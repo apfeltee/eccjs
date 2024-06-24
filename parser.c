@@ -12,19 +12,19 @@
 
 // MARK: - Static Members
 
-static struct io_libecc_OpList * new (struct io_libecc_Parser *);
-static struct io_libecc_OpList * assignment (struct io_libecc_Parser *, int noIn);
-static struct io_libecc_OpList * expression (struct io_libecc_Parser *, int noIn);
-static struct io_libecc_OpList * statement (struct io_libecc_Parser *);
-static struct io_libecc_OpList * function (struct io_libecc_Parser *, int isDeclaration, int isGetter, int isSetter);
-static struct io_libecc_OpList * sourceElements (struct io_libecc_Parser *);
+static struct io_libecc_OpList * new (eccastparser_t *);
+static struct io_libecc_OpList * assignment (eccastparser_t *, int noIn);
+static struct io_libecc_OpList * expression (eccastparser_t *, int noIn);
+static struct io_libecc_OpList * statement (eccastparser_t *);
+static struct io_libecc_OpList * function (eccastparser_t *, int isDeclaration, int isGetter, int isSetter);
+static struct io_libecc_OpList * sourceElements (eccastparser_t *);
 
 
 // MARK: Token
 
-static struct io_libecc_Parser* createWithLexer(struct io_libecc_Lexer*);
-static void destroy(struct io_libecc_Parser*);
-static struct io_libecc_Function* parseWithEnvironment(struct io_libecc_Parser* const, eccobject_t* environment, eccobject_t* global);
+static eccastparser_t* createWithLexer(eccastlexer_t*);
+static void destroy(eccastparser_t*);
+static struct io_libecc_Function* parseWithEnvironment(eccastparser_t* const, eccobject_t* environment, eccobject_t* global);
 const struct type_io_libecc_Parser io_libecc_Parser = {
     createWithLexer,
     destroy,
@@ -32,13 +32,13 @@ const struct type_io_libecc_Parser io_libecc_Parser = {
 };
 
 static inline
-enum io_libecc_lexer_Token previewToken (struct io_libecc_Parser *self)
+eccasttoktype_t previewToken (eccastparser_t *self)
 {
 	return self->previewToken;
 }
 
 static inline
-enum io_libecc_lexer_Token nextToken (struct io_libecc_Parser *self)
+eccasttoktype_t nextToken (eccastparser_t *self)
 {
 	if (self->previewToken != io_libecc_lexer_errorToken)
 	{
@@ -51,7 +51,7 @@ enum io_libecc_lexer_Token nextToken (struct io_libecc_Parser *self)
 }
 
 static
-void parseError (struct io_libecc_Parser *self, struct io_libecc_Error *error)
+void parseError (eccastparser_t *self, struct io_libecc_Error *error)
 {
 	if (!self->error)
 	{
@@ -61,19 +61,19 @@ void parseError (struct io_libecc_Parser *self, struct io_libecc_Error *error)
 }
 
 static
-void syntaxError (struct io_libecc_Parser *self, ecctextstring_t text, struct io_libecc_Chars *message)
+void syntaxError (eccastparser_t *self, ecctextstring_t text, struct io_libecc_Chars *message)
 {
 	parseError(self, io_libecc_Error.syntaxError(text, message));
 }
 
 static
-void referenceError (struct io_libecc_Parser *self, ecctextstring_t text, struct io_libecc_Chars *message)
+void referenceError (eccastparser_t *self, ecctextstring_t text, struct io_libecc_Chars *message)
 {
 	parseError(self, io_libecc_Error.referenceError(text, message));
 }
 
 static
-struct io_libecc_OpList * tokenError (struct io_libecc_Parser *self, const char *t)
+struct io_libecc_OpList * tokenError (eccastparser_t *self, const char *t)
 {
 	char b[4];
 	
@@ -86,7 +86,7 @@ struct io_libecc_OpList * tokenError (struct io_libecc_Parser *self, const char 
 }
 
 static inline
-int acceptToken (struct io_libecc_Parser *self, enum io_libecc_lexer_Token token)
+int acceptToken (eccastparser_t *self, eccasttoktype_t token)
 {
 	if (previewToken(self) != token)
 		return 0;
@@ -96,7 +96,7 @@ int acceptToken (struct io_libecc_Parser *self, enum io_libecc_lexer_Token token
 }
 
 static inline
-int expectToken (struct io_libecc_Parser *self, enum io_libecc_lexer_Token token)
+int expectToken (eccastparser_t *self, eccasttoktype_t token)
 {
 	if (previewToken(self) != token)
 	{
@@ -115,7 +115,7 @@ int expectToken (struct io_libecc_Parser *self, enum io_libecc_lexer_Token token
 // MARK: Depth
 
 static
-void pushDepth (struct io_libecc_Parser *self, struct io_libecc_Key key, char depth)
+void pushDepth (eccastparser_t *self, struct io_libecc_Key key, char depth)
 {
 	self->depths = realloc(self->depths, (self->depthCount + 1) * sizeof(*self->depths));
 	self->depths[self->depthCount].key = key;
@@ -124,7 +124,7 @@ void pushDepth (struct io_libecc_Parser *self, struct io_libecc_Key key, char de
 }
 
 static
-void popDepth (struct io_libecc_Parser *self)
+void popDepth (eccastparser_t *self)
 {
 	--self->depthCount;
 }
@@ -133,9 +133,9 @@ void popDepth (struct io_libecc_Parser *self)
 // MARK: Expression
 
 static
-struct io_libecc_OpList * foldConstant (struct io_libecc_Parser *self, struct io_libecc_OpList * oplist)
+struct io_libecc_OpList * foldConstant (eccastparser_t *self, struct io_libecc_OpList * oplist)
 {
-	struct io_libecc_Ecc ecc = { .sloppyMode = self->lexer->allowUnicodeOutsideLiteral };
+	struct ECCNSScript ecc = { .sloppyMode = self->lexer->allowUnicodeOutsideLiteral };
 	eccstate_t context = { oplist->ops, .ecc = &ecc };
 	eccvalue_t value = context.ops->native(&context);
 	ecctextstring_t text = io_libecc_OpList.text(oplist);
@@ -144,11 +144,11 @@ struct io_libecc_OpList * foldConstant (struct io_libecc_Parser *self, struct io
 }
 
 static
-struct io_libecc_OpList * useBinary (struct io_libecc_Parser *self, struct io_libecc_OpList * oplist, int add)
+struct io_libecc_OpList * useBinary (eccastparser_t *self, struct io_libecc_OpList * oplist, int add)
 {
 	if (oplist && oplist->ops[0].native == io_libecc_Op.value && (ECCNSValue.isNumber(oplist->ops[0].value) || !add))
 	{
-		struct io_libecc_Ecc ecc = { .sloppyMode = self->lexer->allowUnicodeOutsideLiteral };
+		struct ECCNSScript ecc = { .sloppyMode = self->lexer->allowUnicodeOutsideLiteral };
 		eccstate_t context = { oplist->ops, .ecc = &ecc };
 		oplist->ops[0].value = ECCNSValue.toBinary(&context, oplist->ops[0].value);
 	}
@@ -156,11 +156,11 @@ struct io_libecc_OpList * useBinary (struct io_libecc_Parser *self, struct io_li
 }
 
 static
-struct io_libecc_OpList * useInteger (struct io_libecc_Parser *self, struct io_libecc_OpList * oplist)
+struct io_libecc_OpList * useInteger (eccastparser_t *self, struct io_libecc_OpList * oplist)
 {
 	if (oplist && oplist->ops[0].native == io_libecc_Op.value)
 	{
-		struct io_libecc_Ecc ecc = { .sloppyMode = self->lexer->allowUnicodeOutsideLiteral };
+		struct ECCNSScript ecc = { .sloppyMode = self->lexer->allowUnicodeOutsideLiteral };
 		eccstate_t context = { oplist->ops, .ecc = &ecc };
 		oplist->ops[0].value = ECCNSValue.toInteger(&context, oplist->ops[0].value);
 	}
@@ -168,7 +168,7 @@ struct io_libecc_OpList * useInteger (struct io_libecc_Parser *self, struct io_l
 }
 
 static
-struct io_libecc_OpList * expressionRef (struct io_libecc_Parser *self, struct io_libecc_OpList *oplist, const char *name)
+struct io_libecc_OpList * expressionRef (eccastparser_t *self, struct io_libecc_OpList *oplist, const char *name)
 {
 	if (!oplist)
 		return NULL;
@@ -196,7 +196,7 @@ struct io_libecc_OpList * expressionRef (struct io_libecc_Parser *self, struct i
 }
 
 static
-void semicolon (struct io_libecc_Parser *self)
+void semicolon (eccastparser_t *self)
 {
 	if (previewToken(self) == ';')
 	{
@@ -210,7 +210,7 @@ void semicolon (struct io_libecc_Parser *self)
 }
 
 static
-struct io_libecc_Op identifier (struct io_libecc_Parser *self)
+struct io_libecc_Op identifier (eccastparser_t *self)
 {
 	eccvalue_t value = self->lexer->value;
 	ecctextstring_t text = self->lexer->text;
@@ -221,7 +221,7 @@ struct io_libecc_Op identifier (struct io_libecc_Parser *self)
 }
 
 static
-struct io_libecc_OpList * array (struct io_libecc_Parser *self)
+struct io_libecc_OpList * array (eccastparser_t *self)
 {
 	struct io_libecc_OpList *oplist = NULL;
 	uint32_t count = 0;
@@ -246,14 +246,14 @@ struct io_libecc_OpList * array (struct io_libecc_Parser *self)
 	}
 	while (acceptToken(self, ','));
 	
-	text = io_libecc_Text.join(text, self->lexer->text);
+	text = ECCNSText.join(text, self->lexer->text);
 	expectToken(self, ']');
 	
 	return io_libecc_OpList.unshift(io_libecc_Op.make(io_libecc_Op.array, ECCNSValue.integer(count), text), oplist);
 }
 
 static
-struct io_libecc_OpList * propertyAssignment (struct io_libecc_Parser *self)
+struct io_libecc_OpList * propertyAssignment (eccastparser_t *self)
 {
 	struct io_libecc_OpList *oplist = NULL;
 	int isGetter = 0, isSetter = 0;
@@ -298,7 +298,7 @@ struct io_libecc_OpList * propertyAssignment (struct io_libecc_Parser *self)
 	}
 	else if (previewToken(self) == io_libecc_lexer_escapedStringToken)
 	{
-		ecctextstring_t text = io_libecc_Text.make(self->lexer->value.data.chars->bytes, self->lexer->value.data.chars->length);
+		ecctextstring_t text = ECCNSText.make(self->lexer->value.data.chars->bytes, self->lexer->value.data.chars->length);
 		uint32_t element = io_libecc_Lexer.scanElement(text);
 		if (element < UINT32_MAX)
 			oplist = io_libecc_OpList.create(io_libecc_Op.value, ECCNSValue.integer(element), self->lexer->text);
@@ -326,7 +326,7 @@ struct io_libecc_OpList * propertyAssignment (struct io_libecc_Parser *self)
 }
 
 static
-struct io_libecc_OpList * object (struct io_libecc_Parser *self)
+struct io_libecc_OpList * object (eccastparser_t *self)
 {
 	struct io_libecc_OpList *oplist = NULL;
 	uint32_t count = 0;
@@ -346,14 +346,14 @@ struct io_libecc_OpList * object (struct io_libecc_Parser *self)
 	}
 	while (previewToken(self) == ',');
 	
-	text = io_libecc_Text.join(text, self->lexer->text);
+	text = ECCNSText.join(text, self->lexer->text);
 	expectToken(self, '}');
 	
 	return io_libecc_OpList.unshift(io_libecc_Op.make(io_libecc_Op.object, ECCNSValue.integer(count), text), oplist);
 }
 
 static
-struct io_libecc_OpList * primary (struct io_libecc_Parser *self)
+struct io_libecc_OpList * primary (eccastparser_t *self)
 {
 	struct io_libecc_OpList *oplist = NULL;
 	
@@ -420,7 +420,7 @@ struct io_libecc_OpList * primary (struct io_libecc_Parser *self)
 }
 
 static
-struct io_libecc_OpList * arguments (struct io_libecc_Parser *self, int *count)
+struct io_libecc_OpList * arguments (eccastparser_t *self, int *count)
 {
 	struct io_libecc_OpList *oplist = NULL, *argumentOps;
 	*count = 0;
@@ -439,7 +439,7 @@ struct io_libecc_OpList * arguments (struct io_libecc_Parser *self, int *count)
 }
 
 static
-struct io_libecc_OpList * member (struct io_libecc_Parser *self)
+struct io_libecc_OpList * member (eccastparser_t *self)
 {
 	struct io_libecc_OpList *oplist = new(self);
 	ecctextstring_t text;
@@ -454,7 +454,7 @@ struct io_libecc_OpList * member (struct io_libecc_Parser *self)
 			self->lexer->disallowKeyword = 0;
 			
 			value = self->lexer->value;
-			text = io_libecc_Text.join(io_libecc_OpList.text(oplist), self->lexer->text);
+			text = ECCNSText.join(io_libecc_OpList.text(oplist), self->lexer->text);
 			if (!expectToken(self, io_libecc_lexer_identifierToken))
 				return oplist;
 			
@@ -463,7 +463,7 @@ struct io_libecc_OpList * member (struct io_libecc_Parser *self)
 		else if (acceptToken(self, '['))
 		{
 			oplist = io_libecc_OpList.join(oplist, expression(self, 0));
-			text = io_libecc_Text.join(io_libecc_OpList.text(oplist), self->lexer->text);
+			text = ECCNSText.join(io_libecc_OpList.text(oplist), self->lexer->text);
 			if (!expectToken(self, ']'))
 				return oplist;
 			
@@ -476,7 +476,7 @@ struct io_libecc_OpList * member (struct io_libecc_Parser *self)
 }
 
 static
-struct io_libecc_OpList * new (struct io_libecc_Parser *self)
+struct io_libecc_OpList * new (eccastparser_t *self)
 {
 	struct io_libecc_OpList *oplist = NULL;
 	ecctextstring_t text = self->lexer->text;
@@ -485,11 +485,11 @@ struct io_libecc_OpList * new (struct io_libecc_Parser *self)
 	{
 		int count = 0;
 		oplist = member(self);
-		text = io_libecc_Text.join(text, io_libecc_OpList.text(oplist));
+		text = ECCNSText.join(text, io_libecc_OpList.text(oplist));
 		if (acceptToken(self, '('))
 		{
 			oplist = io_libecc_OpList.join(oplist, arguments(self, &count));
-			text = io_libecc_Text.join(text, self->lexer->text);
+			text = ECCNSText.join(text, self->lexer->text);
 			expectToken(self, ')');
 		}
 		return io_libecc_OpList.unshift(io_libecc_Op.make(io_libecc_Op.construct, ECCNSValue.integer(count), text), oplist);
@@ -501,7 +501,7 @@ struct io_libecc_OpList * new (struct io_libecc_Parser *self)
 }
 
 static
-struct io_libecc_OpList * leftHandSide (struct io_libecc_Parser *self)
+struct io_libecc_OpList * leftHandSide (eccastparser_t *self)
 {
 	struct io_libecc_OpList *oplist = new(self);
 	ecctextstring_t text = io_libecc_OpList.text(oplist);
@@ -522,7 +522,7 @@ struct io_libecc_OpList * leftHandSide (struct io_libecc_Parser *self)
 			self->lexer->disallowKeyword = 0;
 			
 			value = self->lexer->value;
-			text = io_libecc_Text.join(io_libecc_OpList.text(oplist), self->lexer->text);
+			text = ECCNSText.join(io_libecc_OpList.text(oplist), self->lexer->text);
 			if (!expectToken(self, io_libecc_lexer_identifierToken))
 				return oplist;
 			
@@ -531,7 +531,7 @@ struct io_libecc_OpList * leftHandSide (struct io_libecc_Parser *self)
 		else if (acceptToken(self, '['))
 		{
 			oplist = io_libecc_OpList.join(oplist, expression(self, 0));
-			text = io_libecc_Text.join(io_libecc_OpList.text(oplist), self->lexer->text);
+			text = ECCNSText.join(io_libecc_OpList.text(oplist), self->lexer->text);
 			if (!expectToken(self, ']'))
 				return oplist;
 			
@@ -544,12 +544,12 @@ struct io_libecc_OpList * leftHandSide (struct io_libecc_Parser *self)
 			int isEval = oplist->count == 1 && oplist->ops[0].native == io_libecc_Op.getLocal && io_libecc_Key.isEqual(oplist->ops[0].value.data.key, io_libecc_key_eval);
 			if (isEval)
 			{
-				text = io_libecc_Text.join(io_libecc_OpList.text(oplist), self->lexer->text);
+				text = ECCNSText.join(io_libecc_OpList.text(oplist), self->lexer->text);
 				io_libecc_OpList.destroy(oplist), oplist = NULL;
 			}
 			
 			oplist = io_libecc_OpList.join(oplist, arguments(self, &count));
-			text = io_libecc_Text.join(io_libecc_Text.join(text, io_libecc_OpList.text(oplist)), self->lexer->text);
+			text = ECCNSText.join(ECCNSText.join(text, io_libecc_OpList.text(oplist)), self->lexer->text);
 			
 			if (isEval)
 				oplist = io_libecc_OpList.unshift(io_libecc_Op.make(io_libecc_Op.eval, ECCNSValue.integer(count), text), oplist);
@@ -570,21 +570,21 @@ struct io_libecc_OpList * leftHandSide (struct io_libecc_Parser *self)
 }
 
 static
-struct io_libecc_OpList * postfix (struct io_libecc_Parser *self)
+struct io_libecc_OpList * postfix (eccastparser_t *self)
 {
 	struct io_libecc_OpList *oplist = leftHandSide(self);
 	ecctextstring_t text = self->lexer->text;
 	
 	if (!self->lexer->didLineBreak && acceptToken(self, io_libecc_lexer_incrementToken))
-		oplist = io_libecc_OpList.unshift(io_libecc_Op.make(io_libecc_Op.postIncrementRef, ECCValConstUndefined, io_libecc_Text.join(oplist->ops->text, text)), expressionRef(self, oplist, "invalid increment operand"));
+		oplist = io_libecc_OpList.unshift(io_libecc_Op.make(io_libecc_Op.postIncrementRef, ECCValConstUndefined, ECCNSText.join(oplist->ops->text, text)), expressionRef(self, oplist, "invalid increment operand"));
 	if (!self->lexer->didLineBreak && acceptToken(self, io_libecc_lexer_decrementToken))
-		oplist = io_libecc_OpList.unshift(io_libecc_Op.make(io_libecc_Op.postDecrementRef, ECCValConstUndefined, io_libecc_Text.join(oplist->ops->text, text)), expressionRef(self, oplist, "invalid decrement operand"));
+		oplist = io_libecc_OpList.unshift(io_libecc_Op.make(io_libecc_Op.postDecrementRef, ECCValConstUndefined, ECCNSText.join(oplist->ops->text, text)), expressionRef(self, oplist, "invalid decrement operand"));
 	
 	return oplist;
 }
 
 static
-struct io_libecc_OpList * unary (struct io_libecc_Parser *self)
+struct io_libecc_OpList * unary (eccastparser_t *self)
 {
 	struct io_libecc_OpList *oplist, *alt;
 	ecctextstring_t text = self->lexer->text;
@@ -640,7 +640,7 @@ struct io_libecc_OpList * unary (struct io_libecc_Parser *self)
 	if (!alt)
 		return tokenError(self, "expression");
 	
-	oplist = io_libecc_OpList.unshift(io_libecc_Op.make(native, ECCValConstUndefined, io_libecc_Text.join(text, alt->ops->text)), alt);
+	oplist = io_libecc_OpList.unshift(io_libecc_Op.make(native, ECCValConstUndefined, ECCNSText.join(text, alt->ops->text)), alt);
 	
 	if (oplist->ops[1].native == io_libecc_Op.value)
 		return foldConstant(self, oplist);
@@ -649,7 +649,7 @@ struct io_libecc_OpList * unary (struct io_libecc_Parser *self)
 }
 
 static
-struct io_libecc_OpList * multiplicative (struct io_libecc_Parser *self)
+struct io_libecc_OpList * multiplicative (eccastparser_t *self)
 {
 	struct io_libecc_OpList *oplist = unary(self), *alt;
 	
@@ -671,7 +671,7 @@ struct io_libecc_OpList * multiplicative (struct io_libecc_Parser *self)
 			nextToken(self);
 			if ((alt = useBinary(self, unary(self), 0)))
 			{
-				ecctextstring_t text = io_libecc_Text.join(oplist->ops->text, alt->ops->text);
+				ecctextstring_t text = ECCNSText.join(oplist->ops->text, alt->ops->text);
 				oplist = io_libecc_OpList.unshiftJoin(io_libecc_Op.make(native, ECCValConstUndefined, text), oplist, alt);
 				
 				if (oplist->ops[1].native == io_libecc_Op.value && oplist->ops[2].native == io_libecc_Op.value)
@@ -686,7 +686,7 @@ struct io_libecc_OpList * multiplicative (struct io_libecc_Parser *self)
 }
 
 static
-struct io_libecc_OpList * additive (struct io_libecc_Parser *self)
+struct io_libecc_OpList * additive (eccastparser_t *self)
 {
 	struct io_libecc_OpList *oplist = multiplicative(self), *alt;
 	while (1)
@@ -705,7 +705,7 @@ struct io_libecc_OpList * additive (struct io_libecc_Parser *self)
 			nextToken(self);
 			if ((alt = useBinary(self, multiplicative(self), native == io_libecc_Op.add)))
 			{
-				ecctextstring_t text = io_libecc_Text.join(oplist->ops->text, alt->ops->text);
+				ecctextstring_t text = ECCNSText.join(oplist->ops->text, alt->ops->text);
 				oplist = io_libecc_OpList.unshiftJoin(io_libecc_Op.make(native, ECCValConstUndefined, text), oplist, alt);
 				
 				if (oplist->ops[1].native == io_libecc_Op.value && oplist->ops[2].native == io_libecc_Op.value)
@@ -720,7 +720,7 @@ struct io_libecc_OpList * additive (struct io_libecc_Parser *self)
 }
 
 static
-struct io_libecc_OpList * shift (struct io_libecc_Parser *self)
+struct io_libecc_OpList * shift (eccastparser_t *self)
 {
 	struct io_libecc_OpList *oplist = additive(self), *alt;
 	while (1)
@@ -741,7 +741,7 @@ struct io_libecc_OpList * shift (struct io_libecc_Parser *self)
 			nextToken(self);
 			if ((alt = useInteger(self, additive(self))))
 			{
-				ecctextstring_t text = io_libecc_Text.join(oplist->ops->text, alt->ops->text);
+				ecctextstring_t text = ECCNSText.join(oplist->ops->text, alt->ops->text);
 				oplist = io_libecc_OpList.unshiftJoin(io_libecc_Op.make(native, ECCValConstUndefined, text), oplist, alt);
 				
 				if (oplist->ops[1].native == io_libecc_Op.value && oplist->ops[2].native == io_libecc_Op.value)
@@ -756,7 +756,7 @@ struct io_libecc_OpList * shift (struct io_libecc_Parser *self)
 }
 
 static
-struct io_libecc_OpList * relational (struct io_libecc_Parser *self, int noIn)
+struct io_libecc_OpList * relational (eccastparser_t *self, int noIn)
 {
 	struct io_libecc_OpList *oplist = shift(self), *alt;
 	while (1)
@@ -783,7 +783,7 @@ struct io_libecc_OpList * relational (struct io_libecc_Parser *self, int noIn)
 			nextToken(self);
 			if ((alt = shift(self)))
 			{
-				ecctextstring_t text = io_libecc_Text.join(oplist->ops->text, alt->ops->text);
+				ecctextstring_t text = ECCNSText.join(oplist->ops->text, alt->ops->text);
 				oplist = io_libecc_OpList.unshiftJoin(io_libecc_Op.make(native, ECCValConstUndefined, text), oplist, alt);
 				
 				continue;
@@ -795,7 +795,7 @@ struct io_libecc_OpList * relational (struct io_libecc_Parser *self, int noIn)
 }
 
 static
-struct io_libecc_OpList * equality (struct io_libecc_Parser *self, int noIn)
+struct io_libecc_OpList * equality (eccastparser_t *self, int noIn)
 {
 	struct io_libecc_OpList *oplist = relational(self, noIn), *alt;
 	while (1)
@@ -818,7 +818,7 @@ struct io_libecc_OpList * equality (struct io_libecc_Parser *self, int noIn)
 			nextToken(self);
 			if ((alt = relational(self, noIn)))
 			{
-				ecctextstring_t text = io_libecc_Text.join(oplist->ops->text, alt->ops->text);
+				ecctextstring_t text = ECCNSText.join(oplist->ops->text, alt->ops->text);
 				oplist = io_libecc_OpList.unshiftJoin(io_libecc_Op.make(native, ECCValConstUndefined, text), oplist, alt);
 				
 				continue;
@@ -830,7 +830,7 @@ struct io_libecc_OpList * equality (struct io_libecc_Parser *self, int noIn)
 }
 
 static
-struct io_libecc_OpList * bitwiseAnd (struct io_libecc_Parser *self, int noIn)
+struct io_libecc_OpList * bitwiseAnd (eccastparser_t *self, int noIn)
 {
 	struct io_libecc_OpList *oplist = equality(self, noIn), *alt;
 	while (previewToken(self) == '&')
@@ -840,7 +840,7 @@ struct io_libecc_OpList * bitwiseAnd (struct io_libecc_Parser *self, int noIn)
 			nextToken(self);
 			if ((alt = useInteger(self, equality(self, noIn))))
 			{
-				ecctextstring_t text = io_libecc_Text.join(oplist->ops->text, alt->ops->text);
+				ecctextstring_t text = ECCNSText.join(oplist->ops->text, alt->ops->text);
 				oplist = io_libecc_OpList.unshiftJoin(io_libecc_Op.make(io_libecc_Op.bitwiseAnd, ECCValConstUndefined, text), oplist, alt);
 				
 				continue;
@@ -853,7 +853,7 @@ struct io_libecc_OpList * bitwiseAnd (struct io_libecc_Parser *self, int noIn)
 }
 
 static
-struct io_libecc_OpList * bitwiseXor (struct io_libecc_Parser *self, int noIn)
+struct io_libecc_OpList * bitwiseXor (eccastparser_t *self, int noIn)
 {
 	struct io_libecc_OpList *oplist = bitwiseAnd(self, noIn), *alt;
 	while (previewToken(self) == '^')
@@ -863,7 +863,7 @@ struct io_libecc_OpList * bitwiseXor (struct io_libecc_Parser *self, int noIn)
 			nextToken(self);
 			if ((alt = useInteger(self, bitwiseAnd(self, noIn))))
 			{
-				ecctextstring_t text = io_libecc_Text.join(oplist->ops->text, alt->ops->text);
+				ecctextstring_t text = ECCNSText.join(oplist->ops->text, alt->ops->text);
 				oplist = io_libecc_OpList.unshiftJoin(io_libecc_Op.make(io_libecc_Op.bitwiseXor, ECCValConstUndefined, text), oplist, alt);
 				
 				continue;
@@ -876,7 +876,7 @@ struct io_libecc_OpList * bitwiseXor (struct io_libecc_Parser *self, int noIn)
 }
 
 static
-struct io_libecc_OpList * bitwiseOr (struct io_libecc_Parser *self, int noIn)
+struct io_libecc_OpList * bitwiseOr (eccastparser_t *self, int noIn)
 {
 	struct io_libecc_OpList *oplist = bitwiseXor(self, noIn), *alt;
 	while (previewToken(self) == '|')
@@ -886,7 +886,7 @@ struct io_libecc_OpList * bitwiseOr (struct io_libecc_Parser *self, int noIn)
 			nextToken(self);
 			if ((alt = useInteger(self, bitwiseXor(self, noIn))))
 			{
-				ecctextstring_t text = io_libecc_Text.join(oplist->ops->text, alt->ops->text);
+				ecctextstring_t text = ECCNSText.join(oplist->ops->text, alt->ops->text);
 				oplist = io_libecc_OpList.unshiftJoin(io_libecc_Op.make(io_libecc_Op.bitwiseOr, ECCValConstUndefined, text), oplist, alt);
 				
 				continue;
@@ -899,7 +899,7 @@ struct io_libecc_OpList * bitwiseOr (struct io_libecc_Parser *self, int noIn)
 }
 
 static
-struct io_libecc_OpList * logicalAnd (struct io_libecc_Parser *self, int noIn)
+struct io_libecc_OpList * logicalAnd (eccastparser_t *self, int noIn)
 {
 	int32_t opCount;
 	struct io_libecc_OpList *oplist = bitwiseOr(self, noIn), *nextOp = NULL;
@@ -917,7 +917,7 @@ struct io_libecc_OpList * logicalAnd (struct io_libecc_Parser *self, int noIn)
 }
 
 static
-struct io_libecc_OpList * logicalOr (struct io_libecc_Parser *self, int noIn)
+struct io_libecc_OpList * logicalOr (eccastparser_t *self, int noIn)
 {
 	int32_t opCount;
 	struct io_libecc_OpList *oplist = logicalAnd(self, noIn), *nextOp = NULL;
@@ -935,7 +935,7 @@ struct io_libecc_OpList * logicalOr (struct io_libecc_Parser *self, int noIn)
 }
 
 static
-struct io_libecc_OpList * conditional (struct io_libecc_Parser *self, int noIn)
+struct io_libecc_OpList * conditional (eccastparser_t *self, int noIn)
 {
 	struct io_libecc_OpList *oplist = logicalOr(self, noIn);
 	
@@ -964,7 +964,7 @@ struct io_libecc_OpList * conditional (struct io_libecc_Parser *self, int noIn)
 }
 
 static
-struct io_libecc_OpList * assignment (struct io_libecc_Parser *self, int noIn)
+struct io_libecc_OpList * assignment (eccastparser_t *self, int noIn)
 {
 	struct io_libecc_OpList *oplist = conditional(self, noIn), *opassign = NULL;
 	ecctextstring_t text = self->lexer->text;
@@ -984,9 +984,9 @@ struct io_libecc_OpList * assignment (struct io_libecc_Parser *self, int noIn)
 			else if (io_libecc_Key.isEqual(oplist->ops[0].value.data.key, io_libecc_key_arguments))
 				syntaxError(self, text, io_libecc_Chars.create("can't assign to arguments"));
 			
-			if (!self->strictMode && !io_libecc_Object.member(&self->function->environment, oplist->ops[0].value.data.key, 0))
+			if (!self->strictMode && !ECCNSObject.member(&self->function->environment, oplist->ops[0].value.data.key, 0))
 				++self->reserveGlobalSlots;
-//				io_libecc_Object.addMember(self->global, oplist->ops[0].value.data.key, ECCValConstNone, 0);
+//				ECCNSObject.addMember(self->global, oplist->ops[0].value.data.key, ECCValConstNone, 0);
 			
 			oplist->ops->native = io_libecc_Op.setLocal;
 		}
@@ -999,7 +999,7 @@ struct io_libecc_OpList * assignment (struct io_libecc_Parser *self, int noIn)
 		
 		if (( opassign = assignment(self, noIn) ))
 		{
-			oplist->ops->text = io_libecc_Text.join(oplist->ops->text, opassign->ops->text);
+			oplist->ops->text = ECCNSText.join(oplist->ops->text, opassign->ops->text);
 			return io_libecc_OpList.join(oplist, opassign);
 		}
 		
@@ -1033,7 +1033,7 @@ struct io_libecc_OpList * assignment (struct io_libecc_Parser *self, int noIn)
 	if (oplist)
 	{
 		if (( opassign = assignment(self, noIn) ))
-			oplist->ops->text = io_libecc_Text.join(oplist->ops->text, opassign->ops->text);
+			oplist->ops->text = ECCNSText.join(oplist->ops->text, opassign->ops->text);
 		else
 			tokenError(self, "expression");
 		
@@ -1045,7 +1045,7 @@ struct io_libecc_OpList * assignment (struct io_libecc_Parser *self, int noIn)
 }
 
 static
-struct io_libecc_OpList * expression (struct io_libecc_Parser *self, int noIn)
+struct io_libecc_OpList * expression (eccastparser_t *self, int noIn)
 {
 	struct io_libecc_OpList *oplist = assignment(self, noIn);
 	while (acceptToken(self, ','))
@@ -1058,7 +1058,7 @@ struct io_libecc_OpList * expression (struct io_libecc_Parser *self, int noIn)
 // MARK: Statements
 
 static
-struct io_libecc_OpList * statementList (struct io_libecc_Parser *self)
+struct io_libecc_OpList * statementList (eccastparser_t *self)
 {
 	struct io_libecc_OpList *oplist = NULL, *statementOps = NULL, *discardOps = NULL;
 	uint16_t discardCount = 0;
@@ -1106,7 +1106,7 @@ struct io_libecc_OpList * statementList (struct io_libecc_Parser *self)
 }
 
 static
-struct io_libecc_OpList * block (struct io_libecc_Parser *self)
+struct io_libecc_OpList * block (eccastparser_t *self)
 {
 	struct io_libecc_OpList *oplist = NULL;
 	expectToken(self, '{');
@@ -1120,7 +1120,7 @@ struct io_libecc_OpList * block (struct io_libecc_Parser *self)
 }
 
 static
-struct io_libecc_OpList * variableDeclaration (struct io_libecc_Parser *self, int noIn)
+struct io_libecc_OpList * variableDeclaration (eccastparser_t *self, int noIn)
 {
 	eccvalue_t value = self->lexer->value;
 	ecctextstring_t text = self->lexer->text;
@@ -1133,16 +1133,16 @@ struct io_libecc_OpList * variableDeclaration (struct io_libecc_Parser *self, in
 		syntaxError(self, text, io_libecc_Chars.create("redefining arguments is not allowed"));
 	
 	if (self->function->flags & io_libecc_function_strictMode || self->sourceDepth > 1)
-		io_libecc_Object.addMember(&self->function->environment, value.data.key, ECCValConstUndefined, io_libecc_value_sealed);
+		ECCNSObject.addMember(&self->function->environment, value.data.key, ECCValConstUndefined, io_libecc_value_sealed);
 	else
-		io_libecc_Object.addMember(self->global, value.data.key, ECCValConstUndefined, io_libecc_value_sealed);
+		ECCNSObject.addMember(self->global, value.data.key, ECCValConstUndefined, io_libecc_value_sealed);
 	
 	if (acceptToken(self, '='))
 	{
 		struct io_libecc_OpList *opassign = assignment(self, noIn);
 		
 		if (opassign)
-			return io_libecc_OpList.unshiftJoin(io_libecc_Op.make(io_libecc_Op.discard, ECCValConstUndefined, ECC_ConstString_Empty), io_libecc_OpList.create(io_libecc_Op.setLocal, value, io_libecc_Text.join(text, opassign->ops->text)), opassign);
+			return io_libecc_OpList.unshiftJoin(io_libecc_Op.make(io_libecc_Op.discard, ECCValConstUndefined, ECC_ConstString_Empty), io_libecc_OpList.create(io_libecc_Op.setLocal, value, ECCNSText.join(text, opassign->ops->text)), opassign);
 		
 		tokenError(self, "expression");
 		return NULL;
@@ -1154,7 +1154,7 @@ struct io_libecc_OpList * variableDeclaration (struct io_libecc_Parser *self, in
 }
 
 static
-struct io_libecc_OpList * variableDeclarationList (struct io_libecc_Parser *self, int noIn)
+struct io_libecc_OpList * variableDeclarationList (eccastparser_t *self, int noIn)
 {
 	struct io_libecc_OpList *oplist = NULL, *varOps;
 	do
@@ -1172,7 +1172,7 @@ struct io_libecc_OpList * variableDeclarationList (struct io_libecc_Parser *self
 }
 
 static
-struct io_libecc_OpList * ifStatement (struct io_libecc_Parser *self)
+struct io_libecc_OpList * ifStatement (eccastparser_t *self)
 {
 	struct io_libecc_OpList *oplist = NULL, *trueOps = NULL, *falseOps = NULL;
 	expectToken(self, '(');
@@ -1193,7 +1193,7 @@ struct io_libecc_OpList * ifStatement (struct io_libecc_Parser *self)
 }
 
 static
-struct io_libecc_OpList * doStatement (struct io_libecc_Parser *self)
+struct io_libecc_OpList * doStatement (eccastparser_t *self)
 {
 	struct io_libecc_OpList *oplist, *condition;
 	
@@ -1211,7 +1211,7 @@ struct io_libecc_OpList * doStatement (struct io_libecc_Parser *self)
 }
 
 static
-struct io_libecc_OpList * whileStatement (struct io_libecc_Parser *self)
+struct io_libecc_OpList * whileStatement (eccastparser_t *self)
 {
 	struct io_libecc_OpList *oplist, *condition;
 	
@@ -1227,7 +1227,7 @@ struct io_libecc_OpList * whileStatement (struct io_libecc_Parser *self)
 }
 
 static
-struct io_libecc_OpList * forStatement (struct io_libecc_Parser *self)
+struct io_libecc_OpList * forStatement (eccastparser_t *self)
 {
 	struct io_libecc_OpList *oplist = NULL, *condition = NULL, *increment = NULL, *body = NULL;
 	
@@ -1249,7 +1249,7 @@ struct io_libecc_OpList * forStatement (struct io_libecc_Parser *self)
 	{
 		if (oplist->count == 2 && oplist->ops[0].native == io_libecc_Op.discard && oplist->ops[1].native == io_libecc_Op.getLocal)
 		{
-			if (!self->strictMode && !io_libecc_Object.member(&self->function->environment, oplist->ops[1].value.data.key, 0))
+			if (!self->strictMode && !ECCNSObject.member(&self->function->environment, oplist->ops[1].value.data.key, 0))
 				++self->reserveGlobalSlots;
 			
 			oplist->ops[0].native = io_libecc_Op.iterateInRef;
@@ -1299,7 +1299,7 @@ struct io_libecc_OpList * forStatement (struct io_libecc_Parser *self)
 }
 
 static
-struct io_libecc_OpList * continueStatement (struct io_libecc_Parser *self, ecctextstring_t text)
+struct io_libecc_OpList * continueStatement (eccastparser_t *self, ecctextstring_t text)
 {
 	struct io_libecc_OpList *oplist = NULL;
 	struct io_libecc_Key label = io_libecc_key_none;
@@ -1333,7 +1333,7 @@ struct io_libecc_OpList * continueStatement (struct io_libecc_Parser *self, ecct
 }
 
 static
-struct io_libecc_OpList * breakStatement (struct io_libecc_Parser *self, ecctextstring_t text)
+struct io_libecc_OpList * breakStatement (eccastparser_t *self, ecctextstring_t text)
 {
 	struct io_libecc_OpList *oplist = NULL;
 	struct io_libecc_Key label = io_libecc_key_none;
@@ -1362,7 +1362,7 @@ struct io_libecc_OpList * breakStatement (struct io_libecc_Parser *self, ecctext
 }
 
 static
-struct io_libecc_OpList * returnStatement (struct io_libecc_Parser *self, ecctextstring_t text)
+struct io_libecc_OpList * returnStatement (eccastparser_t *self, ecctextstring_t text)
 {
 	struct io_libecc_OpList *oplist = NULL;
 	
@@ -1375,14 +1375,14 @@ struct io_libecc_OpList * returnStatement (struct io_libecc_Parser *self, ecctex
 	semicolon(self);
 	
 	if (!oplist)
-		oplist = io_libecc_OpList.create(io_libecc_Op.value, ECCValConstUndefined, io_libecc_Text.join(text, self->lexer->text));
+		oplist = io_libecc_OpList.create(io_libecc_Op.value, ECCValConstUndefined, ECCNSText.join(text, self->lexer->text));
 	
-	oplist = io_libecc_OpList.unshift(io_libecc_Op.make(io_libecc_Op.result, ECCValConstUndefined, io_libecc_Text.join(text, oplist->ops->text)), oplist);
+	oplist = io_libecc_OpList.unshift(io_libecc_Op.make(io_libecc_Op.result, ECCValConstUndefined, ECCNSText.join(text, oplist->ops->text)), oplist);
 	return oplist;
 }
 
 static
-struct io_libecc_OpList * switchStatement (struct io_libecc_Parser *self)
+struct io_libecc_OpList * switchStatement (eccastparser_t *self)
 {
 	struct io_libecc_OpList *oplist = NULL, *conditionOps = NULL, *defaultOps = NULL;
 	ecctextstring_t text = ECC_ConstString_Empty;
@@ -1435,7 +1435,7 @@ struct io_libecc_OpList * switchStatement (struct io_libecc_Parser *self)
 }
 
 static
-struct io_libecc_OpList * allStatement (struct io_libecc_Parser *self)
+struct io_libecc_OpList * allStatement (eccastparser_t *self)
 {
 	struct io_libecc_OpList *oplist = NULL;
 	ecctextstring_t text = self->lexer->text;
@@ -1489,7 +1489,7 @@ struct io_libecc_OpList * allStatement (struct io_libecc_Parser *self)
 			syntaxError(self, text, io_libecc_Chars.create("throw statement is missing an expression"));
 		
 		semicolon(self);
-		return io_libecc_OpList.unshift(io_libecc_Op.make(io_libecc_Op.throw, ECCValConstUndefined, io_libecc_Text.join(text, io_libecc_OpList.text(oplist))), oplist);
+		return io_libecc_OpList.unshift(io_libecc_Op.make(io_libecc_Op.throw, ECCValConstUndefined, ECCNSText.join(text, io_libecc_OpList.text(oplist))), oplist);
 	}
 	else if (acceptToken(self, io_libecc_lexer_tryToken))
 	{
@@ -1559,7 +1559,7 @@ struct io_libecc_OpList * allStatement (struct io_libecc_Parser *self)
 }
 
 static
-struct io_libecc_OpList * statement (struct io_libecc_Parser *self)
+struct io_libecc_OpList * statement (eccastparser_t *self)
 {
 	struct io_libecc_OpList *oplist = allStatement(self);
 	if (oplist && oplist->count > 1)
@@ -1571,7 +1571,7 @@ struct io_libecc_OpList * statement (struct io_libecc_Parser *self)
 // MARK: io_libecc_Function
 
 static
-struct io_libecc_OpList * parameters (struct io_libecc_Parser *self, int *count)
+struct io_libecc_OpList * parameters (eccastparser_t *self, int *count)
 {
 	struct io_libecc_Op op;
 	*count = 0;
@@ -1588,8 +1588,8 @@ struct io_libecc_OpList * parameters (struct io_libecc_Parser *self, int *count)
 				else if (self->strictMode && io_libecc_Key.isEqual(op.value.data.key, io_libecc_key_arguments))
 					syntaxError(self, op.text, io_libecc_Chars.create("redefining arguments is not allowed"));
 				
-				io_libecc_Object.deleteMember(&self->function->environment, op.value.data.key);
-				io_libecc_Object.addMember(&self->function->environment, op.value.data.key, ECCValConstUndefined, io_libecc_value_hidden);
+				ECCNSObject.deleteMember(&self->function->environment, op.value.data.key);
+				ECCNSObject.addMember(&self->function->environment, op.value.data.key, ECCValConstUndefined, io_libecc_value_hidden);
 			}
 		} while (acceptToken(self, ','));
 	
@@ -1597,7 +1597,7 @@ struct io_libecc_OpList * parameters (struct io_libecc_Parser *self, int *count)
 }
 
 static
-struct io_libecc_OpList * function (struct io_libecc_Parser *self, int isDeclaration, int isGetter, int isSetter)
+struct io_libecc_OpList * function (eccastparser_t *self, int isDeclaration, int isGetter, int isSetter)
 {
 	eccvalue_t value;
 	ecctextstring_t text, textParameter;
@@ -1636,7 +1636,7 @@ struct io_libecc_OpList * function (struct io_libecc_Parser *self, int isDeclara
 	
 	function = io_libecc_Function.create(&self->function->environment);
 	
-	arguments = (union io_libecc_object_Hashmap *)io_libecc_Object.addMember(&function->environment, io_libecc_key_arguments, ECCValConstUndefined, 0);
+	arguments = (union io_libecc_object_Hashmap *)ECCNSObject.addMember(&function->environment, io_libecc_key_arguments, ECCValConstUndefined, 0);
 	slot = arguments - function->environment.hashmap;
 	
 	self->function = function;
@@ -1650,9 +1650,9 @@ struct io_libecc_OpList * function (struct io_libecc_Parser *self, int isDeclara
 	function->environment.hashmap[slot].value.flags |= io_libecc_value_hidden | io_libecc_value_sealed;
 	
 	if (isGetter && parameterCount != 0)
-		syntaxError(self, io_libecc_Text.make(textParameter.bytes, (int32_t)(self->lexer->text.bytes - textParameter.bytes)), io_libecc_Chars.create("getter functions must have no arguments"));
+		syntaxError(self, ECCNSText.make(textParameter.bytes, (int32_t)(self->lexer->text.bytes - textParameter.bytes)), io_libecc_Chars.create("getter functions must have no arguments"));
 	else if (isSetter && parameterCount != 1)
-		syntaxError(self, io_libecc_Text.make(self->lexer->text.bytes, 0), io_libecc_Chars.create("setter functions must have one argument"));
+		syntaxError(self, ECCNSText.make(self->lexer->text.bytes, 0), io_libecc_Chars.create("setter functions must have one argument"));
 	
 	expectToken(self, ')');
 	expectToken(self, '{');
@@ -1669,21 +1669,21 @@ struct io_libecc_OpList * function (struct io_libecc_Parser *self, int isDeclara
 	function->text = text;
 	function->parameterCount = parameterCount;
 	
-	io_libecc_Object.addMember(&function->object, io_libecc_key_length, ECCNSValue.integer(parameterCount), io_libecc_value_readonly | io_libecc_value_hidden | io_libecc_value_sealed);
+	ECCNSObject.addMember(&function->object, io_libecc_key_length, ECCNSValue.integer(parameterCount), io_libecc_value_readonly | io_libecc_value_hidden | io_libecc_value_sealed);
 	
 	value = ECCNSValue.function(function);
 	
 	if (isDeclaration)
 	{
 		if (self->function->flags & io_libecc_function_strictMode || self->sourceDepth > 1)
-			io_libecc_Object.addMember(&parentFunction->environment, identifierOp.value.data.key, ECCValConstUndefined, io_libecc_value_hidden);
+			ECCNSObject.addMember(&parentFunction->environment, identifierOp.value.data.key, ECCValConstUndefined, io_libecc_value_hidden);
 		else
-			io_libecc_Object.addMember(self->global, identifierOp.value.data.key, ECCValConstUndefined, io_libecc_value_hidden);
+			ECCNSObject.addMember(self->global, identifierOp.value.data.key, ECCValConstUndefined, io_libecc_value_hidden);
 	}
 	else if (identifierOp.value.type != ECC_VALTYPE_UNDEFINED && !isGetter && !isSetter)
 	{
-		io_libecc_Object.addMember(&function->environment, identifierOp.value.data.key, value, io_libecc_value_hidden);
-		io_libecc_Object.packValue(&function->environment);
+		ECCNSObject.addMember(&function->environment, identifierOp.value.data.key, value, io_libecc_value_hidden);
+		ECCNSObject.packValue(&function->environment);
 	}
 	
 	if (isGetter)
@@ -1701,7 +1701,7 @@ struct io_libecc_OpList * function (struct io_libecc_Parser *self, int isDeclara
 // MARK: Source
 
 static
-struct io_libecc_OpList * sourceElements (struct io_libecc_Parser *self)
+struct io_libecc_OpList * sourceElements (eccastparser_t *self)
 {
 	struct io_libecc_OpList *oplist = NULL;
 	
@@ -1731,7 +1731,7 @@ struct io_libecc_OpList * sourceElements (struct io_libecc_Parser *self)
 	if (oplist->count > 1)
 		oplist->ops[1].text.flags |= ECC_TEXTFLAG_BREAKFLAG;
 	
-	io_libecc_Object.packValue(&self->function->environment);
+	ECCNSObject.packValue(&self->function->environment);
 	
 	--self->sourceDepth;
 	
@@ -1741,9 +1741,9 @@ struct io_libecc_OpList * sourceElements (struct io_libecc_Parser *self)
 
 // MARK: - Methods
 
-struct io_libecc_Parser * createWithLexer (struct io_libecc_Lexer *lexer)
+eccastparser_t * createWithLexer (eccastlexer_t *lexer)
 {
-	struct io_libecc_Parser *self = malloc(sizeof(*self));
+	eccastparser_t *self = malloc(sizeof(*self));
 	*self = io_libecc_Parser.identity;
 	
 	self->lexer = lexer;
@@ -1751,7 +1751,7 @@ struct io_libecc_Parser * createWithLexer (struct io_libecc_Lexer *lexer)
 	return self;
 }
 
-void destroy (struct io_libecc_Parser *self)
+void destroy (eccastparser_t *self)
 {
 	assert(self);
 	
@@ -1760,7 +1760,7 @@ void destroy (struct io_libecc_Parser *self)
 	free(self), self = NULL;
 }
 
-struct io_libecc_Function * parseWithEnvironment (struct io_libecc_Parser * const self, eccobject_t *environment, eccobject_t *global)
+struct io_libecc_Function * parseWithEnvironment (eccastparser_t * const self, eccobject_t *environment, eccobject_t *global)
 {
 	struct io_libecc_Function *function;
 	struct io_libecc_OpList *oplist;
@@ -1778,7 +1778,7 @@ struct io_libecc_Function * parseWithEnvironment (struct io_libecc_Parser * cons
 	oplist = sourceElements(self);
 	io_libecc_OpList.optimizeWithEnvironment(oplist, &function->environment, 0);
 	
-	io_libecc_Object.reserveSlots(global, self->reserveGlobalSlots);
+	ECCNSObject.reserveSlots(global, self->reserveGlobalSlots);
 	
 	if (self->error)
 	{

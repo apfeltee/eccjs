@@ -36,7 +36,7 @@ static ecctextstring_t textSeek(eccstate_t* const);
 static void rewindStatement(eccstate_t* const);
 static void printBacktrace(eccstate_t* const context);
 static eccobject_t* environmentRoot(eccstate_t* const context);
-const struct type_io_libecc_Context io_libecc_Context = {
+const struct type_io_libecc_Context ECCNSContext = {
     rangeError,     referenceError,
     syntaxError,    typeError,
     uriError,       throw,
@@ -87,8 +87,8 @@ void throw (eccstate_t * const self, eccvalue_t value)
 		
 		if (value.type == ECC_VALTYPE_ERROR)
 		{
-			name = ECCNSValue.toString(self, io_libecc_Object.getMember(self, value.data.object, io_libecc_key_name));
-			message = ECCNSValue.toString(self, io_libecc_Object.getMember(self, value.data.object, io_libecc_key_message));
+			name = ECCNSValue.toString(self, ECCNSObject.getMember(self, value.data.object, io_libecc_key_name));
+			message = ECCNSValue.toString(self, ECCNSObject.getMember(self, value.data.object, io_libecc_key_message));
 		}
 		else
 			message = ECCNSValue.toString(self, value);
@@ -96,13 +96,13 @@ void throw (eccstate_t * const self, eccvalue_t value)
 		if (name.type == ECC_VALTYPE_UNDEFINED)
 			name = ECCNSValue.text(&ECC_ConstString_ErrorName);
 		
-		io_libecc_Env.newline();
-		io_libecc_Env.printError(ECCNSValue.stringLength(&name), ECCNSValue.stringBytes(&name), "%.*s" , ECCNSValue.stringLength(&message), ECCNSValue.stringBytes(&message));
+		ECCNSEnv.newline();
+		ECCNSEnv.printError(ECCNSValue.stringLength(&name), ECCNSValue.stringBytes(&name), "%.*s" , ECCNSValue.stringLength(&message), ECCNSValue.stringBytes(&message));
 		printBacktrace(self);
-		io_libecc_Ecc.printTextInput(self->ecc, self->ecc->text, 1);
+		ECCNSScript.printTextInput(self->ecc, self->ecc->text, 1);
 	}
 	
-	io_libecc_Ecc.jmpEnv(self->ecc, value);
+	ECCNSScript.jmpEnv(self->ecc, value);
 }
 
 eccvalue_t callFunction (eccstate_t * const self, struct io_libecc_Function *function, eccvalue_t this, int argumentCount, ... )
@@ -257,7 +257,7 @@ ecctextstring_t textSeek (eccstate_t * const self)
 	if (isAccessor)
 	{
 		if (index > io_libecc_context_thisIndex)
-			io_libecc_Context.rewindStatement(&seek);
+			ECCNSContext.rewindStatement(&seek);
 	}
 	else if (index > io_libecc_context_noIndex)
 	{
@@ -281,7 +281,7 @@ ecctextstring_t textSeek (eccstate_t * const self)
 		while (index-- > io_libecc_context_callIndex)
 		{
 			if (!argumentCount--)
-				return io_libecc_Text.make(callText.bytes + callText.length - 1, 0);
+				return ECCNSText.make(callText.bytes + callText.length - 1, 0);
 			
 			bytes = seek.ops->text.bytes + seek.ops->text.length;
 			while (bytes > seek.ops->text.bytes && seek.ops->text.bytes)
@@ -310,7 +310,7 @@ void printBacktrace (eccstate_t * const context)
 	
 	if (depth > 12)
 	{
-		io_libecc_Env.printColor(0, io_libecc_env_bold, "...");
+		ECCNSEnv.printColor(0, io_libecc_env_bold, "...");
 		fprintf(stderr, " (%d more)\n", depth - 12);
 		depth = 12;
 	}
@@ -335,9 +335,9 @@ void printBacktrace (eccstate_t * const context)
 		
 		if (skip <= 0 && frame.ops->text.bytes != ECC_ConstString_NativeCode.bytes)
 		{
-			io_libecc_Context.rewindStatement(&frame);
+			ECCNSContext.rewindStatement(&frame);
 			if (frame.ops->text.length)
-				io_libecc_Ecc.printTextInput(frame.ecc, frame.ops->text, 0);
+				ECCNSScript.printTextInput(frame.ecc, frame.ops->text, 0);
 		}
 	}
 }

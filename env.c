@@ -33,7 +33,7 @@ static void printError(int typeLength, const char* type, const char* format, ...
 static void printWarning(const char* format, ...);
 static void newline(void);
 static double currentTime(void);
-const struct type_io_libecc_Env io_libecc_Env = {
+const struct type_io_libecc_Env ECCNSEnv = {
     setup, teardown, print, printColor, printError, printWarning, newline, currentTime,
 };
 

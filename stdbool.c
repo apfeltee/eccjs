@@ -33,7 +33,7 @@ eccvalue_t toString (eccstate_t * const context)
 {
 	int truth;
 	
-	io_libecc_Context.assertThisMask(context, ECC_VALMASK_BOOLEAN);
+	ECCNSContext.assertThisMask(context, ECC_VALMASK_BOOLEAN);
 	
 	truth = ECCNSValue.isObject(context->this)? context->this.data.boolean->truth: ECCNSValue.isTrue(context->this);
 	
@@ -45,7 +45,7 @@ eccvalue_t valueOf (eccstate_t * const context)
 {
 	int truth;
 	
-	io_libecc_Context.assertThisMask(context, ECC_VALMASK_BOOLEAN);
+	ECCNSContext.assertThisMask(context, ECC_VALMASK_BOOLEAN);
 	
 	truth = ECCNSValue.isObject(context->this)? context->this.data.boolean->truth: ECCNSValue.isTrue(context->this);
 	
@@ -57,7 +57,7 @@ eccvalue_t constructor (eccstate_t * const context)
 {
 	char truth;
 	
-	truth = ECCNSValue.isTrue(io_libecc_Context.argument(context, 0));
+	truth = ECCNSValue.isTrue(ECCNSContext.argument(context, 0));
 	if (context->construct)
 		return ECCNSValue.boolean(io_libecc_Boolean.create(truth));
 	else
@@ -90,7 +90,7 @@ struct io_libecc_Boolean * create (int truth)
 	struct io_libecc_Boolean *self = malloc(sizeof(*self));
 	*self = io_libecc_Boolean.identity;
 	io_libecc_Pool.addObject(&self->object);
-	io_libecc_Object.initialize(&self->object, io_libecc_boolean_prototype);
+	ECCNSObject.initialize(&self->object, io_libecc_boolean_prototype);
 	
 	self->truth = truth;
 	

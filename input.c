@@ -12,21 +12,21 @@
 
 // MARK: - Static Members
 
-static struct io_libecc_Input* createFromFile(const char* filename);
-static struct io_libecc_Input* createFromBytes(const char* bytes, uint32_t length, const char* name, ...);
-static void destroy(struct io_libecc_Input*);
-static void printText(struct io_libecc_Input*, ecctextstring_t text, int32_t ofLine, ecctextstring_t ofText, const char* ofInput, int fullLine);
-static int32_t findLine(struct io_libecc_Input*, ecctextstring_t text);
-static eccvalue_t attachValue(struct io_libecc_Input*, eccvalue_t value);
+static eccioinput_t* createFromFile(const char* filename);
+static eccioinput_t* createFromBytes(const char* bytes, uint32_t length, const char* name, ...);
+static void destroy(eccioinput_t*);
+static void printText(eccioinput_t*, ecctextstring_t text, int32_t ofLine, ecctextstring_t ofText, const char* ofInput, int fullLine);
+static int32_t findLine(eccioinput_t*, ecctextstring_t text);
+static eccvalue_t attachValue(eccioinput_t*, eccvalue_t value);
 const struct type_io_libecc_Input io_libecc_Input = {
     createFromFile, createFromBytes, destroy, printText, findLine, attachValue,
 };
 
 static
-struct io_libecc_Input * create()
+eccioinput_t * create()
 {
 	size_t linesBytes;
-	struct io_libecc_Input *self = malloc(sizeof(*self));
+	eccioinput_t *self = malloc(sizeof(*self));
 	*self = io_libecc_Input.identity;
 	
 	self->lineCapacity = 8;
@@ -43,34 +43,34 @@ static
 void printInput (const char *name, uint16_t line)
 {
 	if (name[0] == '(')
-		io_libecc_Env.printColor(0, io_libecc_env_dim, "%s", name);
+		ECCNSEnv.printColor(0, io_libecc_env_dim, "%s", name);
 	else
-		io_libecc_Env.printColor(0, io_libecc_env_bold, "%s", name);
+		ECCNSEnv.printColor(0, io_libecc_env_bold, "%s", name);
 	
-	io_libecc_Env.printColor(0, io_libecc_env_bold, " line:%d", line);
+	ECCNSEnv.printColor(0, io_libecc_env_bold, " line:%d", line);
 }
 
 // MARK: - Methods
 
-struct io_libecc_Input * createFromFile (const char *filename)
+eccioinput_t * createFromFile (const char *filename)
 {
 	ecctextstring_t inputError = ECC_ConstString_InputErrorName;
 	FILE *file;
 	long size;
-	struct io_libecc_Input *self;
+	eccioinput_t *self;
 	
 	assert(filename);
 	
 	file = fopen(filename, "rb");
 	if (!file)
 	{
-		io_libecc_Env.printError(inputError.length, inputError.bytes, "cannot open file '%s'", filename);
+		ECCNSEnv.printError(inputError.length, inputError.bytes, "cannot open file '%s'", filename);
 		return NULL;
 	}
 	
 	if (fseek(file, 0, SEEK_END) || (size = ftell(file)) < 0 || fseek(file, 0, SEEK_SET))
 	{
-		io_libecc_Env.printError(inputError.length, inputError.bytes, "cannot handle file '%s'", filename);
+		ECCNSEnv.printError(inputError.length, inputError.bytes, "cannot handle file '%s'", filename);
 		fclose(file);
 		return NULL;
 	}
@@ -90,9 +90,9 @@ struct io_libecc_Input * createFromFile (const char *filename)
 	return self;
 }
 
-struct io_libecc_Input * createFromBytes (const char *bytes, uint32_t length, const char *name, ...)
+eccioinput_t * createFromBytes (const char *bytes, uint32_t length, const char *name, ...)
 {
-	struct io_libecc_Input *self;
+	eccioinput_t *self;
 	
 	assert(bytes);
 	
@@ -113,7 +113,7 @@ struct io_libecc_Input * createFromBytes (const char *bytes, uint32_t length, co
 	return self;
 }
 
-void destroy (struct io_libecc_Input *self)
+void destroy (eccioinput_t *self)
 {
 	assert(self);
 	
@@ -123,7 +123,7 @@ void destroy (struct io_libecc_Input *self)
 	free(self), self = NULL;
 }
 
-void printText (struct io_libecc_Input *self, ecctextstring_t text, int32_t ofLine, ecctextstring_t ofText, const char *ofInput, int fullLine)
+void printText (eccioinput_t *self, ecctextstring_t text, int32_t ofLine, ecctextstring_t ofText, const char *ofInput, int fullLine)
 {
 	int32_t line = -1;
 	const char *bytes = NULL;
@@ -160,18 +160,18 @@ void printText (struct io_libecc_Input *self, ecctextstring_t text, int32_t ofLi
 	if (!fullLine)
 	{
 		if (text.length)
-			io_libecc_Env.printColor(0, 0, " `%.*s`", text.length, text.bytes);
+			ECCNSEnv.printColor(0, 0, " `%.*s`", text.length, text.bytes);
 	}
 	else if (!length)
 	{
-		io_libecc_Env.newline();
-		io_libecc_Env.printColor(0, 0, "%.*s", text.length, text.bytes);
+		ECCNSEnv.newline();
+		ECCNSEnv.printColor(0, 0, "%.*s", text.length, text.bytes);
 	}
 	else
 	{
-		io_libecc_Env.newline();
-		io_libecc_Env.print("%.*s", length, bytes);
-		io_libecc_Env.newline();
+		ECCNSEnv.newline();
+		ECCNSEnv.print("%.*s", length, bytes);
+		ECCNSEnv.newline();
 		
 		if (length >= text.bytes - bytes)
 		{
@@ -211,16 +211,16 @@ void printText (struct io_libecc_Input *self, ecctextstring_t text, int32_t ofLi
 			mark[index] = '\0';
 			
 			if ((text.bytes - bytes) > 0)
-				io_libecc_Env.printColor(0, io_libecc_env_invisible, "%.*s", (text.bytes - bytes), mark);
+				ECCNSEnv.printColor(0, io_libecc_env_invisible, "%.*s", (text.bytes - bytes), mark);
 			
-			io_libecc_Env.printColor(io_libecc_env_green, io_libecc_env_bold, "%s", mark + (text.bytes - bytes));
+			ECCNSEnv.printColor(io_libecc_env_green, io_libecc_env_bold, "%s", mark + (text.bytes - bytes));
 		}
 	}
 	
-	io_libecc_Env.newline();
+	ECCNSEnv.newline();
 }
 
-int32_t findLine (struct io_libecc_Input *self, ecctextstring_t text)
+int32_t findLine (eccioinput_t *self, ecctextstring_t text)
 {
 	uint16_t line = self->lineCount + 1;
 	while (line--)
@@ -230,7 +230,7 @@ int32_t findLine (struct io_libecc_Input *self, ecctextstring_t text)
 	return -1;
 }
 
-eccvalue_t attachValue (struct io_libecc_Input *self, eccvalue_t value)
+eccvalue_t attachValue (eccioinput_t *self, eccvalue_t value)
 {
 	if (value.type == ECC_VALTYPE_CHARS)
 		value.data.chars->referenceCount++;

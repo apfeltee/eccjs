@@ -173,7 +173,7 @@ static
 void appendText (struct io_libecc_chars_Append * chars, ecctextstring_t text)
 {
 	struct io_libecc_Chars *self = chars->value;
-	ecctextchar_t lo = io_libecc_Text.character(text), hi = { 0 };
+	ecctextchar_t lo = ECCNSText.character(text), hi = { 0 };
 	ecctextstring_t prev;
 	int surrogates = 0;
 	
@@ -181,17 +181,17 @@ void appendText (struct io_libecc_chars_Append * chars, ecctextstring_t text)
 		return;
 	
 	if (self)
-		prev = io_libecc_Text.make(self->bytes + self->length, self->length);
+		prev = ECCNSText.make(self->bytes + self->length, self->length);
 	else
-		prev = io_libecc_Text.make(chars->buffer + chars->units, chars->units);
+		prev = ECCNSText.make(chars->buffer + chars->units, chars->units);
 	
 	if (lo.units == 3 && lo.codepoint >= 0xDC00 && lo.codepoint <= 0xDFFF)
 	{
-		hi = io_libecc_Text.prevCharacter(&prev);
+		hi = ECCNSText.prevCharacter(&prev);
 		if (hi.units == 3 && hi.codepoint >= 0xD800 && hi.codepoint <= 0xDBFF)
 		{
 			surrogates = 1;
-			io_libecc_Text.nextCharacter(&text);
+			ECCNSText.nextCharacter(&text);
 			if (self)
 				self->length = prev.length;
 			else
@@ -221,7 +221,7 @@ void appendText (struct io_libecc_chars_Append * chars, ecctextstring_t text)
 void appendCodepoint (struct io_libecc_chars_Append *chars, uint32_t cp)
 {
 	char buffer[5] = { 0 };
-	ecctextstring_t text = io_libecc_Text.make(buffer, writeCodepoint(buffer, cp));
+	ecctextstring_t text = ECCNSText.make(buffer, writeCodepoint(buffer, cp));
 	appendText(chars, text);
 }
 
@@ -281,7 +281,7 @@ void appendValue (struct io_libecc_chars_Append *chars, eccstate_t * const conte
 		case ECC_VALTYPE_REFERENCE:
 			break;
 	}
-	io_libecc_Ecc.fatal("Invalid io_libecc_value_Type : %u", value.type);
+	ECCNSScript.fatal("Invalid io_libecc_value_Type : %u", value.type);
 }
 
 static

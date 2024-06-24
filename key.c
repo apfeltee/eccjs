@@ -78,14 +78,14 @@ struct io_libecc_Key addWithText (const ecctextstring_t text, enum io_libecc_key
 	if (keyCount >= keyCapacity)
 	{
 		if (keyCapacity == UINT16_MAX)
-			io_libecc_Ecc.fatal("No more identifier left");
+			ECCNSScript.fatal("No more identifier left");
 		
 		keyCapacity += 0xff;
 		keyPool = realloc(keyPool, keyCapacity * sizeof(*keyPool));
 	}
 	
 	if ((isdigit(text.bytes[0]) || text.bytes[0] == '-') && !isnan(io_libecc_Lexer.scanBinary(text, 0).data.binary))
-		io_libecc_Env.printWarning("Creating identifier '%.*s'; %u identifier(s) left. Using array of length > 0x%x, or negative-integer/floating-point as property name is discouraged", text.length, text.bytes, UINT16_MAX - keyCount, io_libecc_object_ElementMax);
+		ECCNSEnv.printWarning("Creating identifier '%.*s'; %u identifier(s) left. Using array of length > 0x%x, or negative-integer/floating-point as property name is discouraged", text.length, text.bytes, UINT16_MAX - keyCount, io_libecc_object_ElementMax);
 	
 	if (flags & io_libecc_key_copyOnCreate)
 	{
@@ -94,7 +94,7 @@ struct io_libecc_Key addWithText (const ecctextstring_t text, enum io_libecc_key
 		chars[text.length] = '\0';
 		charsList = realloc(charsList, sizeof(*charsList) * (charsCount + 1));
 		charsList[charsCount++] = chars;
-		keyPool[keyCount++] = io_libecc_Text.make(chars, text.length);
+		keyPool[keyCount++] = ECCNSText.make(chars, text.length);
 	}
 	else
 		keyPool[keyCount++] = text;
@@ -111,103 +111,103 @@ void setup (void)
 	{
         {
             cstr = "prototype";
-            io_libecc_key_prototype = addWithText(io_libecc_Text.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_prototype = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "constructor";
-            io_libecc_key_constructor = addWithText(io_libecc_Text.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_constructor = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "length";
-            io_libecc_key_length = addWithText(io_libecc_Text.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_length = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "arguments";
-            io_libecc_key_arguments = addWithText(io_libecc_Text.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_arguments = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "callee";
-            io_libecc_key_callee = addWithText(io_libecc_Text.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_callee = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "name";
-            io_libecc_key_name = addWithText(io_libecc_Text.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_name = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "message";
-            io_libecc_key_message = addWithText(io_libecc_Text.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_message = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "toString";
-            io_libecc_key_toString = addWithText(io_libecc_Text.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_toString = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "valueOf";
-            io_libecc_key_valueOf = addWithText(io_libecc_Text.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_valueOf = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "eval";
-            io_libecc_key_eval = addWithText(io_libecc_Text.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_eval = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "value";
-            io_libecc_key_value = addWithText(io_libecc_Text.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_value = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "writable";
-            io_libecc_key_writable = addWithText(io_libecc_Text.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_writable = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "enumerable";
-            io_libecc_key_enumerable = addWithText(io_libecc_Text.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_enumerable = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "configurable";
-            io_libecc_key_configurable = addWithText(io_libecc_Text.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_configurable = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "get";
-            io_libecc_key_get = addWithText(io_libecc_Text.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_get = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "set";
-            io_libecc_key_set = addWithText(io_libecc_Text.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_set = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "join";
-            io_libecc_key_join = addWithText(io_libecc_Text.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_join = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "toISOString";
-            io_libecc_key_toISOString = addWithText(io_libecc_Text.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_toISOString = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "input";
-            io_libecc_key_input = addWithText(io_libecc_Text.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_input = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "index";
-            io_libecc_key_index = addWithText(io_libecc_Text.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_index = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "lastIndex";
-            io_libecc_key_lastIndex = addWithText(io_libecc_Text.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_lastIndex = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "global";
-            io_libecc_key_global = addWithText(io_libecc_Text.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_global = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "ignoreCase";
-            io_libecc_key_ignoreCase = addWithText(io_libecc_Text.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_ignoreCase = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "multiline";
-            io_libecc_key_multiline = addWithText(io_libecc_Text.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_multiline = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "source";
-            io_libecc_key_source = addWithText(io_libecc_Text.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_source = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
 
 
@@ -225,7 +225,7 @@ void teardown (void)
 
 struct io_libecc_Key makeWithCString (const char *cString)
 {
-	return makeWithText(io_libecc_Text.make(cString, (uint16_t)strlen(cString)), 0);
+	return makeWithText(ECCNSText.make(cString, (uint16_t)strlen(cString)), 0);
 }
 
 struct io_libecc_Key makeWithText (const ecctextstring_t text, enum io_libecc_key_Flags flags)

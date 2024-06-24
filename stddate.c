@@ -84,9 +84,9 @@ double toUTC (double ms)
 static
 double binaryArgumentOr (eccstate_t * const context, int index, double alternative)
 {
-	eccvalue_t value = io_libecc_Context.argument(context, index);
+	eccvalue_t value = ECCNSContext.argument(context, index);
 	if (value.check == 1)
-		return ECCNSValue.toBinary(context, io_libecc_Context.argument(context, index)).data.binary;
+		return ECCNSValue.toBinary(context, ECCNSContext.argument(context, index)).data.binary;
 	else
 		return alternative;
 }
@@ -136,15 +136,15 @@ double msFromArguments (eccstate_t * const context)
 	struct time time;
 	double year, month, day, h, m, s, ms;
 	
-	count = io_libecc_Context.argumentCount(context);
+	count = ECCNSContext.argumentCount(context);
 	
-	year = ECCNSValue.toBinary(context, io_libecc_Context.argument(context, 0)).data.binary,
-	month = ECCNSValue.toBinary(context, io_libecc_Context.argument(context, 1)).data.binary,
-	day = count > 2? ECCNSValue.toBinary(context, io_libecc_Context.argument(context, 2)).data.binary: 1,
-	h = count > 3? ECCNSValue.toBinary(context, io_libecc_Context.argument(context, 3)).data.binary: 0,
-	m = count > 4? ECCNSValue.toBinary(context, io_libecc_Context.argument(context, 4)).data.binary: 0,
-	s = count > 5? ECCNSValue.toBinary(context, io_libecc_Context.argument(context, 5)).data.binary: 0,
-	ms = count > 6? ECCNSValue.toBinary(context, io_libecc_Context.argument(context, 6)).data.binary: 0;
+	year = ECCNSValue.toBinary(context, ECCNSContext.argument(context, 0)).data.binary,
+	month = ECCNSValue.toBinary(context, ECCNSContext.argument(context, 1)).data.binary,
+	day = count > 2? ECCNSValue.toBinary(context, ECCNSContext.argument(context, 2)).data.binary: 1,
+	h = count > 3? ECCNSValue.toBinary(context, ECCNSContext.argument(context, 3)).data.binary: 0,
+	m = count > 4? ECCNSValue.toBinary(context, ECCNSContext.argument(context, 4)).data.binary: 0,
+	s = count > 5? ECCNSValue.toBinary(context, ECCNSContext.argument(context, 5)).data.binary: 0,
+	ms = count > 6? ECCNSValue.toBinary(context, ECCNSContext.argument(context, 6)).data.binary: 0;
 	
 	if (isnan(year) || isnan(month) || isnan(day) || isnan(h) || isnan(m) || isnan(s) || isnan(ms))
 		return NAN;
@@ -347,7 +347,7 @@ unsigned int msToWeekday(double ms)
 static
 eccvalue_t toString (eccstate_t * const context)
 {
-	io_libecc_Context.assertThisType(context, ECC_VALTYPE_DATE);
+	ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 	
 	return ECCNSValue.chars(msToChars(context->this.data.date->ms, localOffset));
 }
@@ -355,7 +355,7 @@ eccvalue_t toString (eccstate_t * const context)
 static
 eccvalue_t toUTCString (eccstate_t * const context)
 {
-	io_libecc_Context.assertThisType(context, ECC_VALTYPE_DATE);
+	ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 	
 	return ECCNSValue.chars(msToChars(context->this.data.date->ms, 0));
 }
@@ -363,20 +363,20 @@ eccvalue_t toUTCString (eccstate_t * const context)
 static
 eccvalue_t toJSON (eccstate_t * const context)
 {
-	eccvalue_t object = ECCNSValue.toObject(context, io_libecc_Context.this(context));
+	eccvalue_t object = ECCNSValue.toObject(context, ECCNSContext.this(context));
 	eccvalue_t tv = ECCNSValue.toPrimitive(context, object, io_libecc_value_hintNumber);
 	eccvalue_t toISO;
 	
 	if (tv.type == ECC_VALTYPE_BINARY && !isfinite(tv.data.binary))
 		return ECCValConstNull;
 	
-	toISO = io_libecc_Object.getMember(context, object.data.object, io_libecc_key_toISOString);
+	toISO = ECCNSObject.getMember(context, object.data.object, io_libecc_key_toISOString);
 	if (toISO.type != ECC_VALTYPE_FUNCTION)
 	{
-		io_libecc_Context.setTextIndex(context, io_libecc_context_callIndex);
-		io_libecc_Context.typeError(context, io_libecc_Chars.create("toISOString is not a function"));
+		ECCNSContext.setTextIndex(context, io_libecc_context_callIndex);
+		ECCNSContext.typeError(context, io_libecc_Chars.create("toISOString is not a function"));
 	}
-	return io_libecc_Context.callFunction(context, toISO.data.function, object, 0);
+	return ECCNSContext.callFunction(context, toISO.data.function, object, 0);
 }
 
 static
@@ -386,10 +386,10 @@ eccvalue_t toISOString (eccstate_t * const context)
 	struct date date;
 	struct time time;
 	
-	io_libecc_Context.assertThisType(context, ECC_VALTYPE_DATE);
+	ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 	
 	if (isnan(context->this.data.date->ms))
-		io_libecc_Context.rangeError(context, io_libecc_Chars.create("invalid date"));
+		ECCNSContext.rangeError(context, io_libecc_Chars.create("invalid date"));
 	
 	msToDateAndTime(context->this.data.date->ms, &date, &time);
 	
@@ -413,7 +413,7 @@ eccvalue_t toDateString (eccstate_t * const context)
 {
 	struct date date;
 	
-	io_libecc_Context.assertThisType(context, ECC_VALTYPE_DATE);
+	ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 	
 	if (isnan(context->this.data.date->ms))
 		return ECCNSValue.chars(io_libecc_Chars.create("Invalid Date"));
@@ -432,7 +432,7 @@ eccvalue_t toTimeString (eccstate_t * const context)
 {
 	struct time time;
 	
-	io_libecc_Context.assertThisType(context, ECC_VALTYPE_DATE);
+	ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 	
 	if (isnan(context->this.data.date->ms))
 		return ECCNSValue.chars(io_libecc_Chars.create("Invalid Date"));
@@ -451,7 +451,7 @@ eccvalue_t toTimeString (eccstate_t * const context)
 static
 eccvalue_t valueOf (eccstate_t * const context)
 {
-	io_libecc_Context.assertThisType(context, ECC_VALTYPE_DATE);
+	ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 	
 	return ECCNSValue.binary(context->this.data.date->ms >= 0? floor(context->this.data.date->ms): ceil(context->this.data.date->ms));
 }
@@ -461,7 +461,7 @@ eccvalue_t getYear (eccstate_t * const context)
 {
 	struct date date;
 	
-	io_libecc_Context.assertThisType(context, ECC_VALTYPE_DATE);
+	ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 	
 	msToDate(toLocal(context->this.data.date->ms), &date);
 	return ECCNSValue.binary(date.year - 1900);
@@ -472,7 +472,7 @@ eccvalue_t getFullYear (eccstate_t * const context)
 {
 	struct date date;
 	
-	io_libecc_Context.assertThisType(context, ECC_VALTYPE_DATE);
+	ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 	
 	msToDate(toLocal(context->this.data.date->ms), &date);
 	return ECCNSValue.binary(date.year);
@@ -483,7 +483,7 @@ eccvalue_t getUTCFullYear (eccstate_t * const context)
 {
 	struct date date;
 	
-	io_libecc_Context.assertThisType(context, ECC_VALTYPE_DATE);
+	ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 	
 	msToDate(context->this.data.date->ms, &date);
 	return ECCNSValue.binary(date.year);
@@ -494,7 +494,7 @@ eccvalue_t getMonth (eccstate_t * const context)
 {
 	struct date date;
 	
-	io_libecc_Context.assertThisType(context, ECC_VALTYPE_DATE);
+	ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 	
 	msToDate(toLocal(context->this.data.date->ms), &date);
 	return ECCNSValue.binary(date.month - 1);
@@ -505,7 +505,7 @@ eccvalue_t getUTCMonth (eccstate_t * const context)
 {
 	struct date date;
 	
-	io_libecc_Context.assertThisType(context, ECC_VALTYPE_DATE);
+	ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 	
 	msToDate(context->this.data.date->ms, &date);
 	return ECCNSValue.binary(date.month - 1);
@@ -516,7 +516,7 @@ eccvalue_t getDate (eccstate_t * const context)
 {
 	struct date date;
 	
-	io_libecc_Context.assertThisType(context, ECC_VALTYPE_DATE);
+	ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 	
 	msToDate(toLocal(context->this.data.date->ms), &date);
 	return ECCNSValue.binary(date.day);
@@ -527,7 +527,7 @@ eccvalue_t getUTCDate (eccstate_t * const context)
 {
 	struct date date;
 	
-	io_libecc_Context.assertThisType(context, ECC_VALTYPE_DATE);
+	ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 	
 	msToDate(context->this.data.date->ms, &date);
 	return ECCNSValue.binary(date.day);
@@ -536,7 +536,7 @@ eccvalue_t getUTCDate (eccstate_t * const context)
 static
 eccvalue_t getDay (eccstate_t * const context)
 {
-	io_libecc_Context.assertThisType(context, ECC_VALTYPE_DATE);
+	ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 	
 	return ECCNSValue.binary(msToWeekday(toLocal(context->this.data.date->ms)));
 }
@@ -544,7 +544,7 @@ eccvalue_t getDay (eccstate_t * const context)
 static
 eccvalue_t getUTCDay (eccstate_t * const context)
 {
-	io_libecc_Context.assertThisType(context, ECC_VALTYPE_DATE);
+	ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 	
 	return ECCNSValue.binary(msToWeekday(context->this.data.date->ms));
 }
@@ -552,7 +552,7 @@ eccvalue_t getUTCDay (eccstate_t * const context)
 static
 eccvalue_t getHours (eccstate_t * const context)
 {
-	io_libecc_Context.assertThisType(context, ECC_VALTYPE_DATE);
+	ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 	
 	return ECCNSValue.binary(msToHours(toLocal(context->this.data.date->ms)));
 }
@@ -560,7 +560,7 @@ eccvalue_t getHours (eccstate_t * const context)
 static
 eccvalue_t getUTCHours (eccstate_t * const context)
 {
-	io_libecc_Context.assertThisType(context, ECC_VALTYPE_DATE);
+	ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 	
 	return ECCNSValue.binary(msToHours(context->this.data.date->ms));
 }
@@ -568,7 +568,7 @@ eccvalue_t getUTCHours (eccstate_t * const context)
 static
 eccvalue_t getMinutes (eccstate_t * const context)
 {
-	io_libecc_Context.assertThisType(context, ECC_VALTYPE_DATE);
+	ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 	
 	return ECCNSValue.binary(msToMinutes(toLocal(context->this.data.date->ms)));
 }
@@ -576,7 +576,7 @@ eccvalue_t getMinutes (eccstate_t * const context)
 static
 eccvalue_t getUTCMinutes (eccstate_t * const context)
 {
-	io_libecc_Context.assertThisType(context, ECC_VALTYPE_DATE);
+	ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 	
 	return ECCNSValue.binary(msToMinutes(context->this.data.date->ms));
 }
@@ -584,7 +584,7 @@ eccvalue_t getUTCMinutes (eccstate_t * const context)
 static
 eccvalue_t getSeconds (eccstate_t * const context)
 {
-	io_libecc_Context.assertThisType(context, ECC_VALTYPE_DATE);
+	ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 	
 	return ECCNSValue.binary(msToSeconds(toLocal(context->this.data.date->ms)));
 }
@@ -592,7 +592,7 @@ eccvalue_t getSeconds (eccstate_t * const context)
 static
 eccvalue_t getUTCSeconds (eccstate_t * const context)
 {
-	io_libecc_Context.assertThisType(context, ECC_VALTYPE_DATE);
+	ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 	
 	return ECCNSValue.binary(msToSeconds(context->this.data.date->ms));
 }
@@ -600,7 +600,7 @@ eccvalue_t getUTCSeconds (eccstate_t * const context)
 static
 eccvalue_t getMilliseconds (eccstate_t * const context)
 {
-	io_libecc_Context.assertThisType(context, ECC_VALTYPE_DATE);
+	ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 	
 	return ECCNSValue.binary(msToMilliseconds(toLocal(context->this.data.date->ms)));
 }
@@ -608,7 +608,7 @@ eccvalue_t getMilliseconds (eccstate_t * const context)
 static
 eccvalue_t getUTCMilliseconds (eccstate_t * const context)
 {
-	io_libecc_Context.assertThisType(context, ECC_VALTYPE_DATE);
+	ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 	
 	return ECCNSValue.binary(msToMilliseconds(context->this.data.date->ms));
 }
@@ -624,9 +624,9 @@ eccvalue_t setTime (eccstate_t * const context)
 {
 	double ms;
 	
-	io_libecc_Context.assertThisType(context, ECC_VALTYPE_DATE);
+	ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 	
-	ms = ECCNSValue.toBinary(context, io_libecc_Context.argument(context, 0)).data.binary;
+	ms = ECCNSValue.toBinary(context, ECCNSContext.argument(context, 0)).data.binary;
 	
 	return ECCNSValue.binary(context->this.data.date->ms = msClip(ms));
 }
@@ -638,7 +638,7 @@ eccvalue_t setMilliseconds (eccstate_t * const context)
 	struct time time;
 	double ms;
 	
-	io_libecc_Context.assertThisType(context, ECC_VALTYPE_DATE);
+	ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 	
 	msToDateAndTime(toLocal(context->this.data.date->ms), &date, &time);
 	ms = binaryArgumentOr(context, 0, NAN);
@@ -656,7 +656,7 @@ eccvalue_t setUTCMilliseconds (eccstate_t * const context)
 	struct time time;
 	double ms;
 	
-	io_libecc_Context.assertThisType(context, ECC_VALTYPE_DATE);
+	ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 	
 	msToDateAndTime(context->this.data.date->ms, &date, &time);
 	ms = binaryArgumentOr(context, 0, NAN);
@@ -674,7 +674,7 @@ eccvalue_t setSeconds (eccstate_t * const context)
 	struct time time;
 	double s, ms;
 	
-	io_libecc_Context.assertThisType(context, ECC_VALTYPE_DATE);
+	ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 	
 	msToDateAndTime(toLocal(context->this.data.date->ms), &date, &time);
 	s = binaryArgumentOr(context, 0, NAN);
@@ -694,7 +694,7 @@ eccvalue_t setUTCSeconds (eccstate_t * const context)
 	struct time time;
 	double s, ms;
 	
-	io_libecc_Context.assertThisType(context, ECC_VALTYPE_DATE);
+	ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 	
 	msToDateAndTime(context->this.data.date->ms, &date, &time);
 	s = binaryArgumentOr(context, 0, NAN);
@@ -714,7 +714,7 @@ eccvalue_t setMinutes (eccstate_t * const context)
 	struct time time;
 	double m, s, ms;
 	
-	io_libecc_Context.assertThisType(context, ECC_VALTYPE_DATE);
+	ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 	
 	msToDateAndTime(toLocal(context->this.data.date->ms), &date, &time);
 	m = binaryArgumentOr(context, 0, NAN);
@@ -736,7 +736,7 @@ eccvalue_t setUTCMinutes (eccstate_t * const context)
 	struct time time;
 	double m, s, ms;
 	
-	io_libecc_Context.assertThisType(context, ECC_VALTYPE_DATE);
+	ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 	
 	msToDateAndTime(context->this.data.date->ms, &date, &time);
 	m = binaryArgumentOr(context, 0, NAN);
@@ -758,7 +758,7 @@ eccvalue_t setHours (eccstate_t * const context)
 	struct time time;
 	double h, m, s, ms;
 	
-	io_libecc_Context.assertThisType(context, ECC_VALTYPE_DATE);
+	ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 	
 	msToDateAndTime(toLocal(context->this.data.date->ms), &date, &time);
 	h = binaryArgumentOr(context, 0, NAN);
@@ -782,7 +782,7 @@ eccvalue_t setUTCHours (eccstate_t * const context)
 	struct time time;
 	double h, m, s, ms;
 	
-	io_libecc_Context.assertThisType(context, ECC_VALTYPE_DATE);
+	ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 	
 	msToDateAndTime(context->this.data.date->ms, &date, &time);
 	h = binaryArgumentOr(context, 0, NAN);
@@ -805,7 +805,7 @@ eccvalue_t setDate (eccstate_t * const context)
 	struct date date;
 	double day, ms;
 	
-	io_libecc_Context.assertThisType(context, ECC_VALTYPE_DATE);
+	ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 	
 	ms = msToDate(toLocal(context->this.data.date->ms), &date);
 	day = binaryArgumentOr(context, 0, NAN);
@@ -822,7 +822,7 @@ eccvalue_t setUTCDate (eccstate_t * const context)
 	struct date date;
 	double day, ms;
 	
-	io_libecc_Context.assertThisType(context, ECC_VALTYPE_DATE);
+	ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 	
 	ms = msToDate(context->this.data.date->ms, &date);
 	day = binaryArgumentOr(context, 0, NAN);
@@ -839,7 +839,7 @@ eccvalue_t setMonth (eccstate_t * const context)
 	struct date date;
 	double month, day, ms;
 	
-	io_libecc_Context.assertThisType(context, ECC_VALTYPE_DATE);
+	ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 	
 	ms = msToDate(toLocal(context->this.data.date->ms), &date);
 	month = binaryArgumentOr(context, 0, NAN) + 1;
@@ -858,7 +858,7 @@ eccvalue_t setUTCMonth (eccstate_t * const context)
 	struct date date;
 	double month, day, ms;
 	
-	io_libecc_Context.assertThisType(context, ECC_VALTYPE_DATE);
+	ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 	
 	ms = msToDate(context->this.data.date->ms, &date);
 	month = binaryArgumentOr(context, 0, NAN) + 1;
@@ -877,7 +877,7 @@ eccvalue_t setFullYear (eccstate_t * const context)
 	struct date date;
 	double year, month, day, ms;
 	
-	io_libecc_Context.assertThisType(context, ECC_VALTYPE_DATE);
+	ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 	
 	if (isnan(context->this.data.date->ms))
 		context->this.data.date->ms = 0;
@@ -901,7 +901,7 @@ eccvalue_t setYear (eccstate_t * const context)
 	struct date date;
 	double year, month, day, ms;
 	
-	io_libecc_Context.assertThisType(context, ECC_VALTYPE_DATE);
+	ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 	
 	if (isnan(context->this.data.date->ms))
 		context->this.data.date->ms = 0;
@@ -925,7 +925,7 @@ eccvalue_t setUTCFullYear (eccstate_t * const context)
 	struct date date;
 	double year, month, day, ms;
 	
-	io_libecc_Context.assertThisType(context, ECC_VALTYPE_DATE);
+	ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 	
 	if (isnan(context->this.data.date->ms))
 		context->this.data.date->ms = 0;
@@ -946,7 +946,7 @@ eccvalue_t setUTCFullYear (eccstate_t * const context)
 static
 eccvalue_t now (eccstate_t * const context)
 {
-	return ECCNSValue.binary(msClip(io_libecc_Env.currentTime()));
+	return ECCNSValue.binary(msClip(ECCNSEnv.currentTime()));
 }
 
 static
@@ -954,7 +954,7 @@ eccvalue_t parse (eccstate_t * const context)
 {
 	eccvalue_t value;
 	
-	value = ECCNSValue.toString(context, io_libecc_Context.argument(context, 0));
+	value = ECCNSValue.toString(context, ECCNSContext.argument(context, 0));
 	
 	return ECCNSValue.binary(msClip(msFromBytes(ECCNSValue.stringBytes(&value), ECCNSValue.stringLength(&value))));
 }
@@ -962,7 +962,7 @@ eccvalue_t parse (eccstate_t * const context)
 static
 eccvalue_t UTC (eccstate_t * const context)
 {
-	if (io_libecc_Context.argumentCount(context) > 1)
+	if (ECCNSContext.argumentCount(context) > 1)
 		return ECCNSValue.binary(msClip(msFromArguments(context)));
 	
 	return ECCNSValue.binary(NAN);
@@ -975,15 +975,15 @@ eccvalue_t constructor (eccstate_t * const context)
 	uint16_t count;
 	
 	if (!context->construct)
-		return ECCNSValue.chars(msToChars(io_libecc_Env.currentTime(), localOffset));
+		return ECCNSValue.chars(msToChars(ECCNSEnv.currentTime(), localOffset));
 	
-	count = io_libecc_Context.argumentCount(context);
+	count = ECCNSContext.argumentCount(context);
 	
 	if (count > 1)
 		time = toUTC(msFromArguments(context));
 	else if (count)
 	{
-		eccvalue_t value = ECCNSValue.toPrimitive(context, io_libecc_Context.argument(context, 0), io_libecc_value_hintAuto);
+		eccvalue_t value = ECCNSValue.toPrimitive(context, ECCNSContext.argument(context, 0), io_libecc_value_hintAuto);
 		
 		if (ECCNSValue.isString(value))
 			time = msFromBytes(ECCNSValue.stringBytes(&value), ECCNSValue.stringLength(&value));
@@ -991,7 +991,7 @@ eccvalue_t constructor (eccstate_t * const context)
 			time = ECCNSValue.toBinary(context, value).data.binary;
 	}
 	else
-		time = io_libecc_Env.currentTime();
+		time = ECCNSEnv.currentTime();
 	
 	return ECCNSValue.date(create(time));
 }
@@ -1072,7 +1072,7 @@ struct io_libecc_Date *create (double ms)
 	struct io_libecc_Date *self = malloc(sizeof(*self));
 	*self = io_libecc_Date.identity;
 	io_libecc_Pool.addObject(&self->object);
-	io_libecc_Object.initialize(&self->object, io_libecc_date_prototype);
+	ECCNSObject.initialize(&self->object, io_libecc_date_prototype);
 	
 	self->ms = msClip(ms);
 	

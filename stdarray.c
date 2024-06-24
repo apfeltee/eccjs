@@ -51,7 +51,7 @@ uint32_t objectLength (eccstate_t * const context, eccobject_t *object)
 	if (object->type == &io_libecc_array_type)
 		return object->elementCount;
 	else
-		return ECCNSValue.toInteger(context, io_libecc_Object.getMember(context, object, io_libecc_key_length)).data.integer;
+		return ECCNSValue.toInteger(context, ECCNSObject.getMember(context, object, io_libecc_key_length)).data.integer;
 }
 
 static
@@ -59,14 +59,14 @@ void objectResize (eccstate_t * const context, eccobject_t *object, uint32_t len
 {
 	if (object->type == &io_libecc_array_type)
 	{
-		if (io_libecc_Object.resizeElement(object, length) && context->parent->strictMode)
+		if (ECCNSObject.resizeElement(object, length) && context->parent->strictMode)
 		{
-			io_libecc_Context.setTextIndex(context, io_libecc_context_callIndex);
-			io_libecc_Context.typeError(context, io_libecc_Chars.create("'%u' is non-configurable", length));
+			ECCNSContext.setTextIndex(context, io_libecc_context_callIndex);
+			ECCNSContext.typeError(context, io_libecc_Chars.create("'%u' is non-configurable", length));
 		}
 	}
 	else
-		io_libecc_Object.putMember(context, object, io_libecc_key_length, ECCNSValue.binary(length));
+		ECCNSObject.putMember(context, object, io_libecc_key_length, ECCNSValue.binary(length));
 }
 
 static
@@ -76,9 +76,9 @@ void valueAppendFromElement (eccstate_t * const context, eccvalue_t value, eccob
 	
 	if (valueIsArray(value))
 		for (index = 0; index < value.data.object->elementCount; ++index)
-			io_libecc_Object.putElement(context, object, (*element)++, io_libecc_Object.getElement(context, value.data.object, index));
+			ECCNSObject.putElement(context, object, (*element)++, ECCNSObject.getElement(context, value.data.object, index));
 	else
-		io_libecc_Object.putElement(context, object, (*element)++, value);
+		ECCNSObject.putElement(context, object, (*element)++, value);
 }
 
 static
@@ -86,7 +86,7 @@ eccvalue_t isArray (eccstate_t * const context)
 {
 	eccvalue_t value;
 	
-	value = io_libecc_Context.argument(context, 0);
+	value = ECCNSContext.argument(context, 0);
 	
 	return ECCNSValue.truth(value.type == ECC_VALTYPE_OBJECT && value.data.object->type == &io_libecc_array_type);
 }
@@ -95,14 +95,14 @@ static
 eccvalue_t toChars (eccstate_t * const context, eccvalue_t this, ecctextstring_t separator)
 {
 	eccobject_t *object = this.data.object;
-	eccvalue_t value, length = io_libecc_Object.getMember(context, object, io_libecc_key_length);
+	eccvalue_t value, length = ECCNSObject.getMember(context, object, io_libecc_key_length);
 	uint32_t index, count = ECCNSValue.toInteger(context, length).data.integer;
 	struct io_libecc_chars_Append chars;
 	
 	io_libecc_Chars.beginAppend(&chars);
 	for (index = 0; index < count; ++index)
 	{
-		value = io_libecc_Object.getElement(context, this.data.object, index);
+		value = ECCNSObject.getElement(context, this.data.object, index);
 		
 		if (index)
 			io_libecc_Chars.append(&chars, "%.*s", separator.length, separator.bytes);
@@ -119,13 +119,13 @@ eccvalue_t toString (eccstate_t * const context)
 {
 	eccvalue_t function;
 	
-	context->this = ECCNSValue.toObject(context, io_libecc_Context.this(context));
-	function = io_libecc_Object.getMember(context, context->this.data.object, io_libecc_key_join);
+	context->this = ECCNSValue.toObject(context, ECCNSContext.this(context));
+	function = ECCNSObject.getMember(context, context->this.data.object, io_libecc_key_join);
 	
 	if (function.type == ECC_VALTYPE_FUNCTION)
-		return io_libecc_Context.callFunction(context, function.data.function, context->this, 0);
+		return ECCNSContext.callFunction(context, function.data.function, context->this, 0);
 	else
-		return io_libecc_Object.toString(context);
+		return ECCNSObject.toString(context);
 }
 
 static
@@ -135,18 +135,18 @@ eccvalue_t concat (eccstate_t * const context)
 	uint32_t element = 0, length = 0, index, count;
 	eccobject_t *array = NULL;
 	
-	value = ECCNSValue.toObject(context, io_libecc_Context.this(context));
-	count = io_libecc_Context.argumentCount(context);
+	value = ECCNSValue.toObject(context, ECCNSContext.this(context));
+	count = ECCNSContext.argumentCount(context);
 	
 	length += valueArrayLength(value);
 	for (index = 0; index < count; ++index)
-		length += valueArrayLength(io_libecc_Context.argument(context, index));
+		length += valueArrayLength(ECCNSContext.argument(context, index));
 	
 	array = io_libecc_Array.createSized(length);
 	
 	valueAppendFromElement(context, value, array, &element);
 	for (index = 0; index < count; ++index)
-		valueAppendFromElement(context, io_libecc_Context.argument(context, index), array, &element);
+		valueAppendFromElement(context, ECCNSContext.argument(context, index), array, &element);
 	
 	return ECCNSValue.object(array);
 }
@@ -158,16 +158,16 @@ eccvalue_t join (eccstate_t * const context)
 	eccvalue_t value;
 	ecctextstring_t separator;
 	
-	value = io_libecc_Context.argument(context, 0);
+	value = ECCNSContext.argument(context, 0);
 	if (value.type == ECC_VALTYPE_UNDEFINED)
-		separator = io_libecc_Text.make(",", 1);
+		separator = ECCNSText.make(",", 1);
 	else
 	{
 		value = ECCNSValue.toString(context, value);
 		separator = ECCNSValue.textOf(&value);
 	}
 	
-	object = ECCNSValue.toObject(context, io_libecc_Context.this(context));
+	object = ECCNSValue.toObject(context, ECCNSContext.this(context));
 	
 	return toChars(context, object, separator);
 }
@@ -179,18 +179,18 @@ eccvalue_t pop (eccstate_t * const context)
 	eccobject_t *this;
 	uint32_t length;
 	
-	this = ECCNSValue.toObject(context, io_libecc_Context.this(context)).data.object;
+	this = ECCNSValue.toObject(context, ECCNSContext.this(context)).data.object;
 	length = objectLength(context, this);
 	
 	if (length)
 	{
 		--length;
-		value = io_libecc_Object.getElement(context, this, length);
+		value = ECCNSObject.getElement(context, this, length);
 		
-		if (!io_libecc_Object.deleteElement(this, length) && context->parent->strictMode)
+		if (!ECCNSObject.deleteElement(this, length) && context->parent->strictMode)
 		{
-			io_libecc_Context.setTextIndex(context, io_libecc_context_callIndex);
-			io_libecc_Context.typeError(context, io_libecc_Chars.create("'%u' is non-configurable", length));
+			ECCNSContext.setTextIndex(context, io_libecc_context_callIndex);
+			ECCNSContext.typeError(context, io_libecc_Chars.create("'%u' is non-configurable", length));
 		}
 	}
 	objectResize(context, this, length);
@@ -204,29 +204,29 @@ eccvalue_t push (eccstate_t * const context)
 	eccobject_t *this;
 	uint32_t length = 0, index, count, base;
 	
-	this = ECCNSValue.toObject(context, io_libecc_Context.this(context)).data.object;
-	count = io_libecc_Context.argumentCount(context);
+	this = ECCNSValue.toObject(context, ECCNSContext.this(context)).data.object;
+	count = ECCNSContext.argumentCount(context);
 	
 	base = objectLength(context, this);
 	length = UINT32_MAX - base < count? UINT32_MAX: base + count;
 	objectResize(context, this, length);
 	
 	for (index = base; index < length; ++index)
-		io_libecc_Object.putElement(context, this, index, io_libecc_Context.argument(context, index - base));
+		ECCNSObject.putElement(context, this, index, ECCNSContext.argument(context, index - base));
 	
 	if (UINT32_MAX - base < count)
 	{
-		io_libecc_Object.putElement(context, this, index, io_libecc_Context.argument(context, index - base));
+		ECCNSObject.putElement(context, this, index, ECCNSContext.argument(context, index - base));
 		
 		if (this->type == &io_libecc_array_type)
-			io_libecc_Context.rangeError(context, io_libecc_Chars.create("max length exeeded"));
+			ECCNSContext.rangeError(context, io_libecc_Chars.create("max length exeeded"));
 		else
 		{
 			double index, length = (double)base + count;
 			for (index = (double)UINT32_MAX + 1; index < length; ++index)
-				io_libecc_Object.putProperty(context, this, ECCNSValue.binary(index), io_libecc_Context.argument(context, index - base));
+				ECCNSObject.putProperty(context, this, ECCNSValue.binary(index), ECCNSContext.argument(context, index - base));
 			
-			io_libecc_Object.putMember(context, this, io_libecc_key_length, ECCNSValue.binary(length));
+			ECCNSObject.putMember(context, this, io_libecc_key_length, ECCNSValue.binary(length));
 			return ECCNSValue.binary(length);
 		}
 	}
@@ -241,19 +241,19 @@ eccvalue_t reverse (eccstate_t * const context)
 	eccobject_t *this;
 	uint32_t index, half, last, length;
 	
-	this = ECCNSValue.toObject(context, io_libecc_Context.this(context)).data.object;
+	this = ECCNSValue.toObject(context, ECCNSContext.this(context)).data.object;
 	length = objectLength(context, this);
 	
 	last = length - 1;
 	half = length / 2;
 	
-	io_libecc_Context.setTextIndex(context, io_libecc_context_callIndex);
+	ECCNSContext.setTextIndex(context, io_libecc_context_callIndex);
 	
 	for (index = 0; index < half; ++index)
 	{
-		temp = io_libecc_Object.getElement(context, this, index);
-		io_libecc_Object.putElement(context, this, index, io_libecc_Object.getElement(context, this, last - index));
-		io_libecc_Object.putElement(context, this, last - index, temp);
+		temp = ECCNSObject.getElement(context, this, index);
+		ECCNSObject.putElement(context, this, index, ECCNSObject.getElement(context, this, last - index));
+		ECCNSObject.putElement(context, this, last - index, temp);
 	}
 	
 	return ECCNSValue.object(this);
@@ -266,23 +266,23 @@ eccvalue_t shift (eccstate_t * const context)
 	eccobject_t *this;
 	uint32_t index, count, length;
 	
-	this = ECCNSValue.toObject(context, io_libecc_Context.this(context)).data.object;
+	this = ECCNSValue.toObject(context, ECCNSContext.this(context)).data.object;
 	length = objectLength(context, this);
 	
-	io_libecc_Context.setTextIndex(context, io_libecc_context_callIndex);
+	ECCNSContext.setTextIndex(context, io_libecc_context_callIndex);
 	
 	if (length)
 	{
 		length--;
-		result = io_libecc_Object.getElement(context, this, 0);
+		result = ECCNSObject.getElement(context, this, 0);
 		
 		for (index = 0, count = length; index < count; ++index)
-			io_libecc_Object.putElement(context, this, index, io_libecc_Object.getElement(context, this, index + 1));
+			ECCNSObject.putElement(context, this, index, ECCNSObject.getElement(context, this, index + 1));
 		
-		if (!io_libecc_Object.deleteElement(this, length) && context->parent->strictMode)
+		if (!ECCNSObject.deleteElement(this, length) && context->parent->strictMode)
 		{
-			io_libecc_Context.setTextIndex(context, io_libecc_context_callIndex);
-			io_libecc_Context.typeError(context, io_libecc_Chars.create("'%u' is non-configurable", length));
+			ECCNSContext.setTextIndex(context, io_libecc_context_callIndex);
+			ECCNSContext.typeError(context, io_libecc_Chars.create("'%u' is non-configurable", length));
 		}
 	}
 	else
@@ -299,19 +299,19 @@ eccvalue_t unshift (eccstate_t * const context)
 	eccobject_t *this;
 	uint32_t length = 0, index, count;
 	
-	this = ECCNSValue.toObject(context, io_libecc_Context.this(context)).data.object;
-	count = io_libecc_Context.argumentCount(context);
+	this = ECCNSValue.toObject(context, ECCNSContext.this(context)).data.object;
+	count = ECCNSContext.argumentCount(context);
 	
 	length = objectLength(context, this) + count;
 	objectResize(context, this, length);
 	
-	io_libecc_Context.setTextIndex(context, io_libecc_context_callIndex);
+	ECCNSContext.setTextIndex(context, io_libecc_context_callIndex);
 	
 	for (index = count; index < length; ++index)
-		io_libecc_Object.putElement(context, this, index, io_libecc_Object.getElement(context, this, index - count));
+		ECCNSObject.putElement(context, this, index, ECCNSObject.getElement(context, this, index - count));
 	
 	for (index = 0; index < count; ++index)
-		io_libecc_Object.putElement(context, this, index, io_libecc_Context.argument(context, index));
+		ECCNSObject.putElement(context, this, index, ECCNSContext.argument(context, index));
 	
 	return ECCNSValue.binary(length);
 }
@@ -324,10 +324,10 @@ eccvalue_t slice (eccstate_t * const context)
 	uint32_t from, to, length;
 	double binary;
 	
-	this = ECCNSValue.toObject(context, io_libecc_Context.this(context)).data.object;
+	this = ECCNSValue.toObject(context, ECCNSContext.this(context)).data.object;
 	length = objectLength(context, this);
 	
-	start = io_libecc_Context.argument(context, 0);
+	start = ECCNSContext.argument(context, 0);
 	binary = ECCNSValue.toBinary(context, start).data.binary;
 	if (start.type == ECC_VALTYPE_UNDEFINED)
 		from = 0;
@@ -336,7 +336,7 @@ eccvalue_t slice (eccstate_t * const context)
 	else
 		from = binary + length >= 0? length + binary: 0;
 	
-	end = io_libecc_Context.argument(context, 1);
+	end = ECCNSContext.argument(context, 1);
 	binary = ECCNSValue.toBinary(context, end).data.binary;
 	if (end.type == ECC_VALTYPE_UNDEFINED)
 		to = length;
@@ -345,7 +345,7 @@ eccvalue_t slice (eccstate_t * const context)
 	else
 		to = binary < length? binary: length;
 	
-	io_libecc_Context.setTextIndex(context, io_libecc_context_callIndex);
+	ECCNSContext.setTextIndex(context, io_libecc_context_callIndex);
 	
 	if (to > from)
 	{
@@ -353,7 +353,7 @@ eccvalue_t slice (eccstate_t * const context)
 		result = io_libecc_Array.createSized(length);
 		
 		for (to = 0; to < length; ++from, ++to)
-			io_libecc_Object.putElement(context, result, to, io_libecc_Object.getElement(context, this, from));
+			ECCNSObject.putElement(context, result, to, ECCNSObject.getElement(context, this, from));
 	}
 	else
 		result = io_libecc_Array.createSized(0);
@@ -373,8 +373,8 @@ eccvalue_t defaultComparison (eccstate_t * const context)
 {
 	eccvalue_t left, right, result;
 	
-	left = io_libecc_Context.argument(context, 0);
-	right = io_libecc_Context.argument(context, 1);
+	left = ECCNSContext.argument(context, 0);
+	right = ECCNSContext.argument(context, 1);
 	result = ECCNSValue.less(context, ECCNSValue.toString(context, left), ECCNSValue.toString(context, right));
 	
 	return ECCNSValue.integer(ECCNSValue.isTrue(result)? -1: 0);
@@ -407,18 +407,18 @@ void rotate(eccobject_t *object, eccstate_t *context, uint32_t first, uint32_t h
 		shift = half - first;
 		a = first + n;
 		b = a + shift;
-		leftValue = io_libecc_Object.getElement(context, object, a);
+		leftValue = ECCNSObject.getElement(context, object, a);
 		while (b != first + n)
 		{
-			value = io_libecc_Object.getElement(context, object, b);
-			io_libecc_Object.putElement(context, object, a, value);
+			value = ECCNSObject.getElement(context, object, b);
+			ECCNSObject.putElement(context, object, a, value);
 			a = b;
 			if (last - b > shift)
 				b += shift;
 			else
 				b = half - (last - b);
 		}
-		io_libecc_Object.putElement(context, object, a, leftValue);
+		ECCNSObject.putElement(context, object, a, leftValue);
 	}
 }
 
@@ -472,7 +472,7 @@ uint32_t search(eccobject_t *object, struct Compare *cmp, uint32_t first, uint32
 	while (first < last)
 	{
 		half = (first + last) >> 1;
-		left = io_libecc_Object.getElement(&cmp->context, object, half);
+		left = ECCNSObject.getElement(&cmp->context, object, half);
 		if (compare(cmp, left, right))
 			first = half + 1;
 		else
@@ -492,12 +492,12 @@ void merge(eccobject_t *object, struct Compare *cmp, uint32_t first, uint32_t pi
 	if (len1 + len2 == 2)
 	{
 		eccvalue_t left, right;
-		left = io_libecc_Object.getElement(&cmp->context, object, pivot);
-		right = io_libecc_Object.getElement(&cmp->context, object, first);
+		left = ECCNSObject.getElement(&cmp->context, object, pivot);
+		right = ECCNSObject.getElement(&cmp->context, object, first);
 		if (compare(cmp, left, right))
 		{
-			io_libecc_Object.putElement(&cmp->context, object, pivot, right);
-			io_libecc_Object.putElement(&cmp->context, object, first, left);
+			ECCNSObject.putElement(&cmp->context, object, pivot, right);
+			ECCNSObject.putElement(&cmp->context, object, first, left);
 		}
 		return;
 	}
@@ -506,13 +506,13 @@ void merge(eccobject_t *object, struct Compare *cmp, uint32_t first, uint32_t pi
 	{
 		half1 = len1 >> 1;
 		left = first + half1;
-		right = search(object, cmp, pivot, last, io_libecc_Object.getElement(&cmp->context, object, first + half1));
+		right = search(object, cmp, pivot, last, ECCNSObject.getElement(&cmp->context, object, first + half1));
 		half2 = right - pivot;
 	}
 	else
 	{
 		half2 = len2 >> 1;
-		left = search(object, cmp, first, pivot, io_libecc_Object.getElement(&cmp->context, object, pivot + half2));
+		left = search(object, cmp, first, pivot, ECCNSObject.getElement(&cmp->context, object, pivot + half2));
 		right = pivot + half2;
 		half1 = left - first;
 	}
@@ -535,16 +535,16 @@ void sortAndMerge(eccobject_t *object, struct Compare *cmp, uint32_t first, uint
 		
 		for (i = first + 1; i < last; ++i)
 		{
-			right = io_libecc_Object.getElement(&cmp->context, object, i);
+			right = ECCNSObject.getElement(&cmp->context, object, i);
 			for (j = i; j > first; --j)
 			{
-				left = io_libecc_Object.getElement(&cmp->context, object, j - 1);
+				left = ECCNSObject.getElement(&cmp->context, object, j - 1);
 				if (compare(cmp, left, right))
 					break;
 				else
-					io_libecc_Object.putElement(&cmp->context, object, j, left);
+					ECCNSObject.putElement(&cmp->context, object, j, left);
 			}
-			io_libecc_Object.putElement(&cmp->context, object, j, right);
+			ECCNSObject.putElement(&cmp->context, object, j, right);
 		}
 		return;
 	}
@@ -577,10 +577,10 @@ void sortInPlace (eccstate_t * const context, eccobject_t *object, struct io_lib
 	
 	if (function && function->flags & io_libecc_function_needHeap)
 	{
-		eccobject_t *environment = io_libecc_Object.copy(&function->environment);
+		eccobject_t *environment = ECCNSObject.copy(&function->environment);
 		
 		cmp.context.environment = environment;
-		cmp.arguments = io_libecc_Arguments.createSized(2);
+		cmp.arguments = ECCNSArguments.createSized(2);
 		++cmp.arguments->referenceCount;
 		
 		environment->hashmap[2].value = ECCNSValue.object(cmp.arguments);
@@ -589,8 +589,8 @@ void sortInPlace (eccstate_t * const context, eccobject_t *object, struct io_lib
 	}
 	else
 	{
-		eccobject_t environment = function? function->environment: io_libecc_Object.identity;
-		eccobject_t arguments = io_libecc_Object.identity;
+		eccobject_t environment = function? function->environment: ECCNSObject.identity;
+		eccobject_t arguments = ECCNSObject.identity;
 		union io_libecc_object_Hashmap hashmap[function? function->environment.hashmapCapacity: 3];
 		union io_libecc_object_Element element[2];
 		
@@ -618,16 +618,16 @@ eccvalue_t sort (eccstate_t * const context)
 	eccvalue_t compare;
 	uint32_t count;
 	
-	this = ECCNSValue.toObject(context, io_libecc_Context.this(context)).data.object;
-	count = ECCNSValue.toInteger(context, io_libecc_Object.getMember(context, this, io_libecc_key_length)).data.integer;
-	compare = io_libecc_Context.argument(context, 0);
+	this = ECCNSValue.toObject(context, ECCNSContext.this(context)).data.object;
+	count = ECCNSValue.toInteger(context, ECCNSObject.getMember(context, this, io_libecc_key_length)).data.integer;
+	compare = ECCNSContext.argument(context, 0);
 	
 	if (compare.type == ECC_VALTYPE_FUNCTION)
 		sortInPlace(context, this, compare.data.function, 0, count);
 	else if (compare.type == ECC_VALTYPE_UNDEFINED)
 		sortInPlace(context, this, NULL, 0, count);
 	else
-		io_libecc_Context.typeError(context, io_libecc_Chars.create("comparison function must be a function or undefined"));
+		ECCNSContext.typeError(context, io_libecc_Chars.create("comparison function must be a function or undefined"));
 	
 	return ECCNSValue.object(this);
 }
@@ -638,13 +638,13 @@ eccvalue_t splice (eccstate_t * const context)
 	eccobject_t *this, *result;
 	uint32_t length, from, to, count = 0, add = 0, start = 0, delete = 0;
 	
-	count = io_libecc_Context.argumentCount(context);
-	this = ECCNSValue.toObject(context, io_libecc_Context.this(context)).data.object;
+	count = ECCNSContext.argumentCount(context);
+	this = ECCNSValue.toObject(context, ECCNSContext.this(context)).data.object;
 	length = objectLength(context, this);
 	
 	if (count >= 1)
 	{
-		double binary = ECCNSValue.toBinary(context, io_libecc_Context.argument(context, 0)).data.binary;
+		double binary = ECCNSValue.toBinary(context, ECCNSContext.argument(context, 0)).data.binary;
 		if (isnan(binary))
 			binary = 0;
 		else if (binary < 0)
@@ -660,7 +660,7 @@ eccvalue_t splice (eccstate_t * const context)
 	
 	if (count >= 2)
 	{
-		double binary = ECCNSValue.toBinary(context, io_libecc_Context.argument(context, 1)).data.binary;
+		double binary = ECCNSValue.toBinary(context, ECCNSContext.argument(context, 1)).data.binary;
 		if (isnan(binary) || binary < 0)
 			binary = 0;
 		else if (binary > length - start)
@@ -678,22 +678,22 @@ eccvalue_t splice (eccstate_t * const context)
 	result = io_libecc_Array.createSized(delete);
 	
 	for (from = start, to = 0; to < delete; ++from, ++to)
-		io_libecc_Object.putElement(context, result, to, io_libecc_Object.getElement(context, this, from));
+		ECCNSObject.putElement(context, result, to, ECCNSObject.getElement(context, this, from));
 	
 	if (delete > add)
 	{
 		for (from = start + delete, to = start + add; from < length; ++from, ++to)
-			io_libecc_Object.putElement(context, this, to, io_libecc_Object.getElement(context, this, from));
+			ECCNSObject.putElement(context, this, to, ECCNSObject.getElement(context, this, from));
 		
 		for (; to < length; ++to)
-			io_libecc_Object.putElement(context, this, to, ECCValConstNone);
+			ECCNSObject.putElement(context, this, to, ECCValConstNone);
 	}
 	else if (delete < add)
 		for (from = length, to = length + add - delete; from > start;)
-			io_libecc_Object.putElement(context, this, --to, io_libecc_Object.getElement(context, this, --from));
+			ECCNSObject.putElement(context, this, --to, ECCNSObject.getElement(context, this, --from));
 	
 	for (from = 2, to = start; from < count; ++from, ++to)
-		io_libecc_Object.putElement(context, this, to, io_libecc_Context.argument(context, from));
+		ECCNSObject.putElement(context, this, to, ECCNSContext.argument(context, from));
 	
 	if (length - delete + add <= length)
 		objectResize(context, this, length - delete + add);
@@ -709,18 +709,18 @@ eccvalue_t indexOf (eccstate_t * const context)
 	uint32_t length = 0;
 	int32_t index;
 	
-	this = ECCNSValue.toObject(context, io_libecc_Context.this(context)).data.object;
+	this = ECCNSValue.toObject(context, ECCNSContext.this(context)).data.object;
 	length = objectLength(context, this);
 	
-	search = io_libecc_Context.argument(context, 0);
-	start = ECCNSValue.toInteger(context, io_libecc_Context.argument(context, 1));
+	search = ECCNSContext.argument(context, 0);
+	start = ECCNSValue.toInteger(context, ECCNSContext.argument(context, 1));
 	index = start.data.integer < 0? length + start.data.integer: start.data.integer;
 	
 	if (index < 0)
 		index = 0;
 	
 	for (; index < length; ++index)
-		if (ECCNSValue.isTrue(ECCNSValue.same(context, search, io_libecc_Object.getElement(context, this, index))))
+		if (ECCNSValue.isTrue(ECCNSValue.same(context, search, ECCNSObject.getElement(context, this, index))))
 			return ECCNSValue.binary(index);
 	
 	return ECCNSValue.binary(-1);
@@ -734,11 +734,11 @@ eccvalue_t lastIndexOf (eccstate_t * const context)
 	uint32_t length = 0;
 	int32_t index;
 	
-	this = ECCNSValue.toObject(context, io_libecc_Context.this(context)).data.object;
+	this = ECCNSValue.toObject(context, ECCNSContext.this(context)).data.object;
 	length = objectLength(context, this);
 	
-	search = io_libecc_Context.argument(context, 0);
-	start = ECCNSValue.toInteger(context, io_libecc_Context.argument(context, 1));
+	search = ECCNSContext.argument(context, 0);
+	start = ECCNSValue.toInteger(context, ECCNSContext.argument(context, 1));
 	index = start.data.integer <= 0? length + start.data.integer: start.data.integer + 1;
 	
 	if (index < 0)
@@ -747,7 +747,7 @@ eccvalue_t lastIndexOf (eccstate_t * const context)
 		index = length;
 	
 	for (; index--;)
-		if (ECCNSValue.isTrue(ECCNSValue.same(context, search, io_libecc_Object.getElement(context, this, index))))
+		if (ECCNSValue.isTrue(ECCNSValue.same(context, search, ECCNSObject.getElement(context, this, index))))
 			return ECCNSValue.binary(index);
 	
 	return ECCNSValue.binary(-1);
@@ -764,12 +764,12 @@ eccvalue_t setLength (eccstate_t * const context)
 {
 	double length;
 	
-	length = ECCNSValue.toBinary(context, io_libecc_Context.argument(context, 0)).data.binary;
+	length = ECCNSValue.toBinary(context, ECCNSContext.argument(context, 0)).data.binary;
 	if (!isfinite(length) || length < 0 || length > UINT32_MAX || length != (uint32_t)length)
-		io_libecc_Context.rangeError(context, io_libecc_Chars.create("invalid array length"));
+		ECCNSContext.rangeError(context, io_libecc_Chars.create("invalid array length"));
 	
-	if (io_libecc_Object.resizeElement(context->this.data.object, length) && context->parent->strictMode)
-		io_libecc_Context.typeError(context, io_libecc_Chars.create("'%u' is non-configurable", context->this.data.object->elementCount));
+	if (ECCNSObject.resizeElement(context->this.data.object, length) && context->parent->strictMode)
+		ECCNSContext.typeError(context, io_libecc_Chars.create("'%u' is non-configurable", context->this.data.object->elementCount));
 	
 	return ECCValConstUndefined;
 }
@@ -781,8 +781,8 @@ eccvalue_t constructor (eccstate_t * const context)
 	uint32_t index, count, length;
 	eccobject_t *array;
 	
-	length = count = io_libecc_Context.argumentCount(context);
-	value = io_libecc_Context.argument(context, 0);
+	length = count = ECCNSContext.argumentCount(context);
+	value = ECCNSContext.argument(context, 0);
 	if (count == 1 && ECCNSValue.isNumber(value) && ECCNSValue.isPrimitive(value))
 	{
 		double binary = ECCNSValue.toBinary(context, value).data.binary;
@@ -792,14 +792,14 @@ eccvalue_t constructor (eccstate_t * const context)
 			count = 0;
 		}
 		else
-			io_libecc_Context.rangeError(context, io_libecc_Chars.create("invalid array length"));
+			ECCNSContext.rangeError(context, io_libecc_Chars.create("invalid array length"));
 	}
 	
 	array = io_libecc_Array.createSized(length);
 	
 	for (index = 0; index < count; ++index)
 	{
-		array->element[index].value = io_libecc_Context.argument(context, index);
+		array->element[index].value = ECCNSContext.argument(context, index);
 		array->element[index].value.flags &= ~(io_libecc_value_readonly | io_libecc_value_hidden | io_libecc_value_sealed);
 	}
 	
@@ -835,7 +835,7 @@ void setup (void)
 	io_libecc_Function.addToObject(io_libecc_array_prototype, "indexOf", indexOf, -1, h);
 	io_libecc_Function.addToObject(io_libecc_array_prototype, "lastIndexOf", lastIndexOf, -1, h);
 	
-	io_libecc_Object.addMember(io_libecc_array_prototype, io_libecc_key_length, io_libecc_Function.accessor(getLength, setLength), h|s | io_libecc_value_asOwn | io_libecc_value_asData);
+	ECCNSObject.addMember(io_libecc_array_prototype, io_libecc_key_length, io_libecc_Function.accessor(getLength, setLength), h|s | io_libecc_value_asOwn | io_libecc_value_asData);
 }
 
 void teardown (void)
@@ -851,9 +851,9 @@ eccobject_t *create (void)
 
 eccobject_t *createSized (uint32_t size)
 {
-	eccobject_t *self = io_libecc_Object.create(io_libecc_array_prototype);
+	eccobject_t *self = ECCNSObject.create(io_libecc_array_prototype);
 	
-	io_libecc_Object.resizeElement(self, size);
+	ECCNSObject.resizeElement(self, size);
 	
 	return self;
 }

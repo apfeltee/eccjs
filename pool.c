@@ -119,7 +119,7 @@ void addObject (eccobject_t *object)
 	assert(object);
 	
 //	fprintf(stderr, " > add %p %u\n", object, self->objectCount);
-//	io_libecc_Object.dumpTo(object, stderr);
+//	ECCNSObject.dumpTo(object, stderr);
 	
 	if (self->objectCount >= self->objectCapacity)
 	{
@@ -281,8 +281,8 @@ void collectUnmarked (void)
 	while (index--)
 		if (!(self->objectList[index]->flags & io_libecc_object_mark))
 		{
-			io_libecc_Object.finalize(self->objectList[index]);
-			io_libecc_Object.destroy(self->objectList[index]);
+			ECCNSObject.finalize(self->objectList[index]);
+			ECCNSObject.destroy(self->objectList[index]);
 			self->objectList[index] = self->objectList[--self->objectCount];
 		}
 	
@@ -328,8 +328,8 @@ void collectUnreferencedFromIndices (uint32_t indices[3])
 	while (index-- > indices[1])
 		if (self->objectList[index]->referenceCount <= 0)
 		{
-			io_libecc_Object.finalize(self->objectList[index]);
-			io_libecc_Object.destroy(self->objectList[index]);
+			ECCNSObject.finalize(self->objectList[index]);
+			ECCNSObject.destroy(self->objectList[index]);
 			self->objectList[index] = self->objectList[--self->objectCount];
 		}
 	

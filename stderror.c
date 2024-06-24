@@ -72,13 +72,13 @@ eccvalue_t toChars (eccstate_t * const context, eccvalue_t value)
 	
 	self = value.data.object;
 	
-	name = io_libecc_Object.getMember(context, self, io_libecc_key_name);
+	name = ECCNSObject.getMember(context, self, io_libecc_key_name);
 	if (name.type == ECC_VALTYPE_UNDEFINED)
 		name = ECCNSValue.text(&ECC_ConstString_ErrorName);
 	else
 		name = ECCNSValue.toString(context, name);
 	
-	message = io_libecc_Object.getMember(context, self, io_libecc_key_message);
+	message = ECCNSObject.getMember(context, self, io_libecc_key_message);
 	if (message.type == ECC_VALTYPE_UNDEFINED)
 		message = ECCNSValue.text(&ECC_ConstString_Empty);
 	else
@@ -103,13 +103,13 @@ struct io_libecc_Error * create (eccobject_t *errorPrototype, ecctextstring_t te
 	
 	*self = io_libecc_Error.identity;
 	
-	io_libecc_Object.initialize(&self->object, errorPrototype);
+	ECCNSObject.initialize(&self->object, errorPrototype);
 	
 	self->text = text;
 	
 	if (message)
 	{
-		io_libecc_Object.addMember(&self->object, io_libecc_key_message, ECCNSValue.chars(message), io_libecc_value_hidden);
+		ECCNSObject.addMember(&self->object, io_libecc_key_message, ECCNSValue.chars(message), io_libecc_value_hidden);
 		++message->referenceCount;
 	}
 	
@@ -119,7 +119,7 @@ struct io_libecc_Error * create (eccobject_t *errorPrototype, ecctextstring_t te
 static
 eccvalue_t toString (eccstate_t * const context)
 {
-	io_libecc_Context.assertThisMask(context, ECC_VALMASK_OBJECT);
+	ECCNSContext.assertThisMask(context, ECC_VALMASK_OBJECT);
 	
 	return toChars(context, context->this);
 }
@@ -129,9 +129,9 @@ eccvalue_t errorConstructor (eccstate_t * const context)
 {
 	struct io_libecc_Chars *message;
 	
-	message = messageValue(context, io_libecc_Context.argument(context, 0));
-	io_libecc_Context.setTextIndex(context, io_libecc_context_callIndex);
-	return ECCNSValue.error(error(io_libecc_Context.textSeek(context), message));
+	message = messageValue(context, ECCNSContext.argument(context, 0));
+	ECCNSContext.setTextIndex(context, io_libecc_context_callIndex);
+	return ECCNSValue.error(error(ECCNSContext.textSeek(context), message));
 }
 
 static
@@ -139,9 +139,9 @@ eccvalue_t rangeErrorConstructor (eccstate_t * const context)
 {
 	struct io_libecc_Chars *message;
 	
-	message = messageValue(context, io_libecc_Context.argument(context, 0));
-	io_libecc_Context.setTextIndex(context, io_libecc_context_callIndex);
-	return ECCNSValue.error(rangeError(io_libecc_Context.textSeek(context), message));
+	message = messageValue(context, ECCNSContext.argument(context, 0));
+	ECCNSContext.setTextIndex(context, io_libecc_context_callIndex);
+	return ECCNSValue.error(rangeError(ECCNSContext.textSeek(context), message));
 }
 
 static
@@ -149,9 +149,9 @@ eccvalue_t referenceErrorConstructor (eccstate_t * const context)
 {
 	struct io_libecc_Chars *message;
 	
-	message = messageValue(context, io_libecc_Context.argument(context, 0));
-	io_libecc_Context.setTextIndex(context, io_libecc_context_callIndex);
-	return ECCNSValue.error(referenceError(io_libecc_Context.textSeek(context), message));
+	message = messageValue(context, ECCNSContext.argument(context, 0));
+	ECCNSContext.setTextIndex(context, io_libecc_context_callIndex);
+	return ECCNSValue.error(referenceError(ECCNSContext.textSeek(context), message));
 }
 
 static
@@ -159,9 +159,9 @@ eccvalue_t syntaxErrorConstructor (eccstate_t * const context)
 {
 	struct io_libecc_Chars *message;
 	
-	message = messageValue(context, io_libecc_Context.argument(context, 0));
-	io_libecc_Context.setTextIndex(context, io_libecc_context_callIndex);
-	return ECCNSValue.error(syntaxError(io_libecc_Context.textSeek(context), message));
+	message = messageValue(context, ECCNSContext.argument(context, 0));
+	ECCNSContext.setTextIndex(context, io_libecc_context_callIndex);
+	return ECCNSValue.error(syntaxError(ECCNSContext.textSeek(context), message));
 }
 
 static
@@ -169,9 +169,9 @@ eccvalue_t typeErrorConstructor (eccstate_t * const context)
 {
 	struct io_libecc_Chars *message;
 	
-	message = messageValue(context, io_libecc_Context.argument(context, 0));
-	io_libecc_Context.setTextIndex(context, io_libecc_context_callIndex);
-	return ECCNSValue.error(typeError(io_libecc_Context.textSeek(context), message));
+	message = messageValue(context, ECCNSContext.argument(context, 0));
+	ECCNSContext.setTextIndex(context, io_libecc_context_callIndex);
+	return ECCNSValue.error(typeError(ECCNSContext.textSeek(context), message));
 }
 
 static
@@ -179,9 +179,9 @@ eccvalue_t uriErrorConstructor (eccstate_t * const context)
 {
 	struct io_libecc_Chars *message;
 	
-	message = messageValue(context, io_libecc_Context.argument(context, 0));
-	io_libecc_Context.setTextIndex(context, io_libecc_context_callIndex);
-	return ECCNSValue.error(uriError(io_libecc_Context.textSeek(context), message));
+	message = messageValue(context, ECCNSContext.argument(context, 0));
+	ECCNSContext.setTextIndex(context, io_libecc_context_callIndex);
+	return ECCNSValue.error(uriError(ECCNSContext.textSeek(context), message));
 }
 
 static
@@ -189,9 +189,9 @@ eccvalue_t evalErrorConstructor (eccstate_t * const context)
 {
 	struct io_libecc_Chars *message;
 	
-	message = messageValue(context, io_libecc_Context.argument(context, 0));
-	io_libecc_Context.setTextIndex(context, io_libecc_context_callIndex);
-	return ECCNSValue.error(evalError(io_libecc_Context.textSeek(context), message));
+	message = messageValue(context, ECCNSContext.argument(context, 0));
+	ECCNSContext.setTextIndex(context, io_libecc_context_callIndex);
+	return ECCNSValue.error(evalError(ECCNSContext.textSeek(context), message));
 }
 
 static
@@ -202,7 +202,7 @@ void setupBuiltinObject (struct io_libecc_Function **constructor, const io_libec
 		prototype, ECCNSValue.error(error(*name, NULL)),
 		&io_libecc_error_type);
 	
-	io_libecc_Object.addMember(*prototype, io_libecc_key_name, ECCNSValue.text(name), io_libecc_value_hidden);
+	ECCNSObject.addMember(*prototype, io_libecc_key_name, ECCNSValue.text(name), io_libecc_value_hidden);
 }
 
 // MARK: - Methods
@@ -221,7 +221,7 @@ void setup (void)
 	
 	io_libecc_Function.addToObject(io_libecc_error_prototype, "toString", toString, 0, h);
 	
-	io_libecc_Object.addMember(io_libecc_error_prototype, io_libecc_key_message, ECCNSValue.text(&ECC_ConstString_Empty), h);
+	ECCNSObject.addMember(io_libecc_error_prototype, io_libecc_key_message, ECCNSValue.text(&ECC_ConstString_Empty), h);
 }
 
 void teardown (void)
@@ -286,7 +286,7 @@ void destroy (struct io_libecc_Error *self)
 	if (!self)
 		return;
 	
-	io_libecc_Object.finalize(&self->object);
+	ECCNSObject.finalize(&self->object);
 	
 	free(self), self = NULL;
 }

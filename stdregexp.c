@@ -342,8 +342,8 @@ enum Opcode character (ecctextstring_t text, int16_t *offset, char buffer[12], i
 {
 	if (ignoreCase)
 	{
-		char *split = io_libecc_Text.toLower(text, buffer);
-		char *check = io_libecc_Text.toUpper(text, split);
+		char *split = ECCNSText.toLower(text, buffer);
+		char *check = ECCNSText.toUpper(text, split);
 		ptrdiff_t length = check - buffer;
 		int codepoints = 0;
 		
@@ -425,7 +425,7 @@ struct io_libecc_regexp_Node * term (struct Parse *p, struct io_libecc_Error **e
 				opcode = escape(p, &offset, buffer);
 				if (opcode == opBytes)
 				{
-					text = io_libecc_Text.make(buffer, offset);
+					text = ECCNSText.make(buffer, offset);
 					return characterNode(text, p->ignoreCase);
 				}
 				else
@@ -448,7 +448,7 @@ struct io_libecc_regexp_Node * term (struct Parse *p, struct io_libecc_Error **e
 			count = ++p->count;
 			if ((int)count * 2 + 1 > 0xff)
 			{
-				*error = io_libecc_Error.syntaxError(io_libecc_Text.make(p->c, 1), io_libecc_Chars.create("too many captures"));
+				*error = io_libecc_Error.syntaxError(ECCNSText.make(p->c, 1), io_libecc_Chars.create("too many captures"));
 				return NULL;
 			}
 		}
@@ -457,7 +457,7 @@ struct io_libecc_regexp_Node * term (struct Parse *p, struct io_libecc_Error **e
 		if (!accept(p, ')'))
 		{
 			if (!*error)
-				*error = io_libecc_Error.syntaxError(io_libecc_Text.make(p->c, 1), io_libecc_Chars.create("expect ')'"));
+				*error = io_libecc_Error.syntaxError(ECCNSText.make(p->c, 1), io_libecc_Chars.create("expect ')'"));
 			
 			return NULL;
 		}
@@ -525,17 +525,17 @@ struct io_libecc_regexp_Node * term (struct Parse *p, struct io_libecc_Error **e
 			{
 				if (opcode == opBytes)
 				{
-					ecctextstring_t text = io_libecc_Text.make(buffer + range, length - range);
+					ecctextstring_t text = ECCNSText.make(buffer + range, length - range);
 					ecctextchar_t from, to;
 					
-					from = io_libecc_Text.nextCharacter(&text);
-					io_libecc_Text.advance(&text, 1);
-					to = io_libecc_Text.nextCharacter(&text);
+					from = ECCNSText.nextCharacter(&text);
+					ECCNSText.advance(&text, 1);
+					to = ECCNSText.nextCharacter(&text);
 					
 					if (from.codepoint > to.codepoint)
 					{
 						toss(n);
-						*error = io_libecc_Error.syntaxError(io_libecc_Text.make(p->c - length - range, length - range), io_libecc_Chars.create("range out of order in character class"));
+						*error = io_libecc_Error.syntaxError(ECCNSText.make(p->c - length - range, length - range), io_libecc_Chars.create("range out of order in character class"));
 						return NULL;
 					}
 					
@@ -563,7 +563,7 @@ struct io_libecc_regexp_Node * term (struct Parse *p, struct io_libecc_Error **e
 			
 			if (p->c >= p->end || length >= sizeof(buffer))
 			{
-				*error = io_libecc_Error.syntaxError(io_libecc_Text.make(p->c - 1, 1), io_libecc_Chars.create("expect ']'"));
+				*error = io_libecc_Error.syntaxError(ECCNSText.make(p->c - 1, 1), io_libecc_Chars.create("expect ']'"));
 				return NULL;
 			}
 		}
@@ -573,22 +573,22 @@ struct io_libecc_regexp_Node * term (struct Parse *p, struct io_libecc_Error **e
 			char casebuffer[6];
 			ecctextstring_t single;
 			ecctextchar_t c;
-			text = io_libecc_Text.make(buffer + length, length);
+			text = ECCNSText.make(buffer + length, length);
 			
 			while (text.length)
 			{
-				c = io_libecc_Text.prevCharacter(&text);
+				c = ECCNSText.prevCharacter(&text);
 				single = text;
 				single.length = c.units;
 				
-				offset = io_libecc_Text.toLower(single, casebuffer) - casebuffer;
+				offset = ECCNSText.toLower(single, casebuffer) - casebuffer;
 				if (memcmp(text.bytes, casebuffer, offset))
 				{
 					memcpy(buffer + length, casebuffer, offset);
 					length += offset;
 				}
 				
-				offset = io_libecc_Text.toUpper(single, casebuffer) - casebuffer;
+				offset = ECCNSText.toUpper(single, casebuffer) - casebuffer;
 				if (memcmp(text.bytes, casebuffer, offset))
 				{
 					memcpy(buffer + length, casebuffer, offset);
@@ -604,8 +604,8 @@ struct io_libecc_regexp_Node * term (struct Parse *p, struct io_libecc_Error **e
 	else if (*p->c && strchr("*+?)}|", *p->c))
 		return NULL;
 	
-	text = io_libecc_Text.make(p->c, (int32_t)(p->end - p->c));
-	text.length = io_libecc_Text.character(text).units;
+	text = ECCNSText.make(p->c, (int32_t)(p->end - p->c));
+	text.length = ECCNSText.character(text).units;
 	p->c += text.length;
 	return characterNode(text, p->ignoreCase);
 }
@@ -658,7 +658,7 @@ struct io_libecc_regexp_Node * alternative (struct Parse *p, struct io_libecc_Er
 					}
 					else
 					{
-						*error = io_libecc_Error.syntaxError(io_libecc_Text.make(p->c, 1), io_libecc_Chars.create("expect number"));
+						*error = io_libecc_Error.syntaxError(ECCNSText.make(p->c, 1), io_libecc_Chars.create("expect number"));
 						goto error;
 					}
 					
@@ -683,7 +683,7 @@ struct io_libecc_regexp_Node * alternative (struct Parse *p, struct io_libecc_Er
 					
 					if (!accept(p, '}'))
 					{
-						*error = io_libecc_Error.syntaxError(io_libecc_Text.make(p->c, 1), io_libecc_Chars.create("expect '}'"));
+						*error = io_libecc_Error.syntaxError(ECCNSText.make(p->c, 1), io_libecc_Chars.create("expect '}'"));
 						goto error;
 					}
 					break;
@@ -835,37 +835,37 @@ start:
 			
 		case opLineStart:
 		{
-			ecctextstring_t prev = io_libecc_Text.make(text.bytes, (int32_t)(text.bytes - s->start));
-			if (text.bytes != s->start && !io_libecc_Text.isLineFeed(io_libecc_Text.prevCharacter(&prev)))
+			ecctextstring_t prev = ECCNSText.make(text.bytes, (int32_t)(text.bytes - s->start));
+			if (text.bytes != s->start && !ECCNSText.isLineFeed(ECCNSText.prevCharacter(&prev)))
 				return 0;
 			
 			goto next;
 		}
 			
 		case opLineEnd:
-			if (text.bytes != s->end && !io_libecc_Text.isLineFeed(io_libecc_Text.character(text)))
+			if (text.bytes != s->end && !ECCNSText.isLineFeed(ECCNSText.character(text)))
 				return 0;
 			
 			goto next;
 			
 		case opBoundary:
 		{
-			ecctextstring_t prev = io_libecc_Text.make(text.bytes, (int32_t)(text.bytes - s->start));
+			ecctextstring_t prev = ECCNSText.make(text.bytes, (int32_t)(text.bytes - s->start));
 			if (text.bytes == s->start)
 			{
-				if (io_libecc_Text.isWord(io_libecc_Text.character(text)) != n->offset)
+				if (ECCNSText.isWord(ECCNSText.character(text)) != n->offset)
 					return 0;
 			}
 			else if (text.bytes == s->end)
 			{
-				if (io_libecc_Text.isWord(io_libecc_Text.prevCharacter(&prev)) != n->offset)
+				if (ECCNSText.isWord(ECCNSText.prevCharacter(&prev)) != n->offset)
 					return 0;
 			}
 			else
 			{
-				if ((io_libecc_Text.isWord(io_libecc_Text.prevCharacter(&prev))
+				if ((ECCNSText.isWord(ECCNSText.prevCharacter(&prev))
 					!=
-					io_libecc_Text.isWord(io_libecc_Text.character(text))) != n->offset
+					ECCNSText.isWord(ECCNSText.character(text))) != n->offset
 					)
 					return 0;
 			}
@@ -890,7 +890,7 @@ start:
 				if (text.length < len || memcmp(text.bytes, s->capture[n->offset * 2], len))
 					return 0;
 				
-				io_libecc_Text.advance(&text, len);
+				ECCNSText.advance(&text, len);
 			}
 			goto next;
 		}
@@ -945,19 +945,19 @@ start:
 		}
 			
 		case opDigit:
-			if (text.length < 1 || io_libecc_Text.isDigit(io_libecc_Text.nextCharacter(&text)) != n->offset)
+			if (text.length < 1 || ECCNSText.isDigit(ECCNSText.nextCharacter(&text)) != n->offset)
 				return 0;
 			
 			goto next;
 			
 		case opSpace:
-			if (text.length < 1 || io_libecc_Text.isSpace(io_libecc_Text.nextCharacter(&text)) != n->offset)
+			if (text.length < 1 || ECCNSText.isSpace(ECCNSText.nextCharacter(&text)) != n->offset)
 				return 0;
 			
 			goto next;
 			
 		case opWord:
-			if (text.length < 1 || io_libecc_Text.isWord(io_libecc_Text.nextCharacter(&text)) != n->offset)
+			if (text.length < 1 || ECCNSText.isWord(ECCNSText.nextCharacter(&text)) != n->offset)
 				return 0;
 			
 			goto next;
@@ -966,7 +966,7 @@ start:
 			if (text.length < n->offset || memcmp(n->bytes, text.bytes, n->offset))
 				return 0;
 			
-			io_libecc_Text.advance(&text, n->offset);
+			ECCNSText.advance(&text, n->offset);
 			goto next;
 			
 		case opOneOf:
@@ -977,13 +977,13 @@ start:
 			if (!text.length)
 				return 0;
 			
-			c = io_libecc_Text.character(text);
+			c = ECCNSText.character(text);
 			memcpy(buffer, text.bytes, c.units);
 			buffer[c.units] = '\0';
 			
 			if (n->bytes && strstr(n->bytes, buffer))
 			{
-				io_libecc_Text.nextCharacter(&text);
+				ECCNSText.nextCharacter(&text);
 				goto next;
 			}
 			return 0;
@@ -997,49 +997,49 @@ start:
 			if (!text.length)
 				return 0;
 			
-			c = io_libecc_Text.character(text);
+			c = ECCNSText.character(text);
 			memcpy(buffer, text.bytes, c.units);
 			buffer[c.units] = '\0';
 			
 			if (n->bytes && strstr(n->bytes, buffer))
 				return 0;
 			
-			io_libecc_Text.nextCharacter(&text);
+			ECCNSText.nextCharacter(&text);
 			goto next;
 		}
 			
 		case opInRange:
 		case opInRangeCase:
 		{
-			ecctextstring_t range = io_libecc_Text.make(n->bytes, n->offset);
+			ecctextstring_t range = ECCNSText.make(n->bytes, n->offset);
 			ecctextchar_t from, to, c;
 			
 			if (!text.length)
 				return 0;
 			
-			from = io_libecc_Text.nextCharacter(&range);
-			io_libecc_Text.advance(&range, 1);
-			to = io_libecc_Text.nextCharacter(&range);
-			c = io_libecc_Text.character(text);
+			from = ECCNSText.nextCharacter(&range);
+			ECCNSText.advance(&range, 1);
+			to = ECCNSText.nextCharacter(&range);
+			c = ECCNSText.character(text);
 			
 			if (n->opcode == opInRangeCase)
 			{
 				char buffer[c.units];
-				ecctextstring_t casetext = io_libecc_Text.make(buffer, 0);
+				ecctextstring_t casetext = ECCNSText.make(buffer, 0);
 				
-				casetext.length = (int32_t)(io_libecc_Text.toLower(io_libecc_Text.make(text.bytes, (int32_t)sizeof(buffer)), buffer) - buffer);
-				c = io_libecc_Text.character(casetext);
+				casetext.length = (int32_t)(ECCNSText.toLower(ECCNSText.make(text.bytes, (int32_t)sizeof(buffer)), buffer) - buffer);
+				c = ECCNSText.character(casetext);
 				if (c.units == casetext.length && (c.codepoint >= from.codepoint && c.codepoint <= to.codepoint))
 				{
-					io_libecc_Text.nextCharacter(&text);
+					ECCNSText.nextCharacter(&text);
 					goto next;
 				}
 				
-				casetext.length = (int32_t)(io_libecc_Text.toUpper(io_libecc_Text.make(text.bytes, (int32_t)sizeof(buffer)), buffer) - buffer);
-				c = io_libecc_Text.character(casetext);
+				casetext.length = (int32_t)(ECCNSText.toUpper(ECCNSText.make(text.bytes, (int32_t)sizeof(buffer)), buffer) - buffer);
+				c = ECCNSText.character(casetext);
 				if (c.units == casetext.length && (c.codepoint >= from.codepoint && c.codepoint <= to.codepoint))
 				{
-					io_libecc_Text.nextCharacter(&text);
+					ECCNSText.nextCharacter(&text);
 					goto next;
 				}
 			}
@@ -1047,7 +1047,7 @@ start:
 			{
 				if ((c.codepoint >= from.codepoint && c.codepoint <= to.codepoint))
 				{
-					io_libecc_Text.nextCharacter(&text);
+					ECCNSText.nextCharacter(&text);
 					goto next;
 				}
 			}
@@ -1056,7 +1056,7 @@ start:
 		}
 			
 		case opAny:
-			if (text.length >= 1 && !io_libecc_Text.isLineFeed(io_libecc_Text.nextCharacter(&text)))
+			if (text.length >= 1 && !ECCNSText.isLineFeed(ECCNSText.nextCharacter(&text)))
 				goto next;
 			
 			return 0;
@@ -1086,8 +1086,8 @@ eccvalue_t constructor (eccstate_t * const context)
 {
 	eccvalue_t pattern, flags;
 	
-	pattern = io_libecc_Context.argument(context, 0);
-	flags = io_libecc_Context.argument(context, 1);
+	pattern = ECCNSContext.argument(context, 0);
+	flags = ECCNSContext.argument(context, 1);
 	
 	return ECCNSValue.regexp(createWith(context, pattern, flags));
 }
@@ -1097,7 +1097,7 @@ eccvalue_t toString (eccstate_t * const context)
 {
 	struct io_libecc_RegExp *self = context->this.data.regexp;
 	
-	io_libecc_Context.assertThisType(context, ECC_VALTYPE_REGEXP);
+	ECCNSContext.assertThisType(context, ECC_VALTYPE_REGEXP);
 	
 	return ECCNSValue.chars(self->pattern);
 }
@@ -1108,12 +1108,12 @@ eccvalue_t exec (eccstate_t * const context)
 	struct io_libecc_RegExp *self = context->this.data.regexp;
 	eccvalue_t value, lastIndex;
 	
-	io_libecc_Context.assertThisType(context, ECC_VALTYPE_REGEXP);
+	ECCNSContext.assertThisType(context, ECC_VALTYPE_REGEXP);
 	
-	value = ECCNSValue.toString(context, io_libecc_Context.argument(context, 0));
-	lastIndex = self->global? ECCNSValue.toInteger(context, io_libecc_Object.getMember(context, &self->object, io_libecc_key_lastIndex)): ECCNSValue.integer(0);
+	value = ECCNSValue.toString(context, ECCNSContext.argument(context, 0));
+	lastIndex = self->global? ECCNSValue.toInteger(context, ECCNSObject.getMember(context, &self->object, io_libecc_key_lastIndex)): ECCNSValue.integer(0);
 	
-	io_libecc_Object.putMember(context, &self->object, io_libecc_key_lastIndex, ECCNSValue.integer(0));
+	ECCNSObject.putMember(context, &self->object, io_libecc_key_lastIndex, ECCNSValue.integer(0));
 	
 	if (lastIndex.data.integer >= 0)
 	{
@@ -1147,10 +1147,10 @@ eccvalue_t exec (eccstate_t * const context)
 			}
 			
 			if (self->global)
-				io_libecc_Object.putMember(context, &self->object, io_libecc_key_lastIndex, ECCNSValue.integer(io_libecc_String.unitIndex(bytes, length, (int32_t)(capture[1] - bytes))));
+				ECCNSObject.putMember(context, &self->object, io_libecc_key_lastIndex, ECCNSValue.integer(io_libecc_String.unitIndex(bytes, length, (int32_t)(capture[1] - bytes))));
 			
-			io_libecc_Object.addMember(array, io_libecc_key_index, ECCNSValue.integer(io_libecc_String.unitIndex(bytes, length, (int32_t)(capture[0] - bytes))), 0);
-			io_libecc_Object.addMember(array, io_libecc_key_input, value, 0);
+			ECCNSObject.addMember(array, io_libecc_key_index, ECCNSValue.integer(io_libecc_String.unitIndex(bytes, length, (int32_t)(capture[0] - bytes))), 0);
+			ECCNSObject.addMember(array, io_libecc_key_input, value, 0);
 			
 			return ECCNSValue.object(array);
 		}
@@ -1164,12 +1164,12 @@ eccvalue_t test (eccstate_t * const context)
 	struct io_libecc_RegExp *self = context->this.data.regexp;
 	eccvalue_t value, lastIndex;
 	
-	io_libecc_Context.assertThisType(context, ECC_VALTYPE_REGEXP);
+	ECCNSContext.assertThisType(context, ECC_VALTYPE_REGEXP);
 	
-	value = ECCNSValue.toString(context, io_libecc_Context.argument(context, 0));
-	lastIndex = ECCNSValue.toInteger(context, io_libecc_Object.getMember(context, &self->object, io_libecc_key_lastIndex));
+	value = ECCNSValue.toString(context, ECCNSContext.argument(context, 0));
+	lastIndex = ECCNSValue.toInteger(context, ECCNSObject.getMember(context, &self->object, io_libecc_key_lastIndex));
 	
-	io_libecc_Object.putMember(context, &self->object, io_libecc_key_lastIndex, ECCNSValue.integer(0));
+	ECCNSObject.putMember(context, &self->object, io_libecc_key_lastIndex, ECCNSValue.integer(0));
 	
 	if (lastIndex.data.integer >= 0)
 	{
@@ -1188,7 +1188,7 @@ eccvalue_t test (eccstate_t * const context)
 		if (state.start >= bytes && state.start <= state.end && matchWithState(self, &state))
 		{
 			if (self->global)
-				io_libecc_Object.putMember(context, &self->object, io_libecc_key_lastIndex, ECCNSValue.integer(io_libecc_String.unitIndex(bytes, length, (int32_t)(capture[1] - bytes))));
+				ECCNSObject.putMember(context, &self->object, io_libecc_key_lastIndex, ECCNSValue.integer(io_libecc_String.unitIndex(bytes, length, (int32_t)(capture[1] - bytes))));
 			
 			return ECCValConstTrue;
 		}
@@ -1229,7 +1229,7 @@ struct io_libecc_RegExp * create (struct io_libecc_Chars *s, struct io_libecc_Er
 	*self = io_libecc_RegExp.identity;
 	io_libecc_Pool.addObject(&self->object);
 	
-	io_libecc_Object.initialize(&self->object, io_libecc_regexp_prototype);
+	ECCNSObject.initialize(&self->object, io_libecc_regexp_prototype);
 	
 	p.c = s->bytes;
 	p.end = s->bytes + s->length;
@@ -1265,21 +1265,21 @@ struct io_libecc_RegExp * create (struct io_libecc_Chars *s, struct io_libecc_Er
 			{
 				case 'g': g:
 					if (self->global == 1)
-						*error = io_libecc_Error.syntaxError(io_libecc_Text.make(p.c, 1), io_libecc_Chars.create("invalid flag"));
+						*error = io_libecc_Error.syntaxError(ECCNSText.make(p.c, 1), io_libecc_Chars.create("invalid flag"));
 					
 					self->global = 1;
 					continue;
 					
 				case 'i': i:
 					if (self->ignoreCase == 1)
-						*error = io_libecc_Error.syntaxError(io_libecc_Text.make(p.c, 1), io_libecc_Chars.create("invalid flag"));
+						*error = io_libecc_Error.syntaxError(ECCNSText.make(p.c, 1), io_libecc_Chars.create("invalid flag"));
 					
 					self->ignoreCase = 1;
 					continue;
 					
 				case 'm': m:
 					if (self->multiline == 1)
-						*error = io_libecc_Error.syntaxError(io_libecc_Text.make(p.c, 1), io_libecc_Chars.create("invalid flag"));
+						*error = io_libecc_Error.syntaxError(ECCNSText.make(p.c, 1), io_libecc_Chars.create("invalid flag"));
 					
 					self->multiline = 1;
 					continue;
@@ -1308,18 +1308,18 @@ struct io_libecc_RegExp * create (struct io_libecc_Chars *s, struct io_libecc_Er
 					}
 					
 				default:
-					*error = io_libecc_Error.syntaxError(io_libecc_Text.make(p.c, 1), io_libecc_Chars.create("invalid flag"));
+					*error = io_libecc_Error.syntaxError(ECCNSText.make(p.c, 1), io_libecc_Chars.create("invalid flag"));
 			}
 			break;
 		}
 	else if (error && !*error)
-		*error = io_libecc_Error.syntaxError(io_libecc_Text.make(p.c, 1), io_libecc_Chars.create("invalid character '%c'", isgraph(*p.c)? *p.c: '?'));
+		*error = io_libecc_Error.syntaxError(ECCNSText.make(p.c, 1), io_libecc_Chars.create("invalid character '%c'", isgraph(*p.c)? *p.c: '?'));
 	
-	io_libecc_Object.addMember(&self->object, io_libecc_key_source, ECCNSValue.chars(self->source), io_libecc_value_readonly | io_libecc_value_hidden | io_libecc_value_sealed);
-	io_libecc_Object.addMember(&self->object, io_libecc_key_global, ECCNSValue.truth(self->global), io_libecc_value_readonly | io_libecc_value_hidden | io_libecc_value_sealed);
-	io_libecc_Object.addMember(&self->object, io_libecc_key_ignoreCase, ECCNSValue.truth(self->ignoreCase), io_libecc_value_readonly | io_libecc_value_hidden | io_libecc_value_sealed);
-	io_libecc_Object.addMember(&self->object, io_libecc_key_multiline, ECCNSValue.truth(self->multiline), io_libecc_value_readonly | io_libecc_value_hidden | io_libecc_value_sealed);
-	io_libecc_Object.addMember(&self->object, io_libecc_key_lastIndex, ECCNSValue.integer(0), io_libecc_value_hidden | io_libecc_value_sealed);
+	ECCNSObject.addMember(&self->object, io_libecc_key_source, ECCNSValue.chars(self->source), io_libecc_value_readonly | io_libecc_value_hidden | io_libecc_value_sealed);
+	ECCNSObject.addMember(&self->object, io_libecc_key_global, ECCNSValue.truth(self->global), io_libecc_value_readonly | io_libecc_value_hidden | io_libecc_value_sealed);
+	ECCNSObject.addMember(&self->object, io_libecc_key_ignoreCase, ECCNSValue.truth(self->ignoreCase), io_libecc_value_readonly | io_libecc_value_hidden | io_libecc_value_sealed);
+	ECCNSObject.addMember(&self->object, io_libecc_key_multiline, ECCNSValue.truth(self->multiline), io_libecc_value_readonly | io_libecc_value_hidden | io_libecc_value_sealed);
+	ECCNSObject.addMember(&self->object, io_libecc_key_lastIndex, ECCNSValue.integer(0), io_libecc_value_hidden | io_libecc_value_sealed);
 	
 	return self;
 }
@@ -1371,11 +1371,11 @@ struct io_libecc_RegExp * createWith (eccstate_t *context, eccvalue_t pattern, e
 	regexp = create(value.data.chars, &error, context->ecc->sloppyMode? io_libecc_regexp_allowUnicodeFlags: 0);
 	if (error)
 	{
-		io_libecc_Context.setTextIndex(context, io_libecc_context_noIndex);
+		ECCNSContext.setTextIndex(context, io_libecc_context_noIndex);
 		context->ecc->ofLine = 1;
 		context->ecc->ofText = ECCNSValue.textOf(&value);
 		context->ecc->ofInput = "(io_libecc_RegExp)";
-		io_libecc_Context.throw(context, ECCNSValue.error(error));
+		ECCNSContext.throw(context, ECCNSValue.error(error));
 	}
 	return regexp;
 }
@@ -1384,7 +1384,7 @@ int matchWithState (struct io_libecc_RegExp *self, struct io_libecc_regexp_State
 {
 	int result = 0;
 	uint16_t index, count;
-	ecctextstring_t text = io_libecc_Text.make(state->start, (int32_t)(state->end - state->start));
+	ecctextstring_t text = ECCNSText.make(state->start, (int32_t)(state->end - state->start));
 	
 #if DUMP_REGEXP
 	struct io_libecc_regexp_Node *n = self->program;
@@ -1398,7 +1398,7 @@ int matchWithState (struct io_libecc_RegExp *self, struct io_libecc_regexp_State
 		memset(state->index, 0, sizeof(*state->index) * (self->count * 2));
 		state->capture[0] = state->index[0] = text.bytes;
 		result = match(state, self->program, text);
-		io_libecc_Text.nextCharacter(&text);
+		ECCNSText.nextCharacter(&text);
 	}
 	while (!result && text.length);
 	

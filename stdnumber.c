@@ -34,15 +34,15 @@ eccvalue_t toExponential (eccstate_t * const context)
 	eccvalue_t value;
 	double binary, precision = 0;
 	
-	io_libecc_Context.assertThisMask(context, ECC_VALMASK_NUMBER);
+	ECCNSContext.assertThisMask(context, ECC_VALMASK_NUMBER);
 	
 	binary = ECCNSValue.toBinary(context, context->this).data.binary;
-	value = io_libecc_Context.argument(context, 0);
+	value = ECCNSContext.argument(context, 0);
 	if (value.type != ECC_VALTYPE_UNDEFINED)
 	{
 		precision = ECCNSValue.toBinary(context, value).data.binary;
 		if (precision <= -1 || precision >= 21)
-			io_libecc_Context.rangeError(context, io_libecc_Chars.create("precision '%.0f' out of range", precision));
+			ECCNSContext.rangeError(context, io_libecc_Chars.create("precision '%.0f' out of range", precision));
 		
 		if (isnan(precision))
 			precision = 0;
@@ -73,15 +73,15 @@ eccvalue_t toFixed (eccstate_t * const context)
 	eccvalue_t value;
 	double binary, precision = 0;
 	
-	io_libecc_Context.assertThisMask(context, ECC_VALMASK_NUMBER);
+	ECCNSContext.assertThisMask(context, ECC_VALMASK_NUMBER);
 	
 	binary = ECCNSValue.toBinary(context, context->this).data.binary;
-	value = io_libecc_Context.argument(context, 0);
+	value = ECCNSContext.argument(context, 0);
 	if (value.type != ECC_VALTYPE_UNDEFINED)
 	{
 		precision = ECCNSValue.toBinary(context, value).data.binary;
 		if (precision <= -1 || precision >= 21)
-			io_libecc_Context.rangeError(context, io_libecc_Chars.create("precision '%.0f' out of range", precision));
+			ECCNSContext.rangeError(context, io_libecc_Chars.create("precision '%.0f' out of range", precision));
 		
 		if (isnan(precision))
 			precision = 0;
@@ -111,15 +111,15 @@ eccvalue_t toPrecision (eccstate_t * const context)
 	eccvalue_t value;
 	double binary, precision = 0;
 	
-	io_libecc_Context.assertThisMask(context, ECC_VALMASK_NUMBER);
+	ECCNSContext.assertThisMask(context, ECC_VALMASK_NUMBER);
 	
 	binary = ECCNSValue.toBinary(context, context->this).data.binary;
-	value = io_libecc_Context.argument(context, 0);
+	value = ECCNSContext.argument(context, 0);
 	if (value.type != ECC_VALTYPE_UNDEFINED)
 	{
 		precision = ECCNSValue.toBinary(context, value).data.binary;
 		if (precision <= -1 || precision >= 101)
-			io_libecc_Context.rangeError(context, io_libecc_Chars.create("precision '%.0f' out of range", precision));
+			ECCNSContext.rangeError(context, io_libecc_Chars.create("precision '%.0f' out of range", precision));
 		
 		if (isnan(precision))
 			precision = 0;
@@ -152,18 +152,18 @@ eccvalue_t toString (eccstate_t * const context)
 	int32_t radix = 10;
 	double binary;
 	
-	io_libecc_Context.assertThisMask(context, ECC_VALMASK_NUMBER);
+	ECCNSContext.assertThisMask(context, ECC_VALMASK_NUMBER);
 	
 	binary = ECCNSValue.toBinary(context, context->this).data.binary;
-	value = io_libecc_Context.argument(context, 0);
+	value = ECCNSContext.argument(context, 0);
 	if (value.type != ECC_VALTYPE_UNDEFINED)
 	{
 		radix = ECCNSValue.toInteger(context, value).data.integer;
 		if (radix < 2 || radix > 36)
-			io_libecc_Context.rangeError(context, io_libecc_Chars.create("radix must be an integer at least 2 and no greater than 36"));
+			ECCNSContext.rangeError(context, io_libecc_Chars.create("radix must be an integer at least 2 and no greater than 36"));
 		
 		if (radix != 10 && (binary < LONG_MIN || binary > LONG_MAX))
-			io_libecc_Env.printWarning("%g.toString(%d) out of bounds; only long int are supported by radices other than 10", binary, radix);
+			ECCNSEnv.printWarning("%g.toString(%d) out of bounds; only long int are supported by radices other than 10", binary, radix);
 	}
 	
 	return ECCNSValue.binaryToString(binary, radix);
@@ -172,7 +172,7 @@ eccvalue_t toString (eccstate_t * const context)
 static
 eccvalue_t valueOf (eccstate_t * const context)
 {
-	io_libecc_Context.assertThisType(context, ECC_VALTYPE_NUMBER);
+	ECCNSContext.assertThisType(context, ECC_VALTYPE_NUMBER);
 	
 	return ECCNSValue.binary(context->this.data.number->value);
 }
@@ -182,7 +182,7 @@ eccvalue_t constructor (eccstate_t * const context)
 {
 	eccvalue_t value;
 	
-	value = io_libecc_Context.argument(context, 0);
+	value = ECCNSContext.argument(context, 0);
 	if (value.type == ECC_VALTYPE_UNDEFINED)
 		value = ECCNSValue.binary(value.check == 1? NAN: 0);
 	else
@@ -232,7 +232,7 @@ struct io_libecc_Number * create (double binary)
 	struct io_libecc_Number *self = malloc(sizeof(*self));
 	*self = io_libecc_Number.identity;
 	io_libecc_Pool.addObject(&self->object);
-	io_libecc_Object.initialize(&self->object, io_libecc_number_prototype);
+	ECCNSObject.initialize(&self->object, io_libecc_number_prototype);
 	
 	self->value = binary;
 	

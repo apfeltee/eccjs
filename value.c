@@ -299,7 +299,7 @@ int isTrue (eccvalue_t value)
 	else if (isString(value))
 		return stringLength(&value) > 0;
 	
-	io_libecc_Ecc.fatal("Invalid io_libecc_value_Type : %u", value.type);
+	ECCNSScript.fatal("Invalid io_libecc_value_Type : %u", value.type);
 }
 
 
@@ -319,34 +319,34 @@ eccvalue_t toPrimitive (eccstate_t * const context, eccvalue_t value, enum io_li
 		return value;
 	
 	if (!context)
-		io_libecc_Ecc.fatal("cannot use toPrimitive outside context");
+		ECCNSScript.fatal("cannot use toPrimitive outside context");
 	
 	object = value.data.object;
 	hint = hint? hint: value.type == ECC_VALTYPE_DATE? io_libecc_value_hintString: io_libecc_value_hintNumber;
 	aKey = hint > 0? io_libecc_key_toString: io_libecc_key_valueOf;
 	bKey = hint > 0? io_libecc_key_valueOf: io_libecc_key_toString;
 	
-	aFunction = io_libecc_Object.getMember(context, object, aKey);
+	aFunction = ECCNSObject.getMember(context, object, aKey);
 	if (aFunction.type == ECC_VALTYPE_FUNCTION)
 	{
-		eccvalue_t result = io_libecc_Context.callFunction(context, aFunction.data.function, value, 0 | io_libecc_context_asAccessor);
+		eccvalue_t result = ECCNSContext.callFunction(context, aFunction.data.function, value, 0 | io_libecc_context_asAccessor);
 		if (isPrimitive(result))
 			return result;
 	}
 	
-	bFunction = io_libecc_Object.getMember(context, object, bKey);
+	bFunction = ECCNSObject.getMember(context, object, bKey);
 	if (bFunction.type == ECC_VALTYPE_FUNCTION)
 	{
-		result = io_libecc_Context.callFunction(context, bFunction.data.function, value, 0 | io_libecc_context_asAccessor);
+		result = ECCNSContext.callFunction(context, bFunction.data.function, value, 0 | io_libecc_context_asAccessor);
 		if (isPrimitive(result))
 			return result;
 	}
 	
-	text = io_libecc_Context.textSeek(context);
+	text = ECCNSContext.textSeek(context);
 	if (context->textIndex != io_libecc_context_callIndex && text.length)
-		io_libecc_Context.typeError(context, io_libecc_Chars.create("cannot convert '%.*s' to primitive", text.length, text.bytes));
+		ECCNSContext.typeError(context, io_libecc_Chars.create("cannot convert '%.*s' to primitive", text.length, text.bytes));
 	else
-		io_libecc_Context.typeError(context, io_libecc_Chars.create("cannot convert value to primitive"));
+		ECCNSContext.typeError(context, io_libecc_Chars.create("cannot convert value to primitive"));
 }
 
 eccvalue_t toBinary (eccstate_t * const context, eccvalue_t value)
@@ -406,7 +406,7 @@ eccvalue_t toBinary (eccstate_t * const context, eccvalue_t value)
 		case ECC_VALTYPE_REFERENCE:
 			break;
 	}
-	io_libecc_Ecc.fatal("Invalid io_libecc_value_Type : %u", value.type);
+	ECCNSScript.fatal("Invalid io_libecc_value_Type : %u", value.type);
 }
 
 eccvalue_t toInteger (eccstate_t * const context, eccvalue_t value)
@@ -503,7 +503,7 @@ eccvalue_t toString (eccstate_t * const context, eccvalue_t value)
 		case ECC_VALTYPE_REFERENCE:
 			break;
 	}
-	io_libecc_Ecc.fatal("Invalid io_libecc_value_Type : %u", value.type);
+	ECCNSScript.fatal("Invalid io_libecc_value_Type : %u", value.type);
 }
 
 int32_t stringLength (const eccvalue_t *value)
@@ -553,19 +553,19 @@ ecctextstring_t textOf (const eccvalue_t *value)
 	switch (value->type)
 	{
 		case ECC_VALTYPE_CHARS:
-			return io_libecc_Text.make(value->data.chars->bytes, value->data.chars->length);
+			return ECCNSText.make(value->data.chars->bytes, value->data.chars->length);
 			
 		case ECC_VALTYPE_TEXT:
 			return *value->data.text;
 			
 		case ECC_VALTYPE_STRING:
-			return io_libecc_Text.make(value->data.string->value->bytes, value->data.string->value->length);
+			return ECCNSText.make(value->data.string->value->bytes, value->data.string->value->length);
 			
 		case ECC_VALTYPE_KEY:
 			return *io_libecc_Key.textOf(value->data.key);
 			
 		case ECC_VALTYPE_BUFFER:
-			return io_libecc_Text.make(value->data.buffer, value->data.buffer[7]);
+			return ECCNSText.make(value->data.buffer, value->data.buffer[7]);
 			
 		default:
 			return ECC_ConstString_Empty;
@@ -613,16 +613,16 @@ eccvalue_t toObject (eccstate_t * const context, eccvalue_t value)
 		case ECC_VALTYPE_HOST:
 			break;
 	}
-	io_libecc_Ecc.fatal("Invalid io_libecc_value_Type : %u", value.type);
+	ECCNSScript.fatal("Invalid io_libecc_value_Type : %u", value.type);
 	
 error:
 	{
-		ecctextstring_t text = io_libecc_Context.textSeek(context);
+		ecctextstring_t text = ECCNSContext.textSeek(context);
 		
 		if (context->textIndex != io_libecc_context_callIndex && text.length)
-			io_libecc_Context.typeError(context, io_libecc_Chars.create("cannot convert '%.*s' to object", text.length, text.bytes));
+			ECCNSContext.typeError(context, io_libecc_Chars.create("cannot convert '%.*s' to object", text.length, text.bytes));
 		else
-			io_libecc_Context.typeError(context, io_libecc_Chars.create("cannot convert %s to object", typeName(value.type)));
+			ECCNSContext.typeError(context, io_libecc_Chars.create("cannot convert %s to object", typeName(value.type)));
 	}
 }
 
@@ -697,7 +697,7 @@ eccvalue_t toType (eccvalue_t value)
 		case ECC_VALTYPE_REFERENCE:
 			break;
 	}
-	io_libecc_Ecc.fatal("Invalid io_libecc_value_Type : %u", value.type);
+	ECCNSScript.fatal("Invalid io_libecc_value_Type : %u", value.type);
 }
 
 eccvalue_t equals (eccstate_t * const context, eccvalue_t a, eccvalue_t b)
@@ -709,7 +709,7 @@ eccvalue_t equals (eccstate_t * const context, eccvalue_t a, eccvalue_t b)
 			 )
 	{
 		a = toPrimitive(context, a, io_libecc_value_hintAuto);
-		io_libecc_Context.setTextIndex(context, io_libecc_context_savedIndexAlt);
+		ECCNSContext.setTextIndex(context, io_libecc_context_savedIndexAlt);
 		b = toPrimitive(context, b, io_libecc_value_hintAuto);
 		
 		return equals(context, a, b);
@@ -769,7 +769,7 @@ eccvalue_t add (eccstate_t * const context, eccvalue_t a, eccvalue_t b)
 	if (!isNumber(a) || !isNumber(b))
 	{
 		a = toPrimitive(context, a, io_libecc_value_hintAuto);
-		io_libecc_Context.setTextIndex(context, io_libecc_context_savedIndexAlt);
+		ECCNSContext.setTextIndex(context, io_libecc_context_savedIndexAlt);
 		b = toPrimitive(context, b, io_libecc_value_hintAuto);
 		
 		if (isString(a) || isString(b))
@@ -794,7 +794,7 @@ static
 eccvalue_t compare (eccstate_t * const context, eccvalue_t a, eccvalue_t b)
 {
 	a = toPrimitive(context, a, io_libecc_value_hintNumber);
-	io_libecc_Context.setTextIndex(context, io_libecc_context_savedIndexAlt);
+	ECCNSContext.setTextIndex(context, io_libecc_context_savedIndexAlt);
 	b = toPrimitive(context, b, io_libecc_value_hintNumber);
 	
 	if (isString(a) && isString(b))
@@ -910,7 +910,7 @@ const char * typeName (eccvaltype_t type)
 		case ECC_VALTYPE_REFERENCE:
 			break;
 	}
-	io_libecc_Ecc.fatal("Invalid io_libecc_value_Type : %u", type);
+	ECCNSScript.fatal("Invalid io_libecc_value_Type : %u", type);
 }
 
 const char * maskName (enum io_libecc_value_Mask mask)
@@ -932,7 +932,7 @@ const char * maskName (enum io_libecc_value_Mask mask)
 		case ECC_VALMASK_DYNAMIC:
 			return "dynamic";
 	}
-	io_libecc_Ecc.fatal("Invalid io_libecc_value_Mask : %u", mask);
+	ECCNSScript.fatal("Invalid io_libecc_value_Mask : %u", mask);
 }
 
 void dumpTo (eccvalue_t value, FILE *file)
@@ -989,7 +989,7 @@ void dumpTo (eccvalue_t value, FILE *file)
 		case ECC_VALTYPE_ERROR:
 		case ECC_VALTYPE_REGEXP:
 		case ECC_VALTYPE_HOST:
-			io_libecc_Object.dumpTo(value.data.object, file);
+			ECCNSObject.dumpTo(value.data.object, file);
 			return;
 		
 		case ECC_VALTYPE_FUNCTION:

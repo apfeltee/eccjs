@@ -14,7 +14,7 @@
 static const struct {
  const char *name;
  size_t length;
- enum io_libecc_lexer_Token token;
+ eccasttoktype_t token;
 } keywords[] = {
  { eccmac_stringandlen("break"), io_libecc_lexer_breakToken },
  { eccmac_stringandlen("case"), io_libecc_lexer_caseToken },
@@ -75,10 +75,10 @@ static const struct {
 
 // MARK: - Static Members
 
-static struct io_libecc_Lexer* createWithInput(struct io_libecc_Input*);
-static void destroy(struct io_libecc_Lexer*);
-static enum io_libecc_lexer_Token nextToken(struct io_libecc_Lexer*);
-static const char* tokenChars(enum io_libecc_lexer_Token token, char buffer[4]);
+static eccastlexer_t* createWithInput(eccioinput_t*);
+static void destroy(eccastlexer_t*);
+static eccasttoktype_t nextToken(eccastlexer_t*);
+static const char* tokenChars(eccasttoktype_t token, char buffer[4]);
 static eccvalue_t scanBinary(ecctextstring_t text, enum io_libecc_lexer_ScanFlags);
 static eccvalue_t scanInteger(ecctextstring_t text, int base, enum io_libecc_lexer_ScanFlags);
 static uint32_t scanElement(ecctextstring_t text);
@@ -89,7 +89,7 @@ const struct type_io_libecc_Lexer io_libecc_Lexer = {
 };
 
 static
-void addLine(struct io_libecc_Lexer *self, uint32_t offset)
+void addLine(eccastlexer_t *self, uint32_t offset)
 {
 	if (self->input->lineCount + 1 >= self->input->lineCapacity)
 	{
@@ -100,7 +100,7 @@ void addLine(struct io_libecc_Lexer *self, uint32_t offset)
 }
 
 static
-unsigned char previewChar(struct io_libecc_Lexer *self)
+unsigned char previewChar(eccastlexer_t *self)
 {
 	if (self->offset < self->input->length)
 		return self->input->bytes[self->offset];
@@ -109,15 +109,15 @@ unsigned char previewChar(struct io_libecc_Lexer *self)
 }
 
 static
-uint32_t nextChar(struct io_libecc_Lexer *self)
+uint32_t nextChar(eccastlexer_t *self)
 {
 	if (self->offset < self->input->length)
 	{
-		ecctextchar_t c = io_libecc_Text.character(io_libecc_Text.make(self->input->bytes + self->offset, self->input->length - self->offset));
+		ecctextchar_t c = ECCNSText.character(ECCNSText.make(self->input->bytes + self->offset, self->input->length - self->offset));
 		
 		self->offset += c.units;
 		
-		if ((self->allowUnicodeOutsideLiteral && io_libecc_Text.isLineFeed(c))
+		if ((self->allowUnicodeOutsideLiteral && ECCNSText.isLineFeed(c))
 			|| (c.codepoint == '\r' && previewChar(self) != '\n')
 			|| c.codepoint == '\n'
 			)
@@ -126,7 +126,7 @@ uint32_t nextChar(struct io_libecc_Lexer *self)
 			addLine(self, self->offset);
 			c.codepoint = '\n';
 		}
-		else if (self->allowUnicodeOutsideLiteral && io_libecc_Text.isSpace(c))
+		else if (self->allowUnicodeOutsideLiteral && ECCNSText.isSpace(c))
 			c.codepoint = ' ';
 		
 		self->text.length += c.units;
@@ -137,7 +137,7 @@ uint32_t nextChar(struct io_libecc_Lexer *self)
 }
 
 static
-int acceptChar(struct io_libecc_Lexer *self, char c)
+int acceptChar(eccastlexer_t *self, char c)
 {
 	if (previewChar(self) == c)
 	{
@@ -149,13 +149,13 @@ int acceptChar(struct io_libecc_Lexer *self, char c)
 }
 
 static
-char eof(struct io_libecc_Lexer *self)
+char eof(eccastlexer_t *self)
 {
 	return self->offset >= self->input->length;
 }
 
 static
-enum io_libecc_lexer_Token syntaxError(struct io_libecc_Lexer *self, struct io_libecc_Chars *message)
+eccasttoktype_t syntaxError(eccastlexer_t *self, struct io_libecc_Chars *message)
 {
 	struct io_libecc_Error *error = io_libecc_Error.syntaxError(self->text, message);
 	self->value = ECCNSValue.error(error);
@@ -164,9 +164,9 @@ enum io_libecc_lexer_Token syntaxError(struct io_libecc_Lexer *self, struct io_l
 
 // MARK: - Methods
 
-struct io_libecc_Lexer * createWithInput(struct io_libecc_Input *input)
+eccastlexer_t * createWithInput(eccioinput_t *input)
 {
-	struct io_libecc_Lexer *self = malloc(sizeof(*self));
+	eccastlexer_t *self = malloc(sizeof(*self));
 	*self = io_libecc_Lexer.identity;
 	
 	assert(input);
@@ -175,7 +175,7 @@ struct io_libecc_Lexer * createWithInput(struct io_libecc_Input *input)
 	return self;
 }
 
-void destroy (struct io_libecc_Lexer *self)
+void destroy (eccastlexer_t *self)
 {
 	assert(self);
 	
@@ -183,7 +183,7 @@ void destroy (struct io_libecc_Lexer *self)
 	free(self), self = NULL;
 }
 
-enum io_libecc_lexer_Token nextToken (struct io_libecc_Lexer *self)
+eccasttoktype_t nextToken (eccastlexer_t *self)
 {
 	uint32_t c;
 	assert(self);
@@ -301,7 +301,7 @@ enum io_libecc_lexer_Token nextToken (struct io_libecc_Lexer *self)
 												index += 2;
 												break;
 											}
-											self->text = io_libecc_Text.make(self->text.bytes + index - 1, 4);
+											self->text = ECCNSText.make(self->text.bytes + index - 1, 4);
 											return syntaxError(self, io_libecc_Chars.create("malformed hexadecimal character escape sequence"));
 										
 										case 'u':
@@ -311,7 +311,7 @@ enum io_libecc_lexer_Token nextToken (struct io_libecc_Lexer *self)
 												index += 4;
 												break;
 											}
-											self->text = io_libecc_Text.make(self->text.bytes + index - 1, 6);
+											self->text = ECCNSText.make(self->text.bytes + index - 1, 6);
 											return syntaxError(self, io_libecc_Chars.create("malformed Unicode character escape sequence"));
 											
 										case '\r':
@@ -563,7 +563,7 @@ enum io_libecc_lexer_Token nextToken (struct io_libecc_Lexer *self)
 								return syntaxError(self, io_libecc_Chars.create("incomplete unicode escape"));
 						}
 						
-						if (io_libecc_Text.isSpace((ecctextchar_t){ c }))
+						if (ECCNSText.isSpace((ecctextchar_t){ c }))
 							break;
 						
 						text = self->text;
@@ -584,20 +584,20 @@ enum io_libecc_lexer_Token nextToken (struct io_libecc_Lexer *self)
 						
 						while (text.length)
 						{
-							c = io_libecc_Text.nextCharacter(&text).codepoint;
+							c = ECCNSText.nextCharacter(&text).codepoint;
 							
-							if (c == '\\' && io_libecc_Text.nextCharacter(&text).codepoint == 'u')
+							if (c == '\\' && ECCNSText.nextCharacter(&text).codepoint == 'u')
 							{
 								char
-									u1 = io_libecc_Text.nextCharacter(&text).codepoint,
-									u2 = io_libecc_Text.nextCharacter(&text).codepoint,
-									u3 = io_libecc_Text.nextCharacter(&text).codepoint,
-									u4 = io_libecc_Text.nextCharacter(&text).codepoint;
+									u1 = ECCNSText.nextCharacter(&text).codepoint,
+									u2 = ECCNSText.nextCharacter(&text).codepoint,
+									u3 = ECCNSText.nextCharacter(&text).codepoint,
+									u4 = ECCNSText.nextCharacter(&text).codepoint;
 								
 								if (isxdigit(u1) && isxdigit(u2) && isxdigit(u3) && isxdigit(u4))
 									c = uint16Hex(u1, u2, u3, u4);
 								else
-									io_libecc_Text.advance(&text, -5);
+									ECCNSText.advance(&text, -5);
 							}
 							
 							io_libecc_Chars.appendCodepoint(&chars, c);
@@ -639,13 +639,13 @@ enum io_libecc_lexer_Token nextToken (struct io_libecc_Lexer *self)
 	return io_libecc_lexer_noToken;
 }
 
-const char * tokenChars (enum io_libecc_lexer_Token token, char buffer[4])
+const char * tokenChars (eccasttoktype_t token, char buffer[4])
 {
 	int index;
     struct
     {
         const char* name;
-        const enum io_libecc_lexer_Token token;
+        const eccasttoktype_t token;
     } static const tokenList[] =
     {
         { (sizeof("end of script") > sizeof("") ? "end of script" : "no"), io_libecc_lexer_noToken },
@@ -738,17 +738,17 @@ eccvalue_t scanBinary (ecctextstring_t text, enum io_libecc_lexer_ScanFlags flag
 	
 	if (flags & io_libecc_lexer_scanSloppy)
 	{
-		ecctextstring_t tail = io_libecc_Text.make(text.bytes + text.length, text.length);
+		ecctextstring_t tail = ECCNSText.make(text.bytes + text.length, text.length);
 		
-		while (tail.length && io_libecc_Text.isSpace(io_libecc_Text.prevCharacter(&tail)))
+		while (tail.length && ECCNSText.isSpace(ECCNSText.prevCharacter(&tail)))
 			text.length = tail.length;
 		
-		while (text.length && io_libecc_Text.isSpace(io_libecc_Text.character(text)))
-			io_libecc_Text.nextCharacter(&text);
+		while (text.length && ECCNSText.isSpace(ECCNSText.character(text)))
+			ECCNSText.nextCharacter(&text);
 	}
 	else
 		while (text.length && isspace(*text.bytes))
-			io_libecc_Text.advance(&text, 1);
+			ECCNSText.advance(&text, 1);
 	
 	memcpy(buffer, text.bytes, text.length);
 	buffer[text.length] = '\0';
@@ -815,17 +815,17 @@ eccvalue_t scanInteger (ecctextstring_t text, int base, enum io_libecc_lexer_Sca
 	
 	if (flags & io_libecc_lexer_scanSloppy)
 	{
-		ecctextstring_t tail = io_libecc_Text.make(text.bytes + text.length, text.length);
+		ecctextstring_t tail = ECCNSText.make(text.bytes + text.length, text.length);
 		
-		while (tail.length && io_libecc_Text.isSpace(io_libecc_Text.prevCharacter(&tail)))
+		while (tail.length && ECCNSText.isSpace(ECCNSText.prevCharacter(&tail)))
 			text.length = tail.length;
 		
-		while (text.length && io_libecc_Text.isSpace(io_libecc_Text.character(text)))
-			io_libecc_Text.nextCharacter(&text);
+		while (text.length && ECCNSText.isSpace(ECCNSText.character(text)))
+			ECCNSText.nextCharacter(&text);
 	}
 	else
 		while (text.length && isspace(*text.bytes))
-			io_libecc_Text.advance(&text, 1);
+			ECCNSText.advance(&text, 1);
 	
 	memcpy(buffer, text.bytes, text.length);
 	buffer[text.length] = '\0';
@@ -846,7 +846,7 @@ eccvalue_t scanInteger (ecctextstring_t text, int base, enum io_libecc_lexer_Sca
 			return ECCNSValue.binary(binary);
 		}
 		
-		io_libecc_Env.printWarning("`parseInt('%.*s', %d)` out of bounds; only long int are supported by radices other than 10 or 16", text.length, text.bytes, base);
+		ECCNSEnv.printWarning("`parseInt('%.*s', %d)` out of bounds; only long int are supported by radices other than 10 or 16", text.length, text.bytes, base);
 		return ECCNSValue.binary(NAN);
 	}
 	else if (integer < INT32_MIN || integer > INT32_MAX)

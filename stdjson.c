@@ -50,7 +50,7 @@ const struct type_io_libecc_JSON io_libecc_JSON = {
 static
 eccvalue_t error (struct Parse *parse, int length, struct io_libecc_Chars *chars)
 {
-	return ECCNSValue.error(io_libecc_Error.syntaxError(io_libecc_Text.make(parse->text.bytes + (length < 0? length: 0), abs(length)), chars));
+	return ECCNSValue.error(io_libecc_Error.syntaxError(ECCNSText.make(parse->text.bytes + (length < 0? length: 0), abs(length)), chars));
 }
 
 static
@@ -60,11 +60,11 @@ ecctextstring_t errorOfLine (struct Parse *parse)
 	text.bytes = parse->start;
 	while (parse->text.length)
 	{
-		ecctextchar_t c = io_libecc_Text.character(parse->text);
+		ecctextchar_t c = ECCNSText.character(parse->text);
 		if (c.codepoint == '\r' || c.codepoint == '\n')
 			break;
 		
-		io_libecc_Text.advance(&parse->text, 1);
+		ECCNSText.advance(&parse->text, 1);
 	}
 	text.length = (int32_t)(parse->text.bytes - parse->start);
 	return text;
@@ -76,10 +76,10 @@ ecctextchar_t nextc (struct Parse *parse)
 	ecctextchar_t c = { 0 };
 	while (parse->text.length)
 	{
-		c = io_libecc_Text.nextCharacter(&parse->text);
+		c = ECCNSText.nextCharacter(&parse->text);
 		
-		if (c.codepoint == '\r' && io_libecc_Text.character(parse->text).codepoint == '\n')
-			io_libecc_Text.advance(&parse->text, 1);
+		if (c.codepoint == '\r' && ECCNSText.character(parse->text).codepoint == '\n')
+			ECCNSText.advance(&parse->text, 1);
 		
 		if (c.codepoint == '\r' || c.codepoint == '\n')
 		{
@@ -101,9 +101,9 @@ ecctextstring_t string (struct Parse *parse)
 	
 	do
 	{
-		c = io_libecc_Text.nextCharacter(&parse->text);
+		c = ECCNSText.nextCharacter(&parse->text);
 		if (c.codepoint == '\\')
-			io_libecc_Text.advance(&parse->text, 1);
+			ECCNSText.advance(&parse->text, 1);
 	}
 	while (c.codepoint != '\"' && parse->text.length);
 	
@@ -124,7 +124,7 @@ eccvalue_t literal (struct Parse *parse)
 		case 't':
 			if (!memcmp(parse->text.bytes, "rue", 3))
 			{
-				io_libecc_Text.advance(&parse->text, 3);
+				ECCNSText.advance(&parse->text, 3);
 				return ECCValConstTrue;
 			}
 			break;
@@ -132,7 +132,7 @@ eccvalue_t literal (struct Parse *parse)
 		case 'f':
 			if (!memcmp(parse->text.bytes, "alse", 4))
 			{
-				io_libecc_Text.advance(&parse->text, 4);
+				ECCNSText.advance(&parse->text, 4);
 				return ECCValConstFalse;
 			}
 			break;
@@ -140,7 +140,7 @@ eccvalue_t literal (struct Parse *parse)
 		case 'n':
 			if (!memcmp(parse->text.bytes, "ull", 3))
 			{
-				io_libecc_Text.advance(&parse->text, 3);
+				ECCNSText.advance(&parse->text, 3);
 				return ECCValConstNull;
 			}
 			break;
@@ -157,26 +157,26 @@ eccvalue_t literal (struct Parse *parse)
 		case '8':
 		case '9':
 		{
-			ecctextstring_t text = io_libecc_Text.make(parse->text.bytes - 1, 1);
+			ecctextstring_t text = ECCNSText.make(parse->text.bytes - 1, 1);
 			
 			if (c.codepoint == '-')
-				c = io_libecc_Text.nextCharacter(&parse->text);
+				c = ECCNSText.nextCharacter(&parse->text);
 			
 			if (c.codepoint != '0')
 				while (parse->text.length)
 				{
-					c = io_libecc_Text.nextCharacter(&parse->text);
+					c = ECCNSText.nextCharacter(&parse->text);
 					if (!isdigit(c.codepoint))
 						break;
 				}
 			else
-				c = io_libecc_Text.nextCharacter(&parse->text);
+				c = ECCNSText.nextCharacter(&parse->text);
 			
 			if (c.codepoint == '.')
 			{
 				while (parse->text.length)
 				{
-					c = io_libecc_Text.nextCharacter(&parse->text);
+					c = ECCNSText.nextCharacter(&parse->text);
 					if (!isdigit(c.codepoint))
 						break;
 				}
@@ -184,19 +184,19 @@ eccvalue_t literal (struct Parse *parse)
 			
 			if (c.codepoint == 'e' || c.codepoint == 'E')
 			{
-				c = io_libecc_Text.nextCharacter(&parse->text);
+				c = ECCNSText.nextCharacter(&parse->text);
 				if (c.codepoint == '+' || c.codepoint == '-')
-					c = io_libecc_Text.nextCharacter(&parse->text);
+					c = ECCNSText.nextCharacter(&parse->text);
 				
 				while (parse->text.length)
 				{
-					c = io_libecc_Text.nextCharacter(&parse->text);
+					c = ECCNSText.nextCharacter(&parse->text);
 					if (!isdigit(c.codepoint))
 						break;
 				}
 			}
 			
-			io_libecc_Text.advance(&parse->text, -c.units);
+			ECCNSText.advance(&parse->text, -c.units);
 			text.length = (int32_t)(parse->text.bytes - text.bytes);
 			
 			return io_libecc_Lexer.scanBinary(text, 0);
@@ -223,7 +223,7 @@ eccvalue_t literal (struct Parse *parse)
 static
 eccvalue_t object (struct Parse *parse)
 {
-	eccobject_t *object = io_libecc_Object.create(io_libecc_object_prototype);
+	eccobject_t *object = ECCNSObject.create(io_libecc_object_prototype);
 	ecctextchar_t c;
 	eccvalue_t value;
 	struct io_libecc_Key key;
@@ -245,7 +245,7 @@ eccvalue_t object (struct Parse *parse)
 			if (value.type == ECC_VALTYPE_ERROR)
 				return value;
 			
-			io_libecc_Object.addMember(object, key, value, 0);
+			ECCNSObject.addMember(object, key, value, 0);
 			
 			c = nextc(parse);
 			
@@ -273,7 +273,7 @@ eccvalue_t array (struct Parse *parse)
 		if (value.type == ECC_VALTYPE_ERROR)
 			return value;
 		
-		io_libecc_Object.addElement(object, object->elementCount, value, 0);
+		ECCNSObject.addElement(object, object->elementCount, value, 0);
 		
 		c = nextc(parse);
 		
@@ -376,10 +376,10 @@ eccvalue_t jsonParse (eccstate_t * const context)
 		},
 	};
 	
-	value = ECCNSValue.toString(context, io_libecc_Context.argument(context, 0));
-	reviver = io_libecc_Context.argument(context, 1);
+	value = ECCNSValue.toString(context, ECCNSContext.argument(context, 0));
+	reviver = ECCNSContext.argument(context, 1);
 	
-	parse.text = io_libecc_Text.make(ECCNSValue.stringBytes(&value), ECCNSValue.stringLength(&value));
+	parse.text = ECCNSText.make(ECCNSValue.stringBytes(&value), ECCNSValue.stringLength(&value));
 	parse.start = parse.text.bytes;
 	parse.line = 1;
 	parse.function = reviver.type == ECC_VALTYPE_FUNCTION? reviver.data.function: NULL;
@@ -389,25 +389,25 @@ eccvalue_t jsonParse (eccstate_t * const context)
 	
 	if (result.type != ECC_VALTYPE_ERROR && parse.text.length)
 	{
-		ecctextchar_t c = io_libecc_Text.character(parse.text);
+		ecctextchar_t c = ECCNSText.character(parse.text);
 		result = error(&parse, c.units, io_libecc_Chars.create("unexpected '%.*s'", c.units, parse.text.bytes));
 	}
 	
 	if (result.type == ECC_VALTYPE_ERROR)
 	{
-		io_libecc_Context.setTextIndex(context, io_libecc_context_noIndex);
+		ECCNSContext.setTextIndex(context, io_libecc_context_noIndex);
 		context->ecc->ofLine = parse.line;
 		context->ecc->ofText = errorOfLine(&parse);
 		context->ecc->ofInput = "(parse)";
-		io_libecc_Context.throw(context, result);
+		ECCNSContext.throw(context, result);
 	}
 	
 	if (parse.function && parse.function->flags & io_libecc_function_needHeap)
 	{
-		eccobject_t *environment = io_libecc_Object.copy(&parse.function->environment);
+		eccobject_t *environment = ECCNSObject.copy(&parse.function->environment);
 		
 		parse.context.environment = environment;
-		parse.arguments = io_libecc_Arguments.createSized(2);
+		parse.arguments = ECCNSArguments.createSized(2);
 		++parse.arguments->referenceCount;
 		
 		environment->hashmap[2].value = ECCNSValue.object(parse.arguments);
@@ -417,7 +417,7 @@ eccvalue_t jsonParse (eccstate_t * const context)
 	else if (parse.function)
 	{
 		eccobject_t environment = parse.function->environment;
-		eccobject_t arguments = io_libecc_Object.identity;
+		eccobject_t arguments = ECCNSObject.identity;
 		union io_libecc_object_Hashmap hashmap[parse.function->environment.hashmapCapacity];
 		union io_libecc_object_Element element[2];
 		
@@ -573,9 +573,9 @@ eccvalue_t jsonStringify (eccstate_t * const context)
 		.spaces = { 0 },
 	};
 	
-	value = io_libecc_Context.argument(context, 0);
-	replacer = io_libecc_Context.argument(context, 1);
-	space = io_libecc_Context.argument(context, 2);
+	value = ECCNSContext.argument(context, 0);
+	replacer = ECCNSContext.argument(context, 1);
+	space = ECCNSContext.argument(context, 2);
 	
 	stringify.filter = replacer.type == ECC_VALTYPE_OBJECT && replacer.data.object->type == &io_libecc_array_type? replacer.data.object: NULL;
 	stringify.function = replacer.type == ECC_VALTYPE_FUNCTION? replacer.data.function: NULL;
@@ -601,10 +601,10 @@ eccvalue_t jsonStringify (eccstate_t * const context)
 	
 	if (stringify.function && stringify.function->flags & io_libecc_function_needHeap)
 	{
-		eccobject_t *environment = io_libecc_Object.copy(&stringify.function->environment);
+		eccobject_t *environment = ECCNSObject.copy(&stringify.function->environment);
 		
 		stringify.context.environment = environment;
-		stringify.arguments = io_libecc_Arguments.createSized(2);
+		stringify.arguments = ECCNSArguments.createSized(2);
 		++stringify.arguments->referenceCount;
 		
 		environment->hashmap[2].value = ECCNSValue.object(stringify.arguments);
@@ -614,7 +614,7 @@ eccvalue_t jsonStringify (eccstate_t * const context)
 	else if (stringify.function)
 	{
 		eccobject_t environment = stringify.function->environment;
-		eccobject_t arguments = io_libecc_Object.identity;
+		eccobject_t arguments = ECCNSObject.identity;
 		union io_libecc_object_Hashmap hashmap[stringify.function->environment.hashmapCapacity];
 		union io_libecc_object_Element element[2];
 		
@@ -643,7 +643,7 @@ void setup ()
 {
 	const enum io_libecc_value_Flags h = io_libecc_value_hidden;
 	
-	io_libecc_json_object = io_libecc_Object.createTyped(&io_libecc_json_type);
+	io_libecc_json_object = ECCNSObject.createTyped(&io_libecc_json_type);
 	
 	io_libecc_Function.addToObject(io_libecc_json_object, "parse", jsonParse, -1, h);
 	io_libecc_Function.addToObject(io_libecc_json_object, "stringify", jsonStringify, -1, h);

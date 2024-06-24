@@ -371,7 +371,7 @@ void optimizeWithEnvironment (struct io_libecc_OpList *self, eccobject_t *enviro
 	}
 	
 	if (!haveLocal)
-		io_libecc_Object.stripMap(environment);
+		ECCNSObject.stripMap(environment);
 }
 
 void dumpTo (struct io_libecc_OpList *self, FILE *file)
@@ -418,7 +418,7 @@ ecctextstring_t text (struct io_libecc_OpList *oplist)
 	
 	length = oplist->ops[oplist->count - 1].text.bytes + oplist->ops[oplist->count - 1].text.length - oplist->ops[0].text.bytes;
 	
-	return io_libecc_Text.make(
+	return ECCNSText.make(
 		oplist->ops[0].text.bytes,
 		oplist->ops[0].text.length > length? oplist->ops[0].text.length: length);
 }

@@ -26,7 +26,7 @@ eccvalue_t mathAbs (eccstate_t * const context)
 {
 	eccvalue_t value;
 	
-	value = io_libecc_Context.argument(context, 0);
+	value = ECCNSContext.argument(context, 0);
 	if (value.type != ECC_VALTYPE_BINARY)
 		value = ECCNSValue.toBinary(context, value);
 	
@@ -38,7 +38,7 @@ eccvalue_t mathACos (eccstate_t * const context)
 {
 	eccvalue_t value;
 	
-	value = io_libecc_Context.argument(context, 0);
+	value = ECCNSContext.argument(context, 0);
 	if (value.type != ECC_VALTYPE_BINARY)
 		value = ECCNSValue.toBinary(context, value);
 	
@@ -50,7 +50,7 @@ eccvalue_t mathASin (eccstate_t * const context)
 {
 	eccvalue_t value;
 	
-	value = io_libecc_Context.argument(context, 0);
+	value = ECCNSContext.argument(context, 0);
 	if (value.type != ECC_VALTYPE_BINARY)
 		value = ECCNSValue.toBinary(context, value);
 	
@@ -62,7 +62,7 @@ eccvalue_t mathATan (eccstate_t * const context)
 {
 	eccvalue_t value;
 	
-	value = io_libecc_Context.argument(context, 0);
+	value = ECCNSContext.argument(context, 0);
 	if (value.type != ECC_VALTYPE_BINARY)
 		value = ECCNSValue.toBinary(context, value);
 	
@@ -74,11 +74,11 @@ eccvalue_t mathATan2 (eccstate_t * const context)
 {
 	eccvalue_t x, y;
 	
-	x = io_libecc_Context.argument(context, 0);
+	x = ECCNSContext.argument(context, 0);
 	if (x.type != ECC_VALTYPE_BINARY)
 		x = ECCNSValue.toBinary(context, x);
 	
-	y = io_libecc_Context.argument(context, 1);
+	y = ECCNSContext.argument(context, 1);
 	if (y.type != ECC_VALTYPE_BINARY)
 		y = ECCNSValue.toBinary(context, y);
 	
@@ -90,7 +90,7 @@ eccvalue_t mathCeil (eccstate_t * const context)
 {
 	eccvalue_t value;
 	
-	value = io_libecc_Context.argument(context, 0);
+	value = ECCNSContext.argument(context, 0);
 	if (value.type != ECC_VALTYPE_BINARY)
 		value = ECCNSValue.toBinary(context, value);
 	
@@ -102,7 +102,7 @@ eccvalue_t mathCos (eccstate_t * const context)
 {
 	eccvalue_t value;
 	
-	value = io_libecc_Context.argument(context, 0);
+	value = ECCNSContext.argument(context, 0);
 	if (value.type != ECC_VALTYPE_BINARY)
 		value = ECCNSValue.toBinary(context, value);
 	
@@ -114,7 +114,7 @@ eccvalue_t mathExp (eccstate_t * const context)
 {
 	eccvalue_t value;
 	
-	value = io_libecc_Context.argument(context, 0);
+	value = ECCNSContext.argument(context, 0);
 	if (value.type != ECC_VALTYPE_BINARY)
 		value = ECCNSValue.toBinary(context, value);
 	
@@ -126,7 +126,7 @@ eccvalue_t mathFloor (eccstate_t * const context)
 {
 	eccvalue_t value;
 	
-	value = io_libecc_Context.argument(context, 0);
+	value = ECCNSContext.argument(context, 0);
 	if (value.type != ECC_VALTYPE_BINARY)
 		value = ECCNSValue.toBinary(context, value);
 	
@@ -138,7 +138,7 @@ eccvalue_t mathLog (eccstate_t * const context)
 {
 	eccvalue_t value;
 	
-	value = io_libecc_Context.argument(context, 0);
+	value = ECCNSContext.argument(context, 0);
 	if (value.type != ECC_VALTYPE_BINARY)
 		value = ECCNSValue.toBinary(context, value);
 	
@@ -151,13 +151,13 @@ eccvalue_t mathMax (eccstate_t * const context)
 	double result = -INFINITY, value;
 	int index, count;
 	
-	count = io_libecc_Context.argumentCount(context);
+	count = ECCNSContext.argumentCount(context);
 	if (!count)
 		return ECCNSValue.binary(-INFINITY);
 	
 	for (index = 0; index < count; ++index)
 	{
-		value = ECCNSValue.toBinary(context, io_libecc_Context.argument(context, index)).data.binary;
+		value = ECCNSValue.toBinary(context, ECCNSContext.argument(context, index)).data.binary;
 		if (isnan(value))
 			return ECCNSValue.binary(NAN);
 		
@@ -174,13 +174,13 @@ eccvalue_t mathMin (eccstate_t * const context)
 	double result = INFINITY, value;
 	int index, count;
 	
-	count = io_libecc_Context.argumentCount(context);
+	count = ECCNSContext.argumentCount(context);
 	if (!count)
 		return ECCNSValue.binary(INFINITY);
 	
 	for (index = 0; index < count; ++index)
 	{
-		value = ECCNSValue.toBinary(context, io_libecc_Context.argument(context, index)).data.binary;
+		value = ECCNSValue.toBinary(context, ECCNSContext.argument(context, index)).data.binary;
 		if (isnan(value))
 			return ECCNSValue.binary(NAN);
 		
@@ -196,8 +196,8 @@ eccvalue_t mathPow (eccstate_t * const context)
 {
 	eccvalue_t x, y;
 	
-	x = ECCNSValue.toBinary(context, io_libecc_Context.argument(context, 0));
-	y = ECCNSValue.toBinary(context, io_libecc_Context.argument(context, 1));
+	x = ECCNSValue.toBinary(context, ECCNSContext.argument(context, 0));
+	y = ECCNSValue.toBinary(context, ECCNSContext.argument(context, 1));
 	
 	if (fabs(x.data.binary) == 1 && !isfinite(y.data.binary))
 		return ECCNSValue.binary(NAN);
@@ -216,7 +216,7 @@ eccvalue_t mathRound (eccstate_t * const context)
 {
 	eccvalue_t value;
 	
-	value = io_libecc_Context.argument(context, 0);
+	value = ECCNSContext.argument(context, 0);
 	if (value.type != ECC_VALTYPE_BINARY)
 		value = ECCNSValue.toBinary(context, value);
 	
@@ -231,7 +231,7 @@ eccvalue_t mathSin (eccstate_t * const context)
 {
 	eccvalue_t value;
 	
-	value = io_libecc_Context.argument(context, 0);
+	value = ECCNSContext.argument(context, 0);
 	if (value.type != ECC_VALTYPE_BINARY)
 		value = ECCNSValue.toBinary(context, value);
 	
@@ -243,7 +243,7 @@ eccvalue_t mathSqrt (eccstate_t * const context)
 {
 	eccvalue_t value;
 	
-	value = io_libecc_Context.argument(context, 0);
+	value = ECCNSContext.argument(context, 0);
 	if (value.type != ECC_VALTYPE_BINARY)
 		value = ECCNSValue.toBinary(context, value);
 	
@@ -255,7 +255,7 @@ eccvalue_t mathTan (eccstate_t * const context)
 {
 	eccvalue_t value;
 	
-	value = io_libecc_Context.argument(context, 0);
+	value = ECCNSContext.argument(context, 0);
 	if (value.type != ECC_VALTYPE_BINARY)
 		value = ECCNSValue.toBinary(context, value);
 	
@@ -272,16 +272,16 @@ void setup ()
 	const enum io_libecc_value_Flags h = io_libecc_value_hidden;
 	const enum io_libecc_value_Flags s = io_libecc_value_sealed;
 	
-	io_libecc_math_object = io_libecc_Object.createTyped(&io_libecc_math_type);
+	io_libecc_math_object = ECCNSObject.createTyped(&io_libecc_math_type);
 	
-	io_libecc_Object.addMember(io_libecc_math_object, io_libecc_Key.makeWithCString("E"), ECCNSValue.binary(2.71828182845904523536), r|h|s);
-	io_libecc_Object.addMember(io_libecc_math_object, io_libecc_Key.makeWithCString("LN10"), ECCNSValue.binary(2.30258509299404568402), r|h|s);
-	io_libecc_Object.addMember(io_libecc_math_object, io_libecc_Key.makeWithCString("LN2"), ECCNSValue.binary(0.693147180559945309417), r|h|s);
-	io_libecc_Object.addMember(io_libecc_math_object, io_libecc_Key.makeWithCString("LOG2E"), ECCNSValue.binary(1.44269504088896340736), r|h|s);
-	io_libecc_Object.addMember(io_libecc_math_object, io_libecc_Key.makeWithCString("LOG10E"), ECCNSValue.binary(0.434294481903251827651), r|h|s);
-	io_libecc_Object.addMember(io_libecc_math_object, io_libecc_Key.makeWithCString("PI"), ECCNSValue.binary(3.14159265358979323846), r|h|s);
-	io_libecc_Object.addMember(io_libecc_math_object, io_libecc_Key.makeWithCString("SQRT1_2"), ECCNSValue.binary(0.707106781186547524401), r|h|s);
-	io_libecc_Object.addMember(io_libecc_math_object, io_libecc_Key.makeWithCString("SQRT2"), ECCNSValue.binary(1.41421356237309504880), r|h|s);
+	ECCNSObject.addMember(io_libecc_math_object, io_libecc_Key.makeWithCString("E"), ECCNSValue.binary(2.71828182845904523536), r|h|s);
+	ECCNSObject.addMember(io_libecc_math_object, io_libecc_Key.makeWithCString("LN10"), ECCNSValue.binary(2.30258509299404568402), r|h|s);
+	ECCNSObject.addMember(io_libecc_math_object, io_libecc_Key.makeWithCString("LN2"), ECCNSValue.binary(0.693147180559945309417), r|h|s);
+	ECCNSObject.addMember(io_libecc_math_object, io_libecc_Key.makeWithCString("LOG2E"), ECCNSValue.binary(1.44269504088896340736), r|h|s);
+	ECCNSObject.addMember(io_libecc_math_object, io_libecc_Key.makeWithCString("LOG10E"), ECCNSValue.binary(0.434294481903251827651), r|h|s);
+	ECCNSObject.addMember(io_libecc_math_object, io_libecc_Key.makeWithCString("PI"), ECCNSValue.binary(3.14159265358979323846), r|h|s);
+	ECCNSObject.addMember(io_libecc_math_object, io_libecc_Key.makeWithCString("SQRT1_2"), ECCNSValue.binary(0.707106781186547524401), r|h|s);
+	ECCNSObject.addMember(io_libecc_math_object, io_libecc_Key.makeWithCString("SQRT2"), ECCNSValue.binary(1.41421356237309504880), r|h|s);
 	
 	io_libecc_Function.addToObject(io_libecc_math_object, "abs", mathAbs, 1, h);
 	io_libecc_Function.addToObject(io_libecc_math_object, "acos", mathACos, 1, h);
