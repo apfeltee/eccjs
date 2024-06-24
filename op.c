@@ -52,9 +52,9 @@ void usage(void)
 }
 
 static
-struct eccvalue_t trapOp_(struct eccstate_t *context, int offset)
+eccvalue_t trapOp_(eccstate_t *context, int offset)
 {
-	const struct io_libecc_Text *text = opText(offset);
+	const ecctextstring_t *text = opText(offset);
 	if (debug && text->bytes && text->length)
 	{
 		io_libecc_Env.newline();
@@ -67,7 +67,7 @@ struct eccvalue_t trapOp_(struct eccstate_t *context, int offset)
 #define _ return trapOp_(context, offset);
 
 static
-struct eccvalue_t trapOp(struct eccstate_t *context, int offset)
+eccvalue_t trapOp(eccstate_t *context, int offset)
 {
 _/*     gdb/lldb infos: p usage()     */
 }
@@ -81,119 +81,119 @@ _/*     gdb/lldb infos: p usage()     */
 
 //
 
-static struct io_libecc_Op make(const io_libecc_native_io_libecc_Function native, struct eccvalue_t value, struct io_libecc_Text text);
+static struct io_libecc_Op make(const io_libecc_native_io_libecc_Function native, eccvalue_t value, ecctextstring_t text);
 static const char* toChars(const io_libecc_native_io_libecc_Function native);
-static struct eccvalue_t
-callFunctionArguments(struct eccstate_t* const, enum io_libecc_context_Offset, struct io_libecc_Function* function, struct eccvalue_t this, struct eccobject_t* arguments);
-static struct eccvalue_t
-callFunctionVA(struct eccstate_t* const, enum io_libecc_context_Offset, struct io_libecc_Function* function, struct eccvalue_t this, int argumentCount, va_list ap);
-static struct eccvalue_t noop(struct eccstate_t* const);
-static struct eccvalue_t value(struct eccstate_t* const);
-static struct eccvalue_t valueConstRef(struct eccstate_t* const);
-static struct eccvalue_t text(struct eccstate_t* const);
-static struct eccvalue_t function(struct eccstate_t* const);
-static struct eccvalue_t object(struct eccstate_t* const);
-static struct eccvalue_t array(struct eccstate_t* const);
-static struct eccvalue_t regexp(struct eccstate_t* const);
-static struct eccvalue_t this(struct eccstate_t* const);
-static struct eccvalue_t createLocalRef(struct eccstate_t* const);
-static struct eccvalue_t getLocalRefOrNull(struct eccstate_t* const);
-static struct eccvalue_t getLocalRef(struct eccstate_t* const);
-static struct eccvalue_t getLocal(struct eccstate_t* const);
-static struct eccvalue_t setLocal(struct eccstate_t* const);
-static struct eccvalue_t deleteLocal(struct eccstate_t* const);
-static struct eccvalue_t getLocalSlotRef(struct eccstate_t* const);
-static struct eccvalue_t getLocalSlot(struct eccstate_t* const);
-static struct eccvalue_t setLocalSlot(struct eccstate_t* const);
-static struct eccvalue_t deleteLocalSlot(struct eccstate_t* const);
-static struct eccvalue_t getParentSlotRef(struct eccstate_t* const);
-static struct eccvalue_t getParentSlot(struct eccstate_t* const);
-static struct eccvalue_t setParentSlot(struct eccstate_t* const);
-static struct eccvalue_t deleteParentSlot(struct eccstate_t* const);
-static struct eccvalue_t getMemberRef(struct eccstate_t* const);
-static struct eccvalue_t getMember(struct eccstate_t* const);
-static struct eccvalue_t setMember(struct eccstate_t* const);
-static struct eccvalue_t callMember(struct eccstate_t* const);
-static struct eccvalue_t deleteMember(struct eccstate_t* const);
-static struct eccvalue_t getPropertyRef(struct eccstate_t* const);
-static struct eccvalue_t getProperty(struct eccstate_t* const);
-static struct eccvalue_t setProperty(struct eccstate_t* const);
-static struct eccvalue_t callProperty(struct eccstate_t* const);
-static struct eccvalue_t deleteProperty(struct eccstate_t* const);
-static struct eccvalue_t pushEnvironment(struct eccstate_t* const);
-static struct eccvalue_t popEnvironment(struct eccstate_t* const);
-static struct eccvalue_t exchange(struct eccstate_t* const);
-static struct eccvalue_t typeOf(struct eccstate_t* const);
-static struct eccvalue_t equal(struct eccstate_t* const);
-static struct eccvalue_t notEqual(struct eccstate_t* const);
-static struct eccvalue_t identical(struct eccstate_t* const);
-static struct eccvalue_t notIdentical(struct eccstate_t* const);
-static struct eccvalue_t less(struct eccstate_t* const);
-static struct eccvalue_t lessOrEqual(struct eccstate_t* const);
-static struct eccvalue_t more(struct eccstate_t* const);
-static struct eccvalue_t moreOrEqual(struct eccstate_t* const);
-static struct eccvalue_t instanceOf(struct eccstate_t* const);
-static struct eccvalue_t in(struct eccstate_t* const);
-static struct eccvalue_t add(struct eccstate_t* const);
-static struct eccvalue_t minus(struct eccstate_t* const);
-static struct eccvalue_t multiply(struct eccstate_t* const);
-static struct eccvalue_t divide(struct eccstate_t* const);
-static struct eccvalue_t modulo(struct eccstate_t* const);
-static struct eccvalue_t leftShift(struct eccstate_t* const);
-static struct eccvalue_t rightShift(struct eccstate_t* const);
-static struct eccvalue_t unsignedRightShift(struct eccstate_t* const);
-static struct eccvalue_t bitwiseAnd(struct eccstate_t* const);
-static struct eccvalue_t bitwiseXor(struct eccstate_t* const);
-static struct eccvalue_t bitwiseOr(struct eccstate_t* const);
-static struct eccvalue_t logicalAnd(struct eccstate_t* const);
-static struct eccvalue_t logicalOr(struct eccstate_t* const);
-static struct eccvalue_t positive(struct eccstate_t* const);
-static struct eccvalue_t negative(struct eccstate_t* const);
-static struct eccvalue_t invert(struct eccstate_t* const);
-static struct eccvalue_t not(struct eccstate_t* const);
-static struct eccvalue_t construct(struct eccstate_t* const);
-static struct eccvalue_t call(struct eccstate_t* const);
-static struct eccvalue_t eval(struct eccstate_t* const);
-static struct eccvalue_t incrementRef(struct eccstate_t* const);
-static struct eccvalue_t decrementRef(struct eccstate_t* const);
-static struct eccvalue_t postIncrementRef(struct eccstate_t* const);
-static struct eccvalue_t postDecrementRef(struct eccstate_t* const);
-static struct eccvalue_t addAssignRef(struct eccstate_t* const);
-static struct eccvalue_t minusAssignRef(struct eccstate_t* const);
-static struct eccvalue_t multiplyAssignRef(struct eccstate_t* const);
-static struct eccvalue_t divideAssignRef(struct eccstate_t* const);
-static struct eccvalue_t moduloAssignRef(struct eccstate_t* const);
-static struct eccvalue_t leftShiftAssignRef(struct eccstate_t* const);
-static struct eccvalue_t rightShiftAssignRef(struct eccstate_t* const);
-static struct eccvalue_t unsignedRightShiftAssignRef(struct eccstate_t* const);
-static struct eccvalue_t bitAndAssignRef(struct eccstate_t* const);
-static struct eccvalue_t bitXorAssignRef(struct eccstate_t* const);
-static struct eccvalue_t bitOrAssignRef(struct eccstate_t* const);
-static struct eccvalue_t debugger(struct eccstate_t* const);
-static struct eccvalue_t try(struct eccstate_t* const);
-static struct eccvalue_t throw(struct eccstate_t* const);
-static struct eccvalue_t with(struct eccstate_t* const);
-static struct eccvalue_t next(struct eccstate_t* const);
-static struct eccvalue_t nextIf(struct eccstate_t* const);
-static struct eccvalue_t autoreleaseExpression(struct eccstate_t* const);
-static struct eccvalue_t autoreleaseDiscard(struct eccstate_t* const);
-static struct eccvalue_t expression(struct eccstate_t* const);
-static struct eccvalue_t discard(struct eccstate_t* const);
-static struct eccvalue_t discardN(struct eccstate_t* const);
-static struct eccvalue_t jump(struct eccstate_t* const);
-static struct eccvalue_t jumpIf(struct eccstate_t* const);
-static struct eccvalue_t jumpIfNot(struct eccstate_t* const);
-static struct eccvalue_t repopulate(struct eccstate_t* const);
-static struct eccvalue_t result(struct eccstate_t* const);
-static struct eccvalue_t resultVoid(struct eccstate_t* const);
-static struct eccvalue_t switchOp(struct eccstate_t* const);
-static struct eccvalue_t breaker(struct eccstate_t* const);
-static struct eccvalue_t iterate(struct eccstate_t* const);
-static struct eccvalue_t iterateLessRef(struct eccstate_t* const);
-static struct eccvalue_t iterateMoreRef(struct eccstate_t* const);
-static struct eccvalue_t iterateLessOrEqualRef(struct eccstate_t* const);
-static struct eccvalue_t iterateMoreOrEqualRef(struct eccstate_t* const);
-static struct eccvalue_t iterateInRef(struct eccstate_t* const);
+static eccvalue_t
+callFunctionArguments(eccstate_t* const, enum io_libecc_context_Offset, struct io_libecc_Function* function, eccvalue_t this, eccobject_t* arguments);
+static eccvalue_t
+callFunctionVA(eccstate_t* const, enum io_libecc_context_Offset, struct io_libecc_Function* function, eccvalue_t this, int argumentCount, va_list ap);
+static eccvalue_t noop(eccstate_t* const);
+static eccvalue_t value(eccstate_t* const);
+static eccvalue_t valueConstRef(eccstate_t* const);
+static eccvalue_t text(eccstate_t* const);
+static eccvalue_t function(eccstate_t* const);
+static eccvalue_t object(eccstate_t* const);
+static eccvalue_t array(eccstate_t* const);
+static eccvalue_t regexp(eccstate_t* const);
+static eccvalue_t this(eccstate_t* const);
+static eccvalue_t createLocalRef(eccstate_t* const);
+static eccvalue_t getLocalRefOrNull(eccstate_t* const);
+static eccvalue_t getLocalRef(eccstate_t* const);
+static eccvalue_t getLocal(eccstate_t* const);
+static eccvalue_t setLocal(eccstate_t* const);
+static eccvalue_t deleteLocal(eccstate_t* const);
+static eccvalue_t getLocalSlotRef(eccstate_t* const);
+static eccvalue_t getLocalSlot(eccstate_t* const);
+static eccvalue_t setLocalSlot(eccstate_t* const);
+static eccvalue_t deleteLocalSlot(eccstate_t* const);
+static eccvalue_t getParentSlotRef(eccstate_t* const);
+static eccvalue_t getParentSlot(eccstate_t* const);
+static eccvalue_t setParentSlot(eccstate_t* const);
+static eccvalue_t deleteParentSlot(eccstate_t* const);
+static eccvalue_t getMemberRef(eccstate_t* const);
+static eccvalue_t getMember(eccstate_t* const);
+static eccvalue_t setMember(eccstate_t* const);
+static eccvalue_t callMember(eccstate_t* const);
+static eccvalue_t deleteMember(eccstate_t* const);
+static eccvalue_t getPropertyRef(eccstate_t* const);
+static eccvalue_t getProperty(eccstate_t* const);
+static eccvalue_t setProperty(eccstate_t* const);
+static eccvalue_t callProperty(eccstate_t* const);
+static eccvalue_t deleteProperty(eccstate_t* const);
+static eccvalue_t pushEnvironment(eccstate_t* const);
+static eccvalue_t popEnvironment(eccstate_t* const);
+static eccvalue_t exchange(eccstate_t* const);
+static eccvalue_t typeOf(eccstate_t* const);
+static eccvalue_t equal(eccstate_t* const);
+static eccvalue_t notEqual(eccstate_t* const);
+static eccvalue_t identical(eccstate_t* const);
+static eccvalue_t notIdentical(eccstate_t* const);
+static eccvalue_t less(eccstate_t* const);
+static eccvalue_t lessOrEqual(eccstate_t* const);
+static eccvalue_t more(eccstate_t* const);
+static eccvalue_t moreOrEqual(eccstate_t* const);
+static eccvalue_t instanceOf(eccstate_t* const);
+static eccvalue_t in(eccstate_t* const);
+static eccvalue_t add(eccstate_t* const);
+static eccvalue_t minus(eccstate_t* const);
+static eccvalue_t multiply(eccstate_t* const);
+static eccvalue_t divide(eccstate_t* const);
+static eccvalue_t modulo(eccstate_t* const);
+static eccvalue_t leftShift(eccstate_t* const);
+static eccvalue_t rightShift(eccstate_t* const);
+static eccvalue_t unsignedRightShift(eccstate_t* const);
+static eccvalue_t bitwiseAnd(eccstate_t* const);
+static eccvalue_t bitwiseXor(eccstate_t* const);
+static eccvalue_t bitwiseOr(eccstate_t* const);
+static eccvalue_t logicalAnd(eccstate_t* const);
+static eccvalue_t logicalOr(eccstate_t* const);
+static eccvalue_t positive(eccstate_t* const);
+static eccvalue_t negative(eccstate_t* const);
+static eccvalue_t invert(eccstate_t* const);
+static eccvalue_t not(eccstate_t* const);
+static eccvalue_t construct(eccstate_t* const);
+static eccvalue_t call(eccstate_t* const);
+static eccvalue_t eval(eccstate_t* const);
+static eccvalue_t incrementRef(eccstate_t* const);
+static eccvalue_t decrementRef(eccstate_t* const);
+static eccvalue_t postIncrementRef(eccstate_t* const);
+static eccvalue_t postDecrementRef(eccstate_t* const);
+static eccvalue_t addAssignRef(eccstate_t* const);
+static eccvalue_t minusAssignRef(eccstate_t* const);
+static eccvalue_t multiplyAssignRef(eccstate_t* const);
+static eccvalue_t divideAssignRef(eccstate_t* const);
+static eccvalue_t moduloAssignRef(eccstate_t* const);
+static eccvalue_t leftShiftAssignRef(eccstate_t* const);
+static eccvalue_t rightShiftAssignRef(eccstate_t* const);
+static eccvalue_t unsignedRightShiftAssignRef(eccstate_t* const);
+static eccvalue_t bitAndAssignRef(eccstate_t* const);
+static eccvalue_t bitXorAssignRef(eccstate_t* const);
+static eccvalue_t bitOrAssignRef(eccstate_t* const);
+static eccvalue_t debugger(eccstate_t* const);
+static eccvalue_t try(eccstate_t* const);
+static eccvalue_t throw(eccstate_t* const);
+static eccvalue_t with(eccstate_t* const);
+static eccvalue_t next(eccstate_t* const);
+static eccvalue_t nextIf(eccstate_t* const);
+static eccvalue_t autoreleaseExpression(eccstate_t* const);
+static eccvalue_t autoreleaseDiscard(eccstate_t* const);
+static eccvalue_t expression(eccstate_t* const);
+static eccvalue_t discard(eccstate_t* const);
+static eccvalue_t discardN(eccstate_t* const);
+static eccvalue_t jump(eccstate_t* const);
+static eccvalue_t jumpIf(eccstate_t* const);
+static eccvalue_t jumpIfNot(eccstate_t* const);
+static eccvalue_t repopulate(eccstate_t* const);
+static eccvalue_t result(eccstate_t* const);
+static eccvalue_t resultVoid(eccstate_t* const);
+static eccvalue_t switchOp(eccstate_t* const);
+static eccvalue_t breaker(eccstate_t* const);
+static eccvalue_t iterate(eccstate_t* const);
+static eccvalue_t iterateLessRef(eccstate_t* const);
+static eccvalue_t iterateMoreRef(eccstate_t* const);
+static eccvalue_t iterateLessOrEqualRef(eccstate_t* const);
+static eccvalue_t iterateMoreOrEqualRef(eccstate_t* const);
+static eccvalue_t iterateInRef(eccstate_t* const);
 const struct type_io_libecc_Op io_libecc_Op = {
     make,
     toChars,
@@ -309,22 +309,22 @@ const struct type_io_libecc_Op io_libecc_Op = {
 };
 
 static
-struct eccvalue_t retain (struct eccvalue_t value)
+eccvalue_t retain (eccvalue_t value)
 {
-	if (value.type == io_libecc_value_charsType)
+	if (value.type == ECC_VALTYPE_CHARS)
 		++value.data.chars->referenceCount;
-	if (value.type >= io_libecc_value_objectType)
+	if (value.type >= ECC_VALTYPE_OBJECT)
 		++value.data.object->referenceCount;
 	
 	return value;
 }
 
 static
-struct eccvalue_t release (struct eccvalue_t value)
+eccvalue_t release (eccvalue_t value)
 {
-	if (value.type == io_libecc_value_charsType)
+	if (value.type == ECC_VALTYPE_CHARS)
 		--value.data.chars->referenceCount;
-	if (value.type >= io_libecc_value_objectType)
+	if (value.type >= ECC_VALTYPE_OBJECT)
 		--value.data.object->referenceCount;
 	
 	return value;
@@ -370,7 +370,7 @@ int integerWontOverflowNegative(int32_t a, int32_t negative)
 
 // MARK: - Methods
 
-struct io_libecc_Op make (const io_libecc_native_io_libecc_Function native, struct eccvalue_t value, struct io_libecc_Text text)
+struct io_libecc_Op make (const io_libecc_native_io_libecc_Function native, eccvalue_t value, ecctextstring_t text)
 {
 	return (struct io_libecc_Op){ native, value, text };
 }
@@ -503,9 +503,9 @@ struct
 // MARK: call
 
 static
-struct eccvalue_t nextOpValue (struct eccstate_t * const context)
+eccvalue_t nextOpValue (eccstate_t * const context)
 {
-	struct eccvalue_t value = nextOp();
+	eccvalue_t value = nextOp();
 	value.flags &= ~(io_libecc_value_readonly | io_libecc_value_hidden | io_libecc_value_sealed);
 	return value;
 }
@@ -513,7 +513,7 @@ struct eccvalue_t nextOpValue (struct eccstate_t * const context)
 #define nextOpValue() nextOpValue(context)
 
 static
-struct eccvalue_t replaceRefValue (struct eccvalue_t *ref, struct eccvalue_t value)
+eccvalue_t replaceRefValue (eccvalue_t *ref, eccvalue_t value)
 {
 	ref->data = value.data;
 	ref->type = value.type;
@@ -521,23 +521,23 @@ struct eccvalue_t replaceRefValue (struct eccvalue_t *ref, struct eccvalue_t val
 }
 
 static inline
-struct eccvalue_t callOps (struct eccstate_t * const context, struct eccobject_t *environment)
+eccvalue_t callOps (eccstate_t * const context, eccobject_t *environment)
 {
 	if (context->depth >= context->ecc->maximumCallDepth)
 		io_libecc_Context.rangeError(context, io_libecc_Chars.create("maximum depth exceeded"));
 	
 //	if (!context->parent->strictMode)
-//		if (context->this.type == io_libecc_value_undefinedType || context->this.type == io_libecc_value_nullType)
-//			context->this = io_libecc_Value.object(&context->ecc->global->environment);
+//		if (context->this.type == ECC_VALTYPE_UNDEFINED || context->this.type == ECC_VALTYPE_NULL)
+//			context->this = ECCNSValue.object(&context->ecc->global->environment);
 	
 	context->environment = environment;
 	return context->ops->native(context);
 }
 
 static inline
-struct eccvalue_t callOpsRelease (struct eccstate_t * const context, struct eccobject_t *environment)
+eccvalue_t callOpsRelease (eccstate_t * const context, eccobject_t *environment)
 {
-	struct eccvalue_t result;
+	eccvalue_t result;
 	uint16_t index, count;
 	
 	result = callOps(context, environment);
@@ -549,12 +549,12 @@ struct eccvalue_t callOpsRelease (struct eccstate_t * const context, struct ecco
 }
 
 static inline
-void populateEnvironmentWithArguments (struct eccobject_t *environment, struct eccobject_t *arguments, int32_t parameterCount)
+void populateEnvironmentWithArguments (eccobject_t *environment, eccobject_t *arguments, int32_t parameterCount)
 {
 	int32_t index = 0;
 	int argumentCount = arguments->elementCount;
 	
-	replaceRefValue(&environment->hashmap[2].value, retain(io_libecc_Value.object(arguments)));
+	replaceRefValue(&environment->hashmap[2].value, retain(ECCNSValue.object(arguments)));
 	
 	if (argumentCount <= parameterCount)
 		for (; index < argumentCount; ++index)
@@ -567,44 +567,44 @@ void populateEnvironmentWithArguments (struct eccobject_t *environment, struct e
 }
 
 static inline
-void populateEnvironmentAndArgumentsWithVA (struct eccobject_t *environment, int32_t parameterCount, int32_t argumentCount, va_list ap)
+void populateEnvironmentAndArgumentsWithVA (eccobject_t *environment, int32_t parameterCount, int32_t argumentCount, va_list ap)
 {
 	int32_t index = 0;
-	struct eccobject_t *arguments = io_libecc_Arguments.createSized(argumentCount);
+	eccobject_t *arguments = io_libecc_Arguments.createSized(argumentCount);
 	
-	replaceRefValue(&environment->hashmap[2].value, retain(io_libecc_Value.object(arguments)));
+	replaceRefValue(&environment->hashmap[2].value, retain(ECCNSValue.object(arguments)));
 	
 	if (argumentCount <= parameterCount)
 		for (; index < argumentCount; ++index)
-			environment->hashmap[index + 3].value = arguments->element[index].value = retain(va_arg(ap, struct eccvalue_t));
+			environment->hashmap[index + 3].value = arguments->element[index].value = retain(va_arg(ap, eccvalue_t));
 	else
 	{
 		for (; index < parameterCount; ++index)
-			environment->hashmap[index + 3].value = arguments->element[index].value = retain(va_arg(ap, struct eccvalue_t));
+			environment->hashmap[index + 3].value = arguments->element[index].value = retain(va_arg(ap, eccvalue_t));
 		
 		for (; index < argumentCount; ++index)
-			arguments->element[index].value = retain(va_arg(ap, struct eccvalue_t));
+			arguments->element[index].value = retain(va_arg(ap, eccvalue_t));
 	}
 }
 
 static inline
-void populateEnvironmentWithVA (struct eccobject_t *environment, int32_t parameterCount, int32_t argumentCount, va_list ap)
+void populateEnvironmentWithVA (eccobject_t *environment, int32_t parameterCount, int32_t argumentCount, va_list ap)
 {
 	int32_t index = 0;
 	if (argumentCount <= parameterCount)
 		for (; index < argumentCount; ++index)
-			environment->hashmap[index + 3].value = retain(va_arg(ap, struct eccvalue_t));
+			environment->hashmap[index + 3].value = retain(va_arg(ap, eccvalue_t));
 	else
 		for (; index < parameterCount; ++index)
-			environment->hashmap[index + 3].value = retain(va_arg(ap, struct eccvalue_t));
+			environment->hashmap[index + 3].value = retain(va_arg(ap, eccvalue_t));
 }
 
 static inline
-void populateStackEnvironmentAndArgumentsWithOps (struct eccstate_t * const context, struct eccobject_t *environment, struct eccobject_t *arguments, int32_t parameterCount, int32_t argumentCount)
+void populateStackEnvironmentAndArgumentsWithOps (eccstate_t * const context, eccobject_t *environment, eccobject_t *arguments, int32_t parameterCount, int32_t argumentCount)
 {
 	int32_t index = 0;
 	
-	replaceRefValue(&environment->hashmap[2].value, io_libecc_Value.object(arguments));
+	replaceRefValue(&environment->hashmap[2].value, ECCNSValue.object(arguments));
 	
 	if (argumentCount <= parameterCount)
 		for (; index < argumentCount; ++index)
@@ -620,11 +620,11 @@ void populateStackEnvironmentAndArgumentsWithOps (struct eccstate_t * const cont
 }
 
 static inline
-void populateEnvironmentAndArgumentsWithOps (struct eccstate_t * const context, struct eccobject_t *environment, struct eccobject_t *arguments, int32_t parameterCount, int32_t argumentCount)
+void populateEnvironmentAndArgumentsWithOps (eccstate_t * const context, eccobject_t *environment, eccobject_t *arguments, int32_t parameterCount, int32_t argumentCount)
 {
 	populateStackEnvironmentAndArgumentsWithOps(context, environment, arguments, parameterCount, argumentCount);
 	
-	retain(io_libecc_Value.object(arguments));
+	retain(ECCNSValue.object(arguments));
 	
 	if (argumentCount > parameterCount)
 	{
@@ -635,7 +635,7 @@ void populateEnvironmentAndArgumentsWithOps (struct eccstate_t * const context, 
 }
 
 static inline
-void populateEnvironmentWithOps (struct eccstate_t * const context, struct eccobject_t *environment, int32_t parameterCount, int32_t argumentCount)
+void populateEnvironmentWithOps (eccstate_t * const context, eccobject_t *environment, int32_t parameterCount, int32_t argumentCount)
 {
 	int32_t index = 0;
 	if (argumentCount <= parameterCount)
@@ -651,9 +651,9 @@ void populateEnvironmentWithOps (struct eccstate_t * const context, struct eccob
 	}
 }
 
-struct eccvalue_t callFunctionArguments (struct eccstate_t * const context, enum io_libecc_context_Offset offset, struct io_libecc_Function *function, struct eccvalue_t this, struct eccobject_t *arguments)
+eccvalue_t callFunctionArguments (eccstate_t * const context, enum io_libecc_context_Offset offset, struct io_libecc_Function *function, eccvalue_t this, eccobject_t *arguments)
 {
-	struct eccstate_t subContext = {
+	eccstate_t subContext = {
 		.ops = function->oplist->ops,
 		.this = this,
 		.parent = context,
@@ -666,11 +666,11 @@ struct eccvalue_t callFunctionArguments (struct eccstate_t * const context, enum
 	
 	if (function->flags & io_libecc_function_needHeap)
 	{
-		struct eccobject_t *environment = io_libecc_Object.copy(&function->environment);
+		eccobject_t *environment = io_libecc_Object.copy(&function->environment);
 		
 		if (function->flags & io_libecc_function_needArguments)
 		{
-			struct eccobject_t *copy = io_libecc_Arguments.createSized(arguments->elementCount);
+			eccobject_t *copy = io_libecc_Arguments.createSized(arguments->elementCount);
 			memcpy(copy->element, arguments->element, sizeof(*copy->element) * copy->elementCount);
 			arguments = copy;
 		}
@@ -680,7 +680,7 @@ struct eccvalue_t callFunctionArguments (struct eccstate_t * const context, enum
 	}
 	else
 	{
-		struct eccobject_t environment = function->environment;
+		eccobject_t environment = function->environment;
 		union io_libecc_object_Hashmap hashmap[function->environment.hashmapCapacity];
 		
 		memcpy(hashmap, function->environment.hashmap, sizeof(hashmap));
@@ -691,9 +691,9 @@ struct eccvalue_t callFunctionArguments (struct eccstate_t * const context, enum
 	}
 }
 
-struct eccvalue_t callFunctionVA (struct eccstate_t * const context, enum io_libecc_context_Offset offset, struct io_libecc_Function *function, struct eccvalue_t this, int argumentCount, va_list ap)
+eccvalue_t callFunctionVA (eccstate_t * const context, enum io_libecc_context_Offset offset, struct io_libecc_Function *function, eccvalue_t this, int argumentCount, va_list ap)
 {
-	struct eccstate_t subContext = {
+	eccstate_t subContext = {
 		.ops = function->oplist->ops,
 		.this = this,
 		.parent = context,
@@ -706,7 +706,7 @@ struct eccvalue_t callFunctionVA (struct eccstate_t * const context, enum io_lib
 	
 	if (function->flags & io_libecc_function_needHeap)
 	{
-		struct eccobject_t *environment = io_libecc_Object.copy(&function->environment);
+		eccobject_t *environment = io_libecc_Object.copy(&function->environment);
 		
 		if (function->flags & io_libecc_function_needArguments)
 		{
@@ -714,8 +714,8 @@ struct eccvalue_t callFunctionVA (struct eccstate_t * const context, enum io_lib
 			
 			if (!context->strictMode)
 			{
-				io_libecc_Object.addMember(environment->hashmap[2].value.data.object, io_libecc_key_callee, retain(io_libecc_Value.function(function)), io_libecc_value_hidden);
-				io_libecc_Object.addMember(environment->hashmap[2].value.data.object, io_libecc_key_length, io_libecc_Value.integer(argumentCount), io_libecc_value_hidden);
+				io_libecc_Object.addMember(environment->hashmap[2].value.data.object, io_libecc_key_callee, retain(ECCNSValue.function(function)), io_libecc_value_hidden);
+				io_libecc_Object.addMember(environment->hashmap[2].value.data.object, io_libecc_key_length, ECCNSValue.integer(argumentCount), io_libecc_value_hidden);
 			}
 		}
 		else
@@ -725,7 +725,7 @@ struct eccvalue_t callFunctionVA (struct eccstate_t * const context, enum io_lib
 	}
 	else
 	{
-		struct eccobject_t environment = function->environment;
+		eccobject_t environment = function->environment;
 		union io_libecc_object_Hashmap hashmap[function->environment.hashmapCapacity];
 		
 		memcpy(hashmap, function->environment.hashmap, sizeof(hashmap));
@@ -738,9 +738,9 @@ struct eccvalue_t callFunctionVA (struct eccstate_t * const context, enum io_lib
 }
 
 static inline
-struct eccvalue_t callFunction (struct eccstate_t * const context, struct io_libecc_Function * const function, struct eccvalue_t this, int32_t argumentCount, int construct)
+eccvalue_t callFunction (eccstate_t * const context, struct io_libecc_Function * const function, eccvalue_t this, int32_t argumentCount, int construct)
 {
-	struct eccstate_t subContext = {
+	eccstate_t subContext = {
 		.ops = function->oplist->ops,
 		.this = this,
 		.parent = context,
@@ -753,7 +753,7 @@ struct eccvalue_t callFunction (struct eccstate_t * const context, struct io_lib
 	
 	if (function->flags & io_libecc_function_needHeap)
 	{
-		struct eccobject_t *environment = io_libecc_Object.copy(&function->environment);
+		eccobject_t *environment = io_libecc_Object.copy(&function->environment);
 		
 		if (function->flags & io_libecc_function_needArguments)
 		{
@@ -761,8 +761,8 @@ struct eccvalue_t callFunction (struct eccstate_t * const context, struct io_lib
 			
 			if (!context->strictMode)
 			{
-				io_libecc_Object.addMember(environment->hashmap[2].value.data.object, io_libecc_key_callee, retain(io_libecc_Value.function(function)), io_libecc_value_hidden);
-				io_libecc_Object.addMember(environment->hashmap[2].value.data.object, io_libecc_key_length, io_libecc_Value.integer(argumentCount), io_libecc_value_hidden);
+				io_libecc_Object.addMember(environment->hashmap[2].value.data.object, io_libecc_key_callee, retain(ECCNSValue.function(function)), io_libecc_value_hidden);
+				io_libecc_Object.addMember(environment->hashmap[2].value.data.object, io_libecc_key_length, ECCNSValue.integer(argumentCount), io_libecc_value_hidden);
 			}
 		}
 		else
@@ -772,8 +772,8 @@ struct eccvalue_t callFunction (struct eccstate_t * const context, struct io_lib
 	}
 	else if (function->flags & io_libecc_function_needArguments)
 	{
-		struct eccobject_t environment = function->environment;
-		struct eccobject_t arguments = io_libecc_Object.identity;
+		eccobject_t environment = function->environment;
+		eccobject_t arguments = io_libecc_Object.identity;
 		union io_libecc_object_Hashmap hashmap[function->environment.hashmapCapacity];
 		union io_libecc_object_Element element[argumentCount];
 		
@@ -787,7 +787,7 @@ struct eccvalue_t callFunction (struct eccstate_t * const context, struct io_lib
 	}
 	else
 	{
-		struct eccobject_t environment = function->environment;
+		eccobject_t environment = function->environment;
 		union io_libecc_object_Hashmap hashmap[function->environment.hashmapCapacity];
 		
 		memcpy(hashmap, function->environment.hashmap, sizeof(hashmap));
@@ -799,12 +799,12 @@ struct eccvalue_t callFunction (struct eccstate_t * const context, struct io_lib
 }
 
 static inline
-struct eccvalue_t callValue (struct eccstate_t * const context, struct eccvalue_t value, struct eccvalue_t this, int32_t argumentCount, int construct, const struct io_libecc_Text *textCall)
+eccvalue_t callValue (eccstate_t * const context, eccvalue_t value, eccvalue_t this, int32_t argumentCount, int construct, const ecctextstring_t *textCall)
 {
-	struct eccvalue_t result;
-	const struct io_libecc_Text *parentTextCall = context->textCall;
+	eccvalue_t result;
+	const ecctextstring_t *parentTextCall = context->textCall;
 	
-	if (value.type != io_libecc_value_functionType)
+	if (value.type != ECC_VALTYPE_FUNCTION)
 		io_libecc_Context.typeError(context, io_libecc_Chars.create("'%.*s' is not a function", context->text->length, context->text->bytes));
 	
 	context->textCall = textCall;
@@ -818,36 +818,36 @@ struct eccvalue_t callValue (struct eccstate_t * const context, struct eccvalue_
 	return result;
 }
 
-struct eccvalue_t construct (struct eccstate_t * const context)
+eccvalue_t construct (eccstate_t * const context)
 {
-	const struct io_libecc_Text *textCall = opText(0);
-	const struct io_libecc_Text *text = opText(1);
+	const ecctextstring_t *textCall = opText(0);
+	const ecctextstring_t *text = opText(1);
 	int32_t argumentCount = opValue().data.integer;
-	struct eccvalue_t value, *prototype, object, function = nextOp();
+	eccvalue_t value, *prototype, object, function = nextOp();
 	
-	if (function.type != io_libecc_value_functionType)
+	if (function.type != ECC_VALTYPE_FUNCTION)
 		goto error;
 	
 	prototype = io_libecc_Object.member(&function.data.function->object, io_libecc_key_prototype, 0);
 	if (!prototype)
 		goto error;
 	
-	if (!io_libecc_Value.isObject(*prototype))
-		object = io_libecc_Value.object(io_libecc_Object.create(io_libecc_object_prototype));
-	else if (prototype->type == io_libecc_value_functionType)
+	if (!ECCNSValue.isObject(*prototype))
+		object = ECCNSValue.object(io_libecc_Object.create(io_libecc_object_prototype));
+	else if (prototype->type == ECC_VALTYPE_FUNCTION)
 	{
-		object = io_libecc_Value.object(io_libecc_Object.create(NULL));
+		object = ECCNSValue.object(io_libecc_Object.create(NULL));
 		object.data.object->prototype = &prototype->data.function->object;
 	}
-	else if (prototype->type == io_libecc_value_objectType)
-		object = io_libecc_Value.object(io_libecc_Object.create(prototype->data.object));
+	else if (prototype->type == ECC_VALTYPE_OBJECT)
+		object = ECCNSValue.object(io_libecc_Object.create(prototype->data.object));
 	else
-		object = io_libecc_value_undefined;
+		object = ECCValConstUndefined;
 	
 	io_libecc_Context.setText(context, text);
 	value = callValue(context, function, object, argumentCount, 1, textCall);
 	
-	if (io_libecc_Value.isObject(value))
+	if (ECCNSValue.isObject(value))
 		return value;
 	else
 		return object;
@@ -858,39 +858,39 @@ error:
 	io_libecc_Context.typeError(context, io_libecc_Chars.create("'%.*s' is not a constructor", text->length, text->bytes));
 }
 
-struct eccvalue_t call (struct eccstate_t * const context)
+eccvalue_t call (eccstate_t * const context)
 {
-	const struct io_libecc_Text *textCall = opText(0);
-	const struct io_libecc_Text *text = opText(1);
+	const ecctextstring_t *textCall = opText(0);
+	const ecctextstring_t *text = opText(1);
 	int32_t argumentCount = opValue().data.integer;
-	struct eccvalue_t value;
-	struct eccvalue_t this;
+	eccvalue_t value;
+	eccvalue_t this;
 	
 	context->inEnvironmentObject = 0;
 	value = nextOp();
 	
 	if (context->inEnvironmentObject)
 	{
-		struct eccstate_t *seek = context;
+		eccstate_t *seek = context;
 		while (seek->parent && seek->parent->refObject == context->refObject)
 			seek = seek->parent;
 		
 		++seek->environment->referenceCount;
-		this = io_libecc_Value.objectValue(seek->environment);
+		this = ECCNSValue.objectValue(seek->environment);
 	}
 	else
-		this = io_libecc_value_undefined;
+		this = ECCValConstUndefined;
 	
 	io_libecc_Context.setText(context, text);
 	return callValue(context, value, this, argumentCount, 0, textCall);
 }
 
-struct eccvalue_t eval (struct eccstate_t * const context)
+eccvalue_t eval (eccstate_t * const context)
 {
-	struct eccvalue_t value;
+	eccvalue_t value;
 	struct io_libecc_Input *input;
 	int32_t argumentCount = opValue().data.integer;
-	struct eccstate_t subContext = {
+	eccstate_t subContext = {
 		.parent = context,
 		.this = context->this,
 		.environment = context->environment,
@@ -900,64 +900,64 @@ struct eccvalue_t eval (struct eccstate_t * const context)
 	};
 	
 	if (!argumentCount)
-		return io_libecc_value_undefined;
+		return ECCValConstUndefined;
 	
 	value = nextOp();
 	while (--argumentCount)
 		nextOp();
 	
-	if (!io_libecc_Value.isString(value) || !io_libecc_Value.isPrimitive(value))
+	if (!ECCNSValue.isString(value) || !ECCNSValue.isPrimitive(value))
 		return value;
 	
-	input = io_libecc_Input.createFromBytes(io_libecc_Value.stringBytes(&value), io_libecc_Value.stringLength(&value), "(eval)");
+	input = io_libecc_Input.createFromBytes(ECCNSValue.stringBytes(&value), ECCNSValue.stringLength(&value), "(eval)");
 	io_libecc_Ecc.evalInputWithContext(context->ecc, input, &subContext);
 	
 	value = context->ecc->result;
-	context->ecc->result = io_libecc_value_undefined;
+	context->ecc->result = ECCValConstUndefined;
 	return value;
 }
 
 
 // Expression
 
-struct eccvalue_t noop (struct eccstate_t * const context)
+eccvalue_t noop (eccstate_t * const context)
 {
-	return io_libecc_value_undefined;
+	return ECCValConstUndefined;
 }
 
-struct eccvalue_t value (struct eccstate_t * const context)
+eccvalue_t value (eccstate_t * const context)
 {
 	return opValue();
 }
 
-struct eccvalue_t valueConstRef (struct eccstate_t * const context)
+eccvalue_t valueConstRef (eccstate_t * const context)
 {
-	return io_libecc_Value.reference((struct eccvalue_t *)&opValue());
+	return ECCNSValue.reference((eccvalue_t *)&opValue());
 }
 
-struct eccvalue_t text (struct eccstate_t * const context)
+eccvalue_t text (eccstate_t * const context)
 {
-	return io_libecc_Value.text(opText(0));
+	return ECCNSValue.text(opText(0));
 }
 
-struct eccvalue_t regexp (struct eccstate_t * const context)
+eccvalue_t regexp (eccstate_t * const context)
 {
-	const struct io_libecc_Text *text = opText(0);
+	const ecctextstring_t *text = opText(0);
 	struct io_libecc_Error *error = NULL;
 	struct io_libecc_Chars *chars = io_libecc_Chars.createWithBytes(text->length, text->bytes);
 	struct io_libecc_RegExp *regexp = io_libecc_RegExp.create(chars, &error, context->ecc->sloppyMode? io_libecc_regexp_allowUnicodeFlags: 0);
 	if (error)
 	{
 		error->text.bytes = text->bytes + (error->text.bytes - chars->bytes);
-		io_libecc_Context.throw(context, io_libecc_Value.error(error));
+		io_libecc_Context.throw(context, ECCNSValue.error(error));
 	}
-	return io_libecc_Value.regexp(regexp);
+	return ECCNSValue.regexp(regexp);
 }
 
-struct eccvalue_t function (struct eccstate_t * const context)
+eccvalue_t function (eccstate_t * const context)
 {
-	struct eccobject_t *prototype;
-	struct eccvalue_t value = opValue(), result;
+	eccobject_t *prototype;
+	eccvalue_t value = opValue(), result;
 	
 	struct io_libecc_Function *function = io_libecc_Function.copy(value.data.function);
 	function->object.prototype = &value.data.function->object;
@@ -969,21 +969,21 @@ struct eccvalue_t function (struct eccstate_t * const context)
 	}
 	
 	prototype = io_libecc_Object.create(io_libecc_object_prototype);
-	io_libecc_Function.linkPrototype(function, io_libecc_Value.object(prototype), io_libecc_value_sealed);
+	io_libecc_Function.linkPrototype(function, ECCNSValue.object(prototype), io_libecc_value_sealed);
 	
 	++prototype->referenceCount;
 	++context->environment->referenceCount;
 	++function->object.referenceCount;
 	
-	result = io_libecc_Value.function(function);
+	result = ECCNSValue.function(function);
 	result.flags = value.flags;
 	return result;
 }
 
-struct eccvalue_t object (struct eccstate_t * const context)
+eccvalue_t object (eccstate_t * const context)
 {
-	struct eccobject_t *object = io_libecc_Object.create(io_libecc_object_prototype);
-	struct eccvalue_t property, value;
+	eccobject_t *object = io_libecc_Object.create(io_libecc_object_prototype);
+	eccvalue_t property, value;
 	uint32_t count;
 	
 	object->flags |= io_libecc_object_mark;
@@ -993,19 +993,19 @@ struct eccvalue_t object (struct eccstate_t * const context)
 		property = nextOp();
 		value = retain(nextOpValue());
 		
-		if (property.type == io_libecc_value_keyType)
+		if (property.type == ECC_VALTYPE_KEY)
 			io_libecc_Object.addMember(object, property.data.key, value, 0);
-		else if (property.type == io_libecc_value_integerType)
+		else if (property.type == ECC_VALTYPE_INTEGER)
 			io_libecc_Object.addElement(object, property.data.integer, value, 0);
 	}
-	return io_libecc_Value.object(object);
+	return ECCNSValue.object(object);
 }
 
-struct eccvalue_t array (struct eccstate_t * const context)
+eccvalue_t array (eccstate_t * const context)
 {
 	uint32_t length = opValue().data.integer;
-	struct eccobject_t *object = io_libecc_Array.createSized(length);
-	struct eccvalue_t value;
+	eccobject_t *object = io_libecc_Array.createSized(length);
+	eccvalue_t value;
 	uint32_t index;
 	
 	object->flags |= io_libecc_object_mark;
@@ -1015,18 +1015,18 @@ struct eccvalue_t array (struct eccstate_t * const context)
 		value = retain(nextOpValue());
 		object->element[index].value = value;
 	}
-	return io_libecc_Value.object(object);
+	return ECCNSValue.object(object);
 }
 
-struct eccvalue_t this (struct eccstate_t * const context)
+eccvalue_t this (eccstate_t * const context)
 {
 	return context->this;
 }
 
 static
-struct eccvalue_t * localRef (struct eccstate_t * const context, struct io_libecc_Key key, const struct io_libecc_Text *text, int required)
+eccvalue_t * localRef (eccstate_t * const context, struct io_libecc_Key key, const ecctextstring_t *text, int required)
 {
-	struct eccvalue_t *ref;
+	eccvalue_t *ref;
 	
 	ref = io_libecc_Object.member(context->environment, key, 0);
 	
@@ -1048,42 +1048,42 @@ struct eccvalue_t * localRef (struct eccstate_t * const context, struct io_libec
 	return ref;
 }
 
-struct eccvalue_t createLocalRef (struct eccstate_t * const context)
+eccvalue_t createLocalRef (eccstate_t * const context)
 {
 	struct io_libecc_Key key = opValue().data.key;
-	struct eccvalue_t *ref = localRef(context, key, opText(0), context->strictMode);
+	eccvalue_t *ref = localRef(context, key, opText(0), context->strictMode);
 	
 	if (!ref)
-		ref = io_libecc_Object.addMember(&context->ecc->global->environment, key, io_libecc_value_undefined, 0);
+		ref = io_libecc_Object.addMember(&context->ecc->global->environment, key, ECCValConstUndefined, 0);
 	
-	return io_libecc_Value.reference(ref);
+	return ECCNSValue.reference(ref);
 }
 
-struct eccvalue_t getLocalRefOrNull (struct eccstate_t * const context)
+eccvalue_t getLocalRefOrNull (eccstate_t * const context)
 {
-	return io_libecc_Value.reference(localRef(context, opValue().data.key, opText(0), 0));
+	return ECCNSValue.reference(localRef(context, opValue().data.key, opText(0), 0));
 }
 
-struct eccvalue_t getLocalRef (struct eccstate_t * const context)
+eccvalue_t getLocalRef (eccstate_t * const context)
 {
-	return io_libecc_Value.reference(localRef(context, opValue().data.key, opText(0), 1));
+	return ECCNSValue.reference(localRef(context, opValue().data.key, opText(0), 1));
 }
 
-struct eccvalue_t getLocal (struct eccstate_t * const context)
+eccvalue_t getLocal (eccstate_t * const context)
 {
 	return *localRef(context, opValue().data.key, opText(0), 1);
 }
 
-struct eccvalue_t setLocal (struct eccstate_t * const context)
+eccvalue_t setLocal (eccstate_t * const context)
 {
-	const struct io_libecc_Text *text = opText(0);
+	const ecctextstring_t *text = opText(0);
 	struct io_libecc_Key key = opValue().data.key;
-	struct eccvalue_t value = nextOp();
+	eccvalue_t value = nextOp();
 	
-	struct eccvalue_t *ref = localRef(context, key, text, context->strictMode);
+	eccvalue_t *ref = localRef(context, key, text, context->strictMode);
 	
 	if (!ref)
-		ref = io_libecc_Object.addMember(&context->ecc->global->environment, key, io_libecc_value_undefined, 0);
+		ref = io_libecc_Object.addMember(&context->ecc->global->environment, key, ECCValConstUndefined, 0);
 	
 	if (ref->flags & io_libecc_value_readonly)
 		return value;
@@ -1094,35 +1094,35 @@ struct eccvalue_t setLocal (struct eccstate_t * const context)
 	return value;
 }
 
-struct eccvalue_t deleteLocal (struct eccstate_t * const context)
+eccvalue_t deleteLocal (eccstate_t * const context)
 {
-	struct eccvalue_t *ref = localRef(context, opValue().data.key, opText(0), 0);
+	eccvalue_t *ref = localRef(context, opValue().data.key, opText(0), 0);
 	
 	if (!ref)
-		return io_libecc_value_true;
+		return ECCValConstTrue;
 	
 	if (ref->flags & io_libecc_value_sealed)
-		return io_libecc_value_false;
+		return ECCValConstFalse;
 	
-	*ref = io_libecc_value_none;
-	return io_libecc_value_true;
+	*ref = ECCValConstNone;
+	return ECCValConstTrue;
 }
 
-struct eccvalue_t getLocalSlotRef (struct eccstate_t * const context)
+eccvalue_t getLocalSlotRef (eccstate_t * const context)
 {
-	return io_libecc_Value.reference(&context->environment->hashmap[opValue().data.integer].value);
+	return ECCNSValue.reference(&context->environment->hashmap[opValue().data.integer].value);
 }
 
-struct eccvalue_t getLocalSlot (struct eccstate_t * const context)
+eccvalue_t getLocalSlot (eccstate_t * const context)
 {
 	return context->environment->hashmap[opValue().data.integer].value;
 }
 
-struct eccvalue_t setLocalSlot (struct eccstate_t * const context)
+eccvalue_t setLocalSlot (eccstate_t * const context)
 {
 	int32_t slot = opValue().data.integer;
-	struct eccvalue_t value = nextOp();
-	struct eccvalue_t *ref = &context->environment->hashmap[slot].value;
+	eccvalue_t value = nextOp();
+	eccvalue_t *ref = &context->environment->hashmap[slot].value;
 	
 	if (ref->flags & io_libecc_value_readonly)
 		return value;
@@ -1133,37 +1133,37 @@ struct eccvalue_t setLocalSlot (struct eccstate_t * const context)
 	return value;
 }
 
-struct eccvalue_t deleteLocalSlot (struct eccstate_t * const context)
+eccvalue_t deleteLocalSlot (eccstate_t * const context)
 {
-	return io_libecc_value_false;
+	return ECCValConstFalse;
 }
 
-struct eccvalue_t getParentSlotRef (struct eccstate_t * const context)
+eccvalue_t getParentSlotRef (eccstate_t * const context)
 {
 	int32_t slot = opValue().data.integer & 0xffff;
 	int32_t count = opValue().data.integer >> 16;
-	struct eccobject_t *object = context->environment;
+	eccobject_t *object = context->environment;
 	while (count--)
 		object = object->prototype;
 	
-	return io_libecc_Value.reference(&object->hashmap[slot].value);
+	return ECCNSValue.reference(&object->hashmap[slot].value);
 }
 
-struct eccvalue_t getParentSlot (struct eccstate_t * const context)
+eccvalue_t getParentSlot (eccstate_t * const context)
 {
 	return *getParentSlotRef(context).data.reference;
 }
 
-struct eccvalue_t setParentSlot (struct eccstate_t * const context)
+eccvalue_t setParentSlot (eccstate_t * const context)
 {
-	const struct io_libecc_Text *text = opText(0);
-	struct eccvalue_t *ref = getParentSlotRef(context).data.reference;
-	struct eccvalue_t value = nextOp();
+	const ecctextstring_t *text = opText(0);
+	eccvalue_t *ref = getParentSlotRef(context).data.reference;
+	eccvalue_t value = nextOp();
 	if (ref->flags & io_libecc_value_readonly)
 	{
 		if (context->strictMode)
 		{
-			struct io_libecc_Text property = *io_libecc_Key.textOf(ref->key);
+			ecctextstring_t property = *io_libecc_Key.textOf(ref->key);
 			io_libecc_Context.setText(context, text);
 			io_libecc_Context.typeError(context, io_libecc_Chars.create("'%.*s' is read-only", property.length, property.bytes));
 		}
@@ -1177,29 +1177,29 @@ struct eccvalue_t setParentSlot (struct eccstate_t * const context)
 	return value;
 }
 
-struct eccvalue_t deleteParentSlot (struct eccstate_t * const context)
+eccvalue_t deleteParentSlot (eccstate_t * const context)
 {
-	return io_libecc_value_false;
+	return ECCValConstFalse;
 }
 
 static
-void prepareObject (struct eccstate_t * const context, struct eccvalue_t *object)
+void prepareObject (eccstate_t * const context, eccvalue_t *object)
 {
-	const struct io_libecc_Text *textObject = opText(1);
+	const ecctextstring_t *textObject = opText(1);
 	*object = nextOp();
 	
-	if (io_libecc_Value.isPrimitive(*object))
+	if (ECCNSValue.isPrimitive(*object))
 	{
 		io_libecc_Context.setText(context, textObject);
-		*object = io_libecc_Value.toObject(context, *object);
+		*object = ECCNSValue.toObject(context, *object);
 	}
 }
 
-struct eccvalue_t getMemberRef (struct eccstate_t * const context)
+eccvalue_t getMemberRef (eccstate_t * const context)
 {
-	const struct io_libecc_Text *text = opText(0);
+	const ecctextstring_t *text = opText(0);
 	struct io_libecc_Key key = opValue().data.key;
-	struct eccvalue_t object, *ref;
+	eccvalue_t object, *ref;
 	
 	prepareObject(context, &object);
 	
@@ -1213,27 +1213,27 @@ struct eccvalue_t getMemberRef (struct eccstate_t * const context)
 			io_libecc_Context.setText(context, text);
 			io_libecc_Context.typeError(context, io_libecc_Chars.create("object is not extensible"));
 		}
-		ref = io_libecc_Object.addMember(object.data.object, key, io_libecc_value_undefined, 0);
+		ref = io_libecc_Object.addMember(object.data.object, key, ECCValConstUndefined, 0);
 	}
 	
-	return io_libecc_Value.reference(ref);
+	return ECCNSValue.reference(ref);
 }
 
-struct eccvalue_t getMember (struct eccstate_t * const context)
+eccvalue_t getMember (eccstate_t * const context)
 {
 	struct io_libecc_Key key = opValue().data.key;
-	struct eccvalue_t object;
+	eccvalue_t object;
 	
 	prepareObject(context, &object);
 	
 	return io_libecc_Object.getMember(context, object.data.object, key);
 }
 
-struct eccvalue_t setMember (struct eccstate_t * const context)
+eccvalue_t setMember (eccstate_t * const context)
 {
-	const struct io_libecc_Text *text = opText(0);
+	const ecctextstring_t *text = opText(0);
 	struct io_libecc_Key key = opValue().data.key;
-	struct eccvalue_t object, value;
+	eccvalue_t object, value;
 	
 	prepareObject(context, &object);
 	value = retain(nextOp());
@@ -1244,13 +1244,13 @@ struct eccvalue_t setMember (struct eccstate_t * const context)
 	return value;
 }
 
-struct eccvalue_t callMember (struct eccstate_t * const context)
+eccvalue_t callMember (eccstate_t * const context)
 {
-	const struct io_libecc_Text *textCall = opText(0);
+	const ecctextstring_t *textCall = opText(0);
 	int32_t argumentCount = opValue().data.integer;
-	const struct io_libecc_Text *text = &(++context->ops)->text;
+	const ecctextstring_t *text = &(++context->ops)->text;
 	struct io_libecc_Key key = opValue().data.key;
-	struct eccvalue_t object;
+	eccvalue_t object;
 	
 	prepareObject(context, &object);
 	
@@ -1258,11 +1258,11 @@ struct eccvalue_t callMember (struct eccstate_t * const context)
 	return callValue(context, io_libecc_Object.getMember(context, object.data.object, key), object, argumentCount, 0, textCall);
 }
 
-struct eccvalue_t deleteMember (struct eccstate_t * const context)
+eccvalue_t deleteMember (eccstate_t * const context)
 {
-	const struct io_libecc_Text *text = opText(0);
+	const ecctextstring_t *text = opText(0);
 	struct io_libecc_Key key = opValue().data.key;
-	struct eccvalue_t object;
+	eccvalue_t object;
 	int result;
 	
 	prepareObject(context, &object);
@@ -1274,31 +1274,31 @@ struct eccvalue_t deleteMember (struct eccstate_t * const context)
 		io_libecc_Context.typeError(context, io_libecc_Chars.create("'%.*s' is non-configurable", io_libecc_Key.textOf(key)->length, io_libecc_Key.textOf(key)->bytes));
 	}
 	
-	return io_libecc_Value.truth(result);
+	return ECCNSValue.truth(result);
 }
 
 static
-void prepareObjectProperty (struct eccstate_t * const context, struct eccvalue_t *object, struct eccvalue_t *property)
+void prepareObjectProperty (eccstate_t * const context, eccvalue_t *object, eccvalue_t *property)
 {
-	const struct io_libecc_Text *textProperty;
+	const ecctextstring_t *textProperty;
 	
 	prepareObject(context, object);
 	
 	textProperty = opText(1);
 	*property = nextOp();
 	
-	if (io_libecc_Value.isObject(*property))
+	if (ECCNSValue.isObject(*property))
 	{
 		io_libecc_Context.setText(context, textProperty);
-		*property = io_libecc_Value.toPrimitive(context, *property, io_libecc_value_hintString);
+		*property = ECCNSValue.toPrimitive(context, *property, io_libecc_value_hintString);
 	}
 }
 
-struct eccvalue_t getPropertyRef (struct eccstate_t * const context)
+eccvalue_t getPropertyRef (eccstate_t * const context)
 {
-	const struct io_libecc_Text *text = opText(1);
-	struct eccvalue_t object, property;
-	struct eccvalue_t *ref;
+	const ecctextstring_t *text = opText(1);
+	eccvalue_t object, property;
+	eccvalue_t *ref;
 	
 	prepareObjectProperty(context, &object, &property);
 	
@@ -1312,25 +1312,25 @@ struct eccvalue_t getPropertyRef (struct eccstate_t * const context)
 			io_libecc_Context.setText(context, text);
 			io_libecc_Context.typeError(context, io_libecc_Chars.create("object is not extensible"));
 		}
-		ref = io_libecc_Object.addProperty(object.data.object, property, io_libecc_value_undefined, 0);
+		ref = io_libecc_Object.addProperty(object.data.object, property, ECCValConstUndefined, 0);
 	}
 	
-	return io_libecc_Value.reference(ref);
+	return ECCNSValue.reference(ref);
 }
 
-struct eccvalue_t getProperty (struct eccstate_t * const context)
+eccvalue_t getProperty (eccstate_t * const context)
 {
-	struct eccvalue_t object, property;
+	eccvalue_t object, property;
 	
 	prepareObjectProperty(context, &object, &property);
 	
 	return io_libecc_Object.getProperty(context, object.data.object, property);
 }
 
-struct eccvalue_t setProperty (struct eccstate_t * const context)
+eccvalue_t setProperty (eccstate_t * const context)
 {
-	const struct io_libecc_Text *text = opText(0);
-	struct eccvalue_t object, property, value;
+	const ecctextstring_t *text = opText(0);
+	eccvalue_t object, property, value;
 	
 	prepareObjectProperty(context, &object, &property);
 	
@@ -1343,12 +1343,12 @@ struct eccvalue_t setProperty (struct eccstate_t * const context)
 	return value;
 }
 
-struct eccvalue_t callProperty (struct eccstate_t * const context)
+eccvalue_t callProperty (eccstate_t * const context)
 {
-	const struct io_libecc_Text *textCall = opText(0);
+	const ecctextstring_t *textCall = opText(0);
 	int32_t argumentCount = opValue().data.integer;
-	const struct io_libecc_Text *text = &(++context->ops)->text;
-	struct eccvalue_t object, property;
+	const ecctextstring_t *text = &(++context->ops)->text;
+	eccvalue_t object, property;
 	
 	prepareObjectProperty(context, &object, &property);
 	
@@ -1356,10 +1356,10 @@ struct eccvalue_t callProperty (struct eccstate_t * const context)
 	return callValue(context, io_libecc_Object.getProperty(context, object.data.object, property), object, argumentCount, 0, textCall);
 }
 
-struct eccvalue_t deleteProperty (struct eccstate_t * const context)
+eccvalue_t deleteProperty (eccstate_t * const context)
 {
-	const struct io_libecc_Text *text = opText(0);
-	struct eccvalue_t object, property;
+	const ecctextstring_t *text = opText(0);
+	eccvalue_t object, property;
 	int result;
 	
 	prepareObjectProperty(context, &object, &property);
@@ -1367,14 +1367,14 @@ struct eccvalue_t deleteProperty (struct eccstate_t * const context)
 	result = io_libecc_Object.deleteProperty(object.data.object, property);
 	if (!result && context->strictMode)
 	{
-		struct eccvalue_t string = io_libecc_Value.toString(context, property);
+		eccvalue_t string = ECCNSValue.toString(context, property);
 		io_libecc_Context.setText(context, text);
-		io_libecc_Context.typeError(context, io_libecc_Chars.create("'%.*s' is non-configurable", io_libecc_Value.stringLength(&string), io_libecc_Value.stringBytes(&string)));
+		io_libecc_Context.typeError(context, io_libecc_Chars.create("'%.*s' is non-configurable", ECCNSValue.stringLength(&string), ECCNSValue.stringBytes(&string)));
 	}
-	return io_libecc_Value.truth(result);
+	return ECCNSValue.truth(result);
 }
 
-struct eccvalue_t pushEnvironment (struct eccstate_t * const context)
+eccvalue_t pushEnvironment (eccstate_t * const context)
 {
 	if (context->refObject)
 		context->refObject = io_libecc_Object.create(context->refObject);
@@ -1384,204 +1384,204 @@ struct eccvalue_t pushEnvironment (struct eccstate_t * const context)
 	return opValue();
 }
 
-struct eccvalue_t popEnvironment (struct eccstate_t * const context)
+eccvalue_t popEnvironment (eccstate_t * const context)
 {
 	if (context->refObject)
 	{
-		struct eccobject_t *refObject = context->refObject;
+		eccobject_t *refObject = context->refObject;
 		context->refObject = context->refObject->prototype;
 		refObject->prototype = NULL;
 	}
 	else
 	{
-		struct eccobject_t *environment = context->environment;
+		eccobject_t *environment = context->environment;
 		context->environment = context->environment->prototype;
 		environment->prototype = NULL;
 	}
 	return opValue();
 }
 
-struct eccvalue_t exchange (struct eccstate_t * const context)
+eccvalue_t exchange (eccstate_t * const context)
 {
-	struct eccvalue_t value = opValue();
+	eccvalue_t value = opValue();
 	nextOp();
 	return value;
 }
 
-struct eccvalue_t typeOf (struct eccstate_t * const context)
+eccvalue_t typeOf (eccstate_t * const context)
 {
-	struct eccvalue_t value = nextOp();
-	if (value.type == io_libecc_value_referenceType)
+	eccvalue_t value = nextOp();
+	if (value.type == ECC_VALTYPE_REFERENCE)
 	{
-		struct eccvalue_t *ref = value.data.reference;
+		eccvalue_t *ref = value.data.reference;
 		if (!ref)
-			return io_libecc_Value.text(&io_libecc_text_undefined);
+			return ECCNSValue.text(&ECC_ConstString_Undefined);
 		else
 			value = *ref;
 	}
-	return io_libecc_Value.toType(value);
+	return ECCNSValue.toType(value);
 }
 
 #define prepareAB \
-	const struct io_libecc_Text *text = opText(1);\
-	struct eccvalue_t a = nextOp();\
-	const struct io_libecc_Text *textAlt = opText(1);\
-	struct eccvalue_t b = nextOp();\
+	const ecctextstring_t *text = opText(1);\
+	eccvalue_t a = nextOp();\
+	const ecctextstring_t *textAlt = opText(1);\
+	eccvalue_t b = nextOp();\
 
-struct eccvalue_t equal (struct eccstate_t * const context)
+eccvalue_t equal (eccstate_t * const context)
 {
 	prepareAB
 	
-	if (a.type == io_libecc_value_binaryType && b.type == io_libecc_value_binaryType)
-		return io_libecc_Value.truth(a.data.binary == b.data.binary);
+	if (a.type == ECC_VALTYPE_BINARY && b.type == ECC_VALTYPE_BINARY)
+		return ECCNSValue.truth(a.data.binary == b.data.binary);
 	else
 	{
 		io_libecc_Context.setTexts(context, text, textAlt);
-		return io_libecc_Value.equals(context, a, b);
+		return ECCNSValue.equals(context, a, b);
 	}
 }
 
-struct eccvalue_t notEqual (struct eccstate_t * const context)
+eccvalue_t notEqual (eccstate_t * const context)
 {
 	prepareAB
 	
-	if (a.type == io_libecc_value_binaryType && b.type == io_libecc_value_binaryType)
-		return io_libecc_Value.truth(a.data.binary != b.data.binary);
+	if (a.type == ECC_VALTYPE_BINARY && b.type == ECC_VALTYPE_BINARY)
+		return ECCNSValue.truth(a.data.binary != b.data.binary);
 	else
 	{
 		io_libecc_Context.setTexts(context, text, textAlt);
-		return io_libecc_Value.truth(!io_libecc_Value.isTrue(io_libecc_Value.equals(context, a, b)));
+		return ECCNSValue.truth(!ECCNSValue.isTrue(ECCNSValue.equals(context, a, b)));
 	}
 }
 
-struct eccvalue_t identical (struct eccstate_t * const context)
+eccvalue_t identical (eccstate_t * const context)
 {
 	prepareAB
 	
-	if (a.type == io_libecc_value_binaryType && b.type == io_libecc_value_binaryType)
-		return io_libecc_Value.truth(a.data.binary == b.data.binary);
+	if (a.type == ECC_VALTYPE_BINARY && b.type == ECC_VALTYPE_BINARY)
+		return ECCNSValue.truth(a.data.binary == b.data.binary);
 	else
 	{
 		io_libecc_Context.setTexts(context, text, textAlt);
-		return io_libecc_Value.same(context, a, b);
+		return ECCNSValue.same(context, a, b);
 	}
 }
 
-struct eccvalue_t notIdentical (struct eccstate_t * const context)
+eccvalue_t notIdentical (eccstate_t * const context)
 {
 	prepareAB
 	
-	if (a.type == io_libecc_value_binaryType && b.type == io_libecc_value_binaryType)
-		return io_libecc_Value.truth(a.data.binary != b.data.binary);
+	if (a.type == ECC_VALTYPE_BINARY && b.type == ECC_VALTYPE_BINARY)
+		return ECCNSValue.truth(a.data.binary != b.data.binary);
 	else
 	{
 		io_libecc_Context.setTexts(context, text, textAlt);
-		return io_libecc_Value.truth(!io_libecc_Value.isTrue(io_libecc_Value.same(context, a, b)));
+		return ECCNSValue.truth(!ECCNSValue.isTrue(ECCNSValue.same(context, a, b)));
 	}
 }
 
-struct eccvalue_t less (struct eccstate_t * const context)
+eccvalue_t less (eccstate_t * const context)
 {
 	prepareAB
 	
-	if (a.type == io_libecc_value_binaryType && b.type == io_libecc_value_binaryType)
-		return io_libecc_Value.truth(a.data.binary < b.data.binary);
+	if (a.type == ECC_VALTYPE_BINARY && b.type == ECC_VALTYPE_BINARY)
+		return ECCNSValue.truth(a.data.binary < b.data.binary);
 	else
 	{
 		io_libecc_Context.setTexts(context, text, textAlt);
-		return io_libecc_Value.less(context, a, b);
+		return ECCNSValue.less(context, a, b);
 	}
 }
 
-struct eccvalue_t lessOrEqual (struct eccstate_t * const context)
+eccvalue_t lessOrEqual (eccstate_t * const context)
 {
 	prepareAB
 	
-	if (a.type == io_libecc_value_binaryType && b.type == io_libecc_value_binaryType)
-		return io_libecc_Value.truth(a.data.binary <= b.data.binary);
+	if (a.type == ECC_VALTYPE_BINARY && b.type == ECC_VALTYPE_BINARY)
+		return ECCNSValue.truth(a.data.binary <= b.data.binary);
 	else
 	{
 		io_libecc_Context.setTexts(context, text, textAlt);
-		return io_libecc_Value.lessOrEqual(context, a, b);
+		return ECCNSValue.lessOrEqual(context, a, b);
 	}
 }
 
-struct eccvalue_t more (struct eccstate_t * const context)
+eccvalue_t more (eccstate_t * const context)
 {
 	prepareAB
 	
-	if (a.type == io_libecc_value_binaryType && b.type == io_libecc_value_binaryType)
-		return io_libecc_Value.truth(a.data.binary > b.data.binary);
+	if (a.type == ECC_VALTYPE_BINARY && b.type == ECC_VALTYPE_BINARY)
+		return ECCNSValue.truth(a.data.binary > b.data.binary);
 	else
 	{
 		io_libecc_Context.setTexts(context, text, textAlt);
-		return io_libecc_Value.more(context, a, b);
+		return ECCNSValue.more(context, a, b);
 	}
 }
 
-struct eccvalue_t moreOrEqual (struct eccstate_t * const context)
+eccvalue_t moreOrEqual (eccstate_t * const context)
 {
 	prepareAB
 	
-	if (a.type == io_libecc_value_binaryType && b.type == io_libecc_value_binaryType)
-		return io_libecc_Value.truth(a.data.binary >= b.data.binary);
+	if (a.type == ECC_VALTYPE_BINARY && b.type == ECC_VALTYPE_BINARY)
+		return ECCNSValue.truth(a.data.binary >= b.data.binary);
 	else
 	{
 		io_libecc_Context.setTexts(context, text, textAlt);
-		return io_libecc_Value.moreOrEqual(context, a, b);
+		return ECCNSValue.moreOrEqual(context, a, b);
 	}
 }
 
-struct eccvalue_t instanceOf (struct eccstate_t * const context)
+eccvalue_t instanceOf (eccstate_t * const context)
 {
-	struct eccvalue_t a = nextOp();
-	const struct io_libecc_Text *textAlt = opText(1);
-	struct eccvalue_t b = nextOp();
+	eccvalue_t a = nextOp();
+	const ecctextstring_t *textAlt = opText(1);
+	eccvalue_t b = nextOp();
 	
-	if (b.type != io_libecc_value_functionType)
+	if (b.type != ECC_VALTYPE_FUNCTION)
 	{
 		io_libecc_Context.setText(context, textAlt);
 		io_libecc_Context.typeError(context, io_libecc_Chars.create("'%.*s' is not a function", textAlt->length, textAlt->bytes));
 	}
 	
 	b = io_libecc_Object.getMember(context, b.data.object, io_libecc_key_prototype);
-	if (!io_libecc_Value.isObject(b))
+	if (!ECCNSValue.isObject(b))
 	{
 		io_libecc_Context.setText(context, textAlt);
 		io_libecc_Context.typeError(context, io_libecc_Chars.create("'%.*s'.prototype not an object", textAlt->length, textAlt->bytes));
 	}
 	
-	if (io_libecc_Value.isObject(a))
+	if (ECCNSValue.isObject(a))
 	{
-		struct eccobject_t *object;
+		eccobject_t *object;
 		
 		object = a.data.object;
 		while (( object = object->prototype ))
 			if (object == b.data.object)
-				return io_libecc_value_true;
+				return ECCValConstTrue;
 	}
-	return io_libecc_value_false;
+	return ECCValConstFalse;
 }
 
-struct eccvalue_t in (struct eccstate_t * const context)
+eccvalue_t in (eccstate_t * const context)
 {
-	struct eccvalue_t property = nextOp();
-	struct eccvalue_t object = nextOp();
-	struct eccvalue_t *ref;
+	eccvalue_t property = nextOp();
+	eccvalue_t object = nextOp();
+	eccvalue_t *ref;
 	
-	if (!io_libecc_Value.isObject(object))
+	if (!ECCNSValue.isObject(object))
 		io_libecc_Context.typeError(context, io_libecc_Chars.create("'%.*s' not an object", context->ops->text.length, context->ops->text.bytes));
 	
-	ref = io_libecc_Object.property(object.data.object, io_libecc_Value.toString(context, property), 0);
+	ref = io_libecc_Object.property(object.data.object, ECCNSValue.toString(context, property), 0);
 	
-	return io_libecc_Value.truth(ref != NULL);
+	return ECCNSValue.truth(ref != NULL);
 }
 
-struct eccvalue_t add (struct eccstate_t * const context)
+eccvalue_t add (eccstate_t * const context)
 {
 	prepareAB
 	
-	if (a.type == io_libecc_value_binaryType && b.type == io_libecc_value_binaryType)
+	if (a.type == ECC_VALTYPE_BINARY && b.type == ECC_VALTYPE_BINARY)
 	{
 		a.data.binary += b.data.binary;
 		return a;
@@ -1589,110 +1589,110 @@ struct eccvalue_t add (struct eccstate_t * const context)
 	else
 	{
 		io_libecc_Context.setTexts(context, text, textAlt);
-		return io_libecc_Value.add(context, a, b);
+		return ECCNSValue.add(context, a, b);
 	}
 }
 
-struct eccvalue_t minus (struct eccstate_t * const context)
+eccvalue_t minus (eccstate_t * const context)
 {
-	struct eccvalue_t a = nextOp();
-	struct eccvalue_t b = nextOp();
-	if (a.type == io_libecc_value_binaryType && b.type == io_libecc_value_binaryType)
+	eccvalue_t a = nextOp();
+	eccvalue_t b = nextOp();
+	if (a.type == ECC_VALTYPE_BINARY && b.type == ECC_VALTYPE_BINARY)
 	{
 		a.data.binary -= b.data.binary;
 		return a;
 	}
 	else
-		return io_libecc_Value.binary(io_libecc_Value.toBinary(context, a).data.binary - io_libecc_Value.toBinary(context, b).data.binary);
+		return ECCNSValue.binary(ECCNSValue.toBinary(context, a).data.binary - ECCNSValue.toBinary(context, b).data.binary);
 }
 
-struct eccvalue_t multiply (struct eccstate_t * const context)
+eccvalue_t multiply (eccstate_t * const context)
 {
-	struct eccvalue_t a = nextOp();
-	struct eccvalue_t b = nextOp();
-	if (a.type == io_libecc_value_binaryType && b.type == io_libecc_value_binaryType)
+	eccvalue_t a = nextOp();
+	eccvalue_t b = nextOp();
+	if (a.type == ECC_VALTYPE_BINARY && b.type == ECC_VALTYPE_BINARY)
 	{
 		a.data.binary *= b.data.binary;
 		return a;
 	}
 	else
-		return io_libecc_Value.binary(io_libecc_Value.toBinary(context, a).data.binary * io_libecc_Value.toBinary(context, b).data.binary);
+		return ECCNSValue.binary(ECCNSValue.toBinary(context, a).data.binary * ECCNSValue.toBinary(context, b).data.binary);
 }
 
-struct eccvalue_t divide (struct eccstate_t * const context)
+eccvalue_t divide (eccstate_t * const context)
 {
-	struct eccvalue_t a = nextOp();
-	struct eccvalue_t b = nextOp();
-	if (a.type == io_libecc_value_binaryType && b.type == io_libecc_value_binaryType)
+	eccvalue_t a = nextOp();
+	eccvalue_t b = nextOp();
+	if (a.type == ECC_VALTYPE_BINARY && b.type == ECC_VALTYPE_BINARY)
 	{
 		a.data.binary /= b.data.binary;
 		return a;
 	}
 	else
-		return io_libecc_Value.binary(io_libecc_Value.toBinary(context, a).data.binary / io_libecc_Value.toBinary(context, b).data.binary);
+		return ECCNSValue.binary(ECCNSValue.toBinary(context, a).data.binary / ECCNSValue.toBinary(context, b).data.binary);
 }
 
-struct eccvalue_t modulo (struct eccstate_t * const context)
+eccvalue_t modulo (eccstate_t * const context)
 {
-	struct eccvalue_t a = nextOp();
-	struct eccvalue_t b = nextOp();
-	if (a.type == io_libecc_value_binaryType && b.type == io_libecc_value_binaryType)
+	eccvalue_t a = nextOp();
+	eccvalue_t b = nextOp();
+	if (a.type == ECC_VALTYPE_BINARY && b.type == ECC_VALTYPE_BINARY)
 	{
 		a.data.binary = fmod(a.data.binary, b.data.binary);
 		return a;
 	}
 	else
-		return io_libecc_Value.binary(fmod(io_libecc_Value.toBinary(context, a).data.binary, io_libecc_Value.toBinary(context, b).data.binary));
+		return ECCNSValue.binary(fmod(ECCNSValue.toBinary(context, a).data.binary, ECCNSValue.toBinary(context, b).data.binary));
 }
 
-struct eccvalue_t leftShift (struct eccstate_t * const context)
+eccvalue_t leftShift (eccstate_t * const context)
 {
-	struct eccvalue_t a = nextOp();
-	struct eccvalue_t b = nextOp();
-	return io_libecc_Value.binary(io_libecc_Value.toInteger(context, a).data.integer << (uint32_t)io_libecc_Value.toInteger(context, b).data.integer);
+	eccvalue_t a = nextOp();
+	eccvalue_t b = nextOp();
+	return ECCNSValue.binary(ECCNSValue.toInteger(context, a).data.integer << (uint32_t)ECCNSValue.toInteger(context, b).data.integer);
 }
 
-struct eccvalue_t rightShift (struct eccstate_t * const context)
+eccvalue_t rightShift (eccstate_t * const context)
 {
-	struct eccvalue_t a = nextOp();
-	struct eccvalue_t b = nextOp();
-	return io_libecc_Value.binary(io_libecc_Value.toInteger(context, a).data.integer >> (uint32_t)io_libecc_Value.toInteger(context, b).data.integer);
+	eccvalue_t a = nextOp();
+	eccvalue_t b = nextOp();
+	return ECCNSValue.binary(ECCNSValue.toInteger(context, a).data.integer >> (uint32_t)ECCNSValue.toInteger(context, b).data.integer);
 }
 
-struct eccvalue_t unsignedRightShift (struct eccstate_t * const context)
+eccvalue_t unsignedRightShift (eccstate_t * const context)
 {
-	struct eccvalue_t a = nextOp();
-	struct eccvalue_t b = nextOp();
-	return io_libecc_Value.binary((uint32_t)io_libecc_Value.toInteger(context, a).data.integer >> (uint32_t)io_libecc_Value.toInteger(context, b).data.integer);
+	eccvalue_t a = nextOp();
+	eccvalue_t b = nextOp();
+	return ECCNSValue.binary((uint32_t)ECCNSValue.toInteger(context, a).data.integer >> (uint32_t)ECCNSValue.toInteger(context, b).data.integer);
 }
 
-struct eccvalue_t bitwiseAnd (struct eccstate_t * const context)
+eccvalue_t bitwiseAnd (eccstate_t * const context)
 {
-	struct eccvalue_t a = nextOp();
-	struct eccvalue_t b = nextOp();
-	return io_libecc_Value.binary(io_libecc_Value.toInteger(context, a).data.integer & io_libecc_Value.toInteger(context, b).data.integer);
+	eccvalue_t a = nextOp();
+	eccvalue_t b = nextOp();
+	return ECCNSValue.binary(ECCNSValue.toInteger(context, a).data.integer & ECCNSValue.toInteger(context, b).data.integer);
 }
 
-struct eccvalue_t bitwiseXor (struct eccstate_t * const context)
+eccvalue_t bitwiseXor (eccstate_t * const context)
 {
-	struct eccvalue_t a = nextOp();
-	struct eccvalue_t b = nextOp();
-	return io_libecc_Value.binary(io_libecc_Value.toInteger(context, a).data.integer ^ io_libecc_Value.toInteger(context, b).data.integer);
+	eccvalue_t a = nextOp();
+	eccvalue_t b = nextOp();
+	return ECCNSValue.binary(ECCNSValue.toInteger(context, a).data.integer ^ ECCNSValue.toInteger(context, b).data.integer);
 }
 
-struct eccvalue_t bitwiseOr (struct eccstate_t * const context)
+eccvalue_t bitwiseOr (eccstate_t * const context)
 {
-	struct eccvalue_t a = nextOp();
-	struct eccvalue_t b = nextOp();
-	return io_libecc_Value.binary(io_libecc_Value.toInteger(context, a).data.integer | io_libecc_Value.toInteger(context, b).data.integer);
+	eccvalue_t a = nextOp();
+	eccvalue_t b = nextOp();
+	return ECCNSValue.binary(ECCNSValue.toInteger(context, a).data.integer | ECCNSValue.toInteger(context, b).data.integer);
 }
 
-struct eccvalue_t logicalAnd (struct eccstate_t * const context)
+eccvalue_t logicalAnd (eccstate_t * const context)
 {
 	const int32_t opCount = opValue().data.integer;
-	struct eccvalue_t value = nextOp();
+	eccvalue_t value = nextOp();
 	
-	if (!io_libecc_Value.isTrue(value))
+	if (!ECCNSValue.isTrue(value))
 	{
 		context->ops += opCount;
 		return value;
@@ -1701,12 +1701,12 @@ struct eccvalue_t logicalAnd (struct eccstate_t * const context)
 		return nextOp();
 }
 
-struct eccvalue_t logicalOr (struct eccstate_t * const context)
+eccvalue_t logicalOr (eccstate_t * const context)
 {
 	const int32_t opCount = opValue().data.integer;
-	struct eccvalue_t value = nextOp();
+	eccvalue_t value = nextOp();
 	
-	if (io_libecc_Value.isTrue(value))
+	if (ECCNSValue.isTrue(value))
 	{
 		context->ops += opCount;
 		return value;
@@ -1715,87 +1715,87 @@ struct eccvalue_t logicalOr (struct eccstate_t * const context)
 		return nextOp();
 }
 
-struct eccvalue_t positive (struct eccstate_t * const context)
+eccvalue_t positive (eccstate_t * const context)
 {
-	struct eccvalue_t a = nextOp();
-	if (a.type == io_libecc_value_binaryType)
+	eccvalue_t a = nextOp();
+	if (a.type == ECC_VALTYPE_BINARY)
 		return a;
 	else
-		return io_libecc_Value.toBinary(context, a);
+		return ECCNSValue.toBinary(context, a);
 }
 
-struct eccvalue_t negative (struct eccstate_t * const context)
+eccvalue_t negative (eccstate_t * const context)
 {
-	struct eccvalue_t a = nextOp();
-	if (a.type == io_libecc_value_binaryType)
-		return io_libecc_Value.binary(-a.data.binary);
+	eccvalue_t a = nextOp();
+	if (a.type == ECC_VALTYPE_BINARY)
+		return ECCNSValue.binary(-a.data.binary);
 	else
-		return io_libecc_Value.binary(-io_libecc_Value.toBinary(context, a).data.binary);
+		return ECCNSValue.binary(-ECCNSValue.toBinary(context, a).data.binary);
 }
 
-struct eccvalue_t invert (struct eccstate_t * const context)
+eccvalue_t invert (eccstate_t * const context)
 {
-	struct eccvalue_t a = nextOp();
-	return io_libecc_Value.binary(~io_libecc_Value.toInteger(context, a).data.integer);
+	eccvalue_t a = nextOp();
+	return ECCNSValue.binary(~ECCNSValue.toInteger(context, a).data.integer);
 }
 
-struct eccvalue_t not (struct eccstate_t * const context)
+eccvalue_t not (eccstate_t * const context)
 {
-	struct eccvalue_t a = nextOp();
-	return io_libecc_Value.truth(!io_libecc_Value.isTrue(a));
+	eccvalue_t a = nextOp();
+	return ECCNSValue.truth(!ECCNSValue.isTrue(a));
 }
 
 // MARK: assignement
 
 #define unaryBinaryOpRef(OP) \
-	struct eccobject_t *refObject = context->refObject; \
-	const struct io_libecc_Text *text = opText(0); \
-	struct eccvalue_t *ref = nextOp().data.reference; \
-	struct eccvalue_t a; \
+	eccobject_t *refObject = context->refObject; \
+	const ecctextstring_t *text = opText(0); \
+	eccvalue_t *ref = nextOp().data.reference; \
+	eccvalue_t a; \
 	double result; \
 	 \
 	a = *ref; \
 	if (a.flags & (io_libecc_value_readonly | io_libecc_value_accessor)) \
 	{ \
 		io_libecc_Context.setText(context, text); \
-		a = io_libecc_Value.toBinary(context, release(io_libecc_Object.getValue(context, context->refObject, ref))); \
+		a = ECCNSValue.toBinary(context, release(io_libecc_Object.getValue(context, context->refObject, ref))); \
 		result = OP; \
 		io_libecc_Object.putValue(context, context->refObject, ref, a); \
-		return io_libecc_Value.binary(result); \
+		return ECCNSValue.binary(result); \
 	} \
-	else if (a.type != io_libecc_value_binaryType) \
-		a = io_libecc_Value.toBinary(context, release(a)); \
+	else if (a.type != ECC_VALTYPE_BINARY) \
+		a = ECCNSValue.toBinary(context, release(a)); \
 	 \
 	result = OP; \
 	replaceRefValue(ref, a); \
 	context->refObject = refObject; \
-	return io_libecc_Value.binary(result); \
+	return ECCNSValue.binary(result); \
 
-struct eccvalue_t incrementRef (struct eccstate_t * const context)
+eccvalue_t incrementRef (eccstate_t * const context)
 {
 	unaryBinaryOpRef(++a.data.binary)
 }
 
-struct eccvalue_t decrementRef (struct eccstate_t * const context)
+eccvalue_t decrementRef (eccstate_t * const context)
 {
 	unaryBinaryOpRef(--a.data.binary)
 }
 
-struct eccvalue_t postIncrementRef (struct eccstate_t * const context)
+eccvalue_t postIncrementRef (eccstate_t * const context)
 {
 	unaryBinaryOpRef(a.data.binary++)
 }
 
-struct eccvalue_t postDecrementRef (struct eccstate_t * const context)
+eccvalue_t postDecrementRef (eccstate_t * const context)
 {
 	unaryBinaryOpRef(a.data.binary--)
 }
 
 #define assignOpRef(OP, TYPE, CONV) \
-	struct eccobject_t *refObject = context->refObject; \
-	const struct io_libecc_Text *text = opText(0); \
-	struct eccvalue_t *ref = nextOp().data.reference; \
-	struct eccvalue_t a, b = nextOp(); \
+	eccobject_t *refObject = context->refObject; \
+	const ecctextstring_t *text = opText(0); \
+	eccvalue_t *ref = nextOp().data.reference; \
+	eccvalue_t a, b = nextOp(); \
 	 \
 	if (b.type != TYPE) \
 		b = CONV(context, b); \
@@ -1816,16 +1816,16 @@ struct eccvalue_t postDecrementRef (struct eccstate_t * const context)
 	context->refObject = refObject; \
 	return a; \
 
-#define assignBinaryOpRef(OP) assignOpRef(OP, io_libecc_value_binaryType, io_libecc_Value.toBinary)
-#define assignIntegerOpRef(OP) assignOpRef(OP, io_libecc_value_integerType, io_libecc_Value.toInteger)
+#define assignBinaryOpRef(OP) assignOpRef(OP, ECC_VALTYPE_BINARY, ECCNSValue.toBinary)
+#define assignIntegerOpRef(OP) assignOpRef(OP, ECC_VALTYPE_INTEGER, ECCNSValue.toInteger)
 
-struct eccvalue_t addAssignRef (struct eccstate_t * const context)
+eccvalue_t addAssignRef (eccstate_t * const context)
 {
-	struct eccobject_t *refObject = context->refObject;
-	const struct io_libecc_Text *text = opText(1);
-	struct eccvalue_t *ref = nextOp().data.reference;
-	const struct io_libecc_Text *textAlt = opText(1);
-	struct eccvalue_t a, b = nextOp();
+	eccobject_t *refObject = context->refObject;
+	const ecctextstring_t *text = opText(1);
+	eccvalue_t *ref = nextOp().data.reference;
+	const ecctextstring_t *textAlt = opText(1);
+	eccvalue_t a, b = nextOp();
 	
 	io_libecc_Context.setTexts(context, text, textAlt);
 
@@ -1833,68 +1833,68 @@ struct eccvalue_t addAssignRef (struct eccstate_t * const context)
 	if (a.flags & (io_libecc_value_readonly | io_libecc_value_accessor))
 	{
 		a = io_libecc_Object.getValue(context, context->refObject, ref);
-		a = retain(io_libecc_Value.add(context, a, b));
+		a = retain(ECCNSValue.add(context, a, b));
 		return io_libecc_Object.putValue(context, context->refObject, ref, a);
 	}
 	
-	if (a.type == io_libecc_value_binaryType && b.type == io_libecc_value_binaryType)
+	if (a.type == ECC_VALTYPE_BINARY && b.type == ECC_VALTYPE_BINARY)
 	{
 		a.data.binary += b.data.binary;
 		return *ref = a;
 	}
 	
-	a = retain(io_libecc_Value.add(context, release(a), b));
+	a = retain(ECCNSValue.add(context, release(a), b));
 	replaceRefValue(ref, a);
 	context->refObject = refObject;
 	return a;
 }
 
-struct eccvalue_t minusAssignRef (struct eccstate_t * const context)
+eccvalue_t minusAssignRef (eccstate_t * const context)
 {
 	assignBinaryOpRef(a.data.binary -= b.data.binary);
 }
 
-struct eccvalue_t multiplyAssignRef (struct eccstate_t * const context)
+eccvalue_t multiplyAssignRef (eccstate_t * const context)
 {
 	assignBinaryOpRef(a.data.binary *= b.data.binary);
 }
 
-struct eccvalue_t divideAssignRef (struct eccstate_t * const context)
+eccvalue_t divideAssignRef (eccstate_t * const context)
 {
 	assignBinaryOpRef(a.data.binary /= b.data.binary);
 }
 
-struct eccvalue_t moduloAssignRef (struct eccstate_t * const context)
+eccvalue_t moduloAssignRef (eccstate_t * const context)
 {
 	assignBinaryOpRef(a.data.binary = fmod(a.data.binary, b.data.binary));
 }
 
-struct eccvalue_t leftShiftAssignRef (struct eccstate_t * const context)
+eccvalue_t leftShiftAssignRef (eccstate_t * const context)
 {
 	assignIntegerOpRef(a.data.integer <<= (uint32_t)b.data.integer);
 }
 
-struct eccvalue_t rightShiftAssignRef (struct eccstate_t * const context)
+eccvalue_t rightShiftAssignRef (eccstate_t * const context)
 {
 	assignIntegerOpRef(a.data.integer >>= (uint32_t)b.data.integer);
 }
 
-struct eccvalue_t unsignedRightShiftAssignRef (struct eccstate_t * const context)
+eccvalue_t unsignedRightShiftAssignRef (eccstate_t * const context)
 {
 	assignIntegerOpRef(a.data.integer = (uint32_t)a.data.integer >> (uint32_t)b.data.integer);
 }
 
-struct eccvalue_t bitAndAssignRef (struct eccstate_t * const context)
+eccvalue_t bitAndAssignRef (eccstate_t * const context)
 {
 	assignIntegerOpRef(a.data.integer &= (uint32_t)b.data.integer);
 }
 
-struct eccvalue_t bitXorAssignRef (struct eccstate_t * const context)
+eccvalue_t bitXorAssignRef (eccstate_t * const context)
 {
 	assignIntegerOpRef(a.data.integer ^= (uint32_t)b.data.integer);
 }
 
-struct eccvalue_t bitOrAssignRef (struct eccstate_t * const context)
+eccvalue_t bitOrAssignRef (eccstate_t * const context)
 {
 	assignIntegerOpRef(a.data.integer |= (uint32_t)b.data.integer);
 }
@@ -1902,7 +1902,7 @@ struct eccvalue_t bitOrAssignRef (struct eccstate_t * const context)
 
 // MARK: Statement
 
-struct eccvalue_t debugger (struct eccstate_t * const context)
+eccvalue_t debugger (eccstate_t * const context)
 {
 	#if DEBUG
 	debug = 1;
@@ -1911,17 +1911,17 @@ struct eccvalue_t debugger (struct eccstate_t * const context)
 }
 
 io_libecc_ecc_useframe
-struct eccvalue_t try (struct eccstate_t * const context)
+eccvalue_t try (eccstate_t * const context)
 {
-	struct eccobject_t *environment = context->environment;
-	struct eccobject_t *refObject = context->refObject;
+	eccobject_t *environment = context->environment;
+	eccobject_t *refObject = context->refObject;
 	const struct io_libecc_Op *end = context->ops + opValue().data.integer;
 	struct io_libecc_Key key;
 	
 	const struct io_libecc_Op * volatile rethrowOps = NULL;
 	volatile int rethrow = 0, breaker = 0;
-	volatile struct eccvalue_t value = io_libecc_value_undefined;
-	struct eccvalue_t finallyValue;
+	volatile eccvalue_t value = ECCValConstUndefined;
+	eccvalue_t finallyValue;
 	uint32_t indices[3];
 	
 	io_libecc_Pool.getIndices(indices);
@@ -1931,7 +1931,7 @@ struct eccvalue_t try (struct eccstate_t * const context)
 	else
 	{
 		value = context->ecc->result;
-		context->ecc->result = io_libecc_value_undefined;
+		context->ecc->result = ECCValConstUndefined;
 		rethrowOps = context->ops;
 		
 		if (!rethrow) // catch
@@ -1946,10 +1946,10 @@ struct eccvalue_t try (struct eccstate_t * const context)
 			
 			if (!io_libecc_Key.isEqual(key, io_libecc_key_none))
 			{
-				if (value.type == io_libecc_value_functionType)
+				if (value.type == ECC_VALTYPE_FUNCTION)
 				{
 					value.data.function->flags |= io_libecc_function_useBoundThis;
-					value.data.function->boundThis = io_libecc_Value.object(context->environment);
+					value.data.function->boundThis = ECCNSValue.object(context->environment);
 				}
 				io_libecc_Object.addMember(context->environment, key, value, io_libecc_value_sealed);
 				value = nextOp(); // execute until noop
@@ -1986,18 +1986,18 @@ struct eccvalue_t try (struct eccstate_t * const context)
 }
 
 io_libecc_ecc_noreturn
-struct eccvalue_t throw (struct eccstate_t * const context)
+eccvalue_t throw (eccstate_t * const context)
 {
 	context->ecc->text = *opText(1);
 	io_libecc_Context.throw(context, retain(trapOp(context, 0)));
 }
 
-struct eccvalue_t with (struct eccstate_t * const context)
+eccvalue_t with (eccstate_t * const context)
 {
-	struct eccobject_t *environment = context->environment;
-	struct eccobject_t *refObject = context->refObject;
-	struct eccobject_t *object = io_libecc_Value.toObject(context, nextOp()).data.object;
-	struct eccvalue_t value;
+	eccobject_t *environment = context->environment;
+	eccobject_t *refObject = context->refObject;
+	eccobject_t *object = ECCNSValue.toObject(context, nextOp()).data.object;
+	eccvalue_t value;
 	
 	if (!refObject)
 		context->refObject = context->environment;
@@ -2013,22 +2013,22 @@ struct eccvalue_t with (struct eccstate_t * const context)
 		return nextOp();
 }
 
-struct eccvalue_t next (struct eccstate_t * const context)
+eccvalue_t next (eccstate_t * const context)
 {
 	return nextOp();
 }
 
-struct eccvalue_t nextIf (struct eccstate_t * const context)
+eccvalue_t nextIf (eccstate_t * const context)
 {
-	struct eccvalue_t value = opValue();
+	eccvalue_t value = opValue();
 	
-	if (!io_libecc_Value.isTrue(trapOp(context, 1)))
+	if (!ECCNSValue.isTrue(trapOp(context, 1)))
 		return value;
 	
 	return nextOp();
 }
 
-struct eccvalue_t autoreleaseExpression (struct eccstate_t * const context)
+eccvalue_t autoreleaseExpression (eccstate_t * const context)
 {
 	uint32_t indices[3];
 	
@@ -2039,7 +2039,7 @@ struct eccvalue_t autoreleaseExpression (struct eccstate_t * const context)
 	return nextOp();
 }
 
-struct eccvalue_t autoreleaseDiscard (struct eccstate_t * const context)
+eccvalue_t autoreleaseDiscard (eccstate_t * const context)
 {
 	uint32_t indices[3];
 	
@@ -2049,20 +2049,20 @@ struct eccvalue_t autoreleaseDiscard (struct eccstate_t * const context)
 	return nextOp();
 }
 
-struct eccvalue_t expression (struct eccstate_t * const context)
+eccvalue_t expression (eccstate_t * const context)
 {
 	release(context->ecc->result);
 	context->ecc->result = retain(trapOp(context, 1));
 	return nextOp();
 }
 
-struct eccvalue_t discard (struct eccstate_t * const context)
+eccvalue_t discard (eccstate_t * const context)
 {
 	trapOp(context, 1);
 	return nextOp();
 }
 
-struct eccvalue_t discardN (struct eccstate_t * const context)
+eccvalue_t discardN (eccstate_t * const context)
 {
 	switch (opValue().data.integer)
 	{
@@ -2105,45 +2105,45 @@ struct eccvalue_t discardN (struct eccstate_t * const context)
 	return nextOp();
 }
 
-struct eccvalue_t jump (struct eccstate_t * const context)
+eccvalue_t jump (eccstate_t * const context)
 {
 	int32_t offset = opValue().data.integer;
 	context->ops += offset;
 	return nextOp();
 }
 
-struct eccvalue_t jumpIf (struct eccstate_t * const context)
+eccvalue_t jumpIf (eccstate_t * const context)
 {
 	int32_t offset = opValue().data.integer;
-	struct eccvalue_t value;
+	eccvalue_t value;
 	
 	value = trapOp(context, 1);
-	if (io_libecc_Value.isTrue(value))
+	if (ECCNSValue.isTrue(value))
 		context->ops += offset;
 	
 	return nextOp();
 }
 
-struct eccvalue_t jumpIfNot (struct eccstate_t * const context)
+eccvalue_t jumpIfNot (eccstate_t * const context)
 {
 	int32_t offset = opValue().data.integer;
-	struct eccvalue_t value;
+	eccvalue_t value;
 	
 	value = trapOp(context, 1);
-	if (!io_libecc_Value.isTrue(value))
+	if (!ECCNSValue.isTrue(value))
 		context->ops += offset;
 	
 	return nextOp();
 }
 
-struct eccvalue_t result (struct eccstate_t * const context)
+eccvalue_t result (eccstate_t * const context)
 {
-	struct eccvalue_t result = trapOp(context, 0);
+	eccvalue_t result = trapOp(context, 0);
 	context->breaker = -1;
 	return result;
 }
 
-struct eccvalue_t repopulate (struct eccstate_t * const context)
+eccvalue_t repopulate (eccstate_t * const context)
 {
 	uint32_t index, count, arguments = opValue().data.integer + 3;
 	int32_t offset = nextOp().data.integer;
@@ -2167,15 +2167,15 @@ struct eccvalue_t repopulate (struct eccstate_t * const context)
 			for (; index < context->environment->hashmapCapacity; ++index)
 			{
 				release(context->environment->hashmap[index].value);
-				hashmap[index].value = io_libecc_value_none;
+				hashmap[index].value = ECCValConstNone;
 			}
 		}
 		else
 			for (; index < arguments; ++index)
 				nextOp();
 		
-		if (context->environment->hashmap[2].value.type == io_libecc_value_objectType) {
-			struct eccobject_t *arguments = context->environment->hashmap[2].value.data.object;
+		if (context->environment->hashmap[2].value.type == ECC_VALTYPE_OBJECT) {
+			eccobject_t *arguments = context->environment->hashmap[2].value.data.object;
 			
 			for (index = 3; index < context->environment->hashmapCapacity; ++index)
 				arguments->element[index - 3].value = hashmap[index].value;
@@ -2188,29 +2188,29 @@ struct eccvalue_t repopulate (struct eccstate_t * const context)
 	return nextOp();
 }
 
-struct eccvalue_t resultVoid (struct eccstate_t * const context)
+eccvalue_t resultVoid (eccstate_t * const context)
 {
-	struct eccvalue_t result = io_libecc_value_undefined;
+	eccvalue_t result = ECCValConstUndefined;
 	context->breaker = -1;
 	return result;
 }
 
-struct eccvalue_t switchOp (struct eccstate_t * const context)
+eccvalue_t switchOp (eccstate_t * const context)
 {
 	int32_t offset = opValue().data.integer;
 	const struct io_libecc_Op *nextOps = context->ops + offset;
-	struct eccvalue_t value, caseValue;
-	const struct io_libecc_Text *text = opText(1);
+	eccvalue_t value, caseValue;
+	const ecctextstring_t *text = opText(1);
 	
 	value = trapOp(context, 1);
 	
 	while (context->ops < nextOps)
 	{
-		const struct io_libecc_Text *textAlt = opText(1);
+		const ecctextstring_t *textAlt = opText(1);
 		caseValue = nextOp();
 		
 		io_libecc_Context.setTexts(context, text, textAlt);
-		if (io_libecc_Value.isTrue(io_libecc_Value.same(context, value, caseValue)))
+		if (ECCNSValue.isTrue(ECCNSValue.same(context, value, caseValue)))
 		{
 			offset = nextOp().data.integer;
 			context->ops = nextOps + offset;
@@ -2251,23 +2251,23 @@ struct eccvalue_t switchOp (struct eccstate_t * const context)
 		} \
 	}
 
-struct eccvalue_t breaker (struct eccstate_t * const context)
+eccvalue_t breaker (eccstate_t * const context)
 {
 	context->breaker = opValue().data.integer;
-	return io_libecc_value_undefined;
+	return ECCValConstUndefined;
 }
 
-struct eccvalue_t iterate (struct eccstate_t * const context)
+eccvalue_t iterate (eccstate_t * const context)
 {
 	const struct io_libecc_Op *startOps = context->ops;
 	const struct io_libecc_Op *endOps = startOps;
 	const struct io_libecc_Op *nextOps = startOps + 1;
-	struct eccvalue_t value;
+	eccvalue_t value;
 	int32_t skipOp = opValue().data.integer;
 	
 	context->ops = nextOps + skipOp;
 	
-	while (io_libecc_Value.isTrue(nextOp()))
+	while (ECCNSValue.isTrue(nextOp()))
 		stepIteration(value, nextOps, break);
 	
 	context->ops = endOps;
@@ -2276,38 +2276,38 @@ struct eccvalue_t iterate (struct eccstate_t * const context)
 }
 
 static
-struct eccvalue_t iterateIntegerRef (
-	struct eccstate_t * const context,
+eccvalue_t iterateIntegerRef (
+	eccstate_t * const context,
 	int (*compareInteger) (int32_t, int32_t),
 	int (*wontOverflow) (int32_t, int32_t),
-	struct eccvalue_t (*compareValue) (struct eccstate_t * const, struct eccvalue_t, struct eccvalue_t),
-	struct eccvalue_t (*valueStep) (struct eccstate_t * const, struct eccvalue_t, struct eccvalue_t))
+	eccvalue_t (*compareValue) (eccstate_t * const, eccvalue_t, eccvalue_t),
+	eccvalue_t (*valueStep) (eccstate_t * const, eccvalue_t, eccvalue_t))
 {
-	struct eccobject_t *refObject = context->refObject;
+	eccobject_t *refObject = context->refObject;
 	const struct io_libecc_Op *endOps = context->ops + opValue().data.integer;
-	struct eccvalue_t stepValue = nextOp();
-	struct eccvalue_t *indexRef = nextOp().data.reference;
-	struct eccvalue_t *countRef = nextOp().data.reference;
+	eccvalue_t stepValue = nextOp();
+	eccvalue_t *indexRef = nextOp().data.reference;
+	eccvalue_t *countRef = nextOp().data.reference;
 	const struct io_libecc_Op *nextOps = context->ops;
-	struct eccvalue_t value;
+	eccvalue_t value;
 	
-	if (indexRef->type == io_libecc_value_binaryType && indexRef->data.binary >= INT32_MIN && indexRef->data.binary <= INT32_MAX)
+	if (indexRef->type == ECC_VALTYPE_BINARY && indexRef->data.binary >= INT32_MIN && indexRef->data.binary <= INT32_MAX)
 	{
-		struct eccvalue_t integerValue = io_libecc_Value.toInteger(context, *indexRef);
+		eccvalue_t integerValue = ECCNSValue.toInteger(context, *indexRef);
 		if (indexRef->data.binary == integerValue.data.integer)
 			*indexRef = integerValue;
 	}
 	
-	if (countRef->type == io_libecc_value_binaryType && countRef->data.binary >= INT32_MIN && countRef->data.binary <= INT32_MAX)
+	if (countRef->type == ECC_VALTYPE_BINARY && countRef->data.binary >= INT32_MIN && countRef->data.binary <= INT32_MAX)
 	{
-		struct eccvalue_t integerValue = io_libecc_Value.toInteger(context, *countRef);
+		eccvalue_t integerValue = ECCNSValue.toInteger(context, *countRef);
 		if (countRef->data.binary == integerValue.data.integer)
 			*countRef = integerValue;
 	}
 	
-	if (indexRef->type == io_libecc_value_integerType && countRef->type == io_libecc_value_integerType)
+	if (indexRef->type == ECC_VALTYPE_INTEGER && countRef->type == ECC_VALTYPE_INTEGER)
 	{
-		int32_t step = valueStep == io_libecc_Value.add? stepValue.data.integer: -stepValue.data.integer;
+		int32_t step = valueStep == ECCNSValue.add? stepValue.data.integer: -stepValue.data.integer;
 		if (!wontOverflow(countRef->data.integer, step - 1))
 			goto deoptimize;
 		
@@ -2316,7 +2316,7 @@ struct eccvalue_t iterateIntegerRef (
 	}
 	
 deoptimize:
-	for (; io_libecc_Value.isTrue(compareValue(context, *indexRef, *countRef))
+	for (; ECCNSValue.isTrue(compareValue(context, *indexRef, *countRef))
 		 ; *indexRef = valueStep(context, *indexRef, stepValue)
 		 )
 		stepIteration(value, nextOps, break);
@@ -2327,39 +2327,39 @@ done:
 	return nextOp();
 }
 
-struct eccvalue_t iterateLessRef (struct eccstate_t * const context)
+eccvalue_t iterateLessRef (eccstate_t * const context)
 {
-	return iterateIntegerRef(context, integerLess, integerWontOverflowPositive, io_libecc_Value.less, io_libecc_Value.add);
+	return iterateIntegerRef(context, integerLess, integerWontOverflowPositive, ECCNSValue.less, ECCNSValue.add);
 }
 
-struct eccvalue_t iterateLessOrEqualRef (struct eccstate_t * const context)
+eccvalue_t iterateLessOrEqualRef (eccstate_t * const context)
 {
-	return iterateIntegerRef(context, integerLessOrEqual, integerWontOverflowPositive, io_libecc_Value.lessOrEqual, io_libecc_Value.add);
+	return iterateIntegerRef(context, integerLessOrEqual, integerWontOverflowPositive, ECCNSValue.lessOrEqual, ECCNSValue.add);
 }
 
-struct eccvalue_t iterateMoreRef (struct eccstate_t * const context)
+eccvalue_t iterateMoreRef (eccstate_t * const context)
 {
-	return iterateIntegerRef(context, integerMore, integerWontOverflowNegative, io_libecc_Value.more, io_libecc_Value.subtract);
+	return iterateIntegerRef(context, integerMore, integerWontOverflowNegative, ECCNSValue.more, ECCNSValue.subtract);
 }
 
-struct eccvalue_t iterateMoreOrEqualRef (struct eccstate_t * const context)
+eccvalue_t iterateMoreOrEqualRef (eccstate_t * const context)
 {
-	return iterateIntegerRef(context, integerMoreOrEqual, integerWontOverflowNegative, io_libecc_Value.moreOrEqual, io_libecc_Value.subtract);
+	return iterateIntegerRef(context, integerMoreOrEqual, integerWontOverflowNegative, ECCNSValue.moreOrEqual, ECCNSValue.subtract);
 }
 
-struct eccvalue_t iterateInRef (struct eccstate_t * const context)
+eccvalue_t iterateInRef (eccstate_t * const context)
 {
-	struct eccobject_t *refObject = context->refObject;
-	struct eccvalue_t *ref = nextOp().data.reference;
-	struct eccvalue_t target = nextOp();
-	struct eccvalue_t value = nextOp(), key;
+	eccobject_t *refObject = context->refObject;
+	eccvalue_t *ref = nextOp().data.reference;
+	eccvalue_t target = nextOp();
+	eccvalue_t value = nextOp(), key;
 	struct io_libecc_chars_Append chars;
-	struct eccobject_t *object;
+	eccobject_t *object;
 	const struct io_libecc_Op *startOps = context->ops;
 	const struct io_libecc_Op *endOps = startOps + value.data.integer;
 	uint32_t index, count;
 	
-	if (io_libecc_Value.isObject(target))
+	if (ECCNSValue.isObject(target))
 	{
 		object = target.data.object;
 		do
@@ -2399,7 +2399,7 @@ struct eccvalue_t iterateInRef (struct eccstate_t * const context)
 				if (object != target.data.object && &hashmap->value != io_libecc_Object.member(target.data.object, hashmap->value.key, 0))
 					continue;
 				
-				key = io_libecc_Value.text(io_libecc_Key.textOf(hashmap->value.key));
+				key = ECCNSValue.text(io_libecc_Key.textOf(hashmap->value.key));
 				replaceRefValue(ref, key);
 				
 				stepIteration(value, startOps, break);

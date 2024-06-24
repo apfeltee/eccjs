@@ -12,7 +12,7 @@
 // MARK: - Static Members
 
 // MARK: - Methods
-static struct io_libecc_OpList* create(const io_libecc_native_io_libecc_Function native, struct eccvalue_t value, struct io_libecc_Text text);
+static struct io_libecc_OpList* create(const io_libecc_native_io_libecc_Function native, eccvalue_t value, ecctextstring_t text);
 static void destroy(struct io_libecc_OpList*);
 static struct io_libecc_OpList* join(struct io_libecc_OpList*, struct io_libecc_OpList*);
 static struct io_libecc_OpList* join3(struct io_libecc_OpList*, struct io_libecc_OpList*, struct io_libecc_OpList*);
@@ -25,15 +25,15 @@ static struct io_libecc_OpList* append(struct io_libecc_OpList*, struct io_libec
 static struct io_libecc_OpList* appendNoop(struct io_libecc_OpList*);
 static struct io_libecc_OpList*
 createLoop(struct io_libecc_OpList* initial, struct io_libecc_OpList* condition, struct io_libecc_OpList* step, struct io_libecc_OpList* body, int reverseCondition);
-static void optimizeWithEnvironment(struct io_libecc_OpList*, struct eccobject_t* environment, uint32_t index);
+static void optimizeWithEnvironment(struct io_libecc_OpList*, eccobject_t* environment, uint32_t index);
 static void dumpTo(struct io_libecc_OpList*, FILE* file);
-static struct io_libecc_Text text(struct io_libecc_OpList* oplist);
+static ecctextstring_t text(struct io_libecc_OpList* oplist);
 const struct type_io_libecc_OpList io_libecc_OpList = {
     create, destroy, join,       join3,      joinDiscarded,           unshift, unshiftJoin, unshiftJoin3,
     shift,  append,  appendNoop, createLoop, optimizeWithEnvironment, dumpTo,  text,
 };
 
-struct io_libecc_OpList * create (const io_libecc_native_io_libecc_Function native, struct eccvalue_t value, struct io_libecc_Text text)
+struct io_libecc_OpList * create (const io_libecc_native_io_libecc_Function native, eccvalue_t value, ecctextstring_t text)
 {
 	struct io_libecc_OpList *self = malloc(sizeof(*self));
 	self->ops = malloc(sizeof(*self->ops) * 1);
@@ -90,14 +90,14 @@ struct io_libecc_OpList * joinDiscarded (struct io_libecc_OpList *self, uint16_t
 {
 	while (n > 16)
 	{
-		self = io_libecc_OpList.append(self, io_libecc_Op.make(io_libecc_Op.discardN, io_libecc_Value.integer(16), io_libecc_text_empty));
+		self = io_libecc_OpList.append(self, io_libecc_Op.make(io_libecc_Op.discardN, ECCNSValue.integer(16), ECC_ConstString_Empty));
 		n -= 16;
 	}
 	
 	if (n == 1)
-		self = io_libecc_OpList.append(self, io_libecc_Op.make(io_libecc_Op.discard, io_libecc_value_undefined, io_libecc_text_empty));
+		self = io_libecc_OpList.append(self, io_libecc_Op.make(io_libecc_Op.discard, ECCValConstUndefined, ECC_ConstString_Empty));
 	else
-		self = io_libecc_OpList.append(self, io_libecc_Op.make(io_libecc_Op.discardN, io_libecc_Value.integer(n), io_libecc_text_empty));
+		self = io_libecc_OpList.append(self, io_libecc_Op.make(io_libecc_Op.discardN, ECCNSValue.integer(n), ECC_ConstString_Empty));
 	
 	return join(self, with);
 }
@@ -171,7 +171,7 @@ struct io_libecc_OpList * append (struct io_libecc_OpList *self, struct io_libec
 
 struct io_libecc_OpList * appendNoop (struct io_libecc_OpList *self)
 {
-	return append(self, io_libecc_Op.make(io_libecc_Op.noop, io_libecc_value_undefined, io_libecc_text_empty));
+	return append(self, io_libecc_Op.make(io_libecc_Op.noop, ECCValConstUndefined, ECC_ConstString_Empty));
 }
 
 struct io_libecc_OpList * createLoop (struct io_libecc_OpList * initial, struct io_libecc_OpList * condition, struct io_libecc_OpList * step, struct io_libecc_OpList * body, int reverseCondition)
@@ -183,10 +183,10 @@ struct io_libecc_OpList * createLoop (struct io_libecc_OpList * initial, struct 
 			condition->ops[0].native == io_libecc_Op.lessOrEqual ))
 			if (step->count >= 2 && step->ops[1].value.data.key.data.integer == condition->ops[1].value.data.key.data.integer)
 			{
-				struct eccvalue_t stepValue;
+				eccvalue_t stepValue;
 				if (step->count == 2 && (step->ops[0].native == io_libecc_Op.incrementRef || step->ops[0].native == io_libecc_Op.postIncrementRef))
-					stepValue = io_libecc_Value.integer(1);
-				else if (step->count == 3 && step->ops[0].native == io_libecc_Op.addAssignRef && step->ops[2].native == io_libecc_Op.value && step->ops[2].value.type == io_libecc_value_integerType && step->ops[2].value.data.integer > 0)
+					stepValue = ECCNSValue.integer(1);
+				else if (step->count == 3 && step->ops[0].native == io_libecc_Op.addAssignRef && step->ops[2].native == io_libecc_Op.value && step->ops[2].value.type == ECC_VALTYPE_INTEGER && step->ops[2].value.data.integer > 0)
 					stepValue = step->ops[2].value;
 				else
 					goto normal;
@@ -200,7 +200,7 @@ struct io_libecc_OpList * createLoop (struct io_libecc_OpList * initial, struct 
 				
 				body = io_libecc_OpList.appendNoop(io_libecc_OpList.unshift(io_libecc_Op.make(io_libecc_Op.getLocalRef, condition->ops[1].value, condition->ops[1].text), body));
 				body = io_libecc_OpList.unshift(io_libecc_Op.make(io_libecc_Op.value, stepValue, condition->ops[0].text), body);
-				body = io_libecc_OpList.unshift(io_libecc_Op.make(condition->ops[0].native == io_libecc_Op.less? io_libecc_Op.iterateLessRef: io_libecc_Op.iterateLessOrEqualRef, io_libecc_Value.integer(body->count), condition->ops[0].text), body);
+				body = io_libecc_OpList.unshift(io_libecc_Op.make(condition->ops[0].native == io_libecc_Op.less? io_libecc_Op.iterateLessRef: io_libecc_Op.iterateLessOrEqualRef, ECCNSValue.integer(body->count), condition->ops[0].text), body);
 				io_libecc_OpList.destroy(condition), condition = NULL;
 				io_libecc_OpList.destroy(step), step = NULL;
 				return io_libecc_OpList.join(initial, body);
@@ -211,10 +211,10 @@ struct io_libecc_OpList * createLoop (struct io_libecc_OpList * initial, struct 
 			condition->ops[0].native == io_libecc_Op.moreOrEqual ))
 			if (step->count >= 2 && step->ops[1].value.data.key.data.integer == condition->ops[1].value.data.key.data.integer)
 			{
-				struct eccvalue_t stepValue;
+				eccvalue_t stepValue;
 				if (step->count == 2 && (step->ops[0].native == io_libecc_Op.decrementRef || step->ops[0].native == io_libecc_Op.postDecrementRef))
-					stepValue = io_libecc_Value.integer(1);
-				else if (step->count == 3 && step->ops[0].native == io_libecc_Op.minusAssignRef && step->ops[2].native == io_libecc_Op.value && step->ops[2].value.type == io_libecc_value_integerType && step->ops[2].value.data.integer > 0)
+					stepValue = ECCNSValue.integer(1);
+				else if (step->count == 3 && step->ops[0].native == io_libecc_Op.minusAssignRef && step->ops[2].native == io_libecc_Op.value && step->ops[2].value.type == ECC_VALTYPE_INTEGER && step->ops[2].value.data.integer > 0)
 					stepValue = step->ops[2].value;
 				else
 					goto normal;
@@ -228,7 +228,7 @@ struct io_libecc_OpList * createLoop (struct io_libecc_OpList * initial, struct 
 				
 				body = io_libecc_OpList.appendNoop(io_libecc_OpList.unshift(io_libecc_Op.make(io_libecc_Op.getLocalRef, condition->ops[1].value, condition->ops[1].text), body));
 				body = io_libecc_OpList.unshift(io_libecc_Op.make(io_libecc_Op.value, stepValue, condition->ops[0].text), body);
-				body = io_libecc_OpList.unshift(io_libecc_Op.make(condition->ops[0].native == io_libecc_Op.more? io_libecc_Op.iterateMoreRef: io_libecc_Op.iterateMoreOrEqualRef, io_libecc_Value.integer(body->count), condition->ops[0].text), body);
+				body = io_libecc_OpList.unshift(io_libecc_Op.make(condition->ops[0].native == io_libecc_Op.more? io_libecc_Op.iterateMoreRef: io_libecc_Op.iterateMoreOrEqualRef, ECCNSValue.integer(body->count), condition->ops[0].text), body);
 				io_libecc_OpList.destroy(condition), condition = NULL;
 				io_libecc_OpList.destroy(step), step = NULL;
 				return io_libecc_OpList.join(initial, body);
@@ -240,11 +240,11 @@ normal:
 		int skipOpCount;
 		
 		if (!condition)
-			condition = io_libecc_OpList.create(io_libecc_Op.value, io_libecc_Value.truth(1), io_libecc_text_empty);
+			condition = io_libecc_OpList.create(io_libecc_Op.value, ECCNSValue.truth(1), ECC_ConstString_Empty);
 		
 		if (step)
 		{
-			step = io_libecc_OpList.unshift(io_libecc_Op.make(io_libecc_Op.discard, io_libecc_value_none, io_libecc_text_empty), step);
+			step = io_libecc_OpList.unshift(io_libecc_Op.make(io_libecc_Op.discard, ECCValConstNone, ECC_ConstString_Empty), step);
 			skipOpCount = step->count;
 		}
 		else
@@ -255,18 +255,18 @@ normal:
 		if (reverseCondition)
 		{
 			skipOpCount += condition->count + body->count;
-			body = io_libecc_OpList.append(body, io_libecc_Op.make(io_libecc_Op.value, io_libecc_Value.truth(1), io_libecc_text_empty));
-			body = io_libecc_OpList.append(body, io_libecc_Op.make(io_libecc_Op.jump, io_libecc_Value.integer(-body->count - 1), io_libecc_text_empty));
+			body = io_libecc_OpList.append(body, io_libecc_Op.make(io_libecc_Op.value, ECCNSValue.truth(1), ECC_ConstString_Empty));
+			body = io_libecc_OpList.append(body, io_libecc_Op.make(io_libecc_Op.jump, ECCNSValue.integer(-body->count - 1), ECC_ConstString_Empty));
 		}
 		
 		body = io_libecc_OpList.join(io_libecc_OpList.join(step, condition), body);
-		body = io_libecc_OpList.unshift(io_libecc_Op.make(io_libecc_Op.jump, io_libecc_Value.integer(body->count), io_libecc_text_empty), body);
-		initial = io_libecc_OpList.append(initial, io_libecc_Op.make(io_libecc_Op.iterate, io_libecc_Value.integer(skipOpCount), io_libecc_text_empty));
+		body = io_libecc_OpList.unshift(io_libecc_Op.make(io_libecc_Op.jump, ECCNSValue.integer(body->count), ECC_ConstString_Empty), body);
+		initial = io_libecc_OpList.append(initial, io_libecc_Op.make(io_libecc_Op.iterate, ECCNSValue.integer(skipOpCount), ECC_ConstString_Empty));
 		return io_libecc_OpList.join(initial, body);
 	}
 }
 
-void optimizeWithEnvironment (struct io_libecc_OpList *self, struct eccobject_t *environment, uint32_t selfIndex)
+void optimizeWithEnvironment (struct io_libecc_OpList *self, eccobject_t *environment, uint32_t selfIndex)
 {
 	uint32_t index, count, slot, haveLocal = 0, environmentLevel = 0;
 	struct io_libecc_Key environments[0xff];
@@ -302,7 +302,7 @@ void optimizeWithEnvironment (struct io_libecc_OpList *self, struct eccobject_t 
 			|| self->ops[index].native == io_libecc_Op.deleteLocal
 			)
 		{
-			struct eccobject_t *searchEnvironment = environment;
+			eccobject_t *searchEnvironment = environment;
 			uint32_t level;
 			
 			level = environmentLevel;
@@ -328,7 +328,7 @@ void optimizeWithEnvironment (struct io_libecc_OpList *self, struct eccobject_t 
 									self->ops[index].native == io_libecc_Op.getLocal? io_libecc_Op.getLocalSlot:
 									self->ops[index].native == io_libecc_Op.setLocal? io_libecc_Op.setLocalSlot:
 									self->ops[index].native == io_libecc_Op.deleteLocal? io_libecc_Op.deleteLocalSlot: NULL
-									, io_libecc_Value.integer(slot), self->ops[index].text);
+									, ECCNSValue.integer(slot), self->ops[index].text);
 							}
 							else if (slot <= INT16_MAX && level <= INT16_MAX)
 							{
@@ -339,7 +339,7 @@ void optimizeWithEnvironment (struct io_libecc_OpList *self, struct eccobject_t 
 									self->ops[index].native == io_libecc_Op.getLocal? io_libecc_Op.getParentSlot:
 									self->ops[index].native == io_libecc_Op.setLocal? io_libecc_Op.setParentSlot:
 									self->ops[index].native == io_libecc_Op.deleteLocal? io_libecc_Op.deleteParentSlot: NULL
-									, io_libecc_Value.integer((level << 16) | slot), self->ops[index].text);
+									, ECCNSValue.integer((level << 16) | slot), self->ops[index].text);
 							}
 							else
 								goto notfound;
@@ -350,7 +350,7 @@ void optimizeWithEnvironment (struct io_libecc_OpList *self, struct eccobject_t 
 								if (op.native == io_libecc_Op.call && self->ops[index - 2].native == io_libecc_Op.result)
 								{
 									self->ops[index - 1] = io_libecc_Op.make(io_libecc_Op.repopulate, op.value, op.text);
-									self->ops[index] = io_libecc_Op.make(io_libecc_Op.value, io_libecc_Value.integer(-index - 1), self->ops[index].text);
+									self->ops[index] = io_libecc_Op.make(io_libecc_Op.value, ECCNSValue.integer(-index - 1), self->ops[index].text);
 								}
 							}
 							
@@ -386,7 +386,7 @@ void dumpTo (struct io_libecc_OpList *self, FILE *file)
 	
 	for (i = 0; i < self->count; ++i)
 	{
-		char c = self->ops[i].text.flags & io_libecc_text_breakFlag? i? '!': 'T': '|';
+		char c = self->ops[i].text.flags & ECC_TEXTFLAG_BREAKFLAG? i? '!': 'T': '|';
 		fprintf(file, "[%p] %c %s ", (void *)(self->ops + i), c, io_libecc_Op.toChars(self->ops[i].native));
 		
 		if (self->ops[i].native == io_libecc_Op.function)
@@ -397,8 +397,8 @@ void dumpTo (struct io_libecc_OpList *self, FILE *file)
 		}
 		else if (self->ops[i].native == io_libecc_Op.getParentSlot || self->ops[i].native == io_libecc_Op.getParentSlotRef || self->ops[i].native == io_libecc_Op.setParentSlot)
 			fprintf(file, "[-%hu] %hu", (uint16_t)(self->ops[i].value.data.integer >> 16), (uint16_t)(self->ops[i].value.data.integer & 0xffff));
-		else if (self->ops[i].value.type != io_libecc_value_undefinedType || self->ops[i].native == io_libecc_Op.value || self->ops[i].native == io_libecc_Op.exchange)
-			io_libecc_Value.dumpTo(self->ops[i].value, file);
+		else if (self->ops[i].value.type != ECC_VALTYPE_UNDEFINED || self->ops[i].native == io_libecc_Op.value || self->ops[i].native == io_libecc_Op.exchange)
+			ECCNSValue.dumpTo(self->ops[i].value, file);
 		
 		if (self->ops[i].native == io_libecc_Op.text)
 			fprintf(file, "'%.*s'", (int)self->ops[i].text.length, self->ops[i].text.bytes);
@@ -410,11 +410,11 @@ void dumpTo (struct io_libecc_OpList *self, FILE *file)
 	}
 }
 
-struct io_libecc_Text text (struct io_libecc_OpList *oplist)
+ecctextstring_t text (struct io_libecc_OpList *oplist)
 {
 	uint16_t length;
 	if (!oplist)
-		return io_libecc_text_empty;
+		return ECC_ConstString_Empty;
 	
 	length = oplist->ops[oplist->count - 1].text.bytes + oplist->ops[oplist->count - 1].text.length - oplist->ops[0].text.bytes;
 	

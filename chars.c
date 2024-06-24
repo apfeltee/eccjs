@@ -16,10 +16,10 @@ static struct io_libecc_Chars* createWithBytes(int32_t length, const char* bytes
 static void beginAppend(struct io_libecc_chars_Append*);
 static void append(struct io_libecc_chars_Append*, const char* format, ...);
 static void appendCodepoint(struct io_libecc_chars_Append*, uint32_t cp);
-static void appendValue(struct io_libecc_chars_Append*, struct eccstate_t* const context, struct eccvalue_t value);
+static void appendValue(struct io_libecc_chars_Append*, eccstate_t* const context, eccvalue_t value);
 static void appendBinary(struct io_libecc_chars_Append*, double binary, int base);
 static void normalizeBinary(struct io_libecc_chars_Append*);
-static struct eccvalue_t endAppend(struct io_libecc_chars_Append*);
+static eccvalue_t endAppend(struct io_libecc_chars_Append*);
 static void destroy(struct io_libecc_Chars*);
 static uint8_t codepointLength(uint32_t cp);
 static uint8_t writeCodepoint(char*, uint32_t cp);
@@ -170,11 +170,11 @@ void append (struct io_libecc_chars_Append *chars, const char *format, ...)
 }
 
 static
-void appendText (struct io_libecc_chars_Append * chars, struct io_libecc_Text text)
+void appendText (struct io_libecc_chars_Append * chars, ecctextstring_t text)
 {
 	struct io_libecc_Chars *self = chars->value;
-	struct io_libecc_text_Char lo = io_libecc_Text.character(text), hi = { 0 };
-	struct io_libecc_Text prev;
+	ecctextchar_t lo = io_libecc_Text.character(text), hi = { 0 };
+	ecctextstring_t prev;
 	int surrogates = 0;
 	
 	if (!text.length)
@@ -221,64 +221,64 @@ void appendText (struct io_libecc_chars_Append * chars, struct io_libecc_Text te
 void appendCodepoint (struct io_libecc_chars_Append *chars, uint32_t cp)
 {
 	char buffer[5] = { 0 };
-	struct io_libecc_Text text = io_libecc_Text.make(buffer, writeCodepoint(buffer, cp));
+	ecctextstring_t text = io_libecc_Text.make(buffer, writeCodepoint(buffer, cp));
 	appendText(chars, text);
 }
 
-void appendValue (struct io_libecc_chars_Append *chars, struct eccstate_t * const context, struct eccvalue_t value)
+void appendValue (struct io_libecc_chars_Append *chars, eccstate_t * const context, eccvalue_t value)
 {
-	switch ((enum io_libecc_value_Type)value.type)
+	switch ((eccvaltype_t)value.type)
 	{
-		case io_libecc_value_keyType:
-		case io_libecc_value_textType:
-		case io_libecc_value_stringType:
-		case io_libecc_value_charsType:
-		case io_libecc_value_bufferType:
-			appendText(chars, io_libecc_Value.textOf(&value));
+		case ECC_VALTYPE_KEY:
+		case ECC_VALTYPE_TEXT:
+		case ECC_VALTYPE_STRING:
+		case ECC_VALTYPE_CHARS:
+		case ECC_VALTYPE_BUFFER:
+			appendText(chars, ECCNSValue.textOf(&value));
 			return;
 			
-		case io_libecc_value_nullType:
-			appendText(chars, io_libecc_text_null);
+		case ECC_VALTYPE_NULL:
+			appendText(chars, ECC_ConstString_Null);
 			return;
 			
-		case io_libecc_value_undefinedType:
-			appendText(chars, io_libecc_text_undefined);
+		case ECC_VALTYPE_UNDEFINED:
+			appendText(chars, ECC_ConstString_Undefined);
 			return;
 			
-		case io_libecc_value_falseType:
-			appendText(chars, io_libecc_text_false);
+		case ECC_VALTYPE_FALSE:
+			appendText(chars, ECC_ConstString_False);
 			return;
 			
-		case io_libecc_value_trueType:
-			appendText(chars, io_libecc_text_true);
+		case ECC_VALTYPE_TRUE:
+			appendText(chars, ECC_ConstString_True);
 			return;
 			
-		case io_libecc_value_booleanType:
-			appendText(chars, value.data.boolean->truth? io_libecc_text_true: io_libecc_text_false);
+		case ECC_VALTYPE_BOOLEAN:
+			appendText(chars, value.data.boolean->truth? ECC_ConstString_True: ECC_ConstString_False);
 			return;
 			
-		case io_libecc_value_integerType:
+		case ECC_VALTYPE_INTEGER:
 			appendBinary(chars, value.data.integer, 10);
 			return;
 			
-		case io_libecc_value_numberType:
+		case ECC_VALTYPE_NUMBER:
 			appendBinary(chars, value.data.number->value, 10);
 			return;
 			
-		case io_libecc_value_binaryType:
+		case ECC_VALTYPE_BINARY:
 			appendBinary(chars, value.data.binary, 10);
 			return;
 			
-		case io_libecc_value_regexpType:
-		case io_libecc_value_functionType:
-		case io_libecc_value_objectType:
-		case io_libecc_value_errorType:
-		case io_libecc_value_dateType:
-		case io_libecc_value_hostType:
-			appendValue(chars, context, io_libecc_Value.toString(context, value));
+		case ECC_VALTYPE_REGEXP:
+		case ECC_VALTYPE_FUNCTION:
+		case ECC_VALTYPE_OBJECT:
+		case ECC_VALTYPE_ERROR:
+		case ECC_VALTYPE_DATE:
+		case ECC_VALTYPE_HOST:
+			appendValue(chars, context, ECCNSValue.toString(context, value));
 			return;
 			
-		case io_libecc_value_referenceType:
+		case ECC_VALTYPE_REFERENCE:
 			break;
 	}
 	io_libecc_Ecc.fatal("Invalid io_libecc_value_Type : %u", value.type);
@@ -319,15 +319,15 @@ void appendBinary (struct io_libecc_chars_Append *chars, double binary, int base
 {
 	if (isnan(binary))
 	{
-		appendText(chars, io_libecc_text_nan);
+		appendText(chars, ECC_ConstString_Nan);
 		return;
 	}
 	else if (!isfinite(binary))
 	{
 		if (binary < 0)
-			appendText(chars, io_libecc_text_negativeInfinity);
+			appendText(chars, ECC_ConstString_NegativeInfinity);
 		else
-			appendText(chars, io_libecc_text_infinity);
+			appendText(chars, ECC_ConstString_Infinity);
 		
 		return;
 	}
@@ -396,17 +396,17 @@ void normalizeBinary (struct io_libecc_chars_Append *chars)
 		chars->units = normalizeBinaryOfBytes(chars->buffer, chars->units);
 }
 
-struct eccvalue_t endAppend (struct io_libecc_chars_Append *chars)
+eccvalue_t endAppend (struct io_libecc_chars_Append *chars)
 {
 	struct io_libecc_Chars *self = chars->value;
 	
 	if (chars->value)
 	{
 		self->bytes[self->length] = '\0';
-		return io_libecc_Value.chars(self);
+		return ECCNSValue.chars(self);
 	}
 	else
-		return io_libecc_Value.buffer(chars->buffer, chars->units);
+		return ECCNSValue.buffer(chars->buffer, chars->units);
 }
 
 void destroy (struct io_libecc_Chars *self)

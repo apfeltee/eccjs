@@ -9,11 +9,11 @@
 
 // MARK: - Private
 
-struct eccobject_t * io_libecc_number_prototype = NULL;
+eccobject_t * io_libecc_number_prototype = NULL;
 struct io_libecc_Function * io_libecc_number_constructor = NULL;
 
 const struct io_libecc_object_Type io_libecc_number_type = {
-	.text = &io_libecc_text_numberType,
+	.text = &ECC_ConstString_NumberType,
 };
 
 // MARK: - Static Members
@@ -28,19 +28,19 @@ const struct type_io_libecc_Number io_libecc_Number = {
 };
 
 static
-struct eccvalue_t toExponential (struct eccstate_t * const context)
+eccvalue_t toExponential (eccstate_t * const context)
 {
 	struct io_libecc_chars_Append chars;
-	struct eccvalue_t value;
+	eccvalue_t value;
 	double binary, precision = 0;
 	
-	io_libecc_Context.assertThisMask(context, io_libecc_value_numberMask);
+	io_libecc_Context.assertThisMask(context, ECC_VALMASK_NUMBER);
 	
-	binary = io_libecc_Value.toBinary(context, context->this).data.binary;
+	binary = ECCNSValue.toBinary(context, context->this).data.binary;
 	value = io_libecc_Context.argument(context, 0);
-	if (value.type != io_libecc_value_undefinedType)
+	if (value.type != ECC_VALTYPE_UNDEFINED)
 	{
-		precision = io_libecc_Value.toBinary(context, value).data.binary;
+		precision = ECCNSValue.toBinary(context, value).data.binary;
 		if (precision <= -1 || precision >= 21)
 			io_libecc_Context.rangeError(context, io_libecc_Chars.create("precision '%.0f' out of range", precision));
 		
@@ -49,15 +49,15 @@ struct eccvalue_t toExponential (struct eccstate_t * const context)
 	}
 	
 	if (isnan(binary))
-		return io_libecc_Value.text(&io_libecc_text_nan);
+		return ECCNSValue.text(&ECC_ConstString_Nan);
 	else if (binary == INFINITY)
-		return io_libecc_Value.text(&io_libecc_text_infinity);
+		return ECCNSValue.text(&ECC_ConstString_Infinity);
 	else if (binary == -INFINITY)
-		return io_libecc_Value.text(&io_libecc_text_negativeInfinity);
+		return ECCNSValue.text(&ECC_ConstString_NegativeInfinity);
 	
 	io_libecc_Chars.beginAppend(&chars);
 	
-	if (value.type != io_libecc_value_undefinedType)
+	if (value.type != ECC_VALTYPE_UNDEFINED)
 		io_libecc_Chars.append(&chars, "%.*e", (int32_t)precision, binary);
 	else
 		io_libecc_Chars.append(&chars, "%e", binary);
@@ -67,19 +67,19 @@ struct eccvalue_t toExponential (struct eccstate_t * const context)
 }
 
 static
-struct eccvalue_t toFixed (struct eccstate_t * const context)
+eccvalue_t toFixed (eccstate_t * const context)
 {
 	struct io_libecc_chars_Append chars;
-	struct eccvalue_t value;
+	eccvalue_t value;
 	double binary, precision = 0;
 	
-	io_libecc_Context.assertThisMask(context, io_libecc_value_numberMask);
+	io_libecc_Context.assertThisMask(context, ECC_VALMASK_NUMBER);
 	
-	binary = io_libecc_Value.toBinary(context, context->this).data.binary;
+	binary = ECCNSValue.toBinary(context, context->this).data.binary;
 	value = io_libecc_Context.argument(context, 0);
-	if (value.type != io_libecc_value_undefinedType)
+	if (value.type != ECC_VALTYPE_UNDEFINED)
 	{
-		precision = io_libecc_Value.toBinary(context, value).data.binary;
+		precision = ECCNSValue.toBinary(context, value).data.binary;
 		if (precision <= -1 || precision >= 21)
 			io_libecc_Context.rangeError(context, io_libecc_Chars.create("precision '%.0f' out of range", precision));
 		
@@ -88,11 +88,11 @@ struct eccvalue_t toFixed (struct eccstate_t * const context)
 	}
 	
 	if (isnan(binary))
-		return io_libecc_Value.text(&io_libecc_text_nan);
+		return ECCNSValue.text(&ECC_ConstString_Nan);
 	else if (binary == INFINITY)
-		return io_libecc_Value.text(&io_libecc_text_infinity);
+		return ECCNSValue.text(&ECC_ConstString_Infinity);
 	else if (binary == -INFINITY)
-		return io_libecc_Value.text(&io_libecc_text_negativeInfinity);
+		return ECCNSValue.text(&ECC_ConstString_NegativeInfinity);
 	
 	io_libecc_Chars.beginAppend(&chars);
 	
@@ -105,19 +105,19 @@ struct eccvalue_t toFixed (struct eccstate_t * const context)
 }
 
 static
-struct eccvalue_t toPrecision (struct eccstate_t * const context)
+eccvalue_t toPrecision (eccstate_t * const context)
 {
 	struct io_libecc_chars_Append chars;
-	struct eccvalue_t value;
+	eccvalue_t value;
 	double binary, precision = 0;
 	
-	io_libecc_Context.assertThisMask(context, io_libecc_value_numberMask);
+	io_libecc_Context.assertThisMask(context, ECC_VALMASK_NUMBER);
 	
-	binary = io_libecc_Value.toBinary(context, context->this).data.binary;
+	binary = ECCNSValue.toBinary(context, context->this).data.binary;
 	value = io_libecc_Context.argument(context, 0);
-	if (value.type != io_libecc_value_undefinedType)
+	if (value.type != ECC_VALTYPE_UNDEFINED)
 	{
-		precision = io_libecc_Value.toBinary(context, value).data.binary;
+		precision = ECCNSValue.toBinary(context, value).data.binary;
 		if (precision <= -1 || precision >= 101)
 			io_libecc_Context.rangeError(context, io_libecc_Chars.create("precision '%.0f' out of range", precision));
 		
@@ -126,15 +126,15 @@ struct eccvalue_t toPrecision (struct eccstate_t * const context)
 	}
 	
 	if (isnan(binary))
-		return io_libecc_Value.text(&io_libecc_text_nan);
+		return ECCNSValue.text(&ECC_ConstString_Nan);
 	else if (binary == INFINITY)
-		return io_libecc_Value.text(&io_libecc_text_infinity);
+		return ECCNSValue.text(&ECC_ConstString_Infinity);
 	else if (binary == -INFINITY)
-		return io_libecc_Value.text(&io_libecc_text_negativeInfinity);
+		return ECCNSValue.text(&ECC_ConstString_NegativeInfinity);
 	
 	io_libecc_Chars.beginAppend(&chars);
 	
-	if (value.type != io_libecc_value_undefinedType)
+	if (value.type != ECC_VALTYPE_UNDEFINED)
 	{
 		io_libecc_Chars.append(&chars, "%.*g", (int32_t)precision, binary);
 		io_libecc_Chars.normalizeBinary(&chars);
@@ -146,19 +146,19 @@ struct eccvalue_t toPrecision (struct eccstate_t * const context)
 }
 
 static
-struct eccvalue_t toString (struct eccstate_t * const context)
+eccvalue_t toString (eccstate_t * const context)
 {
-	struct eccvalue_t value;
+	eccvalue_t value;
 	int32_t radix = 10;
 	double binary;
 	
-	io_libecc_Context.assertThisMask(context, io_libecc_value_numberMask);
+	io_libecc_Context.assertThisMask(context, ECC_VALMASK_NUMBER);
 	
-	binary = io_libecc_Value.toBinary(context, context->this).data.binary;
+	binary = ECCNSValue.toBinary(context, context->this).data.binary;
 	value = io_libecc_Context.argument(context, 0);
-	if (value.type != io_libecc_value_undefinedType)
+	if (value.type != ECC_VALTYPE_UNDEFINED)
 	{
-		radix = io_libecc_Value.toInteger(context, value).data.integer;
+		radix = ECCNSValue.toInteger(context, value).data.integer;
 		if (radix < 2 || radix > 36)
 			io_libecc_Context.rangeError(context, io_libecc_Chars.create("radix must be an integer at least 2 and no greater than 36"));
 		
@@ -166,30 +166,30 @@ struct eccvalue_t toString (struct eccstate_t * const context)
 			io_libecc_Env.printWarning("%g.toString(%d) out of bounds; only long int are supported by radices other than 10", binary, radix);
 	}
 	
-	return io_libecc_Value.binaryToString(binary, radix);
+	return ECCNSValue.binaryToString(binary, radix);
 }
 
 static
-struct eccvalue_t valueOf (struct eccstate_t * const context)
+eccvalue_t valueOf (eccstate_t * const context)
 {
-	io_libecc_Context.assertThisType(context, io_libecc_value_numberType);
+	io_libecc_Context.assertThisType(context, ECC_VALTYPE_NUMBER);
 	
-	return io_libecc_Value.binary(context->this.data.number->value);
+	return ECCNSValue.binary(context->this.data.number->value);
 }
 
 static
-struct eccvalue_t constructor (struct eccstate_t * const context)
+eccvalue_t constructor (eccstate_t * const context)
 {
-	struct eccvalue_t value;
+	eccvalue_t value;
 	
 	value = io_libecc_Context.argument(context, 0);
-	if (value.type == io_libecc_value_undefinedType)
-		value = io_libecc_Value.binary(value.check == 1? NAN: 0);
+	if (value.type == ECC_VALTYPE_UNDEFINED)
+		value = ECCNSValue.binary(value.check == 1? NAN: 0);
 	else
-		value = io_libecc_Value.toBinary(context, value);
+		value = ECCNSValue.toBinary(context, value);
 	
 	if (context->construct)
-		return io_libecc_Value.number(io_libecc_Number.create(value.data.binary));
+		return ECCNSValue.number(io_libecc_Number.create(value.data.binary));
 	else
 		return value;
 }
@@ -204,14 +204,14 @@ void setup ()
 	
 	io_libecc_Function.setupBuiltinObject(
 		&io_libecc_number_constructor, constructor, 1,
-		&io_libecc_number_prototype, io_libecc_Value.number(create(0)),
+		&io_libecc_number_prototype, ECCNSValue.number(create(0)),
 		&io_libecc_number_type);
 	
-	io_libecc_Function.addMember(io_libecc_number_constructor, "MAX_VALUE", io_libecc_Value.binary(DBL_MAX), r|h|s);
-	io_libecc_Function.addMember(io_libecc_number_constructor, "MIN_VALUE", io_libecc_Value.binary(DBL_MIN * DBL_EPSILON), r|h|s);
-	io_libecc_Function.addMember(io_libecc_number_constructor, "NaN", io_libecc_Value.binary(NAN), r|h|s);
-	io_libecc_Function.addMember(io_libecc_number_constructor, "NEGATIVE_INFINITY", io_libecc_Value.binary(-INFINITY), r|h|s);
-	io_libecc_Function.addMember(io_libecc_number_constructor, "POSITIVE_INFINITY", io_libecc_Value.binary(INFINITY), r|h|s);
+	io_libecc_Function.addMember(io_libecc_number_constructor, "MAX_VALUE", ECCNSValue.binary(DBL_MAX), r|h|s);
+	io_libecc_Function.addMember(io_libecc_number_constructor, "MIN_VALUE", ECCNSValue.binary(DBL_MIN * DBL_EPSILON), r|h|s);
+	io_libecc_Function.addMember(io_libecc_number_constructor, "NaN", ECCNSValue.binary(NAN), r|h|s);
+	io_libecc_Function.addMember(io_libecc_number_constructor, "NEGATIVE_INFINITY", ECCNSValue.binary(-INFINITY), r|h|s);
+	io_libecc_Function.addMember(io_libecc_number_constructor, "POSITIVE_INFINITY", ECCNSValue.binary(INFINITY), r|h|s);
 	
 	io_libecc_Function.addToObject(io_libecc_number_prototype, "toString", toString, 1, h);
 	io_libecc_Function.addToObject(io_libecc_number_prototype, "toLocaleString", toString, 1, h);

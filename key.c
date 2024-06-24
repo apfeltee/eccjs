@@ -9,7 +9,7 @@
 
 // MARK: - Private
 
-static struct io_libecc_Text *keyPool = NULL;
+static ecctextstring_t *keyPool = NULL;
 static uint16_t keyCount = 0;
 static uint16_t keyCapacity = 0;
 
@@ -50,10 +50,10 @@ struct io_libecc_Key io_libecc_key_source;
 static void setup(void);
 static void teardown(void);
 static struct io_libecc_Key makeWithCString(const char* cString);
-static struct io_libecc_Key makeWithText(const struct io_libecc_Text text, enum io_libecc_key_Flags flags);
-static struct io_libecc_Key search(const struct io_libecc_Text text);
+static struct io_libecc_Key makeWithText(const ecctextstring_t text, enum io_libecc_key_Flags flags);
+static struct io_libecc_Key search(const ecctextstring_t text);
 static int isEqual(struct io_libecc_Key, struct io_libecc_Key);
-static const struct io_libecc_Text* textOf(struct io_libecc_Key);
+static const ecctextstring_t* textOf(struct io_libecc_Key);
 static void dumpTo(struct io_libecc_Key, FILE*);
 const struct type_io_libecc_Key io_libecc_Key = {
     setup, teardown, makeWithCString, makeWithText, search, isEqual, textOf, dumpTo,
@@ -73,7 +73,7 @@ struct io_libecc_Key makeWithNumber (uint16_t number)
 }
 
 static
-struct io_libecc_Key addWithText (const struct io_libecc_Text text, enum io_libecc_key_Flags flags)
+struct io_libecc_Key addWithText (const ecctextstring_t text, enum io_libecc_key_Flags flags)
 {
 	if (keyCount >= keyCapacity)
 	{
@@ -228,7 +228,7 @@ struct io_libecc_Key makeWithCString (const char *cString)
 	return makeWithText(io_libecc_Text.make(cString, (uint16_t)strlen(cString)), 0);
 }
 
-struct io_libecc_Key makeWithText (const struct io_libecc_Text text, enum io_libecc_key_Flags flags)
+struct io_libecc_Key makeWithText (const ecctextstring_t text, enum io_libecc_key_Flags flags)
 {
 	struct io_libecc_Key key = search(text);
 	
@@ -238,7 +238,7 @@ struct io_libecc_Key makeWithText (const struct io_libecc_Text text, enum io_lib
 	return key;
 }
 
-struct io_libecc_Key search (const struct io_libecc_Text text)
+struct io_libecc_Key search (const ecctextstring_t text)
 {
 	uint16_t index = 0;
 	
@@ -257,17 +257,17 @@ int isEqual (struct io_libecc_Key self, struct io_libecc_Key to)
 	return self.data.integer == to.data.integer;
 }
 
-const struct io_libecc_Text *textOf (struct io_libecc_Key key)
+const ecctextstring_t *textOf (struct io_libecc_Key key)
 {
 	uint16_t number = key.data.depth[0] << 12 | key.data.depth[1] << 8 | key.data.depth[2] << 4 | key.data.depth[3];
 	if (number)
 		return &keyPool[number - 1];
 	else
-		return &io_libecc_text_empty;
+		return &ECC_ConstString_Empty;
 }
 
 void dumpTo (struct io_libecc_Key key, FILE *file)
 {
-	const struct io_libecc_Text *text = textOf(key);
+	const ecctextstring_t *text = textOf(key);
 	fprintf(file, "%.*s", (int)text->length, text->bytes);
 }

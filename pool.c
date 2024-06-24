@@ -9,8 +9,8 @@
 
 // MARK: - Private
 
-static void markValue (struct eccvalue_t value);
-static void cleanupObject(struct eccobject_t *object);
+static void markValue (eccvalue_t value);
+static void cleanupObject(eccobject_t *object);
 
 static struct io_libecc_Pool *self = NULL;
 
@@ -19,11 +19,11 @@ static struct io_libecc_Pool *self = NULL;
 static void setup(void);
 static void teardown(void);
 static void addFunction(struct io_libecc_Function* function);
-static void addObject(struct eccobject_t* object);
+static void addObject(eccobject_t* object);
 static void addChars(struct io_libecc_Chars* chars);
 static void unmarkAll(void);
-static void markValue(struct eccvalue_t value);
-static void markObject(struct eccobject_t* object);
+static void markValue(eccvalue_t value);
+static void markObject(eccobject_t* object);
 static void collectUnmarked(void);
 static void collectUnreferencedFromIndices(uint32_t indices[3]);
 static void unreferenceFromIndices(uint32_t indices[3]);
@@ -43,7 +43,7 @@ const struct type_io_libecc_Pool io_libecc_Pool = {
     getIndices,
 };
 
-void markObject (struct eccobject_t *object)
+void markObject (eccobject_t *object)
 {
 	uint32_t index, count;
 	
@@ -114,7 +114,7 @@ void addFunction (struct io_libecc_Function *function)
 	self->functionList[self->functionCount++] = function;
 }
 
-void addObject (struct eccobject_t *object)
+void addObject (eccobject_t *object)
 {
 	assert(object);
 	
@@ -162,40 +162,40 @@ void unmarkAll (void)
 		self->charsList[index]->flags &= ~io_libecc_chars_mark;
 }
 
-void markValue (struct eccvalue_t value)
+void markValue (eccvalue_t value)
 {
-	if (value.type >= io_libecc_value_objectType)
+	if (value.type >= ECC_VALTYPE_OBJECT)
 		markObject(value.data.object);
-	else if (value.type == io_libecc_value_charsType)
+	else if (value.type == ECC_VALTYPE_CHARS)
 		markChars(value.data.chars);
 }
 
 static
-void releaseObject(struct eccobject_t *object)
+void releaseObject(eccobject_t *object)
 {
 	if (object->referenceCount > 0 && !--object->referenceCount)
 		cleanupObject(object);
 }
 
 static
-struct eccvalue_t releaseValue(struct eccvalue_t value)
+eccvalue_t releaseValue(eccvalue_t value)
 {
-	if (value.type == io_libecc_value_charsType)
+	if (value.type == ECC_VALTYPE_CHARS)
 		--value.data.chars->referenceCount;
-	if (value.type >= io_libecc_value_objectType)
+	if (value.type >= ECC_VALTYPE_OBJECT)
 		releaseObject(value.data.object);
 	
 	return value;
 }
 
-static void captureObject (struct eccobject_t *object);
+static void captureObject (eccobject_t *object);
 
 static
-struct eccvalue_t retainValue(struct eccvalue_t value)
+eccvalue_t retainValue(eccvalue_t value)
 {
-	if (value.type == io_libecc_value_charsType)
+	if (value.type == ECC_VALTYPE_CHARS)
 		++value.data.chars->referenceCount;
-	if (value.type >= io_libecc_value_objectType)
+	if (value.type >= ECC_VALTYPE_OBJECT)
 	{
 		++value.data.object->referenceCount;
 		if (!(value.data.object->flags & io_libecc_object_mark))
@@ -208,9 +208,9 @@ struct eccvalue_t retainValue(struct eccvalue_t value)
 }
 
 static
-void cleanupObject(struct eccobject_t *object)
+void cleanupObject(eccobject_t *object)
 {
-	struct eccvalue_t value;
+	eccvalue_t value;
 	
 	if (object->prototype && object->prototype->referenceCount)
 		--object->prototype->referenceCount;
@@ -227,7 +227,7 @@ void cleanupObject(struct eccobject_t *object)
 }
 
 static
-void captureObject (struct eccobject_t *object)
+void captureObject (eccobject_t *object)
 {
 	uint32_t index, count;
 	union io_libecc_object_Element *element;

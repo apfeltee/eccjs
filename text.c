@@ -8,55 +8,52 @@
 #include "ecc.h"
 
 
+#define _textMake(name, litstr) \
+	static const char cstr_##name[] = litstr; \
+	const ecctextstring_t name = { .bytes = cstr_##name, .length = sizeof(cstr_##name) - 1 }
 
 
+_textMake(ECC_ConstString_Undefined, "undefined");
+_textMake(ECC_ConstString_Null, "null");
+_textMake(ECC_ConstString_True, "true");
+_textMake(ECC_ConstString_False, "false");
+_textMake(ECC_ConstString_Boolean, "boolean");
+_textMake(ECC_ConstString_Number, "number");
+_textMake(ECC_ConstString_String, "string");
+_textMake(ECC_ConstString_Object, "object");
+_textMake(ECC_ConstString_Function, "function");
+_textMake(ECC_ConstString_Zero, "0");
+_textMake(ECC_ConstString_One, "1");
+_textMake(ECC_ConstString_Nan, "NaN");
+_textMake(ECC_ConstString_Infinity, "Infinity");
+_textMake(ECC_ConstString_NegativeInfinity, "-Infinity");
+_textMake(ECC_ConstString_NativeCode, "[native code]");
+_textMake(ECC_ConstString_Empty, "");
+_textMake(ECC_ConstString_EmptyRegExp, "/(?:)/");
+_textMake(ECC_ConstString_NullType, "[object Null]");
+_textMake(ECC_ConstString_UndefinedType, "[object Undefined]");
+_textMake(ECC_ConstString_ObjectType, "[object Object]");
+_textMake(ECC_ConstString_ErrorType, "[object Error]");
+_textMake(ECC_ConstString_ArrayType, "[object Array]");
+_textMake(ECC_ConstString_StringType, "[object String]");
+_textMake(ECC_ConstString_RegexpType, "[object RegExp]");
+_textMake(ECC_ConstString_NumberType, "[object Number]");
+_textMake(ECC_ConstString_BooleanType, "[object Boolean]");
+_textMake(ECC_ConstString_DateType, "[object Date]");
+_textMake(ECC_ConstString_FunctionType, "[object Function]");
+_textMake(ECC_ConstString_ArgumentsType, "[object Arguments]");
+_textMake(ECC_ConstString_MathType, "[object Math]");
+_textMake(ECC_ConstString_JsonType, "[object JSON]");
+_textMake(ECC_ConstString_GlobalType, "[object Global]");
+_textMake(ECC_ConstString_ErrorName, "Error");
+_textMake(ECC_ConstString_RangeErrorName, "RangeError");
+_textMake(ECC_ConstString_ReferenceErrorName, "ReferenceError");
+_textMake(ECC_ConstString_SyntaxErrorName, "SyntaxError");
+_textMake(ECC_ConstString_TypeErrorName, "TypeError");
+_textMake(ECC_ConstString_UriErrorName, "URIError");
+_textMake(ECC_ConstString_InputErrorName, "InputError");
+_textMake(ECC_ConstString_EvalErrorName, "EvalError");
 
-#define textMake(N, T) \
-	static const char N ## Literal[] = T; \
-	const struct io_libecc_Text io_libecc_text_##N = { .bytes = N ## Literal, .length = sizeof N ## Literal - 1 }
-
-textMake(undefined, "undefined");
-textMake(null, "null");
-textMake(true, "true");
-textMake(false, "false");
-textMake(boolean, "boolean");
-textMake(number, "number");
-textMake(string, "string");
-textMake(object, "object");
-textMake(function, "function");
-textMake(zero, "0");
-textMake(one, "1");
-textMake(nan, "NaN");
-textMake(infinity, "Infinity");
-textMake(negativeInfinity, "-Infinity");
-textMake(nativeCode, "[native code]");
-textMake(empty, "");
-textMake(emptyRegExp, "/(?:)/");
-
-textMake(nullType, "[object Null]");
-textMake(undefinedType, "[object Undefined]");
-textMake(objectType, "[object io_libecc_Object]");
-textMake(errorType, "[object io_libecc_Error]");
-textMake(arrayType, "[object io_libecc_Array]");
-textMake(stringType, "[object io_libecc_String]");
-textMake(regexpType, "[object io_libecc_RegExp]");
-textMake(numberType, "[object io_libecc_Number]");
-textMake(booleanType, "[object io_libecc_Boolean]");
-textMake(dateType, "[object io_libecc_Date]");
-textMake(functionType, "[object io_libecc_Function]");
-textMake(argumentsType, "[object io_libecc_Arguments]");
-textMake(mathType, "[object io_libecc_Math]");
-textMake(jsonType, "[object io_libecc_JSON]");
-textMake(globalType, "[object io_libecc_Global]");
-
-textMake(errorName, "io_libecc_Error");
-textMake(rangeErrorName, "RangeError");
-textMake(referenceErrorName, "ReferenceError");
-textMake(syntaxErrorName, "SyntaxError");
-textMake(typeErrorName, "TypeError");
-textMake(uriErrorName, "URIError");
-textMake(inputErrorName, "InputError");
-textMake(evalErrorName, "EvalError");
 
 // MARK: - Static Members
 
@@ -449,41 +446,41 @@ static const char uppers[] = {
 };
 
 // MARK: - Methods
-static struct io_libecc_Text make(const char* bytes, int32_t length);
-static struct io_libecc_Text join(struct io_libecc_Text from, struct io_libecc_Text to);
-static struct io_libecc_text_Char character(struct io_libecc_Text);
-static struct io_libecc_text_Char nextCharacter(struct io_libecc_Text* text);
-static struct io_libecc_text_Char prevCharacter(struct io_libecc_Text* text);
-static void advance(struct io_libecc_Text* text, int32_t units);
-static uint16_t toUTF16Length(struct io_libecc_Text);
-static uint16_t toUTF16(struct io_libecc_Text, uint16_t* wbuffer);
-static char* toLower(struct io_libecc_Text, char* x2buffer);
-static char* toUpper(struct io_libecc_Text, char* x3buffer);
-static int isSpace(struct io_libecc_text_Char);
-static int isDigit(struct io_libecc_text_Char);
-static int isWord(struct io_libecc_text_Char);
-static int isLineFeed(struct io_libecc_text_Char);
+static ecctextstring_t make(const char* bytes, int32_t length);
+static ecctextstring_t join(ecctextstring_t from, ecctextstring_t to);
+static ecctextchar_t character(ecctextstring_t);
+static ecctextchar_t nextCharacter(ecctextstring_t* text);
+static ecctextchar_t prevCharacter(ecctextstring_t* text);
+static void advance(ecctextstring_t* text, int32_t units);
+static uint16_t toUTF16Length(ecctextstring_t);
+static uint16_t toUTF16(ecctextstring_t, uint16_t* wbuffer);
+static char* toLower(ecctextstring_t, char* x2buffer);
+static char* toUpper(ecctextstring_t, char* x3buffer);
+static int isSpace(ecctextchar_t);
+static int isDigit(ecctextchar_t);
+static int isWord(ecctextchar_t);
+static int isLineFeed(ecctextchar_t);
 const struct type_io_libecc_Text io_libecc_Text = {
     make, join, character, nextCharacter, prevCharacter, advance, toUTF16Length, toUTF16, toLower, toUpper, isSpace, isDigit, isWord, isLineFeed,
 };
 
 
-struct io_libecc_Text make (const char *bytes, int32_t length)
+ecctextstring_t make (const char *bytes, int32_t length)
 {
-	return (struct io_libecc_Text){
+	return (ecctextstring_t){
 		.bytes = bytes,
 		.length = length,
 	};
 }
 
-struct io_libecc_Text join (struct io_libecc_Text from, struct io_libecc_Text to)
+ecctextstring_t join (ecctextstring_t from, ecctextstring_t to)
 {
 	return make(from.bytes, (int32_t)(to.bytes - from.bytes) + to.length);
 }
 
-struct io_libecc_text_Char character (struct io_libecc_Text text)
+ecctextchar_t character (ecctextstring_t text)
 {
-	struct io_libecc_text_Char c = { 0 };
+	ecctextchar_t c = { 0 };
 	
 	switch (text.length)
 	{
@@ -536,16 +533,16 @@ struct io_libecc_text_Char character (struct io_libecc_Text text)
 	return c;
 }
 
-struct io_libecc_text_Char nextCharacter (struct io_libecc_Text *text)
+ecctextchar_t nextCharacter (ecctextstring_t *text)
 {
-	struct io_libecc_text_Char c = character(*text);
+	ecctextchar_t c = character(*text);
 	advance(text, c.units);
 	return c;
 }
 
-struct io_libecc_text_Char prevCharacter (struct io_libecc_Text *text)
+ecctextchar_t prevCharacter (ecctextstring_t *text)
 {
-	struct io_libecc_text_Char c = { 0 };
+	ecctextchar_t c = { 0 };
 	
 	switch (text->length)
 	{
@@ -598,7 +595,7 @@ struct io_libecc_text_Char prevCharacter (struct io_libecc_Text *text)
 	return c;
 }
 
-void advance (struct io_libecc_Text *text, int32_t units)
+void advance (ecctextstring_t *text, int32_t units)
 {
 	if (units >= text->length)
 	{
@@ -612,7 +609,7 @@ void advance (struct io_libecc_Text *text, int32_t units)
 	}
 }
 
-uint16_t toUTF16Length (struct io_libecc_Text text)
+uint16_t toUTF16Length (ecctextstring_t text)
 {
 	uint16_t windex = 0;
 	
@@ -622,7 +619,7 @@ uint16_t toUTF16Length (struct io_libecc_Text text)
 	return windex;
 }
 
-uint16_t toUTF16 (struct io_libecc_Text text, uint16_t *wbuffer)
+uint16_t toUTF16 (ecctextstring_t text, uint16_t *wbuffer)
 {
 	uint16_t windex = 0;
 	uint32_t cp;
@@ -644,11 +641,11 @@ uint16_t toUTF16 (struct io_libecc_Text text, uint16_t *wbuffer)
 	return windex;
 }
 
-char * toLower (struct io_libecc_Text i, char *o /* length x 2 */)
+char * toLower (ecctextstring_t i, char *o /* length x 2 */)
 {
 	char buffer[5];
 	const char *p;
-	struct io_libecc_text_Char c;
+	ecctextchar_t c;
 	
 	while (i.length)
 	{
@@ -678,11 +675,11 @@ char * toLower (struct io_libecc_Text i, char *o /* length x 2 */)
 	return o;
 }
 
-char * toUpper (struct io_libecc_Text i, char *o /* length x 3 */)
+char * toUpper (ecctextstring_t i, char *o /* length x 3 */)
 {
 	char buffer[5];
 	const char *p;
-	struct io_libecc_text_Char c;
+	ecctextchar_t c;
 	
 	while (i.length)
 	{
@@ -712,7 +709,7 @@ char * toUpper (struct io_libecc_Text i, char *o /* length x 3 */)
 	return o;
 }
 
-int isSpace (struct io_libecc_text_Char c)
+int isSpace (ecctextchar_t c)
 {
 	return
 		(c.codepoint < 0x7f && isspace(c.codepoint))
@@ -728,17 +725,17 @@ int isSpace (struct io_libecc_text_Char c)
 		;
 }
 
-int isDigit (struct io_libecc_text_Char c)
+int isDigit (ecctextchar_t c)
 {
 	return isdigit(c.codepoint) != 0;
 }
 
-int isWord (struct io_libecc_text_Char c)
+int isWord (ecctextchar_t c)
 {
 	return isalnum(c.codepoint) || c.codepoint == '_';
 }
 
-int isLineFeed (struct io_libecc_text_Char c)
+int isLineFeed (ecctextchar_t c)
 {
 	return
 		c.codepoint == '\n'

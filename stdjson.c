@@ -10,15 +10,15 @@
 // MARK: - Private
 
 struct Parse {
-	struct io_libecc_Text text;
+	ecctextstring_t text;
 	const char *start;
 	int line;
 	
 	// reviver
 	
-	struct eccstate_t context;
+	eccstate_t context;
 	struct io_libecc_Function * function;
-	struct eccobject_t * arguments;
+	eccobject_t * arguments;
 	const struct io_libecc_Op * ops;
 };
 
@@ -26,18 +26,18 @@ struct Stringify {
 	struct io_libecc_chars_Append chars;
 	char spaces[11];
 	int level;
-	struct eccobject_t *filter;
+	eccobject_t *filter;
 	
 	// replacer
 	
-	struct eccstate_t context;
+	eccstate_t context;
 	struct io_libecc_Function * function;
-	struct eccobject_t * arguments;
+	eccobject_t * arguments;
 	const struct io_libecc_Op * ops;
 };
 
 const struct io_libecc_object_Type io_libecc_json_type = {
-	.text = &io_libecc_text_jsonType,
+	.text = &ECC_ConstString_JsonType,
 };
 
 static void setup(void);
@@ -48,19 +48,19 @@ const struct type_io_libecc_JSON io_libecc_JSON = {
 };
 
 static
-struct eccvalue_t error (struct Parse *parse, int length, struct io_libecc_Chars *chars)
+eccvalue_t error (struct Parse *parse, int length, struct io_libecc_Chars *chars)
 {
-	return io_libecc_Value.error(io_libecc_Error.syntaxError(io_libecc_Text.make(parse->text.bytes + (length < 0? length: 0), abs(length)), chars));
+	return ECCNSValue.error(io_libecc_Error.syntaxError(io_libecc_Text.make(parse->text.bytes + (length < 0? length: 0), abs(length)), chars));
 }
 
 static
-struct io_libecc_Text errorOfLine (struct Parse *parse)
+ecctextstring_t errorOfLine (struct Parse *parse)
 {
-	struct io_libecc_Text text = { 0 };
+	ecctextstring_t text = { 0 };
 	text.bytes = parse->start;
 	while (parse->text.length)
 	{
-		struct io_libecc_text_Char c = io_libecc_Text.character(parse->text);
+		ecctextchar_t c = io_libecc_Text.character(parse->text);
 		if (c.codepoint == '\r' || c.codepoint == '\n')
 			break;
 		
@@ -71,9 +71,9 @@ struct io_libecc_Text errorOfLine (struct Parse *parse)
 }
 
 static
-struct io_libecc_text_Char nextc (struct Parse *parse)
+ecctextchar_t nextc (struct Parse *parse)
 {
-	struct io_libecc_text_Char c = { 0 };
+	ecctextchar_t c = { 0 };
 	while (parse->text.length)
 	{
 		c = io_libecc_Text.nextCharacter(&parse->text);
@@ -94,10 +94,10 @@ struct io_libecc_text_Char nextc (struct Parse *parse)
 }
 
 static
-struct io_libecc_Text string (struct Parse *parse)
+ecctextstring_t string (struct Parse *parse)
 {
-	struct io_libecc_Text text = { parse->text.bytes };
-	struct io_libecc_text_Char c;
+	ecctextstring_t text = { parse->text.bytes };
+	ecctextchar_t c;
 	
 	do
 	{
@@ -111,13 +111,13 @@ struct io_libecc_Text string (struct Parse *parse)
 	return text;
 }
 
-static struct eccvalue_t object (struct Parse *parse);
-static struct eccvalue_t array (struct Parse *parse);
+static eccvalue_t object (struct Parse *parse);
+static eccvalue_t array (struct Parse *parse);
 
 static
-struct eccvalue_t literal (struct Parse *parse)
+eccvalue_t literal (struct Parse *parse)
 {
-	struct io_libecc_text_Char c = nextc(parse);
+	ecctextchar_t c = nextc(parse);
 	
 	switch (c.codepoint)
 	{
@@ -125,7 +125,7 @@ struct eccvalue_t literal (struct Parse *parse)
 			if (!memcmp(parse->text.bytes, "rue", 3))
 			{
 				io_libecc_Text.advance(&parse->text, 3);
-				return io_libecc_value_true;
+				return ECCValConstTrue;
 			}
 			break;
 			
@@ -133,7 +133,7 @@ struct eccvalue_t literal (struct Parse *parse)
 			if (!memcmp(parse->text.bytes, "alse", 4))
 			{
 				io_libecc_Text.advance(&parse->text, 4);
-				return io_libecc_value_false;
+				return ECCValConstFalse;
 			}
 			break;
 			
@@ -141,7 +141,7 @@ struct eccvalue_t literal (struct Parse *parse)
 			if (!memcmp(parse->text.bytes, "ull", 3))
 			{
 				io_libecc_Text.advance(&parse->text, 3);
-				return io_libecc_value_null;
+				return ECCValConstNull;
 			}
 			break;
 			
@@ -157,7 +157,7 @@ struct eccvalue_t literal (struct Parse *parse)
 		case '8':
 		case '9':
 		{
-			struct io_libecc_Text text = io_libecc_Text.make(parse->text.bytes - 1, 1);
+			ecctextstring_t text = io_libecc_Text.make(parse->text.bytes - 1, 1);
 			
 			if (c.codepoint == '-')
 				c = io_libecc_Text.nextCharacter(&parse->text);
@@ -204,8 +204,8 @@ struct eccvalue_t literal (struct Parse *parse)
 			
 		case '"':
 		{
-			struct io_libecc_Text text = string(parse);
-			return io_libecc_Value.chars(io_libecc_Chars.createWithBytes(text.length, text.bytes));
+			ecctextstring_t text = string(parse);
+			return ECCNSValue.chars(io_libecc_Chars.createWithBytes(text.length, text.bytes));
 			break;
 		}
 			
@@ -221,11 +221,11 @@ struct eccvalue_t literal (struct Parse *parse)
 }
 
 static
-struct eccvalue_t object (struct Parse *parse)
+eccvalue_t object (struct Parse *parse)
 {
-	struct eccobject_t *object = io_libecc_Object.create(io_libecc_object_prototype);
-	struct io_libecc_text_Char c;
-	struct eccvalue_t value;
+	eccobject_t *object = io_libecc_Object.create(io_libecc_object_prototype);
+	ecctextchar_t c;
+	eccvalue_t value;
 	struct io_libecc_Key key;
 	
 	c = nextc(parse);
@@ -242,7 +242,7 @@ struct eccvalue_t object (struct Parse *parse)
 				return error(parse, -c.units, io_libecc_Chars.create("expect colon"));
 			
 			value = literal(parse);
-			if (value.type == io_libecc_value_errorType)
+			if (value.type == ECC_VALTYPE_ERROR)
 				return value;
 			
 			io_libecc_Object.addMember(object, key, value, 0);
@@ -257,20 +257,20 @@ struct eccvalue_t object (struct Parse *parse)
 				return error(parse, -c.units, io_libecc_Chars.create("unexpected '%.*s'", c.units, parse->text.bytes - c.units));
 		}
 	
-	return io_libecc_Value.object(object);
+	return ECCNSValue.object(object);
 }
 
 static
-struct eccvalue_t array (struct Parse *parse)
+eccvalue_t array (struct Parse *parse)
 {
-	struct eccobject_t *object = io_libecc_Array.create();
-	struct io_libecc_text_Char c;
-	struct eccvalue_t value;
+	eccobject_t *object = io_libecc_Array.create();
+	ecctextchar_t c;
+	eccvalue_t value;
 	
 	for (;;)
 	{
 		value = literal(parse);
-		if (value.type == io_libecc_value_errorType)
+		if (value.type == ECC_VALTYPE_ERROR)
 			return value;
 		
 		io_libecc_Object.addElement(object, object->elementCount, value, 0);
@@ -285,13 +285,13 @@ struct eccvalue_t array (struct Parse *parse)
 		
 		return error(parse, -c.units, io_libecc_Chars.create("unexpected '%.*s'", c.units, parse->text.bytes - c.units));
 	}
-	return io_libecc_Value.object(object);
+	return ECCNSValue.object(object);
 }
 
 static
-struct eccvalue_t json (struct Parse *parse)
+eccvalue_t json (struct Parse *parse)
 {
-	struct io_libecc_text_Char c = nextc(parse);
+	ecctextchar_t c = nextc(parse);
 	
 	if (c.codepoint == '{')
 		return object(parse);
@@ -304,7 +304,7 @@ struct eccvalue_t json (struct Parse *parse)
 // MARK: - Static Members
 
 static
-struct eccvalue_t revive (struct Parse *parse, struct eccvalue_t this, struct eccvalue_t property, struct eccvalue_t value)
+eccvalue_t revive (struct Parse *parse, eccvalue_t this, eccvalue_t property, eccvalue_t value)
 {
 	uint16_t hashmapCount;
 	
@@ -335,14 +335,14 @@ struct eccvalue_t revive (struct Parse *parse, struct eccvalue_t this, struct ec
 }
 
 static
-struct eccvalue_t walker (struct Parse *parse, struct eccvalue_t this, struct eccvalue_t property, struct eccvalue_t value)
+eccvalue_t walker (struct Parse *parse, eccvalue_t this, eccvalue_t property, eccvalue_t value)
 {
 	uint32_t index, count;
 	struct io_libecc_chars_Append chars;
 	
-	if (io_libecc_Value.isObject(value))
+	if (ECCNSValue.isObject(value))
 	{
-		struct eccobject_t *object = value.data.object;
+		eccobject_t *object = value.data.object;
 		
 		for (index = 0, count = object->elementCount < io_libecc_object_ElementMax? object->elementCount: io_libecc_object_ElementMax; index < count; ++index)
 		{
@@ -357,16 +357,16 @@ struct eccvalue_t walker (struct Parse *parse, struct eccvalue_t this, struct ec
 		for (index = 2; index < object->hashmapCount; ++index)
 		{
 			if (object->hashmap[index].value.check == 1)
-				object->hashmap[index].value = walker(parse, this, io_libecc_Value.key(object->hashmap[index].value.key), object->hashmap[index].value);
+				object->hashmap[index].value = walker(parse, this, ECCNSValue.key(object->hashmap[index].value.key), object->hashmap[index].value);
 		}
 	}
 	return revive(parse, this, property, value);
 }
 
 static
-struct eccvalue_t jsonParse (struct eccstate_t * const context)
+eccvalue_t jsonParse (eccstate_t * const context)
 {
-	struct eccvalue_t value, reviver, result;
+	eccvalue_t value, reviver, result;
 	struct Parse parse = {
 		.context = {
 			.parent = context,
@@ -376,24 +376,24 @@ struct eccvalue_t jsonParse (struct eccstate_t * const context)
 		},
 	};
 	
-	value = io_libecc_Value.toString(context, io_libecc_Context.argument(context, 0));
+	value = ECCNSValue.toString(context, io_libecc_Context.argument(context, 0));
 	reviver = io_libecc_Context.argument(context, 1);
 	
-	parse.text = io_libecc_Text.make(io_libecc_Value.stringBytes(&value), io_libecc_Value.stringLength(&value));
+	parse.text = io_libecc_Text.make(ECCNSValue.stringBytes(&value), ECCNSValue.stringLength(&value));
 	parse.start = parse.text.bytes;
 	parse.line = 1;
-	parse.function = reviver.type == io_libecc_value_functionType? reviver.data.function: NULL;
+	parse.function = reviver.type == ECC_VALTYPE_FUNCTION? reviver.data.function: NULL;
 	parse.ops = parse.function? parse.function->oplist->ops: NULL;
 	
 	result = json(&parse);
 	
-	if (result.type != io_libecc_value_errorType && parse.text.length)
+	if (result.type != ECC_VALTYPE_ERROR && parse.text.length)
 	{
-		struct io_libecc_text_Char c = io_libecc_Text.character(parse.text);
+		ecctextchar_t c = io_libecc_Text.character(parse.text);
 		result = error(&parse, c.units, io_libecc_Chars.create("unexpected '%.*s'", c.units, parse.text.bytes));
 	}
 	
-	if (result.type == io_libecc_value_errorType)
+	if (result.type == ECC_VALTYPE_ERROR)
 	{
 		io_libecc_Context.setTextIndex(context, io_libecc_context_noIndex);
 		context->ecc->ofLine = parse.line;
@@ -404,20 +404,20 @@ struct eccvalue_t jsonParse (struct eccstate_t * const context)
 	
 	if (parse.function && parse.function->flags & io_libecc_function_needHeap)
 	{
-		struct eccobject_t *environment = io_libecc_Object.copy(&parse.function->environment);
+		eccobject_t *environment = io_libecc_Object.copy(&parse.function->environment);
 		
 		parse.context.environment = environment;
 		parse.arguments = io_libecc_Arguments.createSized(2);
 		++parse.arguments->referenceCount;
 		
-		environment->hashmap[2].value = io_libecc_Value.object(parse.arguments);
+		environment->hashmap[2].value = ECCNSValue.object(parse.arguments);
 		
-		result = walker(&parse, result, io_libecc_Value.text(&io_libecc_text_empty), result);
+		result = walker(&parse, result, ECCNSValue.text(&ECC_ConstString_Empty), result);
 	}
 	else if (parse.function)
 	{
-		struct eccobject_t environment = parse.function->environment;
-		struct eccobject_t arguments = io_libecc_Object.identity;
+		eccobject_t environment = parse.function->environment;
+		eccobject_t arguments = io_libecc_Object.identity;
 		union io_libecc_object_Hashmap hashmap[parse.function->environment.hashmapCapacity];
 		union io_libecc_object_Element element[2];
 		
@@ -428,15 +428,15 @@ struct eccvalue_t jsonParse (struct eccstate_t * const context)
 		arguments.element = element;
 		arguments.elementCount = 2;
 		environment.hashmap = hashmap;
-		environment.hashmap[2].value = io_libecc_Value.object(&arguments);
+		environment.hashmap[2].value = ECCNSValue.object(&arguments);
 		
-		result = walker(&parse, result, io_libecc_Value.text(&io_libecc_text_empty), result);
+		result = walker(&parse, result, ECCNSValue.text(&ECC_ConstString_Empty), result);
 	}
 	return result;
 }
 
 static
-struct eccvalue_t replace (struct Stringify *stringify, struct eccvalue_t this, struct eccvalue_t property, struct eccvalue_t value)
+eccvalue_t replace (struct Stringify *stringify, eccvalue_t this, eccvalue_t property, eccvalue_t value)
 {
 	uint16_t hashmapCount;
 	
@@ -467,7 +467,7 @@ struct eccvalue_t replace (struct Stringify *stringify, struct eccvalue_t this, 
 }
 
 static
-int stringifyValue (struct Stringify *stringify, struct eccvalue_t this, struct eccvalue_t property, struct eccvalue_t value, int isArray, int addComa)
+int stringifyValue (struct Stringify *stringify, eccvalue_t this, eccvalue_t property, eccvalue_t value, int isArray, int addComa)
 {
 	uint32_t index, count;
 	
@@ -476,19 +476,19 @@ int stringifyValue (struct Stringify *stringify, struct eccvalue_t this, struct 
 	
 	if (!isArray)
 	{
-		if (value.type == io_libecc_value_undefinedType)
+		if (value.type == ECC_VALTYPE_UNDEFINED)
 			return 0;
 		
 		if (stringify->filter)
 		{
-			struct eccobject_t *object = stringify->filter;
+			eccobject_t *object = stringify->filter;
 			int found = 0;
 			
 			for (index = 0, count = object->elementCount < io_libecc_object_ElementMax? object->elementCount: io_libecc_object_ElementMax; index < count; ++index)
 			{
 				if (object->element[index].value.check == 1)
 				{
-					if (io_libecc_Value.isTrue(io_libecc_Value.equals(&stringify->context, property, object->element[index].value)))
+					if (ECCNSValue.isTrue(ECCNSValue.equals(&stringify->context, property, object->element[index].value)))
 					{
 						found = 1;
 						break;
@@ -508,16 +508,16 @@ int stringifyValue (struct Stringify *stringify, struct eccvalue_t this, struct 
 		io_libecc_Chars.append(&stringify->chars, "%s", stringify->spaces);
 	
 	if (!isArray)
-		io_libecc_Chars.append(&stringify->chars, "\"%.*s\":%s", io_libecc_Value.stringLength(&property), io_libecc_Value.stringBytes(&property), strlen(stringify->spaces)? " ": "");
+		io_libecc_Chars.append(&stringify->chars, "\"%.*s\":%s", ECCNSValue.stringLength(&property), ECCNSValue.stringBytes(&property), strlen(stringify->spaces)? " ": "");
 	
-	if (value.type == io_libecc_value_functionType || value.type == io_libecc_value_undefinedType)
+	if (value.type == ECC_VALTYPE_FUNCTION || value.type == ECC_VALTYPE_UNDEFINED)
 		io_libecc_Chars.append(&stringify->chars, "null");
-	else if (io_libecc_Value.isObject(value))
+	else if (ECCNSValue.isObject(value))
 	{
-		struct eccobject_t *object = value.data.object;
-		int isArray = io_libecc_Value.objectIsArray(object);
+		eccobject_t *object = value.data.object;
+		int isArray = ECCNSValue.objectIsArray(object);
 		struct io_libecc_chars_Append chars;
-		const struct io_libecc_Text *property;
+		const ecctextstring_t *property;
 		int hasValue = 0;
 		
 		io_libecc_Chars.append(&stringify->chars, "%s%s", isArray? "[": "{", strlen(stringify->spaces)? "\n": "");
@@ -540,7 +540,7 @@ int stringifyValue (struct Stringify *stringify, struct eccvalue_t this, struct 
 				if (object->hashmap[index].value.check == 1)
 				{
 					property = io_libecc_Key.textOf(object->hashmap[index].value.key);
-					hasValue |= stringifyValue(stringify, value, io_libecc_Value.text(property), object->hashmap[index].value, isArray, hasValue);
+					hasValue |= stringifyValue(stringify, value, ECCNSValue.text(property), object->hashmap[index].value, isArray, hasValue);
 				}
 			}
 		}
@@ -560,9 +560,9 @@ int stringifyValue (struct Stringify *stringify, struct eccvalue_t this, struct 
 }
 
 static
-struct eccvalue_t jsonStringify (struct eccstate_t * const context)
+eccvalue_t jsonStringify (eccstate_t * const context)
 {
-	struct eccvalue_t value, replacer, space;
+	eccvalue_t value, replacer, space;
 	struct Stringify stringify = {
 		.context = {
 			.parent = context,
@@ -577,15 +577,15 @@ struct eccvalue_t jsonStringify (struct eccstate_t * const context)
 	replacer = io_libecc_Context.argument(context, 1);
 	space = io_libecc_Context.argument(context, 2);
 	
-	stringify.filter = replacer.type == io_libecc_value_objectType && replacer.data.object->type == &io_libecc_array_type? replacer.data.object: NULL;
-	stringify.function = replacer.type == io_libecc_value_functionType? replacer.data.function: NULL;
+	stringify.filter = replacer.type == ECC_VALTYPE_OBJECT && replacer.data.object->type == &io_libecc_array_type? replacer.data.object: NULL;
+	stringify.function = replacer.type == ECC_VALTYPE_FUNCTION? replacer.data.function: NULL;
 	stringify.ops = stringify.function? stringify.function->oplist->ops: NULL;
 	
-	if (io_libecc_Value.isString(space))
-		snprintf(stringify.spaces, sizeof(stringify.spaces), "%.*s", (int)io_libecc_Value.stringLength(&space), io_libecc_Value.stringBytes(&space));
-	else if (io_libecc_Value.isNumber(space))
+	if (ECCNSValue.isString(space))
+		snprintf(stringify.spaces, sizeof(stringify.spaces), "%.*s", (int)ECCNSValue.stringLength(&space), ECCNSValue.stringBytes(&space));
+	else if (ECCNSValue.isNumber(space))
 	{
-		int i = io_libecc_Value.toInteger(context, space).data.integer;
+		int i = ECCNSValue.toInteger(context, space).data.integer;
 		
 		if (i < 0)
 			i = 0;
@@ -601,20 +601,20 @@ struct eccvalue_t jsonStringify (struct eccstate_t * const context)
 	
 	if (stringify.function && stringify.function->flags & io_libecc_function_needHeap)
 	{
-		struct eccobject_t *environment = io_libecc_Object.copy(&stringify.function->environment);
+		eccobject_t *environment = io_libecc_Object.copy(&stringify.function->environment);
 		
 		stringify.context.environment = environment;
 		stringify.arguments = io_libecc_Arguments.createSized(2);
 		++stringify.arguments->referenceCount;
 		
-		environment->hashmap[2].value = io_libecc_Value.object(stringify.arguments);
+		environment->hashmap[2].value = ECCNSValue.object(stringify.arguments);
 		
-		stringifyValue(&stringify, value, io_libecc_Value.text(&io_libecc_text_empty), value, 1, 0);
+		stringifyValue(&stringify, value, ECCNSValue.text(&ECC_ConstString_Empty), value, 1, 0);
 	}
 	else if (stringify.function)
 	{
-		struct eccobject_t environment = stringify.function->environment;
-		struct eccobject_t arguments = io_libecc_Object.identity;
+		eccobject_t environment = stringify.function->environment;
+		eccobject_t arguments = io_libecc_Object.identity;
 		union io_libecc_object_Hashmap hashmap[stringify.function->environment.hashmapCapacity];
 		union io_libecc_object_Element element[2];
 		
@@ -625,19 +625,19 @@ struct eccvalue_t jsonStringify (struct eccstate_t * const context)
 		arguments.element = element;
 		arguments.elementCount = 2;
 		environment.hashmap = hashmap;
-		environment.hashmap[2].value = io_libecc_Value.object(&arguments);
+		environment.hashmap[2].value = ECCNSValue.object(&arguments);
 		
-		stringifyValue(&stringify, value, io_libecc_Value.text(&io_libecc_text_empty), value, 1, 0);
+		stringifyValue(&stringify, value, ECCNSValue.text(&ECC_ConstString_Empty), value, 1, 0);
 	}
 	else
-		stringifyValue(&stringify, value, io_libecc_Value.text(&io_libecc_text_empty), value, 1, 0);
+		stringifyValue(&stringify, value, ECCNSValue.text(&ECC_ConstString_Empty), value, 1, 0);
 	
 	return io_libecc_Chars.endAppend(&stringify.chars);
 }
 
 // MARK: - Public
 
-struct eccobject_t * io_libecc_json_object = NULL;
+eccobject_t * io_libecc_json_object = NULL;
 
 void setup ()
 {

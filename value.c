@@ -9,13 +9,13 @@
 
 // MARK: - Private
 
-#define valueMake(T) { .type = io_libecc_value_##T, .check = 1 }
+#define valueMake(T) { .type = T, .check = 1 }
 
-const struct eccvalue_t io_libecc_value_none = {{ 0 }};
-const struct eccvalue_t io_libecc_value_undefined = valueMake(undefinedType);
-const struct eccvalue_t io_libecc_value_true = valueMake(trueType);
-const struct eccvalue_t io_libecc_value_false = valueMake(falseType);
-const struct eccvalue_t io_libecc_value_null = valueMake(nullType);
+const eccvalue_t ECCValConstNone = {{ 0 }};
+const eccvalue_t ECCValConstUndefined = valueMake(ECC_VALTYPE_UNDEFINED);
+const eccvalue_t ECCValConstTrue = valueMake(ECC_VALTYPE_TRUE);
+const eccvalue_t ECCValConstFalse = valueMake(ECC_VALTYPE_FALSE);
+const eccvalue_t ECCValConstNull = valueMake(ECC_VALTYPE_NULL);
 
 // MARK: - Static Members
 
@@ -24,90 +24,90 @@ const struct eccvalue_t io_libecc_value_null = valueMake(nullType);
 
 // make
 
-static struct eccvalue_t truth(int truth);
-static struct eccvalue_t integer(int32_t integer);
-static struct eccvalue_t binary(double binary);
-static struct eccvalue_t buffer(const char buffer[7], uint8_t units);
-static struct eccvalue_t key(struct io_libecc_Key key);
-static struct eccvalue_t text(const struct io_libecc_Text* text);
-static struct eccvalue_t chars(struct io_libecc_Chars* chars);
-static struct eccvalue_t object(struct eccobject_t*);
-static struct eccvalue_t error(struct io_libecc_Error*);
-static struct eccvalue_t string(struct io_libecc_String*);
-static struct eccvalue_t regexp(struct io_libecc_RegExp*);
-static struct eccvalue_t number(struct io_libecc_Number*);
-static struct eccvalue_t boolean(struct io_libecc_Boolean*);
-static struct eccvalue_t date(struct io_libecc_Date*);
-static struct eccvalue_t function(struct io_libecc_Function*);
-static struct eccvalue_t host(struct eccobject_t*);
-static struct eccvalue_t reference(struct eccvalue_t*);
-static int isPrimitive(struct eccvalue_t);
-static int isBoolean(struct eccvalue_t);
-static int isNumber(struct eccvalue_t);
-static int isString(struct eccvalue_t);
-static int isObject(struct eccvalue_t);
-static int isDynamic(struct eccvalue_t);
-static int isTrue(struct eccvalue_t);
-static struct eccvalue_t toPrimitive(struct eccstate_t* const, struct eccvalue_t, enum io_libecc_value_hintPrimitive);
-static struct eccvalue_t toBinary(struct eccstate_t* const, struct eccvalue_t);
-static struct eccvalue_t toInteger(struct eccstate_t* const, struct eccvalue_t);
-static struct eccvalue_t binaryToString(double binary, int base);
-static struct eccvalue_t toString(struct eccstate_t* const, struct eccvalue_t);
-static int32_t stringLength(const struct eccvalue_t*);
-static const char* stringBytes(const struct eccvalue_t*);
-static struct io_libecc_Text textOf(const struct eccvalue_t* string);
-static struct eccvalue_t toObject(struct eccstate_t* const, struct eccvalue_t);
-static struct eccvalue_t objectValue(struct eccobject_t*);
-static int objectIsArray(struct eccobject_t*);
-static struct eccvalue_t toType(struct eccvalue_t);
-static struct eccvalue_t equals(struct eccstate_t* const, struct eccvalue_t, struct eccvalue_t);
-static struct eccvalue_t same(struct eccstate_t* const, struct eccvalue_t, struct eccvalue_t);
-static struct eccvalue_t add(struct eccstate_t* const, struct eccvalue_t, struct eccvalue_t);
-static struct eccvalue_t subtract(struct eccstate_t* const, struct eccvalue_t, struct eccvalue_t);
-static struct eccvalue_t less(struct eccstate_t* const, struct eccvalue_t, struct eccvalue_t);
-static struct eccvalue_t more(struct eccstate_t* const, struct eccvalue_t, struct eccvalue_t);
-static struct eccvalue_t lessOrEqual(struct eccstate_t* const, struct eccvalue_t, struct eccvalue_t);
-static struct eccvalue_t moreOrEqual(struct eccstate_t* const, struct eccvalue_t, struct eccvalue_t);
-static const char* typeName(enum io_libecc_value_Type);
+static eccvalue_t truth(int truth);
+static eccvalue_t integer(int32_t integer);
+static eccvalue_t binary(double binary);
+static eccvalue_t buffer(const char buffer[7], uint8_t units);
+static eccvalue_t key(struct io_libecc_Key key);
+static eccvalue_t text(const ecctextstring_t* text);
+static eccvalue_t chars(struct io_libecc_Chars* chars);
+static eccvalue_t object(eccobject_t*);
+static eccvalue_t error(struct io_libecc_Error*);
+static eccvalue_t string(struct io_libecc_String*);
+static eccvalue_t regexp(struct io_libecc_RegExp*);
+static eccvalue_t number(struct io_libecc_Number*);
+static eccvalue_t boolean(struct io_libecc_Boolean*);
+static eccvalue_t date(struct io_libecc_Date*);
+static eccvalue_t function(struct io_libecc_Function*);
+static eccvalue_t host(eccobject_t*);
+static eccvalue_t reference(eccvalue_t*);
+static int isPrimitive(eccvalue_t);
+static int isBoolean(eccvalue_t);
+static int isNumber(eccvalue_t);
+static int isString(eccvalue_t);
+static int isObject(eccvalue_t);
+static int isDynamic(eccvalue_t);
+static int isTrue(eccvalue_t);
+static eccvalue_t toPrimitive(eccstate_t* const, eccvalue_t, enum io_libecc_value_hintPrimitive);
+static eccvalue_t toBinary(eccstate_t* const, eccvalue_t);
+static eccvalue_t toInteger(eccstate_t* const, eccvalue_t);
+static eccvalue_t binaryToString(double binary, int base);
+static eccvalue_t toString(eccstate_t* const, eccvalue_t);
+static int32_t stringLength(const eccvalue_t*);
+static const char* stringBytes(const eccvalue_t*);
+static ecctextstring_t textOf(const eccvalue_t* string);
+static eccvalue_t toObject(eccstate_t* const, eccvalue_t);
+static eccvalue_t objectValue(eccobject_t*);
+static int objectIsArray(eccobject_t*);
+static eccvalue_t toType(eccvalue_t);
+static eccvalue_t equals(eccstate_t* const, eccvalue_t, eccvalue_t);
+static eccvalue_t same(eccstate_t* const, eccvalue_t, eccvalue_t);
+static eccvalue_t add(eccstate_t* const, eccvalue_t, eccvalue_t);
+static eccvalue_t subtract(eccstate_t* const, eccvalue_t, eccvalue_t);
+static eccvalue_t less(eccstate_t* const, eccvalue_t, eccvalue_t);
+static eccvalue_t more(eccstate_t* const, eccvalue_t, eccvalue_t);
+static eccvalue_t lessOrEqual(eccstate_t* const, eccvalue_t, eccvalue_t);
+static eccvalue_t moreOrEqual(eccstate_t* const, eccvalue_t, eccvalue_t);
+static const char* typeName(eccvaltype_t);
 static const char* maskName(enum io_libecc_value_Mask);
-static void dumpTo(struct eccvalue_t, FILE*);
-const struct type_io_libecc_Value io_libecc_Value = {
+static void dumpTo(eccvalue_t, FILE*);
+const struct type_io_libecc_Value ECCNSValue = {
     truth,       integer,  binary,    buffer,         key,       text,         chars,       object,      error,    string,      regexp,        number,
     boolean,     date,     function,  host,           reference, isPrimitive,  isBoolean,   isNumber,    isString, isObject,    isDynamic,     isTrue,
     toPrimitive, toBinary, toInteger, binaryToString, toString,  stringLength, stringBytes, textOf,      toObject, objectValue, objectIsArray, toType,
     equals,      same,     add,       subtract,       less,      more,         lessOrEqual, moreOrEqual, typeName, maskName,    dumpTo,
 };
 
-struct eccvalue_t truth (int truth)
+eccvalue_t truth (int truth)
 {
-	return (struct eccvalue_t){
-		.type = truth? io_libecc_value_trueType: io_libecc_value_falseType,
+	return (eccvalue_t){
+		.type = truth? ECC_VALTYPE_TRUE: ECC_VALTYPE_FALSE,
 		.check = 1,
 	};
 }
 
-struct eccvalue_t integer (int32_t integer)
+eccvalue_t integer (int32_t integer)
 {
-	return (struct eccvalue_t){
+	return (eccvalue_t){
 		.data = { .integer = integer },
-		.type = io_libecc_value_integerType,
+		.type = ECC_VALTYPE_INTEGER,
 		.check = 1,
 	};
 }
 
-struct eccvalue_t binary (double binary)
+eccvalue_t binary (double binary)
 {
-	return (struct eccvalue_t){
+	return (eccvalue_t){
 		.data = { .binary = binary },
-		.type = io_libecc_value_binaryType,
+		.type = ECC_VALTYPE_BINARY,
 		.check = 1,
 	};
 }
 
-struct eccvalue_t buffer (const char b[7], uint8_t units)
+eccvalue_t buffer (const char b[7], uint8_t units)
 {
-	struct eccvalue_t value = {
-		.type = io_libecc_value_bufferType,
+	eccvalue_t value = {
+		.type = ECC_VALTYPE_BUFFER,
 		.check = 1,
 	};
 	memcpy(value.data.buffer, b, units);
@@ -115,186 +115,186 @@ struct eccvalue_t buffer (const char b[7], uint8_t units)
 	return value;
 }
 
-struct eccvalue_t key (struct io_libecc_Key key)
+eccvalue_t key (struct io_libecc_Key key)
 {
-	return (struct eccvalue_t){
+	return (eccvalue_t){
 		.data = { .key = key },
-		.type = io_libecc_value_keyType,
+		.type = ECC_VALTYPE_KEY,
 		.check = 0,
 	};
 }
 
-struct eccvalue_t text (const struct io_libecc_Text *text)
+eccvalue_t text (const ecctextstring_t *text)
 {
-	return (struct eccvalue_t){
+	return (eccvalue_t){
 		.data = { .text = text },
-		.type = io_libecc_value_textType,
+		.type = ECC_VALTYPE_TEXT,
 		.check = 1,
 	};
 }
 
-struct eccvalue_t chars (struct io_libecc_Chars *chars)
+eccvalue_t chars (struct io_libecc_Chars *chars)
 {
 	assert(chars);
 	
-	return (struct eccvalue_t){
+	return (eccvalue_t){
 		.data = { .chars = chars },
-		.type = io_libecc_value_charsType,
+		.type = ECC_VALTYPE_CHARS,
 		.check = 1,
 	};
 }
 
-struct eccvalue_t object (struct eccobject_t *object)
+eccvalue_t object (eccobject_t *object)
 {
 	assert(object);
 	
-	return (struct eccvalue_t){
+	return (eccvalue_t){
 		.data = { .object = object },
-		.type = io_libecc_value_objectType,
+		.type = ECC_VALTYPE_OBJECT,
 		.check = 1,
 	};
 }
 
-struct eccvalue_t error (struct io_libecc_Error *error)
+eccvalue_t error (struct io_libecc_Error *error)
 {
 	assert(error);
 	
-	return (struct eccvalue_t){
+	return (eccvalue_t){
 		.data = { .error = error },
-		.type = io_libecc_value_errorType,
+		.type = ECC_VALTYPE_ERROR,
 		.check = 1,
 	};
 }
 
-struct eccvalue_t string (struct io_libecc_String *string)
+eccvalue_t string (struct io_libecc_String *string)
 {
 	assert(string);
 	
-	return (struct eccvalue_t){
+	return (eccvalue_t){
 		.data = { .string = string },
-		.type = io_libecc_value_stringType,
+		.type = ECC_VALTYPE_STRING,
 		.check = 1,
 	};
 }
 
-struct eccvalue_t regexp (struct io_libecc_RegExp *regexp)
+eccvalue_t regexp (struct io_libecc_RegExp *regexp)
 {
 	assert(regexp);
 	
-	return (struct eccvalue_t){
+	return (eccvalue_t){
 		.data = { .regexp = regexp },
-		.type = io_libecc_value_regexpType,
+		.type = ECC_VALTYPE_REGEXP,
 		.check = 1,
 	};
 }
 
-struct eccvalue_t number (struct io_libecc_Number *number)
+eccvalue_t number (struct io_libecc_Number *number)
 {
 	assert(number);
 	
-	return (struct eccvalue_t){
+	return (eccvalue_t){
 		.data = { .number = number },
-		.type = io_libecc_value_numberType,
+		.type = ECC_VALTYPE_NUMBER,
 		.check = 1,
 	};
 }
 
-struct eccvalue_t boolean (struct io_libecc_Boolean *boolean)
+eccvalue_t boolean (struct io_libecc_Boolean *boolean)
 {
 	assert(boolean);
 	
-	return (struct eccvalue_t){
+	return (eccvalue_t){
 		.data = { .boolean = boolean },
-		.type = io_libecc_value_booleanType,
+		.type = ECC_VALTYPE_BOOLEAN,
 		.check = 1,
 	};
 }
 
-struct eccvalue_t date (struct io_libecc_Date *date)
+eccvalue_t date (struct io_libecc_Date *date)
 {
 	assert(date);
 	
-	return (struct eccvalue_t){
+	return (eccvalue_t){
 		.data = { .date = date },
-		.type = io_libecc_value_dateType,
+		.type = ECC_VALTYPE_DATE,
 		.check = 1,
 	};
 }
 
-struct eccvalue_t function (struct io_libecc_Function *function)
+eccvalue_t function (struct io_libecc_Function *function)
 {
 	assert(function);
 	
-	return (struct eccvalue_t){
+	return (eccvalue_t){
 		.data = { .function = function },
-		.type = io_libecc_value_functionType,
+		.type = ECC_VALTYPE_FUNCTION,
 		.check = 1,
 	};
 }
 
-struct eccvalue_t host (struct eccobject_t *object)
+eccvalue_t host (eccobject_t *object)
 {
 	assert(object);
 	
-	return (struct eccvalue_t){
+	return (eccvalue_t){
 		.data = { .object = object },
-		.type = io_libecc_value_hostType,
+		.type = ECC_VALTYPE_HOST,
 		.check = 1,
 	};
 }
 
-struct eccvalue_t reference (struct eccvalue_t *reference)
+eccvalue_t reference (eccvalue_t *reference)
 {
 	assert(reference);
 	
-	return (struct eccvalue_t){
+	return (eccvalue_t){
 		.data = { .reference = reference },
-		.type = io_libecc_value_referenceType,
+		.type = ECC_VALTYPE_REFERENCE,
 		.check = 0,
 	};
 }
 
 // check
 
-int isPrimitive (struct eccvalue_t value)
+int isPrimitive (eccvalue_t value)
 {
-	return !(value.type & io_libecc_value_objectMask);
+	return !(value.type & ECC_VALMASK_OBJECT);
 }
 
-int isBoolean (struct eccvalue_t value)
+int isBoolean (eccvalue_t value)
 {
-	return value.type & io_libecc_value_booleanMask;
+	return value.type & ECC_VALMASK_BOOLEAN;
 }
 
-int isNumber (struct eccvalue_t value)
+int isNumber (eccvalue_t value)
 {
-	return value.type & io_libecc_value_numberMask;
+	return value.type & ECC_VALMASK_NUMBER;
 }
 
-int isString (struct eccvalue_t value)
+int isString (eccvalue_t value)
 {
-	return value.type & io_libecc_value_stringMask;
+	return value.type & ECC_VALMASK_STRING;
 }
 
-int isObject (struct eccvalue_t value)
+int isObject (eccvalue_t value)
 {
-	return value.type & io_libecc_value_objectMask;
+	return value.type & ECC_VALMASK_OBJECT;
 }
 
-int isDynamic (struct eccvalue_t value)
+int isDynamic (eccvalue_t value)
 {
-	return value.type & io_libecc_value_dynamicMask;
+	return value.type & ECC_VALMASK_DYNAMIC;
 }
 
-int isTrue (struct eccvalue_t value)
+int isTrue (eccvalue_t value)
 {
-	if (value.type <= io_libecc_value_undefinedType)
+	if (value.type <= ECC_VALTYPE_UNDEFINED)
 		return 0;
-	if (value.type >= io_libecc_value_trueType)
+	if (value.type >= ECC_VALTYPE_TRUE)
 		return 1;
-	else if (value.type == io_libecc_value_integerType)
+	else if (value.type == ECC_VALTYPE_INTEGER)
 		return value.data.integer != 0;
-	else if (value.type == io_libecc_value_binaryType)
+	else if (value.type == ECC_VALTYPE_BINARY)
 		return !isnan(value.data.binary) && value.data.binary != 0;
 	else if (isString(value))
 		return stringLength(&value) > 0;
@@ -305,37 +305,37 @@ int isTrue (struct eccvalue_t value)
 
 // convert
 
-struct eccvalue_t toPrimitive (struct eccstate_t * const context, struct eccvalue_t value, enum io_libecc_value_hintPrimitive hint)
+eccvalue_t toPrimitive (eccstate_t * const context, eccvalue_t value, enum io_libecc_value_hintPrimitive hint)
 {
-	struct eccobject_t *object;
+	eccobject_t *object;
 	struct io_libecc_Key aKey;
 	struct io_libecc_Key bKey;
-	struct eccvalue_t aFunction;
-	struct eccvalue_t bFunction;
-	struct eccvalue_t result;
-	struct io_libecc_Text text;
+	eccvalue_t aFunction;
+	eccvalue_t bFunction;
+	eccvalue_t result;
+	ecctextstring_t text;
 	
-	if (value.type < io_libecc_value_objectType)
+	if (value.type < ECC_VALTYPE_OBJECT)
 		return value;
 	
 	if (!context)
 		io_libecc_Ecc.fatal("cannot use toPrimitive outside context");
 	
 	object = value.data.object;
-	hint = hint? hint: value.type == io_libecc_value_dateType? io_libecc_value_hintString: io_libecc_value_hintNumber;
+	hint = hint? hint: value.type == ECC_VALTYPE_DATE? io_libecc_value_hintString: io_libecc_value_hintNumber;
 	aKey = hint > 0? io_libecc_key_toString: io_libecc_key_valueOf;
 	bKey = hint > 0? io_libecc_key_valueOf: io_libecc_key_toString;
 	
 	aFunction = io_libecc_Object.getMember(context, object, aKey);
-	if (aFunction.type == io_libecc_value_functionType)
+	if (aFunction.type == ECC_VALTYPE_FUNCTION)
 	{
-		struct eccvalue_t result = io_libecc_Context.callFunction(context, aFunction.data.function, value, 0 | io_libecc_context_asAccessor);
+		eccvalue_t result = io_libecc_Context.callFunction(context, aFunction.data.function, value, 0 | io_libecc_context_asAccessor);
 		if (isPrimitive(result))
 			return result;
 	}
 	
 	bFunction = io_libecc_Object.getMember(context, object, bKey);
-	if (bFunction.type == io_libecc_value_functionType)
+	if (bFunction.type == ECC_VALTYPE_FUNCTION)
 	{
 		result = io_libecc_Context.callFunction(context, bFunction.data.function, value, 0 | io_libecc_context_asAccessor);
 		if (isPrimitive(result))
@@ -349,67 +349,67 @@ struct eccvalue_t toPrimitive (struct eccstate_t * const context, struct eccvalu
 		io_libecc_Context.typeError(context, io_libecc_Chars.create("cannot convert value to primitive"));
 }
 
-struct eccvalue_t toBinary (struct eccstate_t * const context, struct eccvalue_t value)
+eccvalue_t toBinary (eccstate_t * const context, eccvalue_t value)
 {
-	switch ((enum io_libecc_value_Type)value.type)
+	switch ((eccvaltype_t)value.type)
 	{
-		case io_libecc_value_binaryType:
+		case ECC_VALTYPE_BINARY:
 			return value;
 		
-		case io_libecc_value_integerType:
+		case ECC_VALTYPE_INTEGER:
 			return binary(value.data.integer);
 		
-		case io_libecc_value_numberType:
+		case ECC_VALTYPE_NUMBER:
 			return binary(value.data.number->value);
 		
-		case io_libecc_value_nullType:
-		case io_libecc_value_falseType:
+		case ECC_VALTYPE_NULL:
+		case ECC_VALTYPE_FALSE:
 			return binary(0);
 		
-		case io_libecc_value_trueType:
+		case ECC_VALTYPE_TRUE:
 			return binary(1);
 		
-		case io_libecc_value_booleanType:
+		case ECC_VALTYPE_BOOLEAN:
 			return binary(value.data.boolean->truth? 1: 0);
 		
-		case io_libecc_value_undefinedType:
+		case ECC_VALTYPE_UNDEFINED:
 			return binary(NAN);
 		
-		case io_libecc_value_textType:
-			if (value.data.text == &io_libecc_text_zero)
+		case ECC_VALTYPE_TEXT:
+			if (value.data.text == &ECC_ConstString_Zero)
 				return binary(0);
-			else if (value.data.text == &io_libecc_text_one)
+			else if (value.data.text == &ECC_ConstString_One)
 				return binary(1);
-			else if (value.data.text == &io_libecc_text_nan)
+			else if (value.data.text == &ECC_ConstString_Nan)
 				return binary(NAN);
-			else if (value.data.text == &io_libecc_text_infinity)
+			else if (value.data.text == &ECC_ConstString_Infinity)
 				return binary(INFINITY);
-			else if (value.data.text == &io_libecc_text_negativeInfinity)
+			else if (value.data.text == &ECC_ConstString_NegativeInfinity)
 				return binary(-INFINITY);
 			
 			/*vvv*/
 			
-		case io_libecc_value_keyType:
-		case io_libecc_value_charsType:
-		case io_libecc_value_stringType:
-		case io_libecc_value_bufferType:
+		case ECC_VALTYPE_KEY:
+		case ECC_VALTYPE_CHARS:
+		case ECC_VALTYPE_STRING:
+		case ECC_VALTYPE_BUFFER:
 			return io_libecc_Lexer.scanBinary(textOf(&value), context && context->ecc->sloppyMode? io_libecc_lexer_scanSloppy: 0);
 			
-		case io_libecc_value_objectType:
-		case io_libecc_value_errorType:
-		case io_libecc_value_dateType:
-		case io_libecc_value_functionType:
-		case io_libecc_value_regexpType:
-		case io_libecc_value_hostType:
+		case ECC_VALTYPE_OBJECT:
+		case ECC_VALTYPE_ERROR:
+		case ECC_VALTYPE_DATE:
+		case ECC_VALTYPE_FUNCTION:
+		case ECC_VALTYPE_REGEXP:
+		case ECC_VALTYPE_HOST:
 			return toBinary(context, toPrimitive(context, value, io_libecc_value_hintNumber));
 		
-		case io_libecc_value_referenceType:
+		case ECC_VALTYPE_REFERENCE:
 			break;
 	}
 	io_libecc_Ecc.fatal("Invalid io_libecc_value_Type : %u", value.type);
 }
 
-struct eccvalue_t toInteger (struct eccstate_t * const context, struct eccvalue_t value)
+eccvalue_t toInteger (eccstate_t * const context, eccvalue_t value)
 {
 	const double modulus = (double)UINT32_MAX + 1;
 	double binary = toBinary(context, value).data.binary;
@@ -429,22 +429,22 @@ struct eccvalue_t toInteger (struct eccstate_t * const context, struct eccvalue_
 	return integer(binary);
 }
 
-struct eccvalue_t binaryToString (double binary, int base)
+eccvalue_t binaryToString (double binary, int base)
 {
 	struct io_libecc_chars_Append chars;
 	
 	if (binary == 0)
-		return text(&io_libecc_text_zero);
+		return text(&ECC_ConstString_Zero);
 	else if (binary == 1)
-		return text(&io_libecc_text_one);
+		return text(&ECC_ConstString_One);
 	else if (isnan(binary))
-		return text(&io_libecc_text_nan);
+		return text(&ECC_ConstString_Nan);
 	else if (isinf(binary))
 	{
 		if (binary < 0)
-			return text(&io_libecc_text_negativeInfinity);
+			return text(&ECC_ConstString_NegativeInfinity);
 		else
-			return text(&io_libecc_text_infinity);
+			return text(&ECC_ConstString_Infinity);
 	}
 	
 	io_libecc_Chars.beginAppend(&chars);
@@ -452,74 +452,74 @@ struct eccvalue_t binaryToString (double binary, int base)
 	return io_libecc_Chars.endAppend(&chars);
 }
 
-struct eccvalue_t toString (struct eccstate_t * const context, struct eccvalue_t value)
+eccvalue_t toString (eccstate_t * const context, eccvalue_t value)
 {
-	switch ((enum io_libecc_value_Type)value.type)
+	switch ((eccvaltype_t)value.type)
 	{
-		case io_libecc_value_textType:
-		case io_libecc_value_charsType:
-		case io_libecc_value_bufferType:
+		case ECC_VALTYPE_TEXT:
+		case ECC_VALTYPE_CHARS:
+		case ECC_VALTYPE_BUFFER:
 			return value;
 			
-		case io_libecc_value_keyType:
+		case ECC_VALTYPE_KEY:
 			return text(io_libecc_Key.textOf(value.data.key));
 		
-		case io_libecc_value_stringType:
+		case ECC_VALTYPE_STRING:
 			return chars(value.data.string->value);
 		
-		case io_libecc_value_nullType:
-			return text(&io_libecc_text_null);
+		case ECC_VALTYPE_NULL:
+			return text(&ECC_ConstString_Null);
 		
-		case io_libecc_value_undefinedType:
-			return text(&io_libecc_text_undefined);
+		case ECC_VALTYPE_UNDEFINED:
+			return text(&ECC_ConstString_Undefined);
 		
-		case io_libecc_value_falseType:
-			return text(&io_libecc_text_false);
+		case ECC_VALTYPE_FALSE:
+			return text(&ECC_ConstString_False);
 		
-		case io_libecc_value_trueType:
-			return text(&io_libecc_text_true);
+		case ECC_VALTYPE_TRUE:
+			return text(&ECC_ConstString_True);
 		
-		case io_libecc_value_booleanType:
-			return value.data.boolean->truth? text(&io_libecc_text_true): text(&io_libecc_text_false);
+		case ECC_VALTYPE_BOOLEAN:
+			return value.data.boolean->truth? text(&ECC_ConstString_True): text(&ECC_ConstString_False);
 		
-		case io_libecc_value_integerType:
+		case ECC_VALTYPE_INTEGER:
 			return binaryToString(value.data.integer, 10);
 		
-		case io_libecc_value_numberType:
+		case ECC_VALTYPE_NUMBER:
 			value.data.binary = value.data.number->value;
 			/*vvv*/
 		
-		case io_libecc_value_binaryType:
+		case ECC_VALTYPE_BINARY:
 			return binaryToString(value.data.binary, 10);
 		
-		case io_libecc_value_objectType:
-		case io_libecc_value_dateType:
-		case io_libecc_value_functionType:
-		case io_libecc_value_errorType:
-		case io_libecc_value_regexpType:
-		case io_libecc_value_hostType:
+		case ECC_VALTYPE_OBJECT:
+		case ECC_VALTYPE_DATE:
+		case ECC_VALTYPE_FUNCTION:
+		case ECC_VALTYPE_ERROR:
+		case ECC_VALTYPE_REGEXP:
+		case ECC_VALTYPE_HOST:
 			return toString(context, toPrimitive(context, value, io_libecc_value_hintString));
 		
-		case io_libecc_value_referenceType:
+		case ECC_VALTYPE_REFERENCE:
 			break;
 	}
 	io_libecc_Ecc.fatal("Invalid io_libecc_value_Type : %u", value.type);
 }
 
-int32_t stringLength (const struct eccvalue_t *value)
+int32_t stringLength (const eccvalue_t *value)
 {
 	switch (value->type)
 	{
-		case io_libecc_value_charsType:
+		case ECC_VALTYPE_CHARS:
 			return value->data.chars->length;
 			
-		case io_libecc_value_textType:
+		case ECC_VALTYPE_TEXT:
 			return value->data.text->length;
 			
-		case io_libecc_value_stringType:
+		case ECC_VALTYPE_STRING:
 			return value->data.string->value->length;
 			
-		case io_libecc_value_bufferType:
+		case ECC_VALTYPE_BUFFER:
 			return value->data.buffer[7];
 			
 		default:
@@ -527,20 +527,20 @@ int32_t stringLength (const struct eccvalue_t *value)
 	}
 }
 
-const char * stringBytes (const struct eccvalue_t *value)
+const char * stringBytes (const eccvalue_t *value)
 {
 	switch (value->type)
 	{
-		case io_libecc_value_charsType:
+		case ECC_VALTYPE_CHARS:
 			return value->data.chars->bytes;
 			
-		case io_libecc_value_textType:
+		case ECC_VALTYPE_TEXT:
 			return value->data.text->bytes;
 			
-		case io_libecc_value_stringType:
+		case ECC_VALTYPE_STRING:
 			return value->data.string->value->bytes;
 			
-		case io_libecc_value_bufferType:
+		case ECC_VALTYPE_BUFFER:
 			return value->data.buffer;
 			
 		default:
@@ -548,76 +548,76 @@ const char * stringBytes (const struct eccvalue_t *value)
 	}
 }
 
-struct io_libecc_Text textOf (const struct eccvalue_t *value)
+ecctextstring_t textOf (const eccvalue_t *value)
 {
 	switch (value->type)
 	{
-		case io_libecc_value_charsType:
+		case ECC_VALTYPE_CHARS:
 			return io_libecc_Text.make(value->data.chars->bytes, value->data.chars->length);
 			
-		case io_libecc_value_textType:
+		case ECC_VALTYPE_TEXT:
 			return *value->data.text;
 			
-		case io_libecc_value_stringType:
+		case ECC_VALTYPE_STRING:
 			return io_libecc_Text.make(value->data.string->value->bytes, value->data.string->value->length);
 			
-		case io_libecc_value_keyType:
+		case ECC_VALTYPE_KEY:
 			return *io_libecc_Key.textOf(value->data.key);
 			
-		case io_libecc_value_bufferType:
+		case ECC_VALTYPE_BUFFER:
 			return io_libecc_Text.make(value->data.buffer, value->data.buffer[7]);
 			
 		default:
-			return io_libecc_text_empty;
+			return ECC_ConstString_Empty;
 	}
 }
 
-struct eccvalue_t toObject (struct eccstate_t * const context, struct eccvalue_t value)
+eccvalue_t toObject (eccstate_t * const context, eccvalue_t value)
 {
-	if (value.type >= io_libecc_value_objectType)
+	if (value.type >= ECC_VALTYPE_OBJECT)
 		return value;
 	
-	switch ((enum io_libecc_value_Type)value.type)
+	switch ((eccvaltype_t)value.type)
 	{
-		case io_libecc_value_binaryType:
+		case ECC_VALTYPE_BINARY:
 			return number(io_libecc_Number.create(value.data.binary));
 		
-		case io_libecc_value_integerType:
+		case ECC_VALTYPE_INTEGER:
 			return number(io_libecc_Number.create(value.data.integer));
 		
-		case io_libecc_value_textType:
-		case io_libecc_value_charsType:
-		case io_libecc_value_bufferType:
+		case ECC_VALTYPE_TEXT:
+		case ECC_VALTYPE_CHARS:
+		case ECC_VALTYPE_BUFFER:
 			return string(io_libecc_String.create(io_libecc_Chars.createWithBytes(stringLength(&value), stringBytes(&value))));
 			
-		case io_libecc_value_falseType:
-		case io_libecc_value_trueType:
-			return boolean(io_libecc_Boolean.create(value.type == io_libecc_value_trueType));
+		case ECC_VALTYPE_FALSE:
+		case ECC_VALTYPE_TRUE:
+			return boolean(io_libecc_Boolean.create(value.type == ECC_VALTYPE_TRUE));
 		
-		case io_libecc_value_nullType:
+		case ECC_VALTYPE_NULL:
 			goto error;
 		
-		case io_libecc_value_undefinedType:
+		case ECC_VALTYPE_UNDEFINED:
 			goto error;
 		
-		case io_libecc_value_keyType:
-		case io_libecc_value_referenceType:
-		case io_libecc_value_functionType:
-		case io_libecc_value_objectType:
-		case io_libecc_value_errorType:
-		case io_libecc_value_stringType:
-		case io_libecc_value_numberType:
-		case io_libecc_value_dateType:
-		case io_libecc_value_booleanType:
-		case io_libecc_value_regexpType:
-		case io_libecc_value_hostType:
+		case ECC_VALTYPE_KEY:
+		case ECC_VALTYPE_REFERENCE:
+		case ECC_VALTYPE_FUNCTION:
+		case ECC_VALTYPE_OBJECT:
+		case ECC_VALTYPE_ERROR:
+		case ECC_VALTYPE_STRING:
+		case ECC_VALTYPE_NUMBER:
+		case ECC_VALTYPE_DATE:
+		case ECC_VALTYPE_BOOLEAN:
+		case ECC_VALTYPE_REGEXP:
+		case ECC_VALTYPE_HOST:
 			break;
 	}
 	io_libecc_Ecc.fatal("Invalid io_libecc_value_Type : %u", value.type);
 	
 error:
 	{
-		struct io_libecc_Text text = io_libecc_Context.textSeek(context);
+		ecctextstring_t text = io_libecc_Context.textSeek(context);
 		
 		if (context->textIndex != io_libecc_context_callIndex && text.length)
 			io_libecc_Context.typeError(context, io_libecc_Chars.create("cannot convert '%.*s' to object", text.length, text.bytes));
@@ -626,81 +626,81 @@ error:
 	}
 }
 
-struct eccvalue_t objectValue (struct eccobject_t *object)
+eccvalue_t objectValue (eccobject_t *object)
 {
 	if (!object)
-		return io_libecc_value_undefined;
+		return ECCValConstUndefined;
 	else if (object->type == &io_libecc_function_type)
-		return io_libecc_Value.function((struct io_libecc_Function *)object);
+		return ECCNSValue.function((struct io_libecc_Function *)object);
 	else if (object->type == &io_libecc_string_type)
-		return io_libecc_Value.string((struct io_libecc_String *)object);
+		return ECCNSValue.string((struct io_libecc_String *)object);
 	else if (object->type == &io_libecc_boolean_type)
-		return io_libecc_Value.boolean((struct io_libecc_Boolean *)object);
+		return ECCNSValue.boolean((struct io_libecc_Boolean *)object);
 	else if (object->type == &io_libecc_number_type)
-		return io_libecc_Value.number((struct io_libecc_Number *)object);
+		return ECCNSValue.number((struct io_libecc_Number *)object);
 	else if (object->type == &io_libecc_date_type)
-		return io_libecc_Value.date((struct io_libecc_Date *)object);
+		return ECCNSValue.date((struct io_libecc_Date *)object);
 	else if (object->type == &io_libecc_regexp_type)
-		return io_libecc_Value.regexp((struct io_libecc_RegExp *)object);
+		return ECCNSValue.regexp((struct io_libecc_RegExp *)object);
 	else if (object->type == &io_libecc_error_type)
-		return io_libecc_Value.error((struct io_libecc_Error *)object);
+		return ECCNSValue.error((struct io_libecc_Error *)object);
 	else if (object->type == &io_libecc_object_type
 			|| object->type == &io_libecc_array_type
 			|| object->type == &io_libecc_arguments_type
 			|| object->type == &io_libecc_math_type
 			)
-		return io_libecc_Value.object((struct eccobject_t *)object);
+		return ECCNSValue.object((eccobject_t *)object);
 	else
-		return io_libecc_Value.host(object);
+		return ECCNSValue.host(object);
 }
 
-int objectIsArray (struct eccobject_t *object)
+int objectIsArray (eccobject_t *object)
 {
 	return object->type == &io_libecc_array_type || object->type == &io_libecc_arguments_type;
 }
 
-struct eccvalue_t toType (struct eccvalue_t value)
+eccvalue_t toType (eccvalue_t value)
 {
-	switch ((enum io_libecc_value_Type)value.type)
+	switch ((eccvaltype_t)value.type)
 	{
-		case io_libecc_value_trueType:
-		case io_libecc_value_falseType:
-			return text(&io_libecc_text_boolean);
+		case ECC_VALTYPE_TRUE:
+		case ECC_VALTYPE_FALSE:
+			return text(&ECC_ConstString_Boolean);
 		
-		case io_libecc_value_undefinedType:
-			return text(&io_libecc_text_undefined);
+		case ECC_VALTYPE_UNDEFINED:
+			return text(&ECC_ConstString_Undefined);
 		
-		case io_libecc_value_integerType:
-		case io_libecc_value_binaryType:
-			return text(&io_libecc_text_number);
+		case ECC_VALTYPE_INTEGER:
+		case ECC_VALTYPE_BINARY:
+			return text(&ECC_ConstString_Number);
 		
-		case io_libecc_value_keyType:
-		case io_libecc_value_textType:
-		case io_libecc_value_charsType:
-		case io_libecc_value_bufferType:
-			return text(&io_libecc_text_string);
+		case ECC_VALTYPE_KEY:
+		case ECC_VALTYPE_TEXT:
+		case ECC_VALTYPE_CHARS:
+		case ECC_VALTYPE_BUFFER:
+			return text(&ECC_ConstString_String);
 			
-		case io_libecc_value_nullType:
-		case io_libecc_value_objectType:
-		case io_libecc_value_stringType:
-		case io_libecc_value_numberType:
-		case io_libecc_value_booleanType:
-		case io_libecc_value_errorType:
-		case io_libecc_value_dateType:
-		case io_libecc_value_regexpType:
-		case io_libecc_value_hostType:
-			return text(&io_libecc_text_object);
+		case ECC_VALTYPE_NULL:
+		case ECC_VALTYPE_OBJECT:
+		case ECC_VALTYPE_STRING:
+		case ECC_VALTYPE_NUMBER:
+		case ECC_VALTYPE_BOOLEAN:
+		case ECC_VALTYPE_ERROR:
+		case ECC_VALTYPE_DATE:
+		case ECC_VALTYPE_REGEXP:
+		case ECC_VALTYPE_HOST:
+			return text(&ECC_ConstString_Object);
 		
-		case io_libecc_value_functionType:
-			return text(&io_libecc_text_function);
+		case ECC_VALTYPE_FUNCTION:
+			return text(&ECC_ConstString_Function);
 		
-		case io_libecc_value_referenceType:
+		case ECC_VALTYPE_REFERENCE:
 			break;
 	}
 	io_libecc_Ecc.fatal("Invalid io_libecc_value_Type : %u", value.type);
 }
 
-struct eccvalue_t equals (struct eccstate_t * const context, struct eccvalue_t a, struct eccvalue_t b)
+eccvalue_t equals (eccstate_t * const context, eccvalue_t a, eccvalue_t b)
 {
 	if (isObject(a) && isObject(b))
 		return truth(a.data.object == b.data.object);
@@ -721,16 +721,16 @@ struct eccvalue_t equals (struct eccstate_t * const context, struct eccvalue_t a
 		int32_t aLength = stringLength(&a);
 		int32_t bLength = stringLength(&b);
 		if (aLength != bLength)
-			return io_libecc_value_false;
+			return ECCValConstFalse;
 		
 		return truth(!memcmp(stringBytes(&a), stringBytes(&b), aLength));
 	}
 	else if (a.type == b.type)
-		return io_libecc_value_true;
-	else if (a.type == io_libecc_value_nullType && b.type == io_libecc_value_undefinedType)
-		return io_libecc_value_true;
-	else if (a.type == io_libecc_value_undefinedType && b.type == io_libecc_value_nullType)
-		return io_libecc_value_true;
+		return ECCValConstTrue;
+	else if (a.type == ECC_VALTYPE_NULL && b.type == ECC_VALTYPE_UNDEFINED)
+		return ECCValConstTrue;
+	else if (a.type == ECC_VALTYPE_UNDEFINED && b.type == ECC_VALTYPE_NULL)
+		return ECCValConstTrue;
 	else if (isNumber(a) && isString(b))
 		return equals(context, a, toBinary(context, b));
 	else if (isString(a) && isNumber(b))
@@ -740,10 +740,10 @@ struct eccvalue_t equals (struct eccstate_t * const context, struct eccvalue_t a
 	else if (isBoolean(b))
 		return equals(context, a, toBinary(context, b));
 	
-	return io_libecc_value_false;
+	return ECCValConstFalse;
 }
 
-struct eccvalue_t same (struct eccstate_t * const context, struct eccvalue_t a, struct eccvalue_t b)
+eccvalue_t same (eccstate_t * const context, eccvalue_t a, eccvalue_t b)
 {
 	if (isObject(a) || isObject(b))
 		return truth(isObject(a) && isObject(b) && a.data.object == b.data.object);
@@ -754,17 +754,17 @@ struct eccvalue_t same (struct eccstate_t * const context, struct eccvalue_t a, 
 		int32_t aLength = stringLength(&a);
 		int32_t bLength = stringLength(&b);
 		if (aLength != bLength)
-			return io_libecc_value_false;
+			return ECCValConstFalse;
 		
 		return truth(!memcmp(stringBytes(&a), stringBytes(&b), aLength));
 	}
 	else if (a.type == b.type)
-		return io_libecc_value_true;
+		return ECCValConstTrue;
 	
-	return io_libecc_value_false;
+	return ECCValConstFalse;
 }
 
-struct eccvalue_t add (struct eccstate_t * const context, struct eccvalue_t a, struct eccvalue_t b)
+eccvalue_t add (eccstate_t * const context, eccvalue_t a, eccvalue_t b)
 {
 	if (!isNumber(a) || !isNumber(b))
 	{
@@ -785,13 +785,13 @@ struct eccvalue_t add (struct eccstate_t * const context, struct eccvalue_t a, s
 	return binary(toBinary(context, a).data.binary + toBinary(context, b).data.binary);
 }
 
-struct eccvalue_t subtract (struct eccstate_t * const context, struct eccvalue_t a, struct eccvalue_t b)
+eccvalue_t subtract (eccstate_t * const context, eccvalue_t a, eccvalue_t b)
 {
 	return binary(toBinary(context, a).data.binary - toBinary(context, b).data.binary);
 }
 
 static
-struct eccvalue_t compare (struct eccstate_t * const context, struct eccvalue_t a, struct eccvalue_t b)
+eccvalue_t compare (eccstate_t * const context, eccvalue_t a, eccvalue_t b)
 {
 	a = toPrimitive(context, a, io_libecc_value_hintNumber);
 	io_libecc_Context.setTextIndex(context, io_libecc_context_savedIndexAlt);
@@ -803,10 +803,10 @@ struct eccvalue_t compare (struct eccstate_t * const context, struct eccvalue_t 
 		int32_t bLength = stringLength(&b);
 		
 		if (aLength < bLength && !memcmp(stringBytes(&a), stringBytes(&b), aLength))
-			return io_libecc_value_true;
+			return ECCValConstTrue;
 		
 		if (aLength > bLength && !memcmp(stringBytes(&a), stringBytes(&b), bLength))
-			return io_libecc_value_false;
+			return ECCValConstFalse;
 		
 		return truth(memcmp(stringBytes(&a), stringBytes(&b), aLength) < 0);
 	}
@@ -816,98 +816,98 @@ struct eccvalue_t compare (struct eccstate_t * const context, struct eccvalue_t 
 		b = toBinary(context, b);
 		
 		if (isnan(a.data.binary) || isnan(b.data.binary))
-			return io_libecc_value_undefined;
+			return ECCValConstUndefined;
 		
 		return truth(a.data.binary < b.data.binary);
 	}
 }
 
-struct eccvalue_t less (struct eccstate_t * const context, struct eccvalue_t a, struct eccvalue_t b)
+eccvalue_t less (eccstate_t * const context, eccvalue_t a, eccvalue_t b)
 {
 	a = compare(context, a, b);
-	if (a.type == io_libecc_value_undefinedType)
-		return io_libecc_value_false;
+	if (a.type == ECC_VALTYPE_UNDEFINED)
+		return ECCValConstFalse;
 	else
 		return a;
 }
 
-struct eccvalue_t more (struct eccstate_t * const context, struct eccvalue_t a, struct eccvalue_t b)
+eccvalue_t more (eccstate_t * const context, eccvalue_t a, eccvalue_t b)
 {
 	a = compare(context, b, a);
-	if (a.type == io_libecc_value_undefinedType)
-		return io_libecc_value_false;
+	if (a.type == ECC_VALTYPE_UNDEFINED)
+		return ECCValConstFalse;
 	else
 		return a;
 }
 
-struct eccvalue_t lessOrEqual (struct eccstate_t * const context, struct eccvalue_t a, struct eccvalue_t b)
+eccvalue_t lessOrEqual (eccstate_t * const context, eccvalue_t a, eccvalue_t b)
 {
 	a = compare(context, b, a);
-	if (a.type == io_libecc_value_undefinedType || a.type == io_libecc_value_trueType)
-		return io_libecc_value_false;
+	if (a.type == ECC_VALTYPE_UNDEFINED || a.type == ECC_VALTYPE_TRUE)
+		return ECCValConstFalse;
 	else
-		return io_libecc_value_true;
+		return ECCValConstTrue;
 }
 
-struct eccvalue_t moreOrEqual (struct eccstate_t * const context, struct eccvalue_t a, struct eccvalue_t b)
+eccvalue_t moreOrEqual (eccstate_t * const context, eccvalue_t a, eccvalue_t b)
 {
 	a = compare(context, a, b);
-	if (a.type == io_libecc_value_undefinedType || a.type == io_libecc_value_trueType)
-		return io_libecc_value_false;
+	if (a.type == ECC_VALTYPE_UNDEFINED || a.type == ECC_VALTYPE_TRUE)
+		return ECCValConstFalse;
 	else
-		return io_libecc_value_true;
+		return ECCValConstTrue;
 }
 
-const char * typeName (enum io_libecc_value_Type type)
+const char * typeName (eccvaltype_t type)
 {
 	switch (type)
 	{
-		case io_libecc_value_nullType:
+		case ECC_VALTYPE_NULL:
 			return "null";
 		
-		case io_libecc_value_undefinedType:
+		case ECC_VALTYPE_UNDEFINED:
 			return "undefined";
 		
-		case io_libecc_value_falseType:
-		case io_libecc_value_trueType:
+		case ECC_VALTYPE_FALSE:
+		case ECC_VALTYPE_TRUE:
 			return "boolean";
 		
-		case io_libecc_value_integerType:
-		case io_libecc_value_binaryType:
+		case ECC_VALTYPE_INTEGER:
+		case ECC_VALTYPE_BINARY:
 			return "number";
 		
-		case io_libecc_value_keyType:
-		case io_libecc_value_textType:
-		case io_libecc_value_charsType:
-		case io_libecc_value_bufferType:
+		case ECC_VALTYPE_KEY:
+		case ECC_VALTYPE_TEXT:
+		case ECC_VALTYPE_CHARS:
+		case ECC_VALTYPE_BUFFER:
 			return "string";
 			
-		case io_libecc_value_objectType:
-		case io_libecc_value_hostType:
+		case ECC_VALTYPE_OBJECT:
+		case ECC_VALTYPE_HOST:
 			return "object";
 		
-		case io_libecc_value_errorType:
+		case ECC_VALTYPE_ERROR:
 			return "error";
 		
-		case io_libecc_value_functionType:
+		case ECC_VALTYPE_FUNCTION:
 			return "function";
 		
-		case io_libecc_value_dateType:
+		case ECC_VALTYPE_DATE:
 			return "date";
 		
-		case io_libecc_value_numberType:
+		case ECC_VALTYPE_NUMBER:
 			return "number";
 		
-		case io_libecc_value_stringType:
+		case ECC_VALTYPE_STRING:
 			return "string";
 		
-		case io_libecc_value_booleanType:
+		case ECC_VALTYPE_BOOLEAN:
 			return "boolean";
 		
-		case io_libecc_value_regexpType:
+		case ECC_VALTYPE_REGEXP:
 			return "regexp";
 			
-		case io_libecc_value_referenceType:
+		case ECC_VALTYPE_REFERENCE:
 			break;
 	}
 	io_libecc_Ecc.fatal("Invalid io_libecc_value_Type : %u", type);
@@ -917,86 +917,86 @@ const char * maskName (enum io_libecc_value_Mask mask)
 {
 	switch (mask)
 	{
-		case io_libecc_value_numberMask:
+		case ECC_VALMASK_NUMBER:
 			return "number";
 		
-		case io_libecc_value_stringMask:
+		case ECC_VALMASK_STRING:
 			return "string";
 		
-		case io_libecc_value_booleanMask:
+		case ECC_VALMASK_BOOLEAN:
 			return "boolean";
 		
-		case io_libecc_value_objectMask:
+		case ECC_VALMASK_OBJECT:
 			return "object";
 		
-		case io_libecc_value_dynamicMask:
+		case ECC_VALMASK_DYNAMIC:
 			return "dynamic";
 	}
 	io_libecc_Ecc.fatal("Invalid io_libecc_value_Mask : %u", mask);
 }
 
-void dumpTo (struct eccvalue_t value, FILE *file)
+void dumpTo (eccvalue_t value, FILE *file)
 {
-	switch ((enum io_libecc_value_Type)value.type)
+	switch ((eccvaltype_t)value.type)
 	{
-		case io_libecc_value_nullType:
+		case ECC_VALTYPE_NULL:
 			fputs("null", file);
 			return;
 		
-		case io_libecc_value_undefinedType:
+		case ECC_VALTYPE_UNDEFINED:
 			fputs("undefined", file);
 			return;
 		
-		case io_libecc_value_falseType:
+		case ECC_VALTYPE_FALSE:
 			fputs("false", file);
 			return;
 		
-		case io_libecc_value_trueType:
+		case ECC_VALTYPE_TRUE:
 			fputs("true", file);
 			return;
 		
-		case io_libecc_value_booleanType:
+		case ECC_VALTYPE_BOOLEAN:
 			fputs(value.data.boolean->truth? "true": "false", file);
 			return;
 		
-		case io_libecc_value_integerType:
+		case ECC_VALTYPE_INTEGER:
 			fprintf(file, "%d", (int)value.data.integer);
 			return;
 		
-		case io_libecc_value_numberType:
+		case ECC_VALTYPE_NUMBER:
 			value.data.binary = value.data.number->value;
 			/*vvv*/
 			
-		case io_libecc_value_binaryType:
+		case ECC_VALTYPE_BINARY:
 			fprintf(file, "%g", value.data.binary);
 			return;
 		
-		case io_libecc_value_keyType:
-		case io_libecc_value_textType:
-		case io_libecc_value_charsType:
-		case io_libecc_value_stringType:
-		case io_libecc_value_bufferType:
+		case ECC_VALTYPE_KEY:
+		case ECC_VALTYPE_TEXT:
+		case ECC_VALTYPE_CHARS:
+		case ECC_VALTYPE_STRING:
+		case ECC_VALTYPE_BUFFER:
 		{
-			const struct io_libecc_Text text = textOf(&value);
+			const ecctextstring_t text = textOf(&value);
 			//putc('\'', file);
 			fwrite(text.bytes, sizeof(char), text.length, file);
 			//putc('\'', file);
 			return;
 		}
 		
-		case io_libecc_value_objectType:
-		case io_libecc_value_dateType:
-		case io_libecc_value_errorType:
-		case io_libecc_value_regexpType:
-		case io_libecc_value_hostType:
+		case ECC_VALTYPE_OBJECT:
+		case ECC_VALTYPE_DATE:
+		case ECC_VALTYPE_ERROR:
+		case ECC_VALTYPE_REGEXP:
+		case ECC_VALTYPE_HOST:
 			io_libecc_Object.dumpTo(value.data.object, file);
 			return;
 		
-		case io_libecc_value_functionType:
+		case ECC_VALTYPE_FUNCTION:
 			fwrite(value.data.function->text.bytes, sizeof(char), value.data.function->text.length, file);
 			return;
 		
-		case io_libecc_value_referenceType:
+		case ECC_VALTYPE_REFERENCE:
 			fputs("-> ", file);
 			dumpTo(*value.data.reference, file);
 			return;

@@ -65,20 +65,47 @@
 
 
 
+typedef struct eccstate_t eccstate_t;
+typedef struct eccobject_t eccobject_t;
+typedef struct eccvalue_t eccvalue_t;
+typedef struct ecctextchar_t ecctextchar_t;
+typedef struct ecctextstring_t ecctextstring_t;
 
 
-struct io_libecc_text_Char
+typedef enum eccvaltype_t eccvaltype_t;
+typedef enum io_libecc_object_Flags io_libecc_object_Flags;
+typedef enum io_libecc_regexp_Options io_libecc_regexp_Options;
+typedef enum io_libecc_function_Flags io_libecc_function_Flags;
+
+typedef struct io_libecc_regexp_Node io_libecc_regexp_Node;
+typedef struct type_io_libecc_Math type_io_libecc_Math;
+typedef struct type_io_libecc_Array type_io_libecc_Array;
+typedef struct type_io_libecc_Object type_io_libecc_Object;
+typedef struct type_io_libecc_RegExp type_io_libecc_RegExp;
+typedef struct type_io_libecc_Arguments type_io_libecc_Arguments;
+typedef struct type_io_libecc_Boolean type_io_libecc_Boolean;
+typedef struct type_io_libecc_Date type_io_libecc_Date;
+typedef struct type_io_libecc_Error type_io_libecc_Error;
+typedef struct type_io_libecc_Function type_io_libecc_Function;
+typedef struct type_io_libecc_JSON type_io_libecc_JSON;
+typedef struct type_io_libecc_Number type_io_libecc_Number;
+typedef struct type_io_libecc_String type_io_libecc_String;
+typedef struct type_io_libecc_Global type_io_libecc_Global;
+
+typedef eccvalue_t (*io_libecc_native_io_libecc_Function)(eccstate_t* const context);
+
+struct ecctextchar_t
 {
     uint32_t codepoint;
     uint8_t units;
 };
 
-enum io_libecc_text_Flags
+enum ecctextflags_t
 {
-    io_libecc_text_breakFlag = 1 << 0,
+    ECC_TEXTFLAG_BREAKFLAG = 1 << 0,
 };
 
-struct io_libecc_Text
+struct ecctextstring_t
 {
     const char* bytes;
     int32_t length;
@@ -87,27 +114,22 @@ struct io_libecc_Text
 
 struct type_io_libecc_Text
 {
-    struct io_libecc_Text (*make)(const char* bytes, int32_t length);
-    struct io_libecc_Text (*join)(struct io_libecc_Text from, struct io_libecc_Text to);
-    struct io_libecc_text_Char (*character)(struct io_libecc_Text);
-    struct io_libecc_text_Char (*nextCharacter)(struct io_libecc_Text* text);
-    struct io_libecc_text_Char (*prevCharacter)(struct io_libecc_Text* text);
-    void (*advance)(struct io_libecc_Text* text, int32_t units);
-    uint16_t (*toUTF16Length)(struct io_libecc_Text);
-    uint16_t (*toUTF16)(struct io_libecc_Text, uint16_t* wbuffer);
-    char* (*toLower)(struct io_libecc_Text, char* x2buffer);
-    char* (*toUpper)(struct io_libecc_Text, char* x3buffer);
-    int (*isSpace)(struct io_libecc_text_Char);
-    int (*isDigit)(struct io_libecc_text_Char);
-    int (*isWord)(struct io_libecc_text_Char);
-    int (*isLineFeed)(struct io_libecc_text_Char);
-    const struct io_libecc_Text identity;
+    ecctextstring_t (*make)(const char* bytes, int32_t length);
+    ecctextstring_t (*join)(ecctextstring_t from, ecctextstring_t to);
+    ecctextchar_t (*character)(ecctextstring_t);
+    ecctextchar_t (*nextCharacter)(ecctextstring_t* text);
+    ecctextchar_t (*prevCharacter)(ecctextstring_t* text);
+    void (*advance)(ecctextstring_t* text, int32_t units);
+    uint16_t (*toUTF16Length)(ecctextstring_t);
+    uint16_t (*toUTF16)(ecctextstring_t, uint16_t* wbuffer);
+    char* (*toLower)(ecctextstring_t, char* x2buffer);
+    char* (*toUpper)(ecctextstring_t, char* x3buffer);
+    int (*isSpace)(ecctextchar_t);
+    int (*isDigit)(ecctextchar_t);
+    int (*isWord)(ecctextchar_t);
+    int (*isLineFeed)(ecctextchar_t);
+    const ecctextstring_t identity;
 };
-
-
-
-
-
 
 enum io_libecc_key_Flags
 {
@@ -128,56 +150,51 @@ struct type_io_libecc_Key
     void (*setup)(void);
     void (*teardown)(void);
     struct io_libecc_Key (*makeWithCString)(const char* cString);
-    struct io_libecc_Key (*makeWithText)(const struct io_libecc_Text text, enum io_libecc_key_Flags flags);
-    struct io_libecc_Key (*search)(const struct io_libecc_Text text);
+    struct io_libecc_Key (*makeWithText)(const ecctextstring_t text, enum io_libecc_key_Flags flags);
+    struct io_libecc_Key (*search)(const ecctextstring_t text);
     int (*isEqual)(struct io_libecc_Key, struct io_libecc_Key);
-    const struct io_libecc_Text* (*textOf)(struct io_libecc_Key);
+    const ecctextstring_t* (*textOf)(struct io_libecc_Key);
     void (*dumpTo)(struct io_libecc_Key, FILE*);
     const struct io_libecc_Key identity;
 };
 
-
-
-
-struct eccstate_t;
-
-enum io_libecc_value_Type
+enum eccvaltype_t
 {
 
-    io_libecc_value_nullType = -1 & ~0x79,
-    io_libecc_value_falseType = -1 & ~0x59,
-    io_libecc_value_undefinedType = 0x00,
+    ECC_VALTYPE_NULL = -1 & ~0x79,
+    ECC_VALTYPE_FALSE = -1 & ~0x59,
+    ECC_VALTYPE_UNDEFINED = 0x00,
 
-    io_libecc_value_integerType = 0x08,
-    io_libecc_value_binaryType = 0x0a,
+    ECC_VALTYPE_INTEGER = 0x08,
+    ECC_VALTYPE_BINARY = 0x0a,
 
-    io_libecc_value_keyType = 0x10,
-    io_libecc_value_textType = 0x12,
-    io_libecc_value_charsType = 0x13,
-    io_libecc_value_bufferType = 0x14,
+    ECC_VALTYPE_KEY = 0x10,
+    ECC_VALTYPE_TEXT = 0x12,
+    ECC_VALTYPE_CHARS = 0x13,
+    ECC_VALTYPE_BUFFER = 0x14,
 
-    io_libecc_value_trueType = 0x20,
+    ECC_VALTYPE_TRUE = 0x20,
 
-    io_libecc_value_objectType = 0x40,
-    io_libecc_value_errorType = 0x41,
-    io_libecc_value_functionType = 0x42,
-    io_libecc_value_regexpType = 0x43,
-    io_libecc_value_dateType = 0x44,
-    io_libecc_value_numberType = 0x48,
-    io_libecc_value_stringType = 0x50,
-    io_libecc_value_booleanType = 0x60,
+    ECC_VALTYPE_OBJECT = 0x40,
+    ECC_VALTYPE_ERROR = 0x41,
+    ECC_VALTYPE_FUNCTION = 0x42,
+    ECC_VALTYPE_REGEXP = 0x43,
+    ECC_VALTYPE_DATE = 0x44,
+    ECC_VALTYPE_NUMBER = 0x48,
+    ECC_VALTYPE_STRING = 0x50,
+    ECC_VALTYPE_BOOLEAN = 0x60,
 
-    io_libecc_value_hostType = 0x46,
-    io_libecc_value_referenceType = 0x47,
+    ECC_VALTYPE_HOST = 0x46,
+    ECC_VALTYPE_REFERENCE = 0x47,
 };
 
 enum io_libecc_value_Mask
 {
-    io_libecc_value_numberMask = 0x08,
-    io_libecc_value_stringMask = 0x10,
-    io_libecc_value_booleanMask = 0x20,
-    io_libecc_value_objectMask = 0x40,
-    io_libecc_value_dynamicMask = 0x41,
+    ECC_VALMASK_NUMBER = 0x08,
+    ECC_VALMASK_STRING = 0x10,
+    ECC_VALMASK_BOOLEAN = 0x20,
+    ECC_VALMASK_OBJECT = 0x40,
+    ECC_VALMASK_DYNAMIC = 0x41,
 };
 
 enum io_libecc_value_Flags
@@ -210,9 +227,9 @@ struct eccvalue_t
         double binary;
         char buffer[8];
         struct io_libecc_Key key;
-        const struct io_libecc_Text* text;
+        const ecctextstring_t* text;
         struct io_libecc_Chars* chars;
-        struct eccobject_t* object;
+        eccobject_t* object;
         struct io_libecc_Error* error;
         struct io_libecc_String* string;
         struct io_libecc_RegExp* regexp;
@@ -220,64 +237,64 @@ struct eccvalue_t
         struct io_libecc_Boolean* boolean;
         struct io_libecc_Date* date;
         struct io_libecc_Function* function;
-        struct eccvalue_t* reference;
+        eccvalue_t* reference;
     } data;
     struct io_libecc_Key key;
-    int8_t type;
+    eccvaltype_t type;
     uint8_t flags;
     uint16_t check;
 };
 
 struct type_io_libecc_Value
 {
-    struct eccvalue_t (*truth)(int truth);
-    struct eccvalue_t (*integer)(int32_t integer);
-    struct eccvalue_t (*binary)(double binary);
-    struct eccvalue_t (*buffer)(const char buffer[7], uint8_t units);
-    struct eccvalue_t (*key)(struct io_libecc_Key key);
-    struct eccvalue_t (*text)(const struct io_libecc_Text* text);
-    struct eccvalue_t (*chars)(struct io_libecc_Chars* chars);
-    struct eccvalue_t (*object)(struct eccobject_t*);
-    struct eccvalue_t (*error)(struct io_libecc_Error*);
-    struct eccvalue_t (*string)(struct io_libecc_String*);
-    struct eccvalue_t (*regexp)(struct io_libecc_RegExp*);
-    struct eccvalue_t (*number)(struct io_libecc_Number*);
-    struct eccvalue_t (*boolean)(struct io_libecc_Boolean*);
-    struct eccvalue_t (*date)(struct io_libecc_Date*);
-    struct eccvalue_t (*function)(struct io_libecc_Function*);
-    struct eccvalue_t (*host)(struct eccobject_t*);
-    struct eccvalue_t (*reference)(struct eccvalue_t*);
-    int (*isPrimitive)(struct eccvalue_t);
-    int (*isBoolean)(struct eccvalue_t);
-    int (*isNumber)(struct eccvalue_t);
-    int (*isString)(struct eccvalue_t);
-    int (*isObject)(struct eccvalue_t);
-    int (*isDynamic)(struct eccvalue_t);
-    int (*isTrue)(struct eccvalue_t);
-    struct eccvalue_t (*toPrimitive)(struct eccstate_t* const, struct eccvalue_t, enum io_libecc_value_hintPrimitive);
-    struct eccvalue_t (*toBinary)(struct eccstate_t* const, struct eccvalue_t);
-    struct eccvalue_t (*toInteger)(struct eccstate_t* const, struct eccvalue_t);
-    struct eccvalue_t (*binaryToString)(double binary, int base);
-    struct eccvalue_t (*toString)(struct eccstate_t* const, struct eccvalue_t);
-    int32_t (*stringLength)(const struct eccvalue_t*);
-    const char* (*stringBytes)(const struct eccvalue_t*);
-    struct io_libecc_Text (*textOf)(const struct eccvalue_t* string);
-    struct eccvalue_t (*toObject)(struct eccstate_t* const, struct eccvalue_t);
-    struct eccvalue_t (*objectValue)(struct eccobject_t*);
-    int (*objectIsArray)(struct eccobject_t*);
-    struct eccvalue_t (*toType)(struct eccvalue_t);
-    struct eccvalue_t (*equals)(struct eccstate_t* const, struct eccvalue_t, struct eccvalue_t);
-    struct eccvalue_t (*same)(struct eccstate_t* const, struct eccvalue_t, struct eccvalue_t);
-    struct eccvalue_t (*add)(struct eccstate_t* const, struct eccvalue_t, struct eccvalue_t);
-    struct eccvalue_t (*subtract)(struct eccstate_t* const, struct eccvalue_t, struct eccvalue_t);
-    struct eccvalue_t (*less)(struct eccstate_t* const, struct eccvalue_t, struct eccvalue_t);
-    struct eccvalue_t (*more)(struct eccstate_t* const, struct eccvalue_t, struct eccvalue_t);
-    struct eccvalue_t (*lessOrEqual)(struct eccstate_t* const, struct eccvalue_t, struct eccvalue_t);
-    struct eccvalue_t (*moreOrEqual)(struct eccstate_t* const, struct eccvalue_t, struct eccvalue_t);
-    const char* (*typeName)(enum io_libecc_value_Type);
+    eccvalue_t (*truth)(int truth);
+    eccvalue_t (*integer)(int32_t integer);
+    eccvalue_t (*binary)(double binary);
+    eccvalue_t (*buffer)(const char buffer[7], uint8_t units);
+    eccvalue_t (*key)(struct io_libecc_Key key);
+    eccvalue_t (*text)(const ecctextstring_t* text);
+    eccvalue_t (*chars)(struct io_libecc_Chars* chars);
+    eccvalue_t (*object)(eccobject_t*);
+    eccvalue_t (*error)(struct io_libecc_Error*);
+    eccvalue_t (*string)(struct io_libecc_String*);
+    eccvalue_t (*regexp)(struct io_libecc_RegExp*);
+    eccvalue_t (*number)(struct io_libecc_Number*);
+    eccvalue_t (*boolean)(struct io_libecc_Boolean*);
+    eccvalue_t (*date)(struct io_libecc_Date*);
+    eccvalue_t (*function)(struct io_libecc_Function*);
+    eccvalue_t (*host)(eccobject_t*);
+    eccvalue_t (*reference)(eccvalue_t*);
+    int (*isPrimitive)(eccvalue_t);
+    int (*isBoolean)(eccvalue_t);
+    int (*isNumber)(eccvalue_t);
+    int (*isString)(eccvalue_t);
+    int (*isObject)(eccvalue_t);
+    int (*isDynamic)(eccvalue_t);
+    int (*isTrue)(eccvalue_t);
+    eccvalue_t (*toPrimitive)(eccstate_t* const, eccvalue_t, enum io_libecc_value_hintPrimitive);
+    eccvalue_t (*toBinary)(eccstate_t* const, eccvalue_t);
+    eccvalue_t (*toInteger)(eccstate_t* const, eccvalue_t);
+    eccvalue_t (*binaryToString)(double binary, int base);
+    eccvalue_t (*toString)(eccstate_t* const, eccvalue_t);
+    int32_t (*stringLength)(const eccvalue_t*);
+    const char* (*stringBytes)(const eccvalue_t*);
+    ecctextstring_t (*textOf)(const eccvalue_t* string);
+    eccvalue_t (*toObject)(eccstate_t* const, eccvalue_t);
+    eccvalue_t (*objectValue)(eccobject_t*);
+    int (*objectIsArray)(eccobject_t*);
+    eccvalue_t (*toType)(eccvalue_t);
+    eccvalue_t (*equals)(eccstate_t* const, eccvalue_t, eccvalue_t);
+    eccvalue_t (*same)(eccstate_t* const, eccvalue_t, eccvalue_t);
+    eccvalue_t (*add)(eccstate_t* const, eccvalue_t, eccvalue_t);
+    eccvalue_t (*subtract)(eccstate_t* const, eccvalue_t, eccvalue_t);
+    eccvalue_t (*less)(eccstate_t* const, eccvalue_t, eccvalue_t);
+    eccvalue_t (*more)(eccstate_t* const, eccvalue_t, eccvalue_t);
+    eccvalue_t (*lessOrEqual)(eccstate_t* const, eccvalue_t, eccvalue_t);
+    eccvalue_t (*moreOrEqual)(eccstate_t* const, eccvalue_t, eccvalue_t);
+    const char* (*typeName)(eccvaltype_t);
     const char* (*maskName)(enum io_libecc_value_Mask);
-    void (*dumpTo)(struct eccvalue_t, FILE*);
-    const struct eccvalue_t identity;
+    void (*dumpTo)(eccvalue_t, FILE*);
+    const eccvalue_t identity;
 };
 
 
@@ -307,14 +324,14 @@ enum io_libecc_context_Special
 struct eccstate_t
 {
     const struct io_libecc_Op* ops;
-    struct eccobject_t* refObject;
-    struct eccobject_t* environment;
-    struct eccstate_t* parent;
+    eccobject_t* refObject;
+    eccobject_t* environment;
+    eccstate_t* parent;
     struct io_libecc_Ecc* ecc;
-    struct eccvalue_t this;
-    const struct io_libecc_Text* text;
-    const struct io_libecc_Text* textAlt;
-    const struct io_libecc_Text* textCall;
+    eccvalue_t this;
+    const ecctextstring_t* text;
+    const ecctextstring_t* textAlt;
+    const ecctextstring_t* textCall;
     enum io_libecc_context_Index textIndex;
     int16_t breaker;
     int16_t depth;
@@ -326,29 +343,29 @@ struct eccstate_t
 
 struct type_io_libecc_Context
 {
-    void (*rangeError)(struct eccstate_t* const, struct io_libecc_Chars*) __attribute__((noreturn));
-    void (*referenceError)(struct eccstate_t* const, struct io_libecc_Chars*) __attribute__((noreturn));
-    void (*syntaxError)(struct eccstate_t* const, struct io_libecc_Chars*) __attribute__((noreturn));
-    void (*typeError)(struct eccstate_t* const, struct io_libecc_Chars*) __attribute__((noreturn));
-    void (*uriError)(struct eccstate_t* const, struct io_libecc_Chars*) __attribute__((noreturn));
-    void (*throw)(struct eccstate_t* const, struct eccvalue_t) __attribute__((noreturn));
-    struct eccvalue_t (*callFunction)(struct eccstate_t* const, struct io_libecc_Function* function, struct eccvalue_t this, int argumentCount, ...);
-    int (*argumentCount)(struct eccstate_t* const);
-    struct eccvalue_t (*argument)(struct eccstate_t* const, int argumentIndex);
-    void (*replaceArgument)(struct eccstate_t* const, int argumentIndex, struct eccvalue_t value);
-    struct eccvalue_t (*this)(struct eccstate_t* const);
-    void (*assertThisType)(struct eccstate_t* const, enum io_libecc_value_Type);
-    void (*assertThisMask)(struct eccstate_t* const, enum io_libecc_value_Mask);
-    void (*assertThisCoerciblePrimitive)(struct eccstate_t* const);
-    void (*setText)(struct eccstate_t* const, const struct io_libecc_Text* text);
-    void (*setTexts)(struct eccstate_t* const, const struct io_libecc_Text* text, const struct io_libecc_Text* textAlt);
-    void (*setTextIndex)(struct eccstate_t* const, enum io_libecc_context_Index index);
-    void (*setTextIndexArgument)(struct eccstate_t* const, int argument);
-    struct io_libecc_Text (*textSeek)(struct eccstate_t* const);
-    void (*rewindStatement)(struct eccstate_t* const);
-    void (*printBacktrace)(struct eccstate_t* const context);
-    struct eccobject_t* (*environmentRoot)(struct eccstate_t* const context);
-    const struct eccstate_t identity;
+    void (*rangeError)(eccstate_t* const, struct io_libecc_Chars*) __attribute__((noreturn));
+    void (*referenceError)(eccstate_t* const, struct io_libecc_Chars*) __attribute__((noreturn));
+    void (*syntaxError)(eccstate_t* const, struct io_libecc_Chars*) __attribute__((noreturn));
+    void (*typeError)(eccstate_t* const, struct io_libecc_Chars*) __attribute__((noreturn));
+    void (*uriError)(eccstate_t* const, struct io_libecc_Chars*) __attribute__((noreturn));
+    void (*throw)(eccstate_t* const, eccvalue_t) __attribute__((noreturn));
+    eccvalue_t (*callFunction)(eccstate_t* const, struct io_libecc_Function* function, eccvalue_t this, int argumentCount, ...);
+    int (*argumentCount)(eccstate_t* const);
+    eccvalue_t (*argument)(eccstate_t* const, int argumentIndex);
+    void (*replaceArgument)(eccstate_t* const, int argumentIndex, eccvalue_t value);
+    eccvalue_t (*this)(eccstate_t* const);
+    void (*assertThisType)(eccstate_t* const, eccvaltype_t);
+    void (*assertThisMask)(eccstate_t* const, enum io_libecc_value_Mask);
+    void (*assertThisCoerciblePrimitive)(eccstate_t* const);
+    void (*setText)(eccstate_t* const, const ecctextstring_t* text);
+    void (*setTexts)(eccstate_t* const, const ecctextstring_t* text, const ecctextstring_t* textAlt);
+    void (*setTextIndex)(eccstate_t* const, enum io_libecc_context_Index index);
+    void (*setTextIndexArgument)(eccstate_t* const, int argument);
+    ecctextstring_t (*textSeek)(eccstate_t* const);
+    void (*rewindStatement)(eccstate_t* const);
+    void (*printBacktrace)(eccstate_t* const context);
+    eccobject_t* (*environmentRoot)(eccstate_t* const context);
+    const eccstate_t identity;
 };
 
 enum io_libecc_chars_Flags
@@ -381,45 +398,23 @@ struct type_io_libecc_Chars
     void (*beginAppend)(struct io_libecc_chars_Append*);
     void (*append)(struct io_libecc_chars_Append*, const char* format, ...);
     void (*appendCodepoint)(struct io_libecc_chars_Append*, uint32_t cp);
-    void (*appendValue)(struct io_libecc_chars_Append*, struct eccstate_t* const context, struct eccvalue_t value);
+    void (*appendValue)(struct io_libecc_chars_Append*, eccstate_t* const context, eccvalue_t value);
     void (*appendBinary)(struct io_libecc_chars_Append*, double binary, int base);
     void (*normalizeBinary)(struct io_libecc_chars_Append*);
-    struct eccvalue_t (*endAppend)(struct io_libecc_chars_Append*);
+    eccvalue_t (*endAppend)(struct io_libecc_chars_Append*);
     void (*destroy)(struct io_libecc_Chars*);
     uint8_t (*codepointLength)(uint32_t cp);
     uint8_t (*writeCodepoint)(char*, uint32_t cp);
     const struct io_libecc_Chars identity;
 };
 
-typedef enum io_libecc_object_Flags io_libecc_object_Flags;
-typedef enum io_libecc_regexp_Options io_libecc_regexp_Options;
-typedef enum io_libecc_function_Flags io_libecc_function_Flags;
-typedef struct io_libecc_regexp_Node io_libecc_regexp_Node;
-
-typedef struct type_io_libecc_Math type_io_libecc_Math;
-typedef struct type_io_libecc_Array type_io_libecc_Array;
-typedef struct type_io_libecc_Object type_io_libecc_Object;
-typedef struct type_io_libecc_RegExp type_io_libecc_RegExp;
-typedef struct type_io_libecc_Arguments type_io_libecc_Arguments;
-typedef struct type_io_libecc_Boolean type_io_libecc_Boolean;
-typedef struct type_io_libecc_Date type_io_libecc_Date;
-typedef struct type_io_libecc_Error type_io_libecc_Error;
-typedef struct type_io_libecc_Function type_io_libecc_Function;
-typedef struct type_io_libecc_JSON type_io_libecc_JSON;
-typedef struct type_io_libecc_Number type_io_libecc_Number;
-typedef struct type_io_libecc_String type_io_libecc_String;
-typedef struct type_io_libecc_Global type_io_libecc_Global;
-
-typedef struct eccvalue_t (*io_libecc_native_io_libecc_Function)(struct eccstate_t* const context);
-
 
 struct io_libecc_object_Type
 {
-    const struct io_libecc_Text* text;
-
-    void (*mark)(struct eccobject_t*);
-    void (*capture)(struct eccobject_t*);
-    void (*finalize)(struct eccobject_t*);
+    const ecctextstring_t* text;
+    void (*mark)(eccobject_t*);
+    void (*capture)(eccobject_t*);
+    void (*finalize)(eccobject_t*);
 };
 
 enum io_libecc_object_Flags
@@ -428,22 +423,23 @@ enum io_libecc_object_Flags
     io_libecc_object_sealed = 1 << 1,
 };
 
+union io_libecc_object_Element
+{
+    eccvalue_t value;
+};
+
+union io_libecc_object_Hashmap
+{
+    eccvalue_t value;
+    uint16_t slot[16];
+};
+
 struct eccobject_t
 {
-    struct eccobject_t* prototype;
+    eccobject_t* prototype;
     const struct io_libecc_object_Type* type;
-
-    union io_libecc_object_Element
-    {
-        struct eccvalue_t value;
-    }* element;
-
-    union io_libecc_object_Hashmap
-    {
-        struct eccvalue_t value;
-        uint16_t slot[16];
-    }* hashmap;
-
+    union io_libecc_object_Element* element;
+    union io_libecc_object_Hashmap* hashmap;
     uint32_t elementCount;
     uint32_t elementCapacity;
     uint16_t hashmapCount;
@@ -456,39 +452,39 @@ struct type_io_libecc_Object
 {
     void (*setup)(void);
     void (*teardown)(void);
-    struct eccobject_t* (*create)(struct eccobject_t* prototype);
-    struct eccobject_t* (*createSized)(struct eccobject_t* prototype, uint16_t size);
-    struct eccobject_t* (*createTyped)(const struct io_libecc_object_Type* type);
-    struct eccobject_t* (*initialize)(struct eccobject_t* restrict, struct eccobject_t* restrict prototype);
-    struct eccobject_t* (*initializeSized)(struct eccobject_t* restrict, struct eccobject_t* restrict prototype, uint16_t size);
-    struct eccobject_t* (*finalize)(struct eccobject_t*);
-    struct eccobject_t* (*copy)(const struct eccobject_t* original);
-    void (*destroy)(struct eccobject_t*);
-    struct eccvalue_t (*getMember)(struct eccstate_t* const, struct eccobject_t*, struct io_libecc_Key key);
-    struct eccvalue_t (*putMember)(struct eccstate_t* const, struct eccobject_t*, struct io_libecc_Key key, struct eccvalue_t);
-    struct eccvalue_t* (*member)(struct eccobject_t*, struct io_libecc_Key key, enum io_libecc_value_Flags);
-    struct eccvalue_t* (*addMember)(struct eccobject_t*, struct io_libecc_Key key, struct eccvalue_t, enum io_libecc_value_Flags);
-    int (*deleteMember)(struct eccobject_t*, struct io_libecc_Key key);
-    struct eccvalue_t (*getElement)(struct eccstate_t* const, struct eccobject_t*, uint32_t index);
-    struct eccvalue_t (*putElement)(struct eccstate_t* const, struct eccobject_t*, uint32_t index, struct eccvalue_t);
-    struct eccvalue_t* (*element)(struct eccobject_t*, uint32_t index, enum io_libecc_value_Flags);
-    struct eccvalue_t* (*addElement)(struct eccobject_t*, uint32_t index, struct eccvalue_t, enum io_libecc_value_Flags);
-    int (*deleteElement)(struct eccobject_t*, uint32_t index);
-    struct eccvalue_t (*getProperty)(struct eccstate_t* const, struct eccobject_t*, struct eccvalue_t primitive);
-    struct eccvalue_t (*putProperty)(struct eccstate_t* const, struct eccobject_t*, struct eccvalue_t primitive, struct eccvalue_t);
-    struct eccvalue_t* (*property)(struct eccobject_t*, struct eccvalue_t primitive, enum io_libecc_value_Flags);
-    struct eccvalue_t* (*addProperty)(struct eccobject_t*, struct eccvalue_t primitive, struct eccvalue_t, enum io_libecc_value_Flags);
-    int (*deleteProperty)(struct eccobject_t*, struct eccvalue_t primitive);
-    struct eccvalue_t (*putValue)(struct eccstate_t* const, struct eccobject_t*, struct eccvalue_t*, struct eccvalue_t);
-    struct eccvalue_t (*getValue)(struct eccstate_t* const, struct eccobject_t*, struct eccvalue_t*);
-    void (*packValue)(struct eccobject_t*);
-    void (*stripMap)(struct eccobject_t*);
-    void (*reserveSlots)(struct eccobject_t*, uint16_t slots);
-    int (*resizeElement)(struct eccobject_t*, uint32_t size);
-    void (*populateElementWithCList)(struct eccobject_t*, uint32_t count, const char* list[]);
-    struct eccvalue_t (*toString)(struct eccstate_t* const);
-    void (*dumpTo)(struct eccobject_t*, FILE* file);
-    const struct eccobject_t identity;
+    eccobject_t* (*create)(eccobject_t* prototype);
+    eccobject_t* (*createSized)(eccobject_t* prototype, uint16_t size);
+    eccobject_t* (*createTyped)(const struct io_libecc_object_Type* type);
+    eccobject_t* (*initialize)(eccobject_t* restrict, eccobject_t* restrict prototype);
+    eccobject_t* (*initializeSized)(eccobject_t* restrict, eccobject_t* restrict prototype, uint16_t size);
+    eccobject_t* (*finalize)(eccobject_t*);
+    eccobject_t* (*copy)(const eccobject_t* original);
+    void (*destroy)(eccobject_t*);
+    eccvalue_t (*getMember)(eccstate_t* const, eccobject_t*, struct io_libecc_Key key);
+    eccvalue_t (*putMember)(eccstate_t* const, eccobject_t*, struct io_libecc_Key key, eccvalue_t);
+    eccvalue_t* (*member)(eccobject_t*, struct io_libecc_Key key, enum io_libecc_value_Flags);
+    eccvalue_t* (*addMember)(eccobject_t*, struct io_libecc_Key key, eccvalue_t, enum io_libecc_value_Flags);
+    int (*deleteMember)(eccobject_t*, struct io_libecc_Key key);
+    eccvalue_t (*getElement)(eccstate_t* const, eccobject_t*, uint32_t index);
+    eccvalue_t (*putElement)(eccstate_t* const, eccobject_t*, uint32_t index, eccvalue_t);
+    eccvalue_t* (*element)(eccobject_t*, uint32_t index, enum io_libecc_value_Flags);
+    eccvalue_t* (*addElement)(eccobject_t*, uint32_t index, eccvalue_t, enum io_libecc_value_Flags);
+    int (*deleteElement)(eccobject_t*, uint32_t index);
+    eccvalue_t (*getProperty)(eccstate_t* const, eccobject_t*, eccvalue_t primitive);
+    eccvalue_t (*putProperty)(eccstate_t* const, eccobject_t*, eccvalue_t primitive, eccvalue_t);
+    eccvalue_t* (*property)(eccobject_t*, eccvalue_t primitive, enum io_libecc_value_Flags);
+    eccvalue_t* (*addProperty)(eccobject_t*, eccvalue_t primitive, eccvalue_t, enum io_libecc_value_Flags);
+    int (*deleteProperty)(eccobject_t*, eccvalue_t primitive);
+    eccvalue_t (*putValue)(eccstate_t* const, eccobject_t*, eccvalue_t*, eccvalue_t);
+    eccvalue_t (*getValue)(eccstate_t* const, eccobject_t*, eccvalue_t*);
+    void (*packValue)(eccobject_t*);
+    void (*stripMap)(eccobject_t*);
+    void (*reserveSlots)(eccobject_t*, uint16_t slots);
+    int (*resizeElement)(eccobject_t*, uint32_t size);
+    void (*populateElementWithCList)(eccobject_t*, uint32_t count, const char* list[]);
+    eccvalue_t (*toString)(eccstate_t* const);
+    void (*dumpTo)(eccobject_t*, FILE* file);
+    const eccobject_t identity;
 };
 
 
@@ -510,7 +506,7 @@ enum io_libecc_regexp_Options
 
 struct io_libecc_RegExp
 {
-    struct eccobject_t object;
+    eccobject_t object;
     struct io_libecc_Chars* pattern;
     struct io_libecc_Chars* source;
     struct io_libecc_regexp_Node* program;
@@ -525,7 +521,7 @@ struct type_io_libecc_RegExp
     void (*setup)(void);
     void (*teardown)(void);
     struct io_libecc_RegExp* (*create)(struct io_libecc_Chars* pattern, struct io_libecc_Error**, enum io_libecc_regexp_Options);
-    struct io_libecc_RegExp* (*createWith)(struct eccstate_t* context, struct eccvalue_t pattern, struct eccvalue_t flags);
+    struct io_libecc_RegExp* (*createWith)(eccstate_t* context, eccvalue_t pattern, eccvalue_t flags);
     int (*matchWithState)(struct io_libecc_RegExp*, struct io_libecc_regexp_State*);
     const struct io_libecc_RegExp identity;
 };
@@ -534,30 +530,30 @@ struct type_io_libecc_RegExp
 
 struct io_libecc_Arguments
 {
-    struct eccobject_t object;
+    eccobject_t object;
 };
 
 struct type_io_libecc_Arguments
 {
     void (*setup)(void);
     void (*teardown)(void);
-    struct eccobject_t* (*createSized)(uint32_t size);
-    struct eccobject_t* (*createWithCList)(int count, const char* list[]);
+    eccobject_t* (*createSized)(uint32_t size);
+    eccobject_t* (*createWithCList)(int count, const char* list[]);
     const struct io_libecc_Arguments identity;
 };
 
 
 struct io_libecc_Array
 {
-    struct eccobject_t object;
+    eccobject_t object;
 };
 
 struct type_io_libecc_Array
 {
     void (*setup)(void);
     void (*teardown)(void);
-    struct eccobject_t* (*create)(void);
-    struct eccobject_t* (*createSized)(uint32_t size);
+    eccobject_t* (*create)(void);
+    eccobject_t* (*createSized)(uint32_t size);
     const struct io_libecc_Array identity;
 };
 
@@ -565,7 +561,7 @@ struct type_io_libecc_Array
 
 struct io_libecc_Boolean
 {
-    struct eccobject_t object;
+    eccobject_t object;
     int truth;
 };
 
@@ -582,7 +578,7 @@ struct type_io_libecc_Boolean
 
 struct io_libecc_Date
 {
-    struct eccobject_t object;
+    eccobject_t object;
     double ms;
 };
 
@@ -598,20 +594,20 @@ struct type_io_libecc_Date
 
 struct io_libecc_Error
 {
-    struct eccobject_t object;
-    struct io_libecc_Text text;
+    eccobject_t object;
+    ecctextstring_t text;
 };
 
 struct type_io_libecc_Error
 {
     void (*setup)(void);
     void (*teardown)(void);
-    struct io_libecc_Error* (*error)(struct io_libecc_Text, struct io_libecc_Chars* message);
-    struct io_libecc_Error* (*rangeError)(struct io_libecc_Text, struct io_libecc_Chars* message);
-    struct io_libecc_Error* (*referenceError)(struct io_libecc_Text, struct io_libecc_Chars* message);
-    struct io_libecc_Error* (*syntaxError)(struct io_libecc_Text, struct io_libecc_Chars* message);
-    struct io_libecc_Error* (*typeError)(struct io_libecc_Text, struct io_libecc_Chars* message);
-    struct io_libecc_Error* (*uriError)(struct io_libecc_Text, struct io_libecc_Chars* message);
+    struct io_libecc_Error* (*error)(ecctextstring_t, struct io_libecc_Chars* message);
+    struct io_libecc_Error* (*rangeError)(ecctextstring_t, struct io_libecc_Chars* message);
+    struct io_libecc_Error* (*referenceError)(ecctextstring_t, struct io_libecc_Chars* message);
+    struct io_libecc_Error* (*syntaxError)(ecctextstring_t, struct io_libecc_Chars* message);
+    struct io_libecc_Error* (*typeError)(ecctextstring_t, struct io_libecc_Chars* message);
+    struct io_libecc_Error* (*uriError)(ecctextstring_t, struct io_libecc_Chars* message);
     void (*destroy)(struct io_libecc_Error*);
     const struct io_libecc_Error identity;
 };
@@ -631,13 +627,13 @@ enum io_libecc_function_Flags
 
 struct io_libecc_Function
 {
-    struct eccobject_t object;
-    struct eccobject_t environment;
-    struct eccobject_t* refObject;
+    eccobject_t object;
+    eccobject_t environment;
+    eccobject_t* refObject;
     struct io_libecc_OpList* oplist;
     struct io_libecc_Function* pair;
-    struct eccvalue_t boundThis;
-    struct io_libecc_Text text;
+    eccvalue_t boundThis;
+    ecctextstring_t text;
     const char* name;
     int parameterCount;
     enum io_libecc_function_Flags flags;
@@ -647,24 +643,24 @@ struct type_io_libecc_Function
 {
     void (*setup)(void);
     void (*teardown)(void);
-    struct io_libecc_Function* (*create)(struct eccobject_t* environment);
-    struct io_libecc_Function* (*createSized)(struct eccobject_t* environment, uint32_t size);
+    struct io_libecc_Function* (*create)(eccobject_t* environment);
+    struct io_libecc_Function* (*createSized)(eccobject_t* environment, uint32_t size);
     struct io_libecc_Function* (*createWithNative)(const io_libecc_native_io_libecc_Function native, int parameterCount);
     struct io_libecc_Function* (*copy)(struct io_libecc_Function* original);
     void (*destroy)(struct io_libecc_Function*);
-    void (*addMember)(struct io_libecc_Function*, const char* name, struct eccvalue_t value, enum io_libecc_value_Flags);
-    void (*addValue)(struct io_libecc_Function*, const char* name, struct eccvalue_t value, enum io_libecc_value_Flags);
+    void (*addMember)(struct io_libecc_Function*, const char* name, eccvalue_t value, enum io_libecc_value_Flags);
+    void (*addValue)(struct io_libecc_Function*, const char* name, eccvalue_t value, enum io_libecc_value_Flags);
     struct io_libecc_Function* (*addMethod)(struct io_libecc_Function*, const char* name, const io_libecc_native_io_libecc_Function native, int argumentCount, enum io_libecc_value_Flags);
     struct io_libecc_Function* (*addFunction)(struct io_libecc_Function*, const char* name, const io_libecc_native_io_libecc_Function native, int argumentCount, enum io_libecc_value_Flags);
-    struct io_libecc_Function* (*addToObject)(struct eccobject_t* object, const char* name, const io_libecc_native_io_libecc_Function native, int parameterCount, enum io_libecc_value_Flags);
-    void (*linkPrototype)(struct io_libecc_Function*, struct eccvalue_t prototype, enum io_libecc_value_Flags);
+    struct io_libecc_Function* (*addToObject)(eccobject_t* object, const char* name, const io_libecc_native_io_libecc_Function native, int parameterCount, enum io_libecc_value_Flags);
+    void (*linkPrototype)(struct io_libecc_Function*, eccvalue_t prototype, enum io_libecc_value_Flags);
     void (*setupBuiltinObject)(struct io_libecc_Function**,
                                const io_libecc_native_io_libecc_Function,
                                int parameterCount,
-                               struct eccobject_t**,
-                               struct eccvalue_t prototype,
+                               eccobject_t**,
+                               eccvalue_t prototype,
                                const struct io_libecc_object_Type* type);
-    struct eccvalue_t (*accessor)(const io_libecc_native_io_libecc_Function getter, const io_libecc_native_io_libecc_Function setter);
+    eccvalue_t (*accessor)(const io_libecc_native_io_libecc_Function getter, const io_libecc_native_io_libecc_Function setter);
     const struct io_libecc_Function identity;
 };
 
@@ -698,7 +694,7 @@ struct type_io_libecc_Math
 
 struct io_libecc_Number
 {
-    struct eccobject_t object;
+    eccobject_t object;
     double value;
 };
 
@@ -713,7 +709,7 @@ struct type_io_libecc_Number
 
 struct io_libecc_String
 {
-    struct eccobject_t object;
+    eccobject_t object;
     struct io_libecc_Chars* value;
 };
 
@@ -722,8 +718,8 @@ struct type_io_libecc_String
     void (*setup)(void);
     void (*teardown)(void);
     struct io_libecc_String* (*create)(struct io_libecc_Chars*);
-    struct eccvalue_t (*valueAtIndex)(struct io_libecc_String*, int32_t index);
-    struct io_libecc_Text (*textAtIndex)(const char* chars, int32_t length, int32_t index, int enableReverse);
+    eccvalue_t (*valueAtIndex)(struct io_libecc_String*, int32_t index);
+    ecctextstring_t (*textAtIndex)(const char* chars, int32_t length, int32_t index, int enableReverse);
     int32_t (*unitIndex)(const char* chars, int32_t max, int32_t unit);
     const struct io_libecc_String identity;
 };
@@ -794,7 +790,7 @@ struct io_libecc_Input
     uint16_t lineCount;
     uint16_t lineCapacity;
     uint32_t* lines;
-    struct eccvalue_t* attached;
+    eccvalue_t* attached;
     uint16_t attachedCount;
 };
 
@@ -803,9 +799,9 @@ struct type_io_libecc_Input
     struct io_libecc_Input* (*createFromFile)(const char* filename);
     struct io_libecc_Input* (*createFromBytes)(const char* bytes, uint32_t length, const char* name, ...);
     void (*destroy)(struct io_libecc_Input*);
-    void (*printText)(struct io_libecc_Input*, struct io_libecc_Text text, int32_t ofLine, struct io_libecc_Text ofText, const char* ofInput, int fullLine);
-    int32_t (*findLine)(struct io_libecc_Input*, struct io_libecc_Text text);
-    struct eccvalue_t (*attachValue)(struct io_libecc_Input*, struct eccvalue_t value);
+    void (*printText)(struct io_libecc_Input*, ecctextstring_t text, int32_t ofLine, ecctextstring_t ofText, const char* ofInput, int fullLine);
+    int32_t (*findLine)(struct io_libecc_Input*, ecctextstring_t text);
+    eccvalue_t (*attachValue)(struct io_libecc_Input*, eccvalue_t value);
     const struct io_libecc_Input identity;
 };
 
@@ -825,10 +821,10 @@ struct io_libecc_Ecc
     uint16_t envCount;
     uint16_t envCapacity;
     struct io_libecc_Function* global;
-    struct eccvalue_t result;
-    struct io_libecc_Text text;
+    eccvalue_t result;
+    ecctextstring_t text;
     int32_t ofLine;
-    struct io_libecc_Text ofText;
+    ecctextstring_t ofText;
     const char* ofInput;
     struct io_libecc_Input** inputs;
     uint16_t inputCount;
@@ -841,16 +837,16 @@ struct type_io_libecc_Ecc
 {
     struct io_libecc_Ecc* (*create)(void);
     void (*destroy)(struct io_libecc_Ecc*);
-    void (*addValue)(struct io_libecc_Ecc*, const char* name, struct eccvalue_t value, enum io_libecc_value_Flags);
+    void (*addValue)(struct io_libecc_Ecc*, const char* name, eccvalue_t value, enum io_libecc_value_Flags);
     void (*addFunction)(struct io_libecc_Ecc*, const char* name, const io_libecc_native_io_libecc_Function native, int argumentCount, enum io_libecc_value_Flags);
     int (*evalInput)(struct io_libecc_Ecc*, struct io_libecc_Input*, enum io_libecc_ecc_EvalFlags);
-    void (*evalInputWithContext)(struct io_libecc_Ecc*, struct io_libecc_Input*, struct eccstate_t* context);
+    void (*evalInputWithContext)(struct io_libecc_Ecc*, struct io_libecc_Input*, eccstate_t* context);
     jmp_buf* (*pushEnv)(struct io_libecc_Ecc*);
     void (*popEnv)(struct io_libecc_Ecc*);
-    void (*jmpEnv)(struct io_libecc_Ecc*, struct eccvalue_t value) __attribute__((noreturn));
+    void (*jmpEnv)(struct io_libecc_Ecc*, eccvalue_t value) __attribute__((noreturn));
     void (*fatal)(const char* format, ...) __attribute__((noreturn));
-    struct io_libecc_Input* (*findInput)(struct io_libecc_Ecc* self, struct io_libecc_Text text);
-    void (*printTextInput)(struct io_libecc_Ecc*, struct io_libecc_Text text, int fullLine);
+    struct io_libecc_Input* (*findInput)(struct io_libecc_Ecc* self, ecctextstring_t text);
+    void (*printTextInput)(struct io_libecc_Ecc*, ecctextstring_t text, int fullLine);
     void (*garbageCollect)(struct io_libecc_Ecc*);
     const struct io_libecc_Ecc identity;
 };
@@ -932,8 +928,8 @@ struct io_libecc_Lexer
 {
     struct io_libecc_Input* input;
     uint32_t offset;
-    struct eccvalue_t value;
-    struct io_libecc_Text text;
+    eccvalue_t value;
+    ecctextstring_t text;
     int didLineBreak;
     int allowRegex;
     int allowUnicodeOutsideLiteral;
@@ -946,9 +942,9 @@ struct type_io_libecc_Lexer
     void (*destroy)(struct io_libecc_Lexer*);
     enum io_libecc_lexer_Token (*nextToken)(struct io_libecc_Lexer*);
     const char* (*tokenChars)(enum io_libecc_lexer_Token token, char buffer[4]);
-    struct eccvalue_t (*scanBinary)(struct io_libecc_Text text, enum io_libecc_lexer_ScanFlags);
-    struct eccvalue_t (*scanInteger)(struct io_libecc_Text text, int base, enum io_libecc_lexer_ScanFlags);
-    uint32_t (*scanElement)(struct io_libecc_Text text);
+    eccvalue_t (*scanBinary)(ecctextstring_t text, enum io_libecc_lexer_ScanFlags);
+    eccvalue_t (*scanInteger)(ecctextstring_t text, int base, enum io_libecc_lexer_ScanFlags);
+    uint32_t (*scanElement)(ecctextstring_t text);
     uint8_t (*uint8Hex)(char a, char b);
     uint16_t (*uint16Hex)(char a, char b, char c, char d);
     const struct io_libecc_Lexer identity;
@@ -959,128 +955,128 @@ struct type_io_libecc_Lexer
 struct io_libecc_Op
 {
     io_libecc_native_io_libecc_Function native;
-    struct eccvalue_t value;
-    struct io_libecc_Text text;
+    eccvalue_t value;
+    ecctextstring_t text;
 };
 
 struct type_io_libecc_Op
 {
-    struct io_libecc_Op (*make)(const io_libecc_native_io_libecc_Function native, struct eccvalue_t value, struct io_libecc_Text text);
+    struct io_libecc_Op (*make)(const io_libecc_native_io_libecc_Function native, eccvalue_t value, ecctextstring_t text);
     const char* (*toChars)(const io_libecc_native_io_libecc_Function native);
-    struct eccvalue_t (*callFunctionArguments)(struct eccstate_t* const,
+    eccvalue_t (*callFunctionArguments)(eccstate_t* const,
                                                     enum io_libecc_context_Offset,
                                                     struct io_libecc_Function* function,
-                                                    struct eccvalue_t this,
-                                                    struct eccobject_t* arguments);
-    struct eccvalue_t (*callFunctionVA)(
-    struct eccstate_t* const, enum io_libecc_context_Offset, struct io_libecc_Function* function, struct eccvalue_t this, int argumentCount, va_list ap);
-    struct eccvalue_t (*noop)(struct eccstate_t* const);
-    struct eccvalue_t (*value)(struct eccstate_t* const);
-    struct eccvalue_t (*valueConstRef)(struct eccstate_t* const);
-    struct eccvalue_t (*text)(struct eccstate_t* const);
-    struct eccvalue_t (*function)(struct eccstate_t* const);
-    struct eccvalue_t (*object)(struct eccstate_t* const);
-    struct eccvalue_t (*array)(struct eccstate_t* const);
-    struct eccvalue_t (*regexp)(struct eccstate_t* const);
-    struct eccvalue_t (*this)(struct eccstate_t* const);
-    struct eccvalue_t (*createLocalRef)(struct eccstate_t* const);
-    struct eccvalue_t (*getLocalRefOrNull)(struct eccstate_t* const);
-    struct eccvalue_t (*getLocalRef)(struct eccstate_t* const);
-    struct eccvalue_t (*getLocal)(struct eccstate_t* const);
-    struct eccvalue_t (*setLocal)(struct eccstate_t* const);
-    struct eccvalue_t (*deleteLocal)(struct eccstate_t* const);
-    struct eccvalue_t (*getLocalSlotRef)(struct eccstate_t* const);
-    struct eccvalue_t (*getLocalSlot)(struct eccstate_t* const);
-    struct eccvalue_t (*setLocalSlot)(struct eccstate_t* const);
-    struct eccvalue_t (*deleteLocalSlot)(struct eccstate_t* const);
-    struct eccvalue_t (*getParentSlotRef)(struct eccstate_t* const);
-    struct eccvalue_t (*getParentSlot)(struct eccstate_t* const);
-    struct eccvalue_t (*setParentSlot)(struct eccstate_t* const);
-    struct eccvalue_t (*deleteParentSlot)(struct eccstate_t* const);
-    struct eccvalue_t (*getMemberRef)(struct eccstate_t* const);
-    struct eccvalue_t (*getMember)(struct eccstate_t* const);
-    struct eccvalue_t (*setMember)(struct eccstate_t* const);
-    struct eccvalue_t (*callMember)(struct eccstate_t* const);
-    struct eccvalue_t (*deleteMember)(struct eccstate_t* const);
-    struct eccvalue_t (*getPropertyRef)(struct eccstate_t* const);
-    struct eccvalue_t (*getProperty)(struct eccstate_t* const);
-    struct eccvalue_t (*setProperty)(struct eccstate_t* const);
-    struct eccvalue_t (*callProperty)(struct eccstate_t* const);
-    struct eccvalue_t (*deleteProperty)(struct eccstate_t* const);
-    struct eccvalue_t (*pushEnvironment)(struct eccstate_t* const);
-    struct eccvalue_t (*popEnvironment)(struct eccstate_t* const);
-    struct eccvalue_t (*exchange)(struct eccstate_t* const);
-    struct eccvalue_t (*typeOf)(struct eccstate_t* const);
-    struct eccvalue_t (*equal)(struct eccstate_t* const);
-    struct eccvalue_t (*notEqual)(struct eccstate_t* const);
-    struct eccvalue_t (*identical)(struct eccstate_t* const);
-    struct eccvalue_t (*notIdentical)(struct eccstate_t* const);
-    struct eccvalue_t (*less)(struct eccstate_t* const);
-    struct eccvalue_t (*lessOrEqual)(struct eccstate_t* const);
-    struct eccvalue_t (*more)(struct eccstate_t* const);
-    struct eccvalue_t (*moreOrEqual)(struct eccstate_t* const);
-    struct eccvalue_t (*instanceOf)(struct eccstate_t* const);
-    struct eccvalue_t (*in)(struct eccstate_t* const);
-    struct eccvalue_t (*add)(struct eccstate_t* const);
-    struct eccvalue_t (*minus)(struct eccstate_t* const);
-    struct eccvalue_t (*multiply)(struct eccstate_t* const);
-    struct eccvalue_t (*divide)(struct eccstate_t* const);
-    struct eccvalue_t (*modulo)(struct eccstate_t* const);
-    struct eccvalue_t (*leftShift)(struct eccstate_t* const);
-    struct eccvalue_t (*rightShift)(struct eccstate_t* const);
-    struct eccvalue_t (*unsignedRightShift)(struct eccstate_t* const);
-    struct eccvalue_t (*bitwiseAnd)(struct eccstate_t* const);
-    struct eccvalue_t (*bitwiseXor)(struct eccstate_t* const);
-    struct eccvalue_t (*bitwiseOr)(struct eccstate_t* const);
-    struct eccvalue_t (*logicalAnd)(struct eccstate_t* const);
-    struct eccvalue_t (*logicalOr)(struct eccstate_t* const);
-    struct eccvalue_t (*positive)(struct eccstate_t* const);
-    struct eccvalue_t (*negative)(struct eccstate_t* const);
-    struct eccvalue_t (*invert)(struct eccstate_t* const);
-    struct eccvalue_t (*not )(struct eccstate_t* const);
-    struct eccvalue_t (*construct)(struct eccstate_t* const);
-    struct eccvalue_t (*call)(struct eccstate_t* const);
-    struct eccvalue_t (*eval)(struct eccstate_t* const);
-    struct eccvalue_t (*incrementRef)(struct eccstate_t* const);
-    struct eccvalue_t (*decrementRef)(struct eccstate_t* const);
-    struct eccvalue_t (*postIncrementRef)(struct eccstate_t* const);
-    struct eccvalue_t (*postDecrementRef)(struct eccstate_t* const);
-    struct eccvalue_t (*addAssignRef)(struct eccstate_t* const);
-    struct eccvalue_t (*minusAssignRef)(struct eccstate_t* const);
-    struct eccvalue_t (*multiplyAssignRef)(struct eccstate_t* const);
-    struct eccvalue_t (*divideAssignRef)(struct eccstate_t* const);
-    struct eccvalue_t (*moduloAssignRef)(struct eccstate_t* const);
-    struct eccvalue_t (*leftShiftAssignRef)(struct eccstate_t* const);
-    struct eccvalue_t (*rightShiftAssignRef)(struct eccstate_t* const);
-    struct eccvalue_t (*unsignedRightShiftAssignRef)(struct eccstate_t* const);
-    struct eccvalue_t (*bitAndAssignRef)(struct eccstate_t* const);
-    struct eccvalue_t (*bitXorAssignRef)(struct eccstate_t* const);
-    struct eccvalue_t (*bitOrAssignRef)(struct eccstate_t* const);
-    struct eccvalue_t (*debugger)(struct eccstate_t* const);
-    struct eccvalue_t (*try)(struct eccstate_t* const);
-    struct eccvalue_t (*throw)(struct eccstate_t* const);
-    struct eccvalue_t (*with)(struct eccstate_t* const);
-    struct eccvalue_t (*next)(struct eccstate_t* const);
-    struct eccvalue_t (*nextIf)(struct eccstate_t* const);
-    struct eccvalue_t (*autoreleaseExpression)(struct eccstate_t* const);
-    struct eccvalue_t (*autoreleaseDiscard)(struct eccstate_t* const);
-    struct eccvalue_t (*expression)(struct eccstate_t* const);
-    struct eccvalue_t (*discard)(struct eccstate_t* const);
-    struct eccvalue_t (*discardN)(struct eccstate_t* const);
-    struct eccvalue_t (*jump)(struct eccstate_t* const);
-    struct eccvalue_t (*jumpIf)(struct eccstate_t* const);
-    struct eccvalue_t (*jumpIfNot)(struct eccstate_t* const);
-    struct eccvalue_t (*repopulate)(struct eccstate_t* const);
-    struct eccvalue_t (*result)(struct eccstate_t* const);
-    struct eccvalue_t (*resultVoid)(struct eccstate_t* const);
-    struct eccvalue_t (*switchOp)(struct eccstate_t* const);
-    struct eccvalue_t (*breaker)(struct eccstate_t* const);
-    struct eccvalue_t (*iterate)(struct eccstate_t* const);
-    struct eccvalue_t (*iterateLessRef)(struct eccstate_t* const);
-    struct eccvalue_t (*iterateMoreRef)(struct eccstate_t* const);
-    struct eccvalue_t (*iterateLessOrEqualRef)(struct eccstate_t* const);
-    struct eccvalue_t (*iterateMoreOrEqualRef)(struct eccstate_t* const);
-    struct eccvalue_t (*iterateInRef)(struct eccstate_t* const);
+                                                    eccvalue_t this,
+                                                    eccobject_t* arguments);
+    eccvalue_t (*callFunctionVA)(
+    eccstate_t* const, enum io_libecc_context_Offset, struct io_libecc_Function* function, eccvalue_t this, int argumentCount, va_list ap);
+    eccvalue_t (*noop)(eccstate_t* const);
+    eccvalue_t (*value)(eccstate_t* const);
+    eccvalue_t (*valueConstRef)(eccstate_t* const);
+    eccvalue_t (*text)(eccstate_t* const);
+    eccvalue_t (*function)(eccstate_t* const);
+    eccvalue_t (*object)(eccstate_t* const);
+    eccvalue_t (*array)(eccstate_t* const);
+    eccvalue_t (*regexp)(eccstate_t* const);
+    eccvalue_t (*this)(eccstate_t* const);
+    eccvalue_t (*createLocalRef)(eccstate_t* const);
+    eccvalue_t (*getLocalRefOrNull)(eccstate_t* const);
+    eccvalue_t (*getLocalRef)(eccstate_t* const);
+    eccvalue_t (*getLocal)(eccstate_t* const);
+    eccvalue_t (*setLocal)(eccstate_t* const);
+    eccvalue_t (*deleteLocal)(eccstate_t* const);
+    eccvalue_t (*getLocalSlotRef)(eccstate_t* const);
+    eccvalue_t (*getLocalSlot)(eccstate_t* const);
+    eccvalue_t (*setLocalSlot)(eccstate_t* const);
+    eccvalue_t (*deleteLocalSlot)(eccstate_t* const);
+    eccvalue_t (*getParentSlotRef)(eccstate_t* const);
+    eccvalue_t (*getParentSlot)(eccstate_t* const);
+    eccvalue_t (*setParentSlot)(eccstate_t* const);
+    eccvalue_t (*deleteParentSlot)(eccstate_t* const);
+    eccvalue_t (*getMemberRef)(eccstate_t* const);
+    eccvalue_t (*getMember)(eccstate_t* const);
+    eccvalue_t (*setMember)(eccstate_t* const);
+    eccvalue_t (*callMember)(eccstate_t* const);
+    eccvalue_t (*deleteMember)(eccstate_t* const);
+    eccvalue_t (*getPropertyRef)(eccstate_t* const);
+    eccvalue_t (*getProperty)(eccstate_t* const);
+    eccvalue_t (*setProperty)(eccstate_t* const);
+    eccvalue_t (*callProperty)(eccstate_t* const);
+    eccvalue_t (*deleteProperty)(eccstate_t* const);
+    eccvalue_t (*pushEnvironment)(eccstate_t* const);
+    eccvalue_t (*popEnvironment)(eccstate_t* const);
+    eccvalue_t (*exchange)(eccstate_t* const);
+    eccvalue_t (*typeOf)(eccstate_t* const);
+    eccvalue_t (*equal)(eccstate_t* const);
+    eccvalue_t (*notEqual)(eccstate_t* const);
+    eccvalue_t (*identical)(eccstate_t* const);
+    eccvalue_t (*notIdentical)(eccstate_t* const);
+    eccvalue_t (*less)(eccstate_t* const);
+    eccvalue_t (*lessOrEqual)(eccstate_t* const);
+    eccvalue_t (*more)(eccstate_t* const);
+    eccvalue_t (*moreOrEqual)(eccstate_t* const);
+    eccvalue_t (*instanceOf)(eccstate_t* const);
+    eccvalue_t (*in)(eccstate_t* const);
+    eccvalue_t (*add)(eccstate_t* const);
+    eccvalue_t (*minus)(eccstate_t* const);
+    eccvalue_t (*multiply)(eccstate_t* const);
+    eccvalue_t (*divide)(eccstate_t* const);
+    eccvalue_t (*modulo)(eccstate_t* const);
+    eccvalue_t (*leftShift)(eccstate_t* const);
+    eccvalue_t (*rightShift)(eccstate_t* const);
+    eccvalue_t (*unsignedRightShift)(eccstate_t* const);
+    eccvalue_t (*bitwiseAnd)(eccstate_t* const);
+    eccvalue_t (*bitwiseXor)(eccstate_t* const);
+    eccvalue_t (*bitwiseOr)(eccstate_t* const);
+    eccvalue_t (*logicalAnd)(eccstate_t* const);
+    eccvalue_t (*logicalOr)(eccstate_t* const);
+    eccvalue_t (*positive)(eccstate_t* const);
+    eccvalue_t (*negative)(eccstate_t* const);
+    eccvalue_t (*invert)(eccstate_t* const);
+    eccvalue_t (*not )(eccstate_t* const);
+    eccvalue_t (*construct)(eccstate_t* const);
+    eccvalue_t (*call)(eccstate_t* const);
+    eccvalue_t (*eval)(eccstate_t* const);
+    eccvalue_t (*incrementRef)(eccstate_t* const);
+    eccvalue_t (*decrementRef)(eccstate_t* const);
+    eccvalue_t (*postIncrementRef)(eccstate_t* const);
+    eccvalue_t (*postDecrementRef)(eccstate_t* const);
+    eccvalue_t (*addAssignRef)(eccstate_t* const);
+    eccvalue_t (*minusAssignRef)(eccstate_t* const);
+    eccvalue_t (*multiplyAssignRef)(eccstate_t* const);
+    eccvalue_t (*divideAssignRef)(eccstate_t* const);
+    eccvalue_t (*moduloAssignRef)(eccstate_t* const);
+    eccvalue_t (*leftShiftAssignRef)(eccstate_t* const);
+    eccvalue_t (*rightShiftAssignRef)(eccstate_t* const);
+    eccvalue_t (*unsignedRightShiftAssignRef)(eccstate_t* const);
+    eccvalue_t (*bitAndAssignRef)(eccstate_t* const);
+    eccvalue_t (*bitXorAssignRef)(eccstate_t* const);
+    eccvalue_t (*bitOrAssignRef)(eccstate_t* const);
+    eccvalue_t (*debugger)(eccstate_t* const);
+    eccvalue_t (*try)(eccstate_t* const);
+    eccvalue_t (*throw)(eccstate_t* const);
+    eccvalue_t (*with)(eccstate_t* const);
+    eccvalue_t (*next)(eccstate_t* const);
+    eccvalue_t (*nextIf)(eccstate_t* const);
+    eccvalue_t (*autoreleaseExpression)(eccstate_t* const);
+    eccvalue_t (*autoreleaseDiscard)(eccstate_t* const);
+    eccvalue_t (*expression)(eccstate_t* const);
+    eccvalue_t (*discard)(eccstate_t* const);
+    eccvalue_t (*discardN)(eccstate_t* const);
+    eccvalue_t (*jump)(eccstate_t* const);
+    eccvalue_t (*jumpIf)(eccstate_t* const);
+    eccvalue_t (*jumpIfNot)(eccstate_t* const);
+    eccvalue_t (*repopulate)(eccstate_t* const);
+    eccvalue_t (*result)(eccstate_t* const);
+    eccvalue_t (*resultVoid)(eccstate_t* const);
+    eccvalue_t (*switchOp)(eccstate_t* const);
+    eccvalue_t (*breaker)(eccstate_t* const);
+    eccvalue_t (*iterate)(eccstate_t* const);
+    eccvalue_t (*iterateLessRef)(eccstate_t* const);
+    eccvalue_t (*iterateMoreRef)(eccstate_t* const);
+    eccvalue_t (*iterateLessOrEqualRef)(eccstate_t* const);
+    eccvalue_t (*iterateMoreOrEqualRef)(eccstate_t* const);
+    eccvalue_t (*iterateInRef)(eccstate_t* const);
     const struct io_libecc_Op identity;
 };
 
@@ -1093,7 +1089,7 @@ struct io_libecc_OpList
 
 struct type_io_libecc_OpList
 {
-    struct io_libecc_OpList* (*create)(const io_libecc_native_io_libecc_Function native, struct eccvalue_t value, struct io_libecc_Text text);
+    struct io_libecc_OpList* (*create)(const io_libecc_native_io_libecc_Function native, eccvalue_t value, ecctextstring_t text);
     void (*destroy)(struct io_libecc_OpList*);
     struct io_libecc_OpList* (*join)(struct io_libecc_OpList*, struct io_libecc_OpList*);
     struct io_libecc_OpList* (*join3)(struct io_libecc_OpList*, struct io_libecc_OpList*, struct io_libecc_OpList*);
@@ -1106,9 +1102,9 @@ struct type_io_libecc_OpList
     struct io_libecc_OpList* (*appendNoop)(struct io_libecc_OpList*);
     struct io_libecc_OpList* (*createLoop)(
     struct io_libecc_OpList* initial, struct io_libecc_OpList* condition, struct io_libecc_OpList* step, struct io_libecc_OpList* body, int reverseCondition);
-    void (*optimizeWithEnvironment)(struct io_libecc_OpList*, struct eccobject_t* environment, uint32_t index);
+    void (*optimizeWithEnvironment)(struct io_libecc_OpList*, eccobject_t* environment, uint32_t index);
     void (*dumpTo)(struct io_libecc_OpList*, FILE* file);
-    struct io_libecc_Text (*text)(struct io_libecc_OpList* oplist);
+    ecctextstring_t (*text)(struct io_libecc_OpList* oplist);
     const struct io_libecc_OpList identity;
 };
 
@@ -1126,7 +1122,7 @@ struct io_libecc_Parser
     }* depths;
 
     uint16_t depthCount;
-    struct eccobject_t* global;
+    eccobject_t* global;
     struct io_libecc_Function* function;
     uint16_t sourceDepth;
     int preferInteger;
@@ -1138,7 +1134,7 @@ struct type_io_libecc_Parser
 {
     struct io_libecc_Parser* (*createWithLexer)(struct io_libecc_Lexer*);
     void (*destroy)(struct io_libecc_Parser*);
-    struct io_libecc_Function* (*parseWithEnvironment)(struct io_libecc_Parser* const, struct eccobject_t* environment, struct eccobject_t* global);
+    struct io_libecc_Function* (*parseWithEnvironment)(struct io_libecc_Parser* const, eccobject_t* environment, eccobject_t* global);
     const struct io_libecc_Parser identity;
 };
 
@@ -1148,7 +1144,7 @@ struct io_libecc_Pool
     struct io_libecc_Function** functionList;
     uint32_t functionCount;
     uint32_t functionCapacity;
-    struct eccobject_t** objectList;
+    eccobject_t** objectList;
     uint32_t objectCount;
     uint32_t objectCapacity;
     struct io_libecc_Chars** charsList;
@@ -1161,11 +1157,11 @@ struct type_io_libecc_Pool
     void (*setup)(void);
     void (*teardown)(void);
     void (*addFunction)(struct io_libecc_Function* function);
-    void (*addObject)(struct eccobject_t* object);
+    void (*addObject)(eccobject_t* object);
     void (*addChars)(struct io_libecc_Chars* chars);
     void (*unmarkAll)(void);
-    void (*markValue)(struct eccvalue_t value);
-    void (*markObject)(struct eccobject_t* object);
+    void (*markValue)(eccvalue_t value);
+    void (*markObject)(eccobject_t* object);
     void (*collectUnmarked)(void);
     void (*collectUnreferencedFromIndices)(uint32_t indices[3]);
     void (*unreferenceFromIndices)(uint32_t indices[3]);
@@ -1173,46 +1169,46 @@ struct type_io_libecc_Pool
     const struct io_libecc_Pool identity;
 };
 
-extern const struct io_libecc_Text io_libecc_text_undefined;
-extern const struct io_libecc_Text io_libecc_text_null;
-extern const struct io_libecc_Text io_libecc_text_false;
-extern const struct io_libecc_Text io_libecc_text_true;
-extern const struct io_libecc_Text io_libecc_text_boolean;
-extern const struct io_libecc_Text io_libecc_text_number;
-extern const struct io_libecc_Text io_libecc_text_string;
-extern const struct io_libecc_Text io_libecc_text_object;
-extern const struct io_libecc_Text io_libecc_text_function;
-extern const struct io_libecc_Text io_libecc_text_zero;
-extern const struct io_libecc_Text io_libecc_text_one;
-extern const struct io_libecc_Text io_libecc_text_nan;
-extern const struct io_libecc_Text io_libecc_text_infinity;
-extern const struct io_libecc_Text io_libecc_text_negativeInfinity;
-extern const struct io_libecc_Text io_libecc_text_nativeCode;
-extern const struct io_libecc_Text io_libecc_text_empty;
-extern const struct io_libecc_Text io_libecc_text_emptyRegExp;
-extern const struct io_libecc_Text io_libecc_text_nullType;
-extern const struct io_libecc_Text io_libecc_text_undefinedType;
-extern const struct io_libecc_Text io_libecc_text_objectType;
-extern const struct io_libecc_Text io_libecc_text_errorType;
-extern const struct io_libecc_Text io_libecc_text_arrayType;
-extern const struct io_libecc_Text io_libecc_text_stringType;
-extern const struct io_libecc_Text io_libecc_text_regexpType;
-extern const struct io_libecc_Text io_libecc_text_numberType;
-extern const struct io_libecc_Text io_libecc_text_booleanType;
-extern const struct io_libecc_Text io_libecc_text_dateType;
-extern const struct io_libecc_Text io_libecc_text_functionType;
-extern const struct io_libecc_Text io_libecc_text_argumentsType;
-extern const struct io_libecc_Text io_libecc_text_mathType;
-extern const struct io_libecc_Text io_libecc_text_jsonType;
-extern const struct io_libecc_Text io_libecc_text_globalType;
-extern const struct io_libecc_Text io_libecc_text_errorName;
-extern const struct io_libecc_Text io_libecc_text_rangeErrorName;
-extern const struct io_libecc_Text io_libecc_text_referenceErrorName;
-extern const struct io_libecc_Text io_libecc_text_syntaxErrorName;
-extern const struct io_libecc_Text io_libecc_text_typeErrorName;
-extern const struct io_libecc_Text io_libecc_text_uriErrorName;
-extern const struct io_libecc_Text io_libecc_text_inputErrorName;
-extern const struct io_libecc_Text io_libecc_text_evalErrorName;
+extern const ecctextstring_t ECC_ConstString_Undefined;
+extern const ecctextstring_t ECC_ConstString_Null;
+extern const ecctextstring_t ECC_ConstString_False;
+extern const ecctextstring_t ECC_ConstString_True;
+extern const ecctextstring_t ECC_ConstString_Boolean;
+extern const ecctextstring_t ECC_ConstString_Number;
+extern const ecctextstring_t ECC_ConstString_String;
+extern const ecctextstring_t ECC_ConstString_Object;
+extern const ecctextstring_t ECC_ConstString_Function;
+extern const ecctextstring_t ECC_ConstString_Zero;
+extern const ecctextstring_t ECC_ConstString_One;
+extern const ecctextstring_t ECC_ConstString_Nan;
+extern const ecctextstring_t ECC_ConstString_Infinity;
+extern const ecctextstring_t ECC_ConstString_NegativeInfinity;
+extern const ecctextstring_t ECC_ConstString_NativeCode;
+extern const ecctextstring_t ECC_ConstString_Empty;
+extern const ecctextstring_t ECC_ConstString_EmptyRegExp;
+extern const ecctextstring_t ECC_ConstString_NullType;
+extern const ecctextstring_t ECC_ConstString_UndefinedType;
+extern const ecctextstring_t ECC_ConstString_ObjectType;
+extern const ecctextstring_t ECC_ConstString_ErrorType;
+extern const ecctextstring_t ECC_ConstString_ArrayType;
+extern const ecctextstring_t ECC_ConstString_StringType;
+extern const ecctextstring_t ECC_ConstString_RegexpType;
+extern const ecctextstring_t ECC_ConstString_NumberType;
+extern const ecctextstring_t ECC_ConstString_BooleanType;
+extern const ecctextstring_t ECC_ConstString_DateType;
+extern const ecctextstring_t ECC_ConstString_FunctionType;
+extern const ecctextstring_t ECC_ConstString_ArgumentsType;
+extern const ecctextstring_t ECC_ConstString_MathType;
+extern const ecctextstring_t ECC_ConstString_JsonType;
+extern const ecctextstring_t ECC_ConstString_GlobalType;
+extern const ecctextstring_t ECC_ConstString_ErrorName;
+extern const ecctextstring_t ECC_ConstString_RangeErrorName;
+extern const ecctextstring_t ECC_ConstString_ReferenceErrorName;
+extern const ecctextstring_t ECC_ConstString_SyntaxErrorName;
+extern const ecctextstring_t ECC_ConstString_TypeErrorName;
+extern const ecctextstring_t ECC_ConstString_UriErrorName;
+extern const ecctextstring_t ECC_ConstString_InputErrorName;
+extern const ecctextstring_t ECC_ConstString_EvalErrorName;
 extern const struct type_io_libecc_Text io_libecc_Text;
 extern struct io_libecc_Key io_libecc_key_none;
 extern struct io_libecc_Key io_libecc_key_prototype;
@@ -1241,12 +1237,12 @@ extern struct io_libecc_Key io_libecc_key_ignoreCase;
 extern struct io_libecc_Key io_libecc_key_multiline;
 extern struct io_libecc_Key io_libecc_key_source;
 extern const struct type_io_libecc_Key io_libecc_Key;
-extern const struct eccvalue_t io_libecc_value_none;
-extern const struct eccvalue_t io_libecc_value_undefined;
-extern const struct eccvalue_t io_libecc_value_true;
-extern const struct eccvalue_t io_libecc_value_false;
-extern const struct eccvalue_t io_libecc_value_null;
-extern const struct type_io_libecc_Value io_libecc_Value;
+extern const eccvalue_t ECCValConstNone;
+extern const eccvalue_t ECCValConstUndefined;
+extern const eccvalue_t ECCValConstTrue;
+extern const eccvalue_t ECCValConstFalse;
+extern const eccvalue_t ECCValConstNull;
+extern const struct type_io_libecc_Value ECCNSValue;
 extern const struct type_io_libecc_Context io_libecc_Context;
 extern const struct type_io_libecc_Chars io_libecc_Chars;
 extern const struct type_io_libecc_Object io_libecc_Object;
@@ -1263,30 +1259,30 @@ extern const struct type_io_libecc_Number io_libecc_Number;
 extern const struct type_io_libecc_String io_libecc_String;
 extern const struct type_io_libecc_Global io_libecc_Global;
 extern const uint32_t io_libecc_object_ElementMax;
-extern struct eccobject_t* io_libecc_object_prototype;
+extern eccobject_t* io_libecc_object_prototype;
 extern struct io_libecc_Function* io_libecc_object_constructor;
 extern const struct io_libecc_object_Type io_libecc_object_type;
-extern struct eccobject_t* io_libecc_regexp_prototype;
+extern eccobject_t* io_libecc_regexp_prototype;
 extern struct io_libecc_Function* io_libecc_regexp_constructor;
 extern const struct io_libecc_object_Type io_libecc_regexp_type;
-extern struct eccobject_t* io_libecc_arguments_prototype;
+extern eccobject_t* io_libecc_arguments_prototype;
 extern const struct io_libecc_object_Type io_libecc_arguments_type;
-extern struct eccobject_t* io_libecc_array_prototype;
+extern eccobject_t* io_libecc_array_prototype;
 extern struct io_libecc_Function* io_libecc_array_constructor;
 extern const struct io_libecc_object_Type io_libecc_array_type;
-extern struct eccobject_t* io_libecc_boolean_prototype;
+extern eccobject_t* io_libecc_boolean_prototype;
 extern struct io_libecc_Function* io_libecc_boolean_constructor;
 extern const struct io_libecc_object_Type io_libecc_boolean_type;
-extern struct eccobject_t* io_libecc_date_prototype;
+extern eccobject_t* io_libecc_date_prototype;
 extern struct io_libecc_Function* io_libecc_date_constructor;
 extern const struct io_libecc_object_Type io_libecc_date_type;
-extern struct eccobject_t* io_libecc_error_prototype;
-extern struct eccobject_t* io_libecc_error_rangePrototype;
-extern struct eccobject_t* io_libecc_error_referencePrototype;
-extern struct eccobject_t* io_libecc_error_syntaxPrototype;
-extern struct eccobject_t* io_libecc_error_typePrototype;
-extern struct eccobject_t* io_libecc_error_uriPrototype;
-extern struct eccobject_t* io_libecc_error_evalPrototype;
+extern eccobject_t* io_libecc_error_prototype;
+extern eccobject_t* io_libecc_error_rangePrototype;
+extern eccobject_t* io_libecc_error_referencePrototype;
+extern eccobject_t* io_libecc_error_syntaxPrototype;
+extern eccobject_t* io_libecc_error_typePrototype;
+extern eccobject_t* io_libecc_error_uriPrototype;
+extern eccobject_t* io_libecc_error_evalPrototype;
 extern struct io_libecc_Function* io_libecc_error_constructor;
 extern struct io_libecc_Function* io_libecc_error_rangeConstructor;
 extern struct io_libecc_Function* io_libecc_error_referenceConstructor;
@@ -1295,17 +1291,17 @@ extern struct io_libecc_Function* io_libecc_error_typeConstructor;
 extern struct io_libecc_Function* io_libecc_error_uriConstructor;
 extern struct io_libecc_Function* io_libecc_error_evalConstructor;
 extern const struct io_libecc_object_Type io_libecc_error_type;
-extern struct eccobject_t* io_libecc_function_prototype;
+extern eccobject_t* io_libecc_function_prototype;
 extern struct io_libecc_Function* io_libecc_function_constructor;
 extern const struct io_libecc_object_Type io_libecc_function_type;
-extern struct eccobject_t* io_libecc_json_object;
+extern eccobject_t* io_libecc_json_object;
 extern const struct io_libecc_object_Type io_libecc_json_type;
-extern struct eccobject_t* io_libecc_math_object;
+extern eccobject_t* io_libecc_math_object;
 extern const struct io_libecc_object_Type io_libecc_math_type;
-extern struct eccobject_t* io_libecc_number_prototype;
+extern eccobject_t* io_libecc_number_prototype;
 extern struct io_libecc_Function* io_libecc_number_constructor;
 extern const struct io_libecc_object_Type io_libecc_number_type;
-extern struct eccobject_t* io_libecc_string_prototype;
+extern eccobject_t* io_libecc_string_prototype;
 extern struct io_libecc_Function* io_libecc_string_constructor;
 extern const struct io_libecc_object_Type io_libecc_string_type;
 extern const struct io_libecc_object_Type io_libecc_global_type;

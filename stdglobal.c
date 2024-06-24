@@ -19,29 +19,29 @@ const struct type_io_libecc_Global io_libecc_Global = {
 };
 
 const struct io_libecc_object_Type io_libecc_global_type = {
-	.text = &io_libecc_text_globalType,
+	.text = &ECC_ConstString_GlobalType,
 };
 
 // MARK: - Static Members
 
 static
-struct eccvalue_t eval (struct eccstate_t * const context)
+eccvalue_t eval (eccstate_t * const context)
 {
-	struct eccvalue_t value;
+	eccvalue_t value;
 	struct io_libecc_Input *input;
-	struct eccstate_t subContext = {
+	eccstate_t subContext = {
 		.parent = context,
-		.this = io_libecc_Value.object(&context->ecc->global->environment),
+		.this = ECCNSValue.object(&context->ecc->global->environment),
 		.ecc = context->ecc,
 		.depth = context->depth + 1,
 		.environment = io_libecc_Context.environmentRoot(context->parent),
 	};
 	
 	value = io_libecc_Context.argument(context, 0);
-	if (!io_libecc_Value.isString(value) || !io_libecc_Value.isPrimitive(value))
+	if (!ECCNSValue.isString(value) || !ECCNSValue.isPrimitive(value))
 		return value;
 	
-	input = io_libecc_Input.createFromBytes(io_libecc_Value.stringBytes(&value), io_libecc_Value.stringLength(&value), "(eval)");
+	input = io_libecc_Input.createFromBytes(ECCNSValue.stringBytes(&value), ECCNSValue.stringLength(&value), "(eval)");
 	
 	io_libecc_Context.setTextIndex(context, io_libecc_context_noIndex);
 	io_libecc_Ecc.evalInputWithContext(context->ecc, input, &subContext);
@@ -50,15 +50,15 @@ struct eccvalue_t eval (struct eccstate_t * const context)
 }
 
 static
-struct eccvalue_t parseInt (struct eccstate_t * const context)
+eccvalue_t parseInt (eccstate_t * const context)
 {
-	struct eccvalue_t value;
-	struct io_libecc_Text text;
+	eccvalue_t value;
+	ecctextstring_t text;
 	int32_t base;
 	
-	value = io_libecc_Value.toString(context, io_libecc_Context.argument(context, 0));
-	base = io_libecc_Value.toInteger(context, io_libecc_Context.argument(context, 1)).data.integer;
-	text = io_libecc_Value.textOf(&value);
+	value = ECCNSValue.toString(context, io_libecc_Context.argument(context, 0));
+	base = ECCNSValue.toInteger(context, io_libecc_Context.argument(context, 1)).data.integer;
+	text = ECCNSValue.textOf(&value);
 	
 	if (!base)
 	{
@@ -77,47 +77,47 @@ struct eccvalue_t parseInt (struct eccstate_t * const context)
 }
 
 static
-struct eccvalue_t parseFloat (struct eccstate_t * const context)
+eccvalue_t parseFloat (eccstate_t * const context)
 {
-	struct eccvalue_t value;
-	struct io_libecc_Text text;
+	eccvalue_t value;
+	ecctextstring_t text;
 	
-	value = io_libecc_Value.toString(context, io_libecc_Context.argument(context, 0));
-	text = io_libecc_Value.textOf(&value);
+	value = ECCNSValue.toString(context, io_libecc_Context.argument(context, 0));
+	text = ECCNSValue.textOf(&value);
 	return io_libecc_Lexer.scanBinary(text, io_libecc_lexer_scanLazy | (context->ecc->sloppyMode? io_libecc_lexer_scanSloppy: 0));
 }
 
 static
-struct eccvalue_t isFinite (struct eccstate_t * const context)
+eccvalue_t isFinite (eccstate_t * const context)
 {
-	struct eccvalue_t value;
+	eccvalue_t value;
 	
-	value = io_libecc_Value.toBinary(context, io_libecc_Context.argument(context, 0));
-	return io_libecc_Value.truth(!isnan(value.data.binary) && !isinf(value.data.binary));
+	value = ECCNSValue.toBinary(context, io_libecc_Context.argument(context, 0));
+	return ECCNSValue.truth(!isnan(value.data.binary) && !isinf(value.data.binary));
 }
 
 static
-struct eccvalue_t isNaN (struct eccstate_t * const context)
+eccvalue_t isNaN (eccstate_t * const context)
 {
-	struct eccvalue_t value;
+	eccvalue_t value;
 	
-	value = io_libecc_Value.toBinary(context, io_libecc_Context.argument(context, 0));
-	return io_libecc_Value.truth(isnan(value.data.binary));
+	value = ECCNSValue.toBinary(context, io_libecc_Context.argument(context, 0));
+	return ECCNSValue.truth(isnan(value.data.binary));
 }
 
 static
-struct eccvalue_t decodeExcept (struct eccstate_t * const context, const char *exclude)
+eccvalue_t decodeExcept (eccstate_t * const context, const char *exclude)
 {
 	char buffer[5], *b;
-	struct eccvalue_t value;
+	eccvalue_t value;
 	const char *bytes;
 	uint16_t index = 0, count;
 	struct io_libecc_chars_Append chars;
 	uint8_t byte;
 	
-	value = io_libecc_Value.toString(context, io_libecc_Context.argument(context, 0));
-	bytes = io_libecc_Value.stringBytes(&value);
-	count = io_libecc_Value.stringLength(&value);
+	value = ECCNSValue.toString(context, io_libecc_Context.argument(context, 0));
+	bytes = ECCNSValue.stringBytes(&value);
+	count = ECCNSValue.stringLength(&value);
 	
 	io_libecc_Chars.beginAppend(&chars);
 	
@@ -136,7 +136,7 @@ struct eccvalue_t decodeExcept (struct eccstate_t * const context, const char *e
 			
 			if (byte >= 0x80)
 			{
-				struct io_libecc_text_Char c;
+				ecctextchar_t c;
 				int continuation = (byte & 0xf8) == 0xf0? 3: (byte & 0xf0) == 0xe0? 2: (byte & 0xe0) == 0xc0? 1: 0;
 				
 				if (!continuation || index + continuation * 3 > count)
@@ -176,32 +176,32 @@ struct eccvalue_t decodeExcept (struct eccstate_t * const context, const char *e
 }
 
 static
-struct eccvalue_t decodeURI (struct eccstate_t * const context)
+eccvalue_t decodeURI (eccstate_t * const context)
 {
 	return decodeExcept(context, ";/?:@&=+$,#");
 }
 
 static
-struct eccvalue_t decodeURIComponent (struct eccstate_t * const context)
+eccvalue_t decodeURIComponent (eccstate_t * const context)
 {
 	return decodeExcept(context, NULL);
 }
 
 static
-struct eccvalue_t encodeExpect (struct eccstate_t * const context, const char *exclude)
+eccvalue_t encodeExpect (eccstate_t * const context, const char *exclude)
 {
 	const char hex[] = "0123456789ABCDEF";
-	struct eccvalue_t value;
+	eccvalue_t value;
 	const char *bytes;
 	uint16_t offset = 0, unit, length;
 	struct io_libecc_Chars *chars;
-	struct io_libecc_Text text;
-	struct io_libecc_text_Char c;
+	ecctextstring_t text;
+	ecctextchar_t c;
 	int needPair = 0;
 	
-	value = io_libecc_Value.toString(context, io_libecc_Context.argument(context, 0));
-	bytes = io_libecc_Value.stringBytes(&value);
-	length = io_libecc_Value.stringLength(&value);
+	value = ECCNSValue.toString(context, io_libecc_Context.argument(context, 0));
+	bytes = ECCNSValue.stringBytes(&value);
+	length = ECCNSValue.stringLength(&value);
 	text = io_libecc_Text.make(bytes, length);
 	
 	chars = io_libecc_Chars.createSized(length * 3);
@@ -239,35 +239,35 @@ struct eccvalue_t encodeExpect (struct eccstate_t * const context, const char *e
 		goto error;
 	
 	chars->length = offset;
-	return io_libecc_Value.chars(chars);
+	return ECCNSValue.chars(chars);
 	
 	error:
 	io_libecc_Context.uriError(context, io_libecc_Chars.create("malformed URI"));
 }
 
 static
-struct eccvalue_t encodeURI (struct eccstate_t * const context)
+eccvalue_t encodeURI (eccstate_t * const context)
 {
 	return encodeExpect(context, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.!~*'()" ";/?:@&=+$,#");
 }
 
 static
-struct eccvalue_t encodeURIComponent (struct eccstate_t * const context)
+eccvalue_t encodeURIComponent (eccstate_t * const context)
 {
 	return encodeExpect(context, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.!~*'()");
 }
 
 static
-struct eccvalue_t escape (struct eccstate_t * const context)
+eccvalue_t escape (eccstate_t * const context)
 {
 	const char *exclude = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 @*_+-./";
-	struct eccvalue_t value;
+	eccvalue_t value;
 	struct io_libecc_chars_Append chars;
-	struct io_libecc_Text text;
-	struct io_libecc_text_Char c;
+	ecctextstring_t text;
+	ecctextchar_t c;
 	
-	value = io_libecc_Value.toString(context, io_libecc_Context.argument(context, 0));
-	text = io_libecc_Value.textOf(&value);
+	value = ECCNSValue.toString(context, io_libecc_Context.argument(context, 0));
+	text = ECCNSValue.textOf(&value);
 	
 	io_libecc_Chars.beginAppend(&chars);
 	
@@ -296,15 +296,15 @@ struct eccvalue_t escape (struct eccstate_t * const context)
 }
 
 static
-struct eccvalue_t unescape (struct eccstate_t * const context)
+eccvalue_t unescape (eccstate_t * const context)
 {
-	struct eccvalue_t value;
+	eccvalue_t value;
 	struct io_libecc_chars_Append chars;
-	struct io_libecc_Text text;
-	struct io_libecc_text_Char c;
+	ecctextstring_t text;
+	ecctextchar_t c;
 	
-	value = io_libecc_Value.toString(context, io_libecc_Context.argument(context, 0));
-	text = io_libecc_Value.textOf(&value);
+	value = ECCNSValue.toString(context, io_libecc_Context.argument(context, 0));
+	text = ECCNSValue.textOf(&value);
 	
 	io_libecc_Chars.beginAppend(&chars);
 	
@@ -391,9 +391,9 @@ struct io_libecc_Function * create (void)
 	struct io_libecc_Function * self = io_libecc_Function.create(io_libecc_object_prototype);
 	self->environment.type = &io_libecc_global_type;
 	
-	io_libecc_Function.addValue(self, "NaN", io_libecc_Value.binary(NAN), r|h|s);
-	io_libecc_Function.addValue(self, "Infinity", io_libecc_Value.binary(INFINITY), r|h|s);
-	io_libecc_Function.addValue(self, "undefined", io_libecc_value_undefined, r|h|s);
+	io_libecc_Function.addValue(self, "NaN", ECCNSValue.binary(NAN), r|h|s);
+	io_libecc_Function.addValue(self, "Infinity", ECCNSValue.binary(INFINITY), r|h|s);
+	io_libecc_Function.addValue(self, "undefined", ECCValConstUndefined, r|h|s);
 	
 	io_libecc_Function.addFunction(self, "eval", eval, 1, h);
 	io_libecc_Function.addFunction(self, "escape", escape, 1, h);
@@ -406,23 +406,23 @@ struct io_libecc_Function * create (void)
 	io_libecc_Function.addFunction(self, "decodeURIComponent", decodeURIComponent, 1, h);
 	io_libecc_Function.addFunction(self, "encodeURI", encodeURI, 1, h);
 	io_libecc_Function.addFunction(self, "encodeURIComponent", encodeURIComponent, 1, h);
-	io_libecc_Function.addValue(self, "Object", io_libecc_Value.function(io_libecc_object_constructor), h);
-	io_libecc_Function.addValue(self, "Function", io_libecc_Value.function(io_libecc_function_constructor), h);
-	io_libecc_Function.addValue(self, "Array", io_libecc_Value.function(io_libecc_array_constructor), h);
-	io_libecc_Function.addValue(self, "String", io_libecc_Value.function(io_libecc_string_constructor), h);
-	io_libecc_Function.addValue(self, "Boolean", io_libecc_Value.function(io_libecc_boolean_constructor), h);
-	io_libecc_Function.addValue(self, "Number", io_libecc_Value.function(io_libecc_number_constructor), h);
-	io_libecc_Function.addValue(self, "Date", io_libecc_Value.function(io_libecc_date_constructor), h);
-	io_libecc_Function.addValue(self, "RegExp", io_libecc_Value.function(io_libecc_regexp_constructor), h);
-	io_libecc_Function.addValue(self, "Error", io_libecc_Value.function(io_libecc_error_constructor), h);
-	io_libecc_Function.addValue(self, "RangeError", io_libecc_Value.function(io_libecc_error_rangeConstructor), h);
-	io_libecc_Function.addValue(self, "ReferenceError", io_libecc_Value.function(io_libecc_error_referenceConstructor), h);
-	io_libecc_Function.addValue(self, "SyntaxError", io_libecc_Value.function(io_libecc_error_syntaxConstructor), h);
-	io_libecc_Function.addValue(self, "TypeError", io_libecc_Value.function(io_libecc_error_typeConstructor), h);
-	io_libecc_Function.addValue(self, "URIError", io_libecc_Value.function(io_libecc_error_uriConstructor), h);
-	io_libecc_Function.addValue(self, "EvalError", io_libecc_Value.function(io_libecc_error_evalConstructor), h);
-	io_libecc_Function.addValue(self, "Math", io_libecc_Value.object(io_libecc_math_object), h);
-	io_libecc_Function.addValue(self, "JSON", io_libecc_Value.object(io_libecc_json_object), h);
+	io_libecc_Function.addValue(self, "Object", ECCNSValue.function(io_libecc_object_constructor), h);
+	io_libecc_Function.addValue(self, "Function", ECCNSValue.function(io_libecc_function_constructor), h);
+	io_libecc_Function.addValue(self, "Array", ECCNSValue.function(io_libecc_array_constructor), h);
+	io_libecc_Function.addValue(self, "String", ECCNSValue.function(io_libecc_string_constructor), h);
+	io_libecc_Function.addValue(self, "Boolean", ECCNSValue.function(io_libecc_boolean_constructor), h);
+	io_libecc_Function.addValue(self, "Number", ECCNSValue.function(io_libecc_number_constructor), h);
+	io_libecc_Function.addValue(self, "Date", ECCNSValue.function(io_libecc_date_constructor), h);
+	io_libecc_Function.addValue(self, "RegExp", ECCNSValue.function(io_libecc_regexp_constructor), h);
+	io_libecc_Function.addValue(self, "Error", ECCNSValue.function(io_libecc_error_constructor), h);
+	io_libecc_Function.addValue(self, "RangeError", ECCNSValue.function(io_libecc_error_rangeConstructor), h);
+	io_libecc_Function.addValue(self, "ReferenceError", ECCNSValue.function(io_libecc_error_referenceConstructor), h);
+	io_libecc_Function.addValue(self, "SyntaxError", ECCNSValue.function(io_libecc_error_syntaxConstructor), h);
+	io_libecc_Function.addValue(self, "TypeError", ECCNSValue.function(io_libecc_error_typeConstructor), h);
+	io_libecc_Function.addValue(self, "URIError", ECCNSValue.function(io_libecc_error_uriConstructor), h);
+	io_libecc_Function.addValue(self, "EvalError", ECCNSValue.function(io_libecc_error_evalConstructor), h);
+	io_libecc_Function.addValue(self, "Math", ECCNSValue.object(io_libecc_math_object), h);
+	io_libecc_Function.addValue(self, "JSON", ECCNSValue.object(io_libecc_json_object), h);
 	
 	return self;
 }

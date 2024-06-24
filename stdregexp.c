@@ -10,23 +10,23 @@
 
 // MARK: - Private
 
-static void mark (struct eccobject_t *object);
-static void capture (struct eccobject_t *object);
-static void finalize (struct eccobject_t *object);
+static void mark (eccobject_t *object);
+static void capture (eccobject_t *object);
+static void finalize (eccobject_t *object);
 static void setup(void);
 static void teardown(void);
 static struct io_libecc_RegExp* create(struct io_libecc_Chars* pattern, struct io_libecc_Error**, enum io_libecc_regexp_Options);
-static struct io_libecc_RegExp* createWith(struct eccstate_t* context, struct eccvalue_t pattern, struct eccvalue_t flags);
+static struct io_libecc_RegExp* createWith(eccstate_t* context, eccvalue_t pattern, eccvalue_t flags);
 static int matchWithState(struct io_libecc_RegExp*, struct io_libecc_regexp_State*);
 const struct type_io_libecc_RegExp io_libecc_RegExp = {
     setup, teardown, create, createWith, matchWithState,
 };
 
-struct eccobject_t * io_libecc_regexp_prototype = NULL;
+eccobject_t * io_libecc_regexp_prototype = NULL;
 struct io_libecc_Function * io_libecc_regexp_constructor = NULL;
 
 const struct io_libecc_object_Type io_libecc_regexp_type = {
-	.text = &io_libecc_text_regexpType,
+	.text = &ECC_ConstString_RegexpType,
 	.mark = mark,
 	.capture = capture,
 	.finalize = finalize,
@@ -81,16 +81,16 @@ struct Parse {
 static struct io_libecc_regexp_Node * disjunction (struct Parse *p, struct io_libecc_Error **error);
 
 static
-void mark (struct eccobject_t *object)
+void mark (eccobject_t *object)
 {
 	struct io_libecc_RegExp *self = (struct io_libecc_RegExp *)object;
 	
-	io_libecc_Pool.markValue(io_libecc_Value.chars(self->pattern));
-	io_libecc_Pool.markValue(io_libecc_Value.chars(self->source));
+	io_libecc_Pool.markValue(ECCNSValue.chars(self->pattern));
+	io_libecc_Pool.markValue(ECCNSValue.chars(self->source));
 }
 
 static
-void capture (struct eccobject_t *object)
+void capture (eccobject_t *object)
 {
 	struct io_libecc_RegExp *self = (struct io_libecc_RegExp *)object;
 	
@@ -99,7 +99,7 @@ void capture (struct eccobject_t *object)
 }
 
 static
-void finalize (struct eccobject_t *object)
+void finalize (eccobject_t *object)
 {
 	struct io_libecc_RegExp *self = (struct io_libecc_RegExp *)object;
 	struct io_libecc_regexp_Node *n = self->program;
@@ -338,7 +338,7 @@ enum Opcode escape (struct Parse *p, int16_t *offset, char buffer[5])
 }
 
 static
-enum Opcode character (struct io_libecc_Text text, int16_t *offset, char buffer[12], int ignoreCase)
+enum Opcode character (ecctextstring_t text, int16_t *offset, char buffer[12], int ignoreCase)
 {
 	if (ignoreCase)
 	{
@@ -364,7 +364,7 @@ enum Opcode character (struct io_libecc_Text text, int16_t *offset, char buffer[
 }
 
 static
-struct io_libecc_regexp_Node * characterNode (struct io_libecc_Text text, int ignoreCase)
+struct io_libecc_regexp_Node * characterNode (ecctextstring_t text, int ignoreCase)
 {
 	char buffer[12];
 	int16_t offset;
@@ -377,7 +377,7 @@ static
 struct io_libecc_regexp_Node * term (struct Parse *p, struct io_libecc_Error **error)
 {
 	struct io_libecc_regexp_Node *n;
-	struct io_libecc_Text text;
+	ecctextstring_t text;
 	
 	p->disallowQuantifier = 0;
 	
@@ -525,8 +525,8 @@ struct io_libecc_regexp_Node * term (struct Parse *p, struct io_libecc_Error **e
 			{
 				if (opcode == opBytes)
 				{
-					struct io_libecc_Text text = io_libecc_Text.make(buffer + range, length - range);
-					struct io_libecc_text_Char from, to;
+					ecctextstring_t text = io_libecc_Text.make(buffer + range, length - range);
+					ecctextchar_t from, to;
 					
 					from = io_libecc_Text.nextCharacter(&text);
 					io_libecc_Text.advance(&text, 1);
@@ -571,8 +571,8 @@ struct io_libecc_regexp_Node * term (struct Parse *p, struct io_libecc_Error **e
 		if (p->ignoreCase)
 		{
 			char casebuffer[6];
-			struct io_libecc_Text single;
-			struct io_libecc_text_Char c;
+			ecctextstring_t single;
+			ecctextchar_t c;
 			text = io_libecc_Text.make(buffer + length, length);
 			
 			while (text.length)
@@ -766,7 +766,7 @@ struct io_libecc_regexp_Node * pattern (struct Parse *p, struct io_libecc_Error 
 //MARK: matching
 
 static
-int match (struct io_libecc_regexp_State * const s, struct io_libecc_regexp_Node *n, struct io_libecc_Text text);
+int match (struct io_libecc_regexp_State * const s, struct io_libecc_regexp_Node *n, ecctextstring_t text);
 
 static
 void clear (struct io_libecc_regexp_State * const s, const char *c, uint8_t *bytes)
@@ -784,7 +784,7 @@ void clear (struct io_libecc_regexp_State * const s, const char *c, uint8_t *byt
 }
 
 static
-int forkMatch (struct io_libecc_regexp_State * const s, struct io_libecc_regexp_Node *n, struct io_libecc_Text text, int16_t offset)
+int forkMatch (struct io_libecc_regexp_State * const s, struct io_libecc_regexp_Node *n, ecctextstring_t text, int16_t offset)
 {
 	int result;
 	
@@ -799,7 +799,7 @@ int forkMatch (struct io_libecc_regexp_State * const s, struct io_libecc_regexp_
 }
 
 
-int match (struct io_libecc_regexp_State * const s, struct io_libecc_regexp_Node *n, struct io_libecc_Text text)
+int match (struct io_libecc_regexp_State * const s, struct io_libecc_regexp_Node *n, ecctextstring_t text)
 {
 	goto start;
 next:
@@ -835,7 +835,7 @@ start:
 			
 		case opLineStart:
 		{
-			struct io_libecc_Text prev = io_libecc_Text.make(text.bytes, (int32_t)(text.bytes - s->start));
+			ecctextstring_t prev = io_libecc_Text.make(text.bytes, (int32_t)(text.bytes - s->start));
 			if (text.bytes != s->start && !io_libecc_Text.isLineFeed(io_libecc_Text.prevCharacter(&prev)))
 				return 0;
 			
@@ -850,7 +850,7 @@ start:
 			
 		case opBoundary:
 		{
-			struct io_libecc_Text prev = io_libecc_Text.make(text.bytes, (int32_t)(text.bytes - s->start));
+			ecctextstring_t prev = io_libecc_Text.make(text.bytes, (int32_t)(text.bytes - s->start));
 			if (text.bytes == s->start)
 			{
 				if (io_libecc_Text.isWord(io_libecc_Text.character(text)) != n->offset)
@@ -972,7 +972,7 @@ start:
 		case opOneOf:
 		{
 			char buffer[5];
-			struct io_libecc_text_Char c;
+			ecctextchar_t c;
 			
 			if (!text.length)
 				return 0;
@@ -992,7 +992,7 @@ start:
 		case opNeitherOf:
 		{
 			char buffer[5];
-			struct io_libecc_text_Char c;
+			ecctextchar_t c;
 			
 			if (!text.length)
 				return 0;
@@ -1011,8 +1011,8 @@ start:
 		case opInRange:
 		case opInRangeCase:
 		{
-			struct io_libecc_Text range = io_libecc_Text.make(n->bytes, n->offset);
-			struct io_libecc_text_Char from, to, c;
+			ecctextstring_t range = io_libecc_Text.make(n->bytes, n->offset);
+			ecctextchar_t from, to, c;
 			
 			if (!text.length)
 				return 0;
@@ -1025,7 +1025,7 @@ start:
 			if (n->opcode == opInRangeCase)
 			{
 				char buffer[c.units];
-				struct io_libecc_Text casetext = io_libecc_Text.make(buffer, 0);
+				ecctextstring_t casetext = io_libecc_Text.make(buffer, 0);
 				
 				casetext.length = (int32_t)(io_libecc_Text.toLower(io_libecc_Text.make(text.bytes, (int32_t)sizeof(buffer)), buffer) - buffer);
 				c = io_libecc_Text.character(casetext);
@@ -1082,43 +1082,43 @@ jump:
 // MARK: - Static Members
 
 static
-struct eccvalue_t constructor (struct eccstate_t * const context)
+eccvalue_t constructor (eccstate_t * const context)
 {
-	struct eccvalue_t pattern, flags;
+	eccvalue_t pattern, flags;
 	
 	pattern = io_libecc_Context.argument(context, 0);
 	flags = io_libecc_Context.argument(context, 1);
 	
-	return io_libecc_Value.regexp(createWith(context, pattern, flags));
+	return ECCNSValue.regexp(createWith(context, pattern, flags));
 }
 
 static
-struct eccvalue_t toString (struct eccstate_t * const context)
+eccvalue_t toString (eccstate_t * const context)
 {
 	struct io_libecc_RegExp *self = context->this.data.regexp;
 	
-	io_libecc_Context.assertThisType(context, io_libecc_value_regexpType);
+	io_libecc_Context.assertThisType(context, ECC_VALTYPE_REGEXP);
 	
-	return io_libecc_Value.chars(self->pattern);
+	return ECCNSValue.chars(self->pattern);
 }
 
 static
-struct eccvalue_t exec (struct eccstate_t * const context)
+eccvalue_t exec (eccstate_t * const context)
 {
 	struct io_libecc_RegExp *self = context->this.data.regexp;
-	struct eccvalue_t value, lastIndex;
+	eccvalue_t value, lastIndex;
 	
-	io_libecc_Context.assertThisType(context, io_libecc_value_regexpType);
+	io_libecc_Context.assertThisType(context, ECC_VALTYPE_REGEXP);
 	
-	value = io_libecc_Value.toString(context, io_libecc_Context.argument(context, 0));
-	lastIndex = self->global? io_libecc_Value.toInteger(context, io_libecc_Object.getMember(context, &self->object, io_libecc_key_lastIndex)): io_libecc_Value.integer(0);
+	value = ECCNSValue.toString(context, io_libecc_Context.argument(context, 0));
+	lastIndex = self->global? ECCNSValue.toInteger(context, io_libecc_Object.getMember(context, &self->object, io_libecc_key_lastIndex)): ECCNSValue.integer(0);
 	
-	io_libecc_Object.putMember(context, &self->object, io_libecc_key_lastIndex, io_libecc_Value.integer(0));
+	io_libecc_Object.putMember(context, &self->object, io_libecc_key_lastIndex, ECCNSValue.integer(0));
 	
 	if (lastIndex.data.integer >= 0)
 	{
-		uint16_t length = io_libecc_Value.stringLength(&value);
-		const char *bytes = io_libecc_Value.stringBytes(&value);
+		uint16_t length = ECCNSValue.stringLength(&value);
+		const char *bytes = ECCNSValue.stringBytes(&value);
 		const char *capture[self->count * 2];
 		const char *index[self->count * 2];
 		struct io_libecc_Chars *element;
@@ -1132,7 +1132,7 @@ struct eccvalue_t exec (struct eccstate_t * const context)
 		
 		if (state.start >= bytes && state.start <= state.end && matchWithState(self, &state))
 		{
-			struct eccobject_t *array = io_libecc_Array.createSized(self->count);
+			eccobject_t *array = io_libecc_Array.createSized(self->count);
 			int32_t index, count;
 			
 			for (index = 0, count = self->count; index < count; ++index)
@@ -1140,41 +1140,41 @@ struct eccvalue_t exec (struct eccstate_t * const context)
 				if (capture[index * 2])
 				{
 					element = io_libecc_Chars.createWithBytes((int32_t)(capture[index * 2 + 1] - capture[index * 2]), capture[index * 2]);
-					array->element[index].value = io_libecc_Value.chars(element);
+					array->element[index].value = ECCNSValue.chars(element);
 				}
 				else
-					array->element[index].value = io_libecc_value_undefined;
+					array->element[index].value = ECCValConstUndefined;
 			}
 			
 			if (self->global)
-				io_libecc_Object.putMember(context, &self->object, io_libecc_key_lastIndex, io_libecc_Value.integer(io_libecc_String.unitIndex(bytes, length, (int32_t)(capture[1] - bytes))));
+				io_libecc_Object.putMember(context, &self->object, io_libecc_key_lastIndex, ECCNSValue.integer(io_libecc_String.unitIndex(bytes, length, (int32_t)(capture[1] - bytes))));
 			
-			io_libecc_Object.addMember(array, io_libecc_key_index, io_libecc_Value.integer(io_libecc_String.unitIndex(bytes, length, (int32_t)(capture[0] - bytes))), 0);
+			io_libecc_Object.addMember(array, io_libecc_key_index, ECCNSValue.integer(io_libecc_String.unitIndex(bytes, length, (int32_t)(capture[0] - bytes))), 0);
 			io_libecc_Object.addMember(array, io_libecc_key_input, value, 0);
 			
-			return io_libecc_Value.object(array);
+			return ECCNSValue.object(array);
 		}
 	}
-	return io_libecc_value_null;
+	return ECCValConstNull;
 }
 
 static
-struct eccvalue_t test (struct eccstate_t * const context)
+eccvalue_t test (eccstate_t * const context)
 {
 	struct io_libecc_RegExp *self = context->this.data.regexp;
-	struct eccvalue_t value, lastIndex;
+	eccvalue_t value, lastIndex;
 	
-	io_libecc_Context.assertThisType(context, io_libecc_value_regexpType);
+	io_libecc_Context.assertThisType(context, ECC_VALTYPE_REGEXP);
 	
-	value = io_libecc_Value.toString(context, io_libecc_Context.argument(context, 0));
-	lastIndex = io_libecc_Value.toInteger(context, io_libecc_Object.getMember(context, &self->object, io_libecc_key_lastIndex));
+	value = ECCNSValue.toString(context, io_libecc_Context.argument(context, 0));
+	lastIndex = ECCNSValue.toInteger(context, io_libecc_Object.getMember(context, &self->object, io_libecc_key_lastIndex));
 	
-	io_libecc_Object.putMember(context, &self->object, io_libecc_key_lastIndex, io_libecc_Value.integer(0));
+	io_libecc_Object.putMember(context, &self->object, io_libecc_key_lastIndex, ECCNSValue.integer(0));
 	
 	if (lastIndex.data.integer >= 0)
 	{
-		uint16_t length = io_libecc_Value.stringLength(&value);
-		const char *bytes = io_libecc_Value.stringBytes(&value);
+		uint16_t length = ECCNSValue.stringLength(&value);
+		const char *bytes = ECCNSValue.stringBytes(&value);
 		const char *capture[self->count * 2];
 		const char *index[self->count * 2];
 		
@@ -1188,12 +1188,12 @@ struct eccvalue_t test (struct eccstate_t * const context)
 		if (state.start >= bytes && state.start <= state.end && matchWithState(self, &state))
 		{
 			if (self->global)
-				io_libecc_Object.putMember(context, &self->object, io_libecc_key_lastIndex, io_libecc_Value.integer(io_libecc_String.unitIndex(bytes, length, (int32_t)(capture[1] - bytes))));
+				io_libecc_Object.putMember(context, &self->object, io_libecc_key_lastIndex, ECCNSValue.integer(io_libecc_String.unitIndex(bytes, length, (int32_t)(capture[1] - bytes))));
 			
-			return io_libecc_value_true;
+			return ECCValConstTrue;
 		}
 	}
-	return io_libecc_value_false;
+	return ECCValConstFalse;
 }
 
 // MARK: - Methods
@@ -1205,7 +1205,7 @@ void setup ()
 	
 	io_libecc_Function.setupBuiltinObject(
 		&io_libecc_regexp_constructor, constructor, 2,
-		&io_libecc_regexp_prototype, io_libecc_Value.regexp(create(io_libecc_Chars.create("/(?:)/"), &error, 0)),
+		&io_libecc_regexp_prototype, ECCNSValue.regexp(create(io_libecc_Chars.create("/(?:)/"), &error, 0)),
 		&io_libecc_regexp_type);
 	
 	assert(error == NULL);
@@ -1315,26 +1315,26 @@ struct io_libecc_RegExp * create (struct io_libecc_Chars *s, struct io_libecc_Er
 	else if (error && !*error)
 		*error = io_libecc_Error.syntaxError(io_libecc_Text.make(p.c, 1), io_libecc_Chars.create("invalid character '%c'", isgraph(*p.c)? *p.c: '?'));
 	
-	io_libecc_Object.addMember(&self->object, io_libecc_key_source, io_libecc_Value.chars(self->source), io_libecc_value_readonly | io_libecc_value_hidden | io_libecc_value_sealed);
-	io_libecc_Object.addMember(&self->object, io_libecc_key_global, io_libecc_Value.truth(self->global), io_libecc_value_readonly | io_libecc_value_hidden | io_libecc_value_sealed);
-	io_libecc_Object.addMember(&self->object, io_libecc_key_ignoreCase, io_libecc_Value.truth(self->ignoreCase), io_libecc_value_readonly | io_libecc_value_hidden | io_libecc_value_sealed);
-	io_libecc_Object.addMember(&self->object, io_libecc_key_multiline, io_libecc_Value.truth(self->multiline), io_libecc_value_readonly | io_libecc_value_hidden | io_libecc_value_sealed);
-	io_libecc_Object.addMember(&self->object, io_libecc_key_lastIndex, io_libecc_Value.integer(0), io_libecc_value_hidden | io_libecc_value_sealed);
+	io_libecc_Object.addMember(&self->object, io_libecc_key_source, ECCNSValue.chars(self->source), io_libecc_value_readonly | io_libecc_value_hidden | io_libecc_value_sealed);
+	io_libecc_Object.addMember(&self->object, io_libecc_key_global, ECCNSValue.truth(self->global), io_libecc_value_readonly | io_libecc_value_hidden | io_libecc_value_sealed);
+	io_libecc_Object.addMember(&self->object, io_libecc_key_ignoreCase, ECCNSValue.truth(self->ignoreCase), io_libecc_value_readonly | io_libecc_value_hidden | io_libecc_value_sealed);
+	io_libecc_Object.addMember(&self->object, io_libecc_key_multiline, ECCNSValue.truth(self->multiline), io_libecc_value_readonly | io_libecc_value_hidden | io_libecc_value_sealed);
+	io_libecc_Object.addMember(&self->object, io_libecc_key_lastIndex, ECCNSValue.integer(0), io_libecc_value_hidden | io_libecc_value_sealed);
 	
 	return self;
 }
 
-struct io_libecc_RegExp * createWith (struct eccstate_t *context, struct eccvalue_t pattern, struct eccvalue_t flags)
+struct io_libecc_RegExp * createWith (eccstate_t *context, eccvalue_t pattern, eccvalue_t flags)
 {
 	struct io_libecc_Error *error = NULL;
 	struct io_libecc_chars_Append chars;
 	struct io_libecc_RegExp *regexp;
-	struct eccvalue_t value;
+	eccvalue_t value;
 	
-	if (pattern.type == io_libecc_value_regexpType && flags.type == io_libecc_value_undefinedType)
+	if (pattern.type == ECC_VALTYPE_REGEXP && flags.type == ECC_VALTYPE_UNDEFINED)
 	{
 		if (context->construct)
-			value = io_libecc_Value.chars(pattern.data.regexp->pattern);
+			value = ECCNSValue.chars(pattern.data.regexp->pattern);
 		else
 			return pattern.data.regexp;
 	}
@@ -1344,11 +1344,11 @@ struct io_libecc_RegExp * createWith (struct eccstate_t *context, struct eccvalu
 		
 		io_libecc_Chars.append(&chars, "/");
 		
-		if (pattern.type == io_libecc_value_regexpType)
-			io_libecc_Chars.appendValue(&chars, context, io_libecc_Value.chars(pattern.data.regexp->source));
+		if (pattern.type == ECC_VALTYPE_REGEXP)
+			io_libecc_Chars.appendValue(&chars, context, ECCNSValue.chars(pattern.data.regexp->source));
 		else
 		{
-			if (pattern.type == io_libecc_value_undefinedType || (io_libecc_Value.isString(pattern) && !io_libecc_Value.stringLength(&pattern)))
+			if (pattern.type == ECC_VALTYPE_UNDEFINED || (ECCNSValue.isString(pattern) && !ECCNSValue.stringLength(&pattern)))
 			{
 				if (!context->ecc->sloppyMode)
 					io_libecc_Chars.append(&chars, "(?:)");
@@ -1359,23 +1359,23 @@ struct io_libecc_RegExp * createWith (struct eccstate_t *context, struct eccvalu
 		
 		io_libecc_Chars.append(&chars, "/");
 		
-		if (flags.type != io_libecc_value_undefinedType)
+		if (flags.type != ECC_VALTYPE_UNDEFINED)
 			io_libecc_Chars.appendValue(&chars, context, flags);
 		
 		value = io_libecc_Chars.endAppend(&chars);
-		if (value.type != io_libecc_value_charsType)
-			value = io_libecc_Value.chars(io_libecc_Chars.createWithBytes(io_libecc_Value.stringLength(&value), io_libecc_Value.stringBytes(&value)));
+		if (value.type != ECC_VALTYPE_CHARS)
+			value = ECCNSValue.chars(io_libecc_Chars.createWithBytes(ECCNSValue.stringLength(&value), ECCNSValue.stringBytes(&value)));
 	}
 	
-	assert(value.type == io_libecc_value_charsType);
+	assert(value.type == ECC_VALTYPE_CHARS);
 	regexp = create(value.data.chars, &error, context->ecc->sloppyMode? io_libecc_regexp_allowUnicodeFlags: 0);
 	if (error)
 	{
 		io_libecc_Context.setTextIndex(context, io_libecc_context_noIndex);
 		context->ecc->ofLine = 1;
-		context->ecc->ofText = io_libecc_Value.textOf(&value);
+		context->ecc->ofText = ECCNSValue.textOf(&value);
 		context->ecc->ofInput = "(io_libecc_RegExp)";
-		io_libecc_Context.throw(context, io_libecc_Value.error(error));
+		io_libecc_Context.throw(context, ECCNSValue.error(error));
 	}
 	return regexp;
 }
@@ -1384,7 +1384,7 @@ int matchWithState (struct io_libecc_RegExp *self, struct io_libecc_regexp_State
 {
 	int result = 0;
 	uint16_t index, count;
-	struct io_libecc_Text text = io_libecc_Text.make(state->start, (int32_t)(state->end - state->start));
+	ecctextstring_t text = io_libecc_Text.make(state->start, (int32_t)(state->end - state->start));
 	
 #if DUMP_REGEXP
 	struct io_libecc_regexp_Node *n = self->program;

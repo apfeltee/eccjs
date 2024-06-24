@@ -15,9 +15,9 @@
 static struct io_libecc_Input* createFromFile(const char* filename);
 static struct io_libecc_Input* createFromBytes(const char* bytes, uint32_t length, const char* name, ...);
 static void destroy(struct io_libecc_Input*);
-static void printText(struct io_libecc_Input*, struct io_libecc_Text text, int32_t ofLine, struct io_libecc_Text ofText, const char* ofInput, int fullLine);
-static int32_t findLine(struct io_libecc_Input*, struct io_libecc_Text text);
-static struct eccvalue_t attachValue(struct io_libecc_Input*, struct eccvalue_t value);
+static void printText(struct io_libecc_Input*, ecctextstring_t text, int32_t ofLine, ecctextstring_t ofText, const char* ofInput, int fullLine);
+static int32_t findLine(struct io_libecc_Input*, ecctextstring_t text);
+static eccvalue_t attachValue(struct io_libecc_Input*, eccvalue_t value);
 const struct type_io_libecc_Input io_libecc_Input = {
     createFromFile, createFromBytes, destroy, printText, findLine, attachValue,
 };
@@ -54,7 +54,7 @@ void printInput (const char *name, uint16_t line)
 
 struct io_libecc_Input * createFromFile (const char *filename)
 {
-	struct io_libecc_Text inputError = io_libecc_text_inputErrorName;
+	ecctextstring_t inputError = ECC_ConstString_InputErrorName;
 	FILE *file;
 	long size;
 	struct io_libecc_Input *self;
@@ -123,7 +123,7 @@ void destroy (struct io_libecc_Input *self)
 	free(self), self = NULL;
 }
 
-void printText (struct io_libecc_Input *self, struct io_libecc_Text text, int32_t ofLine, struct io_libecc_Text ofText, const char *ofInput, int fullLine)
+void printText (struct io_libecc_Input *self, ecctextstring_t text, int32_t ofLine, ecctextstring_t ofText, const char *ofInput, int fullLine)
 {
 	int32_t line = -1;
 	const char *bytes = NULL;
@@ -220,7 +220,7 @@ void printText (struct io_libecc_Input *self, struct io_libecc_Text text, int32_
 	io_libecc_Env.newline();
 }
 
-int32_t findLine (struct io_libecc_Input *self, struct io_libecc_Text text)
+int32_t findLine (struct io_libecc_Input *self, ecctextstring_t text)
 {
 	uint16_t line = self->lineCount + 1;
 	while (line--)
@@ -230,9 +230,9 @@ int32_t findLine (struct io_libecc_Input *self, struct io_libecc_Text text)
 	return -1;
 }
 
-struct eccvalue_t attachValue (struct io_libecc_Input *self, struct eccvalue_t value)
+eccvalue_t attachValue (struct io_libecc_Input *self, eccvalue_t value)
 {
-	if (value.type == io_libecc_value_charsType)
+	if (value.type == ECC_VALTYPE_CHARS)
 		value.data.chars->referenceCount++;
 	
 	self->attached = realloc(self->attached, sizeof(*self->attached) * (self->attachedCount + 1));

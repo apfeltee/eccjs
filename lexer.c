@@ -9,72 +9,69 @@
 
 
 // MARK: - Private
+#define eccmac_stringandlen(str) str, sizeof(str)-1
 
 static const struct {
-	const char *name;
-	size_t length;
-	enum io_libecc_lexer_Token token;
+ const char *name;
+ size_t length;
+ enum io_libecc_lexer_Token token;
 } keywords[] = {
-	#define _(X) { #X, sizeof(#X) - 1, io_libecc_lexer_##X##Token },
-	_(break)
-	_(case)
-	_(catch)
-	_(continue)
-	_(debugger)
-	_(default)
-	_(delete)
-	_(do)
-	_(else)
-	_(finally)
-	_(for)
-	_(function)
-	_(if)
-	_(in)
-	_(instanceof)
-	_(new)
-	_(return)
-	_(switch)
-	_(typeof)
-	_(throw)
-	_(try)
-	_(var)
-	_(void)
-	_(while)
-	_(with)
-	
-	_(void)
-	_(typeof)
-	
-	_(null)
-	_(true)
-	_(false)
-	_(this)
-	#undef _
+ { eccmac_stringandlen("break"), io_libecc_lexer_breakToken },
+ { eccmac_stringandlen("case"), io_libecc_lexer_caseToken },
+ { eccmac_stringandlen("catch"), io_libecc_lexer_catchToken },
+ { eccmac_stringandlen("continue"), io_libecc_lexer_continueToken },
+ { eccmac_stringandlen("debugger"), io_libecc_lexer_debuggerToken },
+ { eccmac_stringandlen("default"), io_libecc_lexer_defaultToken },
+ { eccmac_stringandlen("delete"), io_libecc_lexer_deleteToken },
+ { eccmac_stringandlen("do"), io_libecc_lexer_doToken },
+ { eccmac_stringandlen("else"), io_libecc_lexer_elseToken },
+ { eccmac_stringandlen("finally"), io_libecc_lexer_finallyToken },
+ { eccmac_stringandlen("for"), io_libecc_lexer_forToken },
+ { eccmac_stringandlen("function"), io_libecc_lexer_functionToken },
+ { eccmac_stringandlen("if"), io_libecc_lexer_ifToken },
+ { eccmac_stringandlen("in"), io_libecc_lexer_inToken },
+ { eccmac_stringandlen("instanceof"), io_libecc_lexer_instanceofToken },
+ { eccmac_stringandlen("new"), io_libecc_lexer_newToken },
+ { eccmac_stringandlen("return"), io_libecc_lexer_returnToken },
+ { eccmac_stringandlen("switch"), io_libecc_lexer_switchToken },
+ { eccmac_stringandlen("typeof"), io_libecc_lexer_typeofToken },
+ { eccmac_stringandlen("throw"), io_libecc_lexer_throwToken },
+ { eccmac_stringandlen("try"), io_libecc_lexer_tryToken },
+ { eccmac_stringandlen("var"), io_libecc_lexer_varToken },
+ { eccmac_stringandlen("void"), io_libecc_lexer_voidToken },
+ { eccmac_stringandlen("while"), io_libecc_lexer_whileToken },
+ { eccmac_stringandlen("with"), io_libecc_lexer_withToken },
+ { eccmac_stringandlen("void"), io_libecc_lexer_voidToken },
+ { eccmac_stringandlen("typeof"), io_libecc_lexer_typeofToken },
+ { eccmac_stringandlen("null"), io_libecc_lexer_nullToken },
+ { eccmac_stringandlen("true"), io_libecc_lexer_trueToken },
+ { eccmac_stringandlen("false"), io_libecc_lexer_falseToken },
+ { eccmac_stringandlen("this"), io_libecc_lexer_thisToken },
 };
 
+
 static const struct {
-	const char *name;
-	size_t length;
+ const char *name;
+ size_t length;
 } reservedKeywords[] = {
-	#define _(X) { #X, sizeof(#X) - 1 },
-	_(class)
-	_(enum)
-	_(extends)
-	_(super)
-	_(const)
-	_(export)
-	_(import)
-	_(implements)
-	_(let)
-	_(private)
-	_(public)
-	_(interface)
-	_(package)
-	_(protected)
-	_(static)
-	_(yield)
-	#undef _
+ { eccmac_stringandlen("class") },
+ { eccmac_stringandlen("enum") },
+ { eccmac_stringandlen("extends") },
+ { eccmac_stringandlen("super") },
+ { eccmac_stringandlen("const") },
+ { eccmac_stringandlen("export") },
+ { eccmac_stringandlen("import") },
+ { eccmac_stringandlen("implements") },
+ { eccmac_stringandlen("let") },
+ { eccmac_stringandlen("private") },
+ { eccmac_stringandlen("public") },
+ { eccmac_stringandlen("interface") },
+ { eccmac_stringandlen("package") },
+ { eccmac_stringandlen("protected") },
+ { eccmac_stringandlen("static") },
+ { eccmac_stringandlen("yield") },
 };
+
 
 // MARK: - Static Members
 
@@ -82,9 +79,9 @@ static struct io_libecc_Lexer* createWithInput(struct io_libecc_Input*);
 static void destroy(struct io_libecc_Lexer*);
 static enum io_libecc_lexer_Token nextToken(struct io_libecc_Lexer*);
 static const char* tokenChars(enum io_libecc_lexer_Token token, char buffer[4]);
-static struct eccvalue_t scanBinary(struct io_libecc_Text text, enum io_libecc_lexer_ScanFlags);
-static struct eccvalue_t scanInteger(struct io_libecc_Text text, int base, enum io_libecc_lexer_ScanFlags);
-static uint32_t scanElement(struct io_libecc_Text text);
+static eccvalue_t scanBinary(ecctextstring_t text, enum io_libecc_lexer_ScanFlags);
+static eccvalue_t scanInteger(ecctextstring_t text, int base, enum io_libecc_lexer_ScanFlags);
+static uint32_t scanElement(ecctextstring_t text);
 static uint8_t uint8Hex(char a, char b);
 static uint16_t uint16Hex(char a, char b, char c, char d);
 const struct type_io_libecc_Lexer io_libecc_Lexer = {
@@ -116,7 +113,7 @@ uint32_t nextChar(struct io_libecc_Lexer *self)
 {
 	if (self->offset < self->input->length)
 	{
-		struct io_libecc_text_Char c = io_libecc_Text.character(io_libecc_Text.make(self->input->bytes + self->offset, self->input->length - self->offset));
+		ecctextchar_t c = io_libecc_Text.character(io_libecc_Text.make(self->input->bytes + self->offset, self->input->length - self->offset));
 		
 		self->offset += c.units;
 		
@@ -161,7 +158,7 @@ static
 enum io_libecc_lexer_Token syntaxError(struct io_libecc_Lexer *self, struct io_libecc_Chars *message)
 {
 	struct io_libecc_Error *error = io_libecc_Error.syntaxError(self->text, message);
-	self->value = io_libecc_Value.error(error);
+	self->value = ECCNSValue.error(error);
 	return io_libecc_lexer_errorToken;
 }
 
@@ -191,7 +188,7 @@ enum io_libecc_lexer_Token nextToken (struct io_libecc_Lexer *self)
 	uint32_t c;
 	assert(self);
 	
-	self->value = io_libecc_value_undefined;
+	self->value = ECCValConstUndefined;
 	self->didLineBreak = 0;
 	
 	retry:
@@ -414,7 +411,7 @@ enum io_libecc_lexer_Token nextToken (struct io_libecc_Lexer *self)
 				{
 					self->value = scanInteger(self->text, 0, 0);
 					
-					if (self->value.type == io_libecc_value_integerType)
+					if (self->value.type == ECC_VALTYPE_INTEGER)
 						return io_libecc_lexer_integerToken;
 					else
 						return io_libecc_lexer_binaryToken;
@@ -543,7 +540,7 @@ enum io_libecc_lexer_Token nextToken (struct io_libecc_Lexer *self)
 			{
 				if ((c < 0x80 && isalpha(c)) || c == '$' || c == '_' || (self->allowUnicodeOutsideLiteral && (c == '\\' || c >= 0x80)))
 				{
-					struct io_libecc_Text text = self->text;
+					ecctextstring_t text = self->text;
 					int k, haveEscape = 0;
 					
 					do
@@ -566,7 +563,7 @@ enum io_libecc_lexer_Token nextToken (struct io_libecc_Lexer *self)
 								return syntaxError(self, io_libecc_Chars.create("incomplete unicode escape"));
 						}
 						
-						if (io_libecc_Text.isSpace((struct io_libecc_text_Char){ c }))
+						if (io_libecc_Text.isSpace((ecctextchar_t){ c }))
 							break;
 						
 						text = self->text;
@@ -579,9 +576,9 @@ enum io_libecc_lexer_Token nextToken (struct io_libecc_Lexer *self)
 					
 					if (haveEscape)
 					{
-						struct io_libecc_Text text = self->text;
+						ecctextstring_t text = self->text;
 						struct io_libecc_chars_Append chars;
-						struct eccvalue_t value;
+						eccvalue_t value;
 						
 						io_libecc_Chars.beginAppend(&chars);
 						
@@ -607,7 +604,7 @@ enum io_libecc_lexer_Token nextToken (struct io_libecc_Lexer *self)
 						}
 						
 						value = io_libecc_Input.attachValue(self->input, io_libecc_Chars.endAppend(&chars));
-						self->value = io_libecc_Value.key(io_libecc_Key.makeWithText(io_libecc_Value.textOf(&value), value.type != io_libecc_value_charsType));
+						self->value = ECCNSValue.key(io_libecc_Key.makeWithText(ECCNSValue.textOf(&value), value.type != ECC_VALTYPE_CHARS));
 						return io_libecc_lexer_identifierToken;
 					}
 					
@@ -622,7 +619,7 @@ enum io_libecc_lexer_Token nextToken (struct io_libecc_Lexer *self)
 								return syntaxError(self, io_libecc_Chars.create("'%s' is a reserved identifier", reservedKeywords[k]));
 					}
 					
-					self->value = io_libecc_Value.key(io_libecc_Key.makeWithText(self->text, 0));
+					self->value = ECCNSValue.key(io_libecc_Key.makeWithText(self->text, 0));
 					return io_libecc_lexer_identifierToken;
 				}
 				else
@@ -732,7 +729,7 @@ const char * tokenChars (enum io_libecc_lexer_Token token, char buffer[4])
 	return "unknow";
 }
 
-struct eccvalue_t scanBinary (struct io_libecc_Text text, enum io_libecc_lexer_ScanFlags flags)
+eccvalue_t scanBinary (ecctextstring_t text, enum io_libecc_lexer_ScanFlags flags)
 {
 	int lazy = flags & io_libecc_lexer_scanLazy;
 	char buffer[text.length + 1];
@@ -741,7 +738,7 @@ struct eccvalue_t scanBinary (struct io_libecc_Text text, enum io_libecc_lexer_S
 	
 	if (flags & io_libecc_lexer_scanSloppy)
 	{
-		struct io_libecc_Text tail = io_libecc_Text.make(text.bytes + text.length, text.length);
+		ecctextstring_t tail = io_libecc_Text.make(text.bytes + text.length, text.length);
 		
 		while (tail.length && io_libecc_Text.isSpace(io_libecc_Text.prevCharacter(&tail)))
 			text.length = tail.length;
@@ -759,12 +756,12 @@ struct eccvalue_t scanBinary (struct io_libecc_Text text, enum io_libecc_lexer_S
 	if (text.length)
 	{
 		if (lazy && text.length >= 2 && buffer[0] == '0' && buffer[1] == 'x')
-				return io_libecc_Value.binary(0);
+				return ECCNSValue.binary(0);
 		
-		if (text.length >= io_libecc_text_infinity.length && !memcmp(buffer, io_libecc_text_infinity.bytes, io_libecc_text_infinity.length))
-			binary = INFINITY, end += io_libecc_text_infinity.length;
-		else if (text.length >= io_libecc_text_negativeInfinity.length && !memcmp(buffer, io_libecc_text_negativeInfinity.bytes, io_libecc_text_negativeInfinity.length))
-			binary = -INFINITY, end += io_libecc_text_negativeInfinity.length;
+		if (text.length >= ECC_ConstString_Infinity.length && !memcmp(buffer, ECC_ConstString_Infinity.bytes, ECC_ConstString_Infinity.length))
+			binary = INFINITY, end += ECC_ConstString_Infinity.length;
+		else if (text.length >= ECC_ConstString_NegativeInfinity.length && !memcmp(buffer, ECC_ConstString_NegativeInfinity.bytes, ECC_ConstString_NegativeInfinity.length))
+			binary = -INFINITY, end += ECC_ConstString_NegativeInfinity.length;
 		else if (!isalpha(buffer[0]))
 			binary = strtod(buffer, &end);
 		
@@ -774,10 +771,10 @@ struct eccvalue_t scanBinary (struct io_libecc_Text text, enum io_libecc_lexer_S
 	else if (!lazy)
 		binary = 0;
 	
-	return io_libecc_Value.binary(binary);
+	return ECCNSValue.binary(binary);
 }
 
-static double strtolHexFallback (struct io_libecc_Text text)
+static double strtolHexFallback (ecctextstring_t text)
 {
 	double binary = 0;
 	int sign = 1;
@@ -809,7 +806,7 @@ static double strtolHexFallback (struct io_libecc_Text text)
 	return binary * sign;
 }
 
-struct eccvalue_t scanInteger (struct io_libecc_Text text, int base, enum io_libecc_lexer_ScanFlags flags)
+eccvalue_t scanInteger (ecctextstring_t text, int base, enum io_libecc_lexer_ScanFlags flags)
 {
 	int lazy = flags & io_libecc_lexer_scanLazy;
 	long integer;
@@ -818,7 +815,7 @@ struct eccvalue_t scanInteger (struct io_libecc_Text text, int base, enum io_lib
 	
 	if (flags & io_libecc_lexer_scanSloppy)
 	{
-		struct io_libecc_Text tail = io_libecc_Text.make(text.bytes + text.length, text.length);
+		ecctextstring_t tail = io_libecc_Text.make(text.bytes + text.length, text.length);
 		
 		while (tail.length && io_libecc_Text.isSpace(io_libecc_Text.prevCharacter(&tail)))
 			text.length = tail.length;
@@ -837,7 +834,7 @@ struct eccvalue_t scanInteger (struct io_libecc_Text text, int base, enum io_lib
 	integer = strtol(buffer, &end, base);
 	
 	if ((lazy && end == buffer) || (!lazy && *end && !isspace(*end)))
-		return io_libecc_Value.binary(NAN);
+		return ECCNSValue.binary(NAN);
 	else if (errno == ERANGE)
 	{
 		if (!base || base == 10 || base == 16)
@@ -846,21 +843,21 @@ struct eccvalue_t scanInteger (struct io_libecc_Text text, int base, enum io_lib
 			if (!binary && (!base || base == 16))
 				binary = strtolHexFallback(text);
 			
-			return io_libecc_Value.binary(binary);
+			return ECCNSValue.binary(binary);
 		}
 		
 		io_libecc_Env.printWarning("`parseInt('%.*s', %d)` out of bounds; only long int are supported by radices other than 10 or 16", text.length, text.bytes, base);
-		return io_libecc_Value.binary(NAN);
+		return ECCNSValue.binary(NAN);
 	}
 	else if (integer < INT32_MIN || integer > INT32_MAX)
-		return io_libecc_Value.binary(integer);
+		return ECCNSValue.binary(integer);
 	else
-		return io_libecc_Value.integer((int32_t)integer);
+		return ECCNSValue.integer((int32_t)integer);
 }
 
-uint32_t scanElement (struct io_libecc_Text text)
+uint32_t scanElement (ecctextstring_t text)
 {
-	struct eccvalue_t value;
+	eccvalue_t value;
 	uint16_t index;
 	
 	if (!text.length)
@@ -872,9 +869,9 @@ uint32_t scanElement (struct io_libecc_Text text)
 	
 	value = scanInteger(text, 0, 0);
 	
-	if (value.type == io_libecc_value_integerType)
+	if (value.type == ECC_VALTYPE_INTEGER)
 		return value.data.integer;
-	if (value.type == io_libecc_value_binaryType && value.data.binary >= 0 && value.data.binary < UINT32_MAX && value.data.binary == (uint32_t)value.data.binary)
+	if (value.type == ECC_VALTYPE_BINARY && value.data.binary >= 0 && value.data.binary < UINT32_MAX && value.data.binary == (uint32_t)value.data.binary)
 		return value.data.binary;
 	else
 		return UINT32_MAX;

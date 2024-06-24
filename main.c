@@ -13,8 +13,8 @@ static struct io_libecc_Ecc *ecc;
 static int runTest (int verbosity);
 static int alertUsage (void);
 
-static struct eccvalue_t alert (struct eccstate_t * const context);
-static struct eccvalue_t print (struct eccstate_t * const context);
+static eccvalue_t alert (eccstate_t * const context);
+static eccvalue_t print (eccstate_t * const context);
 
 int main (int argc, const char * argv[])
 {
@@ -35,8 +35,8 @@ int main (int argc, const char * argv[])
 		result = runTest(-1);
 	else
 	{
-		struct eccobject_t *arguments = io_libecc_Arguments.createWithCList(argc - 2, &argv[2]);
-		io_libecc_Ecc.addValue(ecc, "arguments", io_libecc_Value.object(arguments), 0);
+		eccobject_t *arguments = io_libecc_Arguments.createWithCList(argc - 2, &argv[2]);
+		io_libecc_Ecc.addValue(ecc, "arguments", ECCNSValue.object(arguments), 0);
 		result = io_libecc_Ecc.evalInput(ecc, io_libecc_Input.createFromFile(argv[1]), io_libecc_ecc_sloppyMode);
 	}
 	
@@ -57,10 +57,10 @@ static int alertUsage (void)
 
 //
 
-static struct eccvalue_t dumpTo (struct eccstate_t * const context, FILE *file, bool space, bool linefeed)
+static eccvalue_t dumpTo (eccstate_t * const context, FILE *file, bool space, bool linefeed)
 {
 	int index, count;
-	struct eccvalue_t value;
+	eccvalue_t value;
 	
 	for (index = 0, count = io_libecc_Context.argumentCount(context); index < count; ++index)
 	{
@@ -69,21 +69,21 @@ static struct eccvalue_t dumpTo (struct eccstate_t * const context, FILE *file, 
             //putc(' ', file);
 		}
 		value = io_libecc_Context.argument(context, index);
-		io_libecc_Value.dumpTo(io_libecc_Value.toString(context, value), file);
+		ECCNSValue.dumpTo(ECCNSValue.toString(context, value), file);
 	}
     if(linefeed)
     {
         //putc('\n', file);
 	}
-	return io_libecc_value_undefined;
+	return ECCValConstUndefined;
 }
 
-static struct eccvalue_t alert (struct eccstate_t * const context)
+static eccvalue_t alert (eccstate_t * const context)
 {
 	return dumpTo(context, stderr, true, true);
 }
 
-static struct eccvalue_t print (struct eccstate_t * const context)
+static eccvalue_t print (eccstate_t * const context)
 {
 	return dumpTo(context, stdout, false, false);
 }
@@ -111,9 +111,9 @@ static void test (const char *func, int line, const char *test, const char *expe
 	testTime += (double)(clock() - start) / CLOCKS_PER_SEC;
 	++testCount;
 	
-	assert(io_libecc_Value.isString(ecc->result));
-	bytes = io_libecc_Value.stringBytes(&ecc->result);
-	length = io_libecc_Value.stringLength(&ecc->result);
+	assert(ECCNSValue.isString(ecc->result));
+	bytes = ECCNSValue.stringBytes(&ecc->result);
+	length = ECCNSValue.stringLength(&ecc->result);
 	
 	if (length != strlen(expect) || memcmp(expect, bytes, length))
 	{
@@ -358,8 +358,8 @@ static void testEval (void)
 	,    "    ^~~~~~~~~       ");
 	test("new eval.apply('123')", "TypeError: 'eval.apply' is not a constructor"
 	,    "    ^~~~~~~~~~       ");
-	test("eval.call('123', 'this+456')", "[object io_libecc_Global]456", NULL);
-	test("var x = new io_libecc_String('1 + 1'); eval(x) == x", "true", NULL);
+	test("eval.call('123', 'this+456')", "[object Global]456", NULL);
+	test("var x = new String('1 + 1'); eval(x) == x", "true", NULL);
 	test("var a = 123; eval('a')", "123", NULL);
 	test("var a = 123; (1, eval)('a')", "123", NULL);
 }
@@ -387,7 +387,7 @@ static void testConvertion (void)
 	,    "                                                                ^       ");
 	test("var a = { toString: function () { return this } }, b = [1,2,a]; b.join.call(b)", "TypeError: cannot convert 'b' to primitive"
 	,    "                                                                            ^ ");
-	test("io_libecc_Array.prototype.concat.call(undefined, 123).toString()", "TypeError: cannot convert 'undefined' to object"
+	test("Array.prototype.concat.call(undefined, 123).toString()", "TypeError: cannot convert 'undefined' to object"
 	,    "                            ^~~~~~~~~                 ");
 	test("var b = []; b.call.join(b)", "TypeError: cannot convert 'b.call' to object"
 	,    "            ^~~~~~        ");
@@ -411,7 +411,7 @@ static void testException (void)
 	,    "       ^~~~~ ");
 	test("throw [123, 456]", "123,456"
 	,    "      ^~~~~~~~~~");
-	test("throw {123: 456}", "[object io_libecc_Object]"
+	test("throw {123: 456}", "[object Object]"
 	,    "      ^~~~~~~~~~");
 	test("try { throw 'a' } finally { 'b' }", "a"
 	,    "             ^                   ");
@@ -503,10 +503,10 @@ static void testEquality (void)
 	test("0 === NaN", "false", NULL);
 	test("'foo' === NaN", "false", NULL);
 	test("NaN === NaN", "false", NULL);
-	test("1 == new io_libecc_number_1", "true", NULL);
-	test("new io_libecc_number_1 == new io_libecc_number_1", "false", NULL);
-	test("'abc' == new io_libecc_String('abc')", "true", NULL);
-	test("new io_libecc_String('abc') == new io_libecc_String('abc')", "false", NULL);
+	test("1 == new Number(1)", "true", NULL);
+	test("new Number(1) == new Number(1)", "false", NULL);
+	test("'abc' == new String('abc')", "true", NULL);
+	test("new String('abc') == new String('abc')", "false", NULL);
 }
 
 static void testRelational (void)
@@ -529,7 +529,7 @@ static void testRelational (void)
 	test("var a = [ 'b', 'c' ]; '2' in a", "false", NULL);
 	test("function F(){}; var o = new F(); o instanceof F", "true", NULL);
 	test("function F(){}; function G(){}; var o = new F(); o instanceof G", "false", NULL);
-	test("function F(){}; var o = new F(); o instanceof io_libecc_Object", "true", NULL);
+	test("function F(){}; var o = new F(); o instanceof Object", "true", NULL);
 }
 
 static void testConditional (void)
@@ -539,9 +539,9 @@ static void testConditional (void)
 	test("var a = undefined, b; if (a) b = true; else b = false", "false", NULL);
 	test("var a = 1, b; if (a) b = true; else b = false", "true", NULL);
 	test("var b = 0, a = 10;do { ++b } while (a--); b;", "11", NULL);
-	test("var y = new io_libecc_boolean_true; typeof (true && y)", "object", NULL);
-	test("var y = new io_libecc_boolean_false; true && y", "false", NULL);
-	test("var y = new io_libecc_boolean_true; true && y", "true", NULL);
+	test("var y = new Boolean(true); typeof (true && y)", "object", NULL);
+	test("var y = new Boolean(false); true && y", "false", NULL);
+	test("var y = new Boolean(true); true && y", "true", NULL);
 }
 
 static void testSwitch (void)
@@ -552,7 +552,7 @@ static void testSwitch (void)
 	test("switch ('abc') { case 'abc': 123; break; case 2: 'abc'; }", "123", NULL);
 	test("switch (123) { default: case 1: 123; break; case 2: 'abc'; }", "123", NULL);
 	test("switch (123) { case 1: 123; break; default: case 2: 'abc'; }", "abc", NULL);
-	test("switch (123) { case 1: 123; break; case 2: 'abc'; break; default: ({}) }", "[object io_libecc_Object]", NULL);
+	test("switch (123) { case 1: 123; break; case 2: 'abc'; break; default: ({}) }", "[object Object]", NULL);
 	test("switch (123) { default: default: ; }", "SyntaxError: more than one switch default"
 	,    "                        ^~~~~~~     ");
 	test("switch (123) { abc: ; }", "SyntaxError: invalid switch statement"
@@ -565,7 +565,7 @@ static void testDelete (void)
 	,    "       ^");
 	test("var a = { b: 123, c: 'abc' }; a.b", "123", NULL);
 	test("var a = { b: 123, c: 'abc' }; delete a.b; a.b", "undefined", NULL);
-	test("delete io_libecc_Object.prototype", "TypeError: 'prototype' is non-configurable"
+	test("delete Object.prototype", "TypeError: 'prototype' is non-configurable"
 	,    "       ^~~~~~~~~~~~~~~~");
 }
 
@@ -619,38 +619,38 @@ static void testFunction (void)
 	test("var a = null; a.prototype", "TypeError: cannot convert 'a' to object"
 	,    "              ^          ");
 	test("function a() {} a.prototype.toString.length", "0", NULL);
-	test("function a() {} a.prototype.toString()", "[object io_libecc_Object]", NULL);
+	test("function a() {} a.prototype.toString()", "[object Object]", NULL);
 	test("function a() {} a.prototype.hasOwnProperty.length", "1", NULL);
 	test("function a() {} a.length", "0", NULL);
 	test("function a(b, c) {} a.length", "2", NULL);
 	test("function a(b, c) { b + c } a(1, 5)", "undefined", NULL);
 	test("function a(b, c) { return b + c } a(1, 5)", "6", NULL);
-	test("function a(b, c) { return arguments.toString() } a()", "[object io_libecc_Arguments]", NULL);
+	test("function a(b, c) { return arguments.toString() } a()", "[object Arguments]", NULL);
 	test("function a(b, c) { return arguments.length } a(1, 5, 6)", "3", NULL);
 	test("function a(b, c) { return arguments[0] + arguments[1] } a(1, 5)", "6", NULL);
 	test("var n = 456; function b(c) { return 'c' + c + n } b(123)", "c123456", NULL);
 	test("function a() { var n = 456; function b(c) { return 'c' + c + n } return b } a()(123)", "c123456", NULL);
-	test("var a = { a: function() { var n = this; function b(c) { return n + c + this } return b }}; a.a()(123)", "[object io_libecc_Object]123undefined", NULL);
+	test("var a = { a: function() { var n = this; function b(c) { return n + c + this } return b }}; a.a()(123)", "[object Object]123undefined", NULL);
 	test("typeof function(){}", "function", NULL);
 	test("function a(a, b){ return a + b } a.apply(null, 1, 2)", "TypeError: arguments is not an object"
 	,    "                                               ^    ");
 	test("function a(a, b){ return this + a + b } a.apply(10, [1, 2])", "13", NULL);
 	test("function a(a, b){ return this + a + b } a.call(10, 1, 2)", "13", NULL);
-	test("function a(){ return arguments }; a()", "[object io_libecc_Arguments]", NULL);
-	test("function a(){ return arguments }; a.call()", "[object io_libecc_Arguments]", NULL);
-	test("function a(){ return arguments }; a.apply()", "[object io_libecc_Arguments]", NULL);
-	test("typeof io_libecc_Function", "function", NULL);
-	test("io_libecc_Function.length", "1", NULL);
-	test("typeof io_libecc_Function.prototype", "function", NULL);
-	test("io_libecc_Function.prototype.length", "0", NULL);
-	test("io_libecc_Function.prototype(1, 2, 3)", "undefined", NULL);
-	test("typeof io_libecc_Function()", "function", NULL);
-	test("io_libecc_Function()()", "undefined", NULL);
-	test("io_libecc_Function('return 123')()", "123", NULL);
-	test("var a = 123; io_libecc_Function('return a')()", "123", NULL);
-	test("new io_libecc_Function('a', 'b', 'c', 'return a+b+c')(1, 2, 3)", "6", NULL);
-	test("new io_libecc_Function('a, b, c', 'return a+b+c')(1, 2, 3)", "6", NULL);
-	test("new io_libecc_Function('a,b', 'c', 'return a+b+c')(1, 2, 3)", "6", NULL);
+	test("function a(){ return arguments }; a()", "[object Arguments]", NULL);
+	test("function a(){ return arguments }; a.call()", "[object Arguments]", NULL);
+	test("function a(){ return arguments }; a.apply()", "[object Arguments]", NULL);
+	test("typeof Function", "function", NULL);
+	test("Function.length", "1", NULL);
+	test("typeof Function.prototype", "function", NULL);
+	test("Function.prototype.length", "0", NULL);
+	test("Function.prototype(1, 2, 3)", "undefined", NULL);
+	test("typeof Function()", "function", NULL);
+	test("Function()()", "undefined", NULL);
+	test("Function('return 123')()", "123", NULL);
+	test("var a = 123; Function('return a')()", "123", NULL);
+	test("new Function('a', 'b', 'c', 'return a+b+c')(1, 2, 3)", "6", NULL);
+	test("new Function('a, b, c', 'return a+b+c')(1, 2, 3)", "6", NULL);
+	test("new Function('a,b', 'c', 'return a+b+c')(1, 2, 3)", "6", NULL);
 	test("function a(){ var b = { c: 123 }; function d() { return b.c }; return d; } for (var i = 0; !i; ++i){ var b = a(); } b()", "123", NULL);
 	test("123 .toFixed.call.apply([ 123 ], [ 'abc', 100 ])", "TypeError: 'this' is not a function"
 	,    "                        ^~~~~~~                 ");
@@ -670,11 +670,11 @@ static void testFunction (void)
 	,    "                                          ^~~             ");
 	test("123 .toFixed.apply.apply(123 .toFixed, [ 456, [ 100 ] ])", "RangeError: precision '100' out of range"
 	,    "                                                ^~~     ");
-	test("var a = [123,'abc','def']; io_libecc_Object.defineProperty(a, 1, {get: function(){ return this[1]; },set: function(v){}}); a.shift()", "RangeError: maximum depth exceeded"
+	test("var a = [123,'abc','def']; Object.defineProperty(a, 1, {get: function(){ return this[1]; },set: function(v){}}); a.shift()", "RangeError: maximum depth exceeded"
 	,    "                                                                         ^~~~~~~~~~~~~~                                   ");
-	test("function F(){}; F.prototype = 123; new F", "[object io_libecc_Object]", NULL);
-	test("function F(){}; F.prototype = 123; var a = new F; a === io_libecc_Object.prototype", "false", NULL);
-	test("var p=io_libecc_Function(); function F(){}; F.prototype=p; var o = new F; typeof o.apply", "function", NULL);
+	test("function F(){}; F.prototype = 123; new F", "[object Object]", NULL);
+	test("function F(){}; F.prototype = 123; var a = new F; a === Object.prototype", "false", NULL);
+	test("var p=Function(); function F(){}; F.prototype=p; var o = new F; typeof o.apply", "function", NULL);
 	test("var f = function(){ return this }.bind(undefined); f()", "undefined", NULL);
 	test("var f = function(){ return this }.bind(null); f()", "null", NULL);
 	test("var f = function(){ return this }.bind(123); f()", "123", NULL);
@@ -730,10 +730,10 @@ static void testThis (void)
 
 static void testObject (void)
 {
-	test("io_libecc_Object", "function io_libecc_Object() [native code]", NULL);
-	test("io_libecc_Object.prototype.toString.call(io_libecc_Object.prototype)", "[object io_libecc_Object]", NULL);
-	test("io_libecc_Object.prototype.constructor", "function io_libecc_Object() [native code]", NULL);
-	test("io_libecc_Object.prototype", "[object io_libecc_Object]", NULL);
+	test("Object", "function Object() [native code]", NULL);
+	test("Object.prototype.toString.call(Object.prototype)", "[object Object]", NULL);
+	test("Object.prototype.constructor", "function Object() [native code]", NULL);
+	test("Object.prototype", "[object Object]", NULL);
 	test("var a = { a: 1, 'b': 2, '1': 3 }; a.a", "1", NULL);
 	test("var a = { a: 1, 'b': 2, '1': 3 }; a['a']", "1", NULL);
 	test("var a = { a: 1, 'b': 2, '1': 3 }; a['b']", "2", NULL);
@@ -743,65 +743,65 @@ static void testObject (void)
 	test("var a = { a: 1, 'b': 2, '1': 3 }, c = 1; a[c]", "3", NULL);
 	test("var a = { a: 1, 'b': 2, '1': 3 }; delete a['a']; a['a']", "undefined", NULL);
 	test("var a = { a: 1, 'b': 2, '1': 3 }; delete a['a']; a['a'] = 123; a['a']", "123", NULL);
-	test("var a = { a: 123 }; a.toString()", "[object io_libecc_Object]", NULL);
+	test("var a = { a: 123 }; a.toString()", "[object Object]", NULL);
 	test("var a = { a: 123 }; a.valueOf() === a", "true", NULL);
 	test("var a = { a: 123 }; a.hasOwnProperty('a')", "true", NULL);
 	test("var a = { a: 123 }; a.hasOwnProperty('toString')", "false", NULL);
 	test("var a = {}, b = {}; a.isPrototypeOf(123)", "false", NULL);
 	test("var a = {}, b = {}; a.isPrototypeOf(b)", "false", NULL);
-	test("var a = {}, b = {}; io_libecc_Object.getPrototypeOf(b).isPrototypeOf(a)", "true", NULL);
+	test("var a = {}, b = {}; Object.getPrototypeOf(b).isPrototypeOf(a)", "true", NULL);
 	test("var a = { a: 123 }; a.propertyIsEnumerable('a')", "true", NULL);
 	test("var a = {}; a.propertyIsEnumerable('toString')", "false", NULL);
-	test("var a = {}; io_libecc_Object.getPrototypeOf(a).propertyIsEnumerable('toString')", "false", NULL);
-	test("var a = {}, b = {}; io_libecc_Object.getPrototypeOf(a) === io_libecc_Object.getPrototypeOf(b)", "true", NULL);
-	test("var a = {}; io_libecc_Object.getPrototypeOf(io_libecc_Object.getPrototypeOf(a))", "undefined", NULL);
-	test("var a = { a: 123 }; io_libecc_Object.getOwnPropertyDescriptor(a, 'a').value", "123", NULL);
-	test("var a = { a: 123 }; io_libecc_Object.getOwnPropertyDescriptor(a, 'a').writable", "true", NULL);
-	test("io_libecc_Object.getOwnPropertyNames({ a:'!', 2:'@', 'b':'#'}).toString()", "2,a,b", NULL);
+	test("var a = {}; Object.getPrototypeOf(a).propertyIsEnumerable('toString')", "false", NULL);
+	test("var a = {}, b = {}; Object.getPrototypeOf(a) === Object.getPrototypeOf(b)", "true", NULL);
+	test("var a = {}; Object.getPrototypeOf(Object.getPrototypeOf(a))", "undefined", NULL);
+	test("var a = { a: 123 }; Object.getOwnPropertyDescriptor(a, 'a').value", "123", NULL);
+	test("var a = { a: 123 }; Object.getOwnPropertyDescriptor(a, 'a').writable", "true", NULL);
+	test("Object.getOwnPropertyNames({ a:'!', 2:'@', 'b':'#'}).toString()", "2,a,b", NULL);
 	test("var a = {}, o = ''; a['a'] = 'abc'; a['c'] = 123; a['b'] = undefined; for (var b in a) o += b + a[b]; o", "aabcc123bundefined", NULL);
 	test("var a = {}; a.null = 123; a.null", "123", NULL);
 	test("var a = {}; a.function = 123; a.function", "123", NULL);
-	test("typeof io_libecc_Object", "function", NULL);
-	test("typeof io_libecc_Object.prototype", "object", NULL);
-	test("io_libecc_Object.prototype.toString.call(true)", "[object io_libecc_Boolean]", NULL);
-	test("io_libecc_Object.prototype.toString.call('abc')", "[object io_libecc_String]", NULL);
-	test("io_libecc_Object.prototype.toString.call(123)", "[object io_libecc_Number]", NULL);
-	test("io_libecc_Object.prototype.toString.call(function(){})", "[object io_libecc_Function]", NULL);
-	test("var o = {}; io_libecc_Object.defineProperty(o, 'p', { get:undefined }); o.p", "undefined", NULL);
-	test("var o = {}; io_libecc_Object.defineProperty(o, 'p', { get:function(){ return 123 } }); o.p", "123", NULL);
-	test("var o = {}; io_libecc_Object.defineProperty(o, 'p', { get:function(){ return 123 } }); o.toString.call(io_libecc_Object.getOwnPropertyDescriptor(o, 'p').get)", "[object io_libecc_Function]", NULL);
+	test("typeof Object", "function", NULL);
+	test("typeof Object.prototype", "object", NULL);
+	test("Object.prototype.toString.call(true)", "[object Boolean]", NULL);
+	test("Object.prototype.toString.call('abc')", "[object String]", NULL);
+	test("Object.prototype.toString.call(123)", "[object Number]", NULL);
+	test("Object.prototype.toString.call(function(){})", "[object Function]", NULL);
+	test("var o = {}; Object.defineProperty(o, 'p', { get:undefined }); o.p", "undefined", NULL);
+	test("var o = {}; Object.defineProperty(o, 'p', { get:function(){ return 123 } }); o.p", "123", NULL);
+	test("var o = {}; Object.defineProperty(o, 'p', { get:function(){ return 123 } }); o.toString.call(Object.getOwnPropertyDescriptor(o, 'p').get)", "[object Function]", NULL);
 	test("var a = { b:1 }; ++a.b", "2", NULL);
 	test("var a = { b:1 }; ++a['b']", "2", NULL);
 	test("var a = {}; ++a.b", "NaN", NULL);
-	test("var o = {}; io_libecc_Object.defineProperty(o, 'a', { value: 123 }); var b = o.a; b += 123;", "246", NULL);
-	test("var o = { get p(){ return this._p }, set p(v){ this._p = v; } }; o.p = 123; io_libecc_String(o.p) + o._p", "123123", NULL);
-	test("var o = { get p(){ return this._p }, set p(v){ this._p = v; } }; io_libecc_Object.defineProperty(o, 'p', { value: 123 }); io_libecc_String(o.p) + o._p", "123undefined", NULL);
-	test("var p = {}, o; io_libecc_Object.defineProperty(p, 'p', { value:123 }); o = io_libecc_Object.create(p); o.p = 456", "TypeError: 'p' is readonly"
+	test("var o = {}; Object.defineProperty(o, 'a', { value: 123 }); var b = o.a; b += 123;", "246", NULL);
+	test("var o = { get p(){ return this._p }, set p(v){ this._p = v; } }; o.p = 123; String(o.p) + o._p", "123123", NULL);
+	test("var o = { get p(){ return this._p }, set p(v){ this._p = v; } }; Object.defineProperty(o, 'p', { value: 123 }); String(o.p) + o._p", "123undefined", NULL);
+	test("var p = {}, o; Object.defineProperty(p, 'p', { value:123 }); o = Object.create(p); o.p = 456", "TypeError: 'p' is readonly"
 	,    "                                                                                   ^~~~~~~~~");
-	test("var p = {}, o; io_libecc_Object.defineProperty(p, 'p', { value:123, writable: true }); o = io_libecc_Object.create(p); io_libecc_Object.seal(o); o.p = 456", "TypeError: object is not extensible"
+	test("var p = {}, o; Object.defineProperty(p, 'p', { value:123, writable: true }); o = Object.create(p); Object.seal(o); o.p = 456", "TypeError: object is not extensible"
 	,    "                                                                                                                   ^~~~~~~~~");
-	test("var a = ['#'], b = io_libecc_Object.create(a); b[0]", "#", NULL);
-	test("var a = ['#'], b = io_libecc_Object.create(a, { '0': {value:'!'} }); b[0]", "!", NULL);
-	test("var a = {}; io_libecc_Object.freeze(a); ++a.b", "TypeError: object is not extensible"
+	test("var a = ['#'], b = Object.create(a); b[0]", "#", NULL);
+	test("var a = ['#'], b = Object.create(a, { '0': {value:'!'} }); b[0]", "!", NULL);
+	test("var a = {}; Object.freeze(a); ++a.b", "TypeError: object is not extensible"
 	,    "                                ^~~");
-	test("var a = {}; io_libecc_Object.freeze(a); a.b += 2", "TypeError: object is not extensible"
+	test("var a = {}; Object.freeze(a); a.b += 2", "TypeError: object is not extensible"
 	,    "                              ^~~~~~~~");
-	test("var a = {}; io_libecc_Object.freeze(a); a.b = 2", "TypeError: object is not extensible"
+	test("var a = {}; Object.freeze(a); a.b = 2", "TypeError: object is not extensible"
 	,    "                              ^~~~~~~");
-	test("var a = {}; io_libecc_Object.freeze(a); a['b'] = 2", "TypeError: object is not extensible"
+	test("var a = {}; Object.freeze(a); a['b'] = 2", "TypeError: object is not extensible"
 	,    "                              ^~~~~~~~~~");
 	test("var a = { b:1 }; ++a.b", "2", NULL);
-	test("var a = { b:1 }; io_libecc_Object.freeze(a); ++a.b", "TypeError: 'b' is read-only"
+	test("var a = { b:1 }; Object.freeze(a); ++a.b", "TypeError: 'b' is read-only"
 	,    "                                   ^~~~~");
-	test("var a = { b:1 }; io_libecc_Object.freeze(a); a.b += 1", "TypeError: 'b' is read-only"
+	test("var a = { b:1 }; Object.freeze(a); a.b += 1", "TypeError: 'b' is read-only"
 	,    "                                   ^~~~~~~~");
-	test("var a = { b:1 }; io_libecc_Object.freeze(a); a.b -= 1", "TypeError: 'b' is read-only"
+	test("var a = { b:1 }; Object.freeze(a); a.b -= 1", "TypeError: 'b' is read-only"
 	,    "                                   ^~~~~~~~");
-	test("var a = { b:1 }; io_libecc_Object.freeze(a); a.b += 2", "TypeError: 'b' is read-only"
+	test("var a = { b:1 }; Object.freeze(a); a.b += 2", "TypeError: 'b' is read-only"
 	,    "                                   ^~~~~~~~");
-	test("var a = { b:1 }; io_libecc_Object.freeze(a); a.b = 2", "TypeError: 'b' is read-only"
+	test("var a = { b:1 }; Object.freeze(a); a.b = 2", "TypeError: 'b' is read-only"
 	,    "                                   ^~~~~~~");
-	test("var a = { b:1 }; io_libecc_Object.freeze(a); a['b'] = 2", "TypeError: 'b' is read-only"
+	test("var a = { b:1 }; Object.freeze(a); a['b'] = 2", "TypeError: 'b' is read-only"
 	,    "                                   ^~~~~~~~~~");
 	test("var a = { v: 1, get b() { return this.v }, set b(v) { this.v = v } }; ++a.b", "2", NULL);
 	test("var a = { v: 1, get b() { return this.v } }; ++a.b", "TypeError: 'b' is read-only"
@@ -812,65 +812,65 @@ static void testObject (void)
 	,    "                                             ^~~~~~~");
 	test("var a = { v: 1, get b() { return this.v } }; a['b'] = 2", "TypeError: 'b' is read-only"
 	,    "                                             ^~~~~~~~~~");
-	test("var o = {}; io_libecc_Object.defineProperty(o, 'a', 123); o.a = 1;", "TypeError: not an object"
+	test("var o = {}; Object.defineProperty(o, 'a', 123); o.a = 1;", "TypeError: not an object"
 	,    "                                          ^~~           ");
-	test("var o = {}; io_libecc_Object.defineProperty(o, 'a', {}); o.a = 1;", "TypeError: 'a' is read-only"
+	test("var o = {}; Object.defineProperty(o, 'a', {}); o.a = 1;", "TypeError: 'a' is read-only"
 	,    "                                               ^~~~~~~ ");
-	test("var o = {}; io_libecc_Object.defineProperty(o, 2, {}); o[2] = 1;", "TypeError: '2' is read-only"
+	test("var o = {}; Object.defineProperty(o, 2, {}); o[2] = 1;", "TypeError: '2' is read-only"
 	,    "                                             ^~~~~~~~ ");
-	test("var o = {}; io_libecc_Object.defineProperty(o, 'p', { get: 123 });", "TypeError: getter is not a function"
+	test("var o = {}; Object.defineProperty(o, 'p', { get: 123 });", "TypeError: getter is not a function"
 	,    "                                          ^~~~~~~~~~~~  ");
-	test("var o = {}; io_libecc_Object.defineProperty(o, 'p', { get: function(){}, value: 2 });", "TypeError: value & writable forbidden when a getter or setter are set"
+	test("var o = {}; Object.defineProperty(o, 'p', { get: function(){}, value: 2 });", "TypeError: value & writable forbidden when a getter or setter are set"
 	,    "                                          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  ");
-	test("var o = {}; io_libecc_Object.defineProperty(o, 2, { value: 123 }); io_libecc_Object.defineProperty(o, 2, { enumerable: true });", "TypeError: '2' is non-configurable"
+	test("var o = {}; Object.defineProperty(o, 2, { value: 123 }); Object.defineProperty(o, 2, { enumerable: true });", "TypeError: '2' is non-configurable"
 	,    "                                                                                  ^                        ");
-	test("var o = {}; io_libecc_Object.defineProperty(o, 'p', { set: function(){} }); io_libecc_Object.defineProperty(o, 'p', { value: 1 });", "TypeError: 'p' is non-configurable"
+	test("var o = {}; Object.defineProperty(o, 'p', { set: function(){} }); Object.defineProperty(o, 'p', { value: 1 });", "TypeError: 'p' is non-configurable"
 	,    "                                                                                            ^                 ");
-	test("var o = {}; io_libecc_Object.defineProperty(o, 'p', { set: function(){} }); io_libecc_Object.defineProperty(o, 'p', { get: function(){} });", "TypeError: 'p' is non-configurable"
+	test("var o = {}; Object.defineProperty(o, 'p', { set: function(){} }); Object.defineProperty(o, 'p', { get: function(){} });", "TypeError: 'p' is non-configurable"
 	,    "                                                                                            ^                 ");
-	test("var o = {}; io_libecc_Object.defineProperty(o, 'p', { set: function(){} }); io_libecc_Object.defineProperty(o, 'p', { set: function(){} });", "TypeError: 'p' is non-configurable"
+	test("var o = {}; Object.defineProperty(o, 'p', { set: function(){} }); Object.defineProperty(o, 'p', { set: function(){} });", "TypeError: 'p' is non-configurable"
 	,    "                                                                                            ^                          ");
-	test("var o = {}; io_libecc_Object.defineProperty(o, 'p', { value: 123, configurable: false, writable: false });io_libecc_Object.defineProperty(o, 'p', { value: 'abc' }); o", "TypeError: 'p' is non-configurable"
+	test("var o = {}; Object.defineProperty(o, 'p', { value: 123, configurable: false, writable: false });Object.defineProperty(o, 'p', { value: 'abc' }); o", "TypeError: 'p' is non-configurable"
 	,    "                                                                                                                          ^                       ");
-	test("var o = {}; io_libecc_Object.defineProperty(o, 'p', { value: 123, configurable: true, writable: false }); io_libecc_Object.defineProperty(o, 'p', { value: 'abc' }); o", "[object io_libecc_Object]", NULL);
-	test("var o = []; io_libecc_Object.defineProperties(o, { 1: { value: 123 }, 3: { value: '!' } }); o", ",123,,!", NULL);
-	test("var o = []; io_libecc_Object.defineProperties(o, 123); o", "", NULL);
-	test("var o = []; io_libecc_Object.defineProperties(o, null); o", "TypeError: cannot convert 'null' to object"
+	test("var o = {}; Object.defineProperty(o, 'p', { value: 123, configurable: true, writable: false }); Object.defineProperty(o, 'p', { value: 'abc' }); o", "[object Object]", NULL);
+	test("var o = []; Object.defineProperties(o, { 1: { value: 123 }, 3: { value: '!' } }); o", ",123,,!", NULL);
+	test("var o = []; Object.defineProperties(o, 123); o", "", NULL);
+	test("var o = []; Object.defineProperties(o, null); o", "TypeError: cannot convert 'null' to object"
 	,    "                                       ^~~~    ");
-	test("var o = []; io_libecc_Object.defineProperties(o); o", "TypeError: cannot convert undefined to object"
+	test("var o = []; Object.defineProperties(o); o", "TypeError: cannot convert undefined to object"
 	,    "                                     ^   ");
-	test("var o = []; io_libecc_Object.defineProperties(); o", "TypeError: not an object"
+	test("var o = []; Object.defineProperties(); o", "TypeError: not an object"
 	,    "                                    ^   ");
-	test("var o = []; io_libecc_Object.defineProperties(1); o", "TypeError: not an object"
+	test("var o = []; Object.defineProperties(1); o", "TypeError: not an object"
 	,    "                                    ^    ");
-	test("({}).toString.call(io_libecc_Object.getPrototypeOf('abc'))", "[object io_libecc_String]", NULL);
-	test("io_libecc_Object.getOwnPropertyDescriptor('abc', 'length').value", "3", NULL);
-	test("var a = { 1: 'def', length: 2 }; io_libecc_Object.defineProperty(a, 1, {get: function(){ return this.length; }}); [].pop.call(a)", "2", NULL);
-	test("var a = { length: 2 }; io_libecc_Object.defineProperty(a, 1, { value: 123 }); [].pop.call(a)", "TypeError: '1' is non-configurable"
+	test("({}).toString.call(Object.getPrototypeOf('abc'))", "[object String]", NULL);
+	test("Object.getOwnPropertyDescriptor('abc', 'length').value", "3", NULL);
+	test("var a = { 1: 'def', length: 2 }; Object.defineProperty(a, 1, {get: function(){ return this.length; }}); [].pop.call(a)", "2", NULL);
+	test("var a = { length: 2 }; Object.defineProperty(a, 1, { value: 123 }); [].pop.call(a)", "TypeError: '1' is non-configurable"
 	,    "                                                                    ^~~~~~~~~~~~~~");
-	test("var a = { length: 2, pop: io_libecc_Array.prototype.pop }; io_libecc_Object.defineProperty(a, 1, { value: 123 }); a.pop()", "TypeError: '1' is non-configurable"
+	test("var a = { length: 2, pop: Array.prototype.pop }; Object.defineProperty(a, 1, { value: 123 }); a.pop()", "TypeError: '1' is non-configurable"
 	,    "                                                                                              ^~~~~~~");
-	test("var a = [ 'abc', 'def' ]; io_libecc_Object.defineProperty(a, 1, {get: function(){ return this.length; }}); a.pop()", "2", NULL);
-	test("var a = []; io_libecc_Object.defineProperty(a, 2, {get: function(){}}); a.pop()", "TypeError: '2' is non-configurable"
+	test("var a = [ 'abc', 'def' ]; Object.defineProperty(a, 1, {get: function(){ return this.length; }}); a.pop()", "2", NULL);
+	test("var a = []; Object.defineProperty(a, 2, {get: function(){}}); a.pop()", "TypeError: '2' is non-configurable"
 	,    "                                                              ^~~~~~~");
 }
 
 static void testError (void)
 {
-	test("io_libecc_Error", "function io_libecc_Error() [native code]", NULL);
-	test("io_libecc_Object.prototype.toString.call(io_libecc_Error.prototype)", "[object io_libecc_Error]", NULL);
-	test("io_libecc_Error.prototype.constructor", "function io_libecc_Error() [native code]", NULL);
-	test("io_libecc_Error.prototype", "io_libecc_Error", NULL);
+	test("Error", "function Error() [native code]", NULL);
+	test("Object.prototype.toString.call(Error.prototype)", "[object Error]", NULL);
+	test("Error.prototype.constructor", "function Error() [native code]", NULL);
+	test("Error.prototype", "Error", NULL);
 	test("RangeError.prototype", "RangeError", NULL);
 	test("ReferenceError.prototype", "ReferenceError", NULL);
 	test("SyntaxError.prototype", "SyntaxError", NULL);
 	test("TypeError.prototype", "TypeError", NULL);
 	test("URIError.prototype", "URIError", NULL);
-	test("io_libecc_Error.prototype.name", "io_libecc_Error", NULL);
+	test("Error.prototype.name", "Error", NULL);
 	test("RangeError.prototype.name", "RangeError", NULL);
 	test("RangeError('test')", "RangeError: test", NULL);
-	test("io_libecc_Object.prototype.toString.call(RangeError())", "[object io_libecc_Error]", NULL);
-	test("var e = new io_libecc_Error(); io_libecc_Object.prototype.toString.call(e)", "[object io_libecc_Error]", NULL);
+	test("Object.prototype.toString.call(RangeError())", "[object Error]", NULL);
+	test("var e = new Error(); Object.prototype.toString.call(e)", "[object Error]", NULL);
 	test("function a(){ 123 .toFixed.call('abc', 100) }; a()", "TypeError: 'this' is not a number"
 	,    "                                 ^~~              ");
 	test("function a(){ 123 .toFixed.call(456, 100) }; a()", "RangeError: precision '100' out of range"
@@ -880,7 +880,7 @@ static void testError (void)
 	test("''.toString.call(123)", "TypeError: 'this' is not a string"
 	,    "                 ^~~ ");
 	test("function a(){}; a.toString = function(){ return 'abc'; }; var b = 123; a + b", "abc123", NULL);
-	test("function a(){}; a.toString = function(){ throw io_libecc_Error('test'); }; a", "io_libecc_Error: test"
+	test("function a(){}; a.toString = function(){ throw Error('test'); }; a", "Error: test"
 	,    "                                               ^~~~~~~~~~~~~      ");
 	test("function a(){}; a.toString = function(){ return {}; }; a", "TypeError: cannot convert 'a' to primitive"
 	,    "                                                       ^");
@@ -917,12 +917,12 @@ static void testAccessor (void)
 
 static void testArray (void)
 {
-	test("io_libecc_Array", "function io_libecc_Array() [native code]", NULL);
-	test("io_libecc_Object.prototype.toString.call(io_libecc_Array.prototype)", "[object io_libecc_Array]", NULL);
-	test("io_libecc_Array.prototype.constructor", "function io_libecc_Array() [native code]", NULL);
-	test("io_libecc_Array.prototype", "", NULL);
-	test("typeof io_libecc_Array", "function", NULL);
-	test("typeof io_libecc_Array.prototype", "object", NULL);
+	test("Array", "function Array() [native code]", NULL);
+	test("Object.prototype.toString.call(Array.prototype)", "[object Array]", NULL);
+	test("Array.prototype.constructor", "function Array() [native code]", NULL);
+	test("Array.prototype", "", NULL);
+	test("typeof Array", "function", NULL);
+	test("typeof Array.prototype", "object", NULL);
 	test("var a = [ 'a', 'b', 'c' ]; a['a'] = 123; a[1]", "b", NULL);
 	test("var a = [ 'a', 'b', 'c' ]; a['1'] = 123; a[1]", "123", NULL);
 	test("var a = [ 'a', 'b', 'c' ]; a['a'] = 123; a.a", "123", NULL);
@@ -935,12 +935,12 @@ static void testArray (void)
 	test("[1, , 3] + ''", "1,,3", NULL);
 	test("[1, , 3].toString()", "1,,3", NULL);
 	test("typeof []", "object", NULL);
-	test("io_libecc_Object.prototype.toString.call([])", "[object io_libecc_Array]", NULL);
-	test("io_libecc_Array.isArray([])", "true", NULL);
-	test("io_libecc_Array.isArray({})", "false", NULL);
-	test("io_libecc_Array.isArray(io_libecc_Array.prototype)", "true", NULL);
+	test("Object.prototype.toString.call([])", "[object Array]", NULL);
+	test("Array.isArray([])", "true", NULL);
+	test("Array.isArray({})", "false", NULL);
+	test("Array.isArray(Array.prototype)", "true", NULL);
 	test("var alpha = ['a', 'b', 'c'], numeric = [1, 2, 3]; alpha.concat(numeric).toString()", "a,b,c,1,2,3", NULL);
-	test("io_libecc_Array.prototype.concat.call(123, 'abc', [{}, 456]).toString()", "123,abc,[object io_libecc_Object],456", NULL);
+	test("Array.prototype.concat.call(123, 'abc', [{}, 456]).toString()", "123,abc,[object Object],456", NULL);
 	test("var a = [1, 2]; a.length", "2", NULL);
 	test("var a = [1, 2]; a.length = 5; a.length", "5", NULL);
 	test("var a = [1, 2]; a[5] = 5; a.length", "6", NULL);
@@ -953,59 +953,59 @@ static void testArray (void)
 	test("var a = [1, 2]; a.unshift(); a.toString()", "1,2", NULL);
 	test("var a = [1, 2]; a.unshift('abc', 345)", "4", NULL);
 	test("var a = [1, 2]; a.unshift('abc', 345); a", "abc,345,1,2", NULL);
-	test("var a = [123, 'abc', 'def']; io_libecc_Object.defineProperty(a, 1, {get: function(){ return this[2]; },set: function(v){}}); a.unshift(); a", "123,def,def", NULL);
+	test("var a = [123, 'abc', 'def']; Object.defineProperty(a, 1, {get: function(){ return this[2]; },set: function(v){}}); a.unshift(); a", "123,def,def", NULL);
 	test("var a = [1]; a.reverse(); a.toString()", "1", NULL);
 	test("var a = [1,2]; a.reverse(); a.toString()", "2,1", NULL);
 	test("var a = [1,2,'abc']; a.reverse(); a.toString()", "abc,2,1", NULL);
 	test("var a = [1, 2], b = ''; b += a.shift(); b += a.shift(); b += a.shift()", "12undefined", NULL);
-	test("var a = ['abc', 'def']; io_libecc_Object.defineProperty(a, 0, {get: function(){ return this[1]; }}); a.shift()", "TypeError: '0' is read-only"
+	test("var a = ['abc', 'def']; Object.defineProperty(a, 0, {get: function(){ return this[1]; }}); a.shift()", "TypeError: '0' is read-only"
 	,    "                                                                                           ^~~~~~~~~");
-	test("var a = [123, 'abc', 'def']; io_libecc_Object.defineProperty(a, 1, {get: function(){ return this[2]; },set: function(v){}}); a.shift()", "123", NULL);
-	test("var a = [123, 'abc', 'def']; io_libecc_Object.defineProperty(a, 1, {get: function(){ return this[2]; },set: function(v){}}); a.shift(); a", "def,", NULL);
-	test("var a = [123, 'abc', 'def']; io_libecc_Object.defineProperty(a, 1, {get: function(){ return this.length },set: function(v){}}); a.shift(); a.push(123, 456); a", "3,4,123,456", NULL);
+	test("var a = [123, 'abc', 'def']; Object.defineProperty(a, 1, {get: function(){ return this[2]; },set: function(v){}}); a.shift()", "123", NULL);
+	test("var a = [123, 'abc', 'def']; Object.defineProperty(a, 1, {get: function(){ return this[2]; },set: function(v){}}); a.shift(); a", "def,", NULL);
+	test("var a = [123, 'abc', 'def']; Object.defineProperty(a, 1, {get: function(){ return this.length },set: function(v){}}); a.shift(); a.push(123, 456); a", "3,4,123,456", NULL);
 	test("var a = [1, 2, 'abc', null, 456]; a.slice().toString()", "1,2,abc,,456", NULL);
 	test("var a = [1, 2, 'abc', null, 456]; a.slice(2).toString()", "abc,,456", NULL);
 	test("var a = [1, 2, 'abc', null, 456]; a.slice(2,4).toString()", "abc,", NULL);
 	test("var a = [1, 2, 'abc', null, 456]; a.slice(-2).toString()", ",456", NULL);
 	test("var a = [1, 2, 'abc', null, 456]; a.slice(-4,-2).toString()", "2,abc", NULL);
-	test("var a = [123, 'abc', 'def']; io_libecc_Object.defineProperty(a, 1, {get: function(){ return this[2]; },set: function(v){}}); a.slice(-2)", "def,def", NULL);
-	test("var a = io_libecc_Array(); a.length", "0", NULL);
-	test("var a = io_libecc_array_4; a.length", "4", NULL);
-	test("var a = io_libecc_Array(4.5); a.length", "RangeError: invalid array length"
+	test("var a = [123, 'abc', 'def']; Object.defineProperty(a, 1, {get: function(){ return this[2]; },set: function(v){}}); a.slice(-2)", "def,def", NULL);
+	test("var a = Array(); a.length", "0", NULL);
+	test("var a = Array(4); a.length", "4", NULL);
+	test("var a = Array(4.5); a.length", "RangeError: invalid array length"
 	,    "              ^~~           ");
-	test("var a = io_libecc_Array(-4); a.length", "RangeError: invalid array length"
+	test("var a = Array(-4); a.length", "RangeError: invalid array length"
 	,    "              ^~           ");
-	test("var a = io_libecc_Array('abc'); a.length", "1", NULL);
-	test("var a = io_libecc_Array(123, 'abc'); a.length", "2", NULL);
+	test("var a = Array('abc'); a.length", "1", NULL);
+	test("var a = Array(123, 'abc'); a.length", "2", NULL);
 	test("var a = [ 123 ]; function b(){ arguments[0] = 456; }; b.apply(null, a); a;", "123", NULL);
-	test("function b(){ return arguments; }; var a = b.call(null, 123); a;", "[object io_libecc_Arguments]", NULL);
-	test("var a = [ 'abc', 'def' ], r = ''; io_libecc_Object.defineProperty(a, 1, {get: function(){ return this[0]; }}); for (var p in a) r += p + a[p]; r", "0abc1abc", NULL);
-	test("var a = [ 'abc', 'def' ], r = ''; io_libecc_Object.defineProperty(a, 1, {get: function(){ return this[0]; }}); a.join('|')", "abc|abc", NULL);
-	test("var a = [ 'abc', 'def' ], r = ''; io_libecc_Object.defineProperty(a, 1, {get: function(){ return this[0]; }}); a + '^'", "abc,abc^", NULL);
-	test("var a = ['abc', 'def'], b = [123], r = ''; io_libecc_Object.defineProperty(a, 1, {get : function(){ return this[0]; }}); b.concat(a)", "123,abc,abc", NULL);
-	test("var a = [ 'abc', 'def' ]; io_libecc_Object.defineProperty(a, 1, {get: function(){ return this.length; }}); a.pop()", "2", NULL);
-	test("var a = []; io_libecc_Object.defineProperty(a, 2, {get: function(){}}); a.pop()", "TypeError: '2' is non-configurable"
+	test("function b(){ return arguments; }; var a = b.call(null, 123); a;", "[object Arguments]", NULL);
+	test("var a = [ 'abc', 'def' ], r = ''; Object.defineProperty(a, 1, {get: function(){ return this[0]; }}); for (var p in a) r += p + a[p]; r", "0abc1abc", NULL);
+	test("var a = [ 'abc', 'def' ], r = ''; Object.defineProperty(a, 1, {get: function(){ return this[0]; }}); a.join('|')", "abc|abc", NULL);
+	test("var a = [ 'abc', 'def' ], r = ''; Object.defineProperty(a, 1, {get: function(){ return this[0]; }}); a + '^'", "abc,abc^", NULL);
+	test("var a = ['abc', 'def'], b = [123], r = ''; Object.defineProperty(a, 1, {get : function(){ return this[0]; }}); b.concat(a)", "123,abc,abc", NULL);
+	test("var a = [ 'abc', 'def' ]; Object.defineProperty(a, 1, {get: function(){ return this.length; }}); a.pop()", "2", NULL);
+	test("var a = []; Object.defineProperty(a, 2, {get: function(){}}); a.pop()", "TypeError: '2' is non-configurable"
 	,    "                                                              ^~~~~~~");
-	test("var a = [ 'abc', 'def' ]; io_libecc_Object.defineProperty(a, 1, {get: function(){ return this.length; }}); a = a.reverse()", "TypeError: '1' is read-only"
+	test("var a = [ 'abc', 'def' ]; Object.defineProperty(a, 1, {get: function(){ return this.length; }}); a = a.reverse()", "TypeError: '1' is read-only"
 	,    "                                                                                                     ^~~~~~~~~~~");
-	test("var a = [ 'abc', 'def' ]; io_libecc_Object.defineProperty(a, 1, {get: function(){ return this.length; }, set: function(v){ }}); a.push(123); a[1]", "3", NULL);
-	test("var a = [ 'abc', 'def' ]; io_libecc_Object.defineProperty(a, 1, {get: function(){ return this.length; }, set: function(v){ }}); a = a.reverse(); a.push(123); a[0]", "2", NULL);
-	test("var a = [ 'abc', 'def' ]; io_libecc_Object.defineProperty(a, 0, {get: function(){ return this[1]; }, set: function(v){ }}); a = a.shift()", "def", NULL);
+	test("var a = [ 'abc', 'def' ]; Object.defineProperty(a, 1, {get: function(){ return this.length; }, set: function(v){ }}); a.push(123); a[1]", "3", NULL);
+	test("var a = [ 'abc', 'def' ]; Object.defineProperty(a, 1, {get: function(){ return this.length; }, set: function(v){ }}); a = a.reverse(); a.push(123); a[0]", "2", NULL);
+	test("var a = [ 'abc', 'def' ]; Object.defineProperty(a, 0, {get: function(){ return this[1]; }, set: function(v){ }}); a = a.shift()", "def", NULL);
 	test("var o = { toString: function(){ return ' world!' } }, a = [ 'hello', o ]; a", "hello, world!", NULL);
 	test("var a = [ 123, 456 ], a = [ 'hello', a ]; a.toString = function(){ return 'test' }; [ a ]", "test", NULL);
-	test("var o = [], c = 0, a = [o, o]; io_libecc_Object.defineProperty(o, '0', { get: function (){ return ++c } }); a", "1,2", NULL);
-	test("var o = {}, a = ['abc',123]; o[a] = 'test'; io_libecc_Object.getOwnPropertyNames(o)", "abc,123", NULL);
-	test("var a = [1,2,3,4]; io_libecc_Object.defineProperty(a, 'length', {value:2}); a", "1,2", NULL);
+	test("var o = [], c = 0, a = [o, o]; Object.defineProperty(o, '0', { get: function (){ return ++c } }); a", "1,2", NULL);
+	test("var o = {}, a = ['abc',123]; o[a] = 'test'; Object.getOwnPropertyNames(o)", "abc,123", NULL);
+	test("var a = [1,2,3,4]; Object.defineProperty(a, 'length', {value:2}); a", "1,2", NULL);
 	test("[].join.call({1:'@'})", "", NULL);
 	test("[].join.call({1:'@', length:2})", ",@", NULL);
 	test("[].join.call({1:'@', length:12})", ",@,,,,,,,,,,", NULL);
-	test("[].toString.call({1:'@'})", "[object io_libecc_Object]", NULL);
+	test("[].toString.call({1:'@'})", "[object Object]", NULL);
 	test("function f(){ return arguments.hasOwnProperty('length') }; f()", "true", NULL);
-	test("function f(){ return io_libecc_Object.getOwnPropertyDescriptor(arguments, 'length') }; f()", "[object io_libecc_Object]", NULL);
-	test("function f(){ return io_libecc_Object.getOwnPropertyDescriptor(arguments, 'callee') }; f()", "[object io_libecc_Object]", NULL);
-	test("function f(){ return io_libecc_Object.getOwnPropertyDescriptor(arguments, 'callee') }; f().get()", "TypeError: 'callee' cannot be accessed in this context"
+	test("function f(){ return Object.getOwnPropertyDescriptor(arguments, 'length') }; f()", "[object Object]", NULL);
+	test("function f(){ return Object.getOwnPropertyDescriptor(arguments, 'callee') }; f()", "[object Object]", NULL);
+	test("function f(){ return Object.getOwnPropertyDescriptor(arguments, 'callee') }; f().get()", "TypeError: 'callee' cannot be accessed in this context"
 	,    "                                                                             ^~~~~~~~~");
-	test("function f(){ return io_libecc_Object.getOwnPropertyNames(arguments) }; f()", "length,callee", NULL);
+	test("function f(){ return Object.getOwnPropertyNames(arguments) }; f()", "length,callee", NULL);
 	test("function f(){ return arguments.callee }; f()", "TypeError: 'callee' cannot be accessed in this context"
 	,    "                     ^~~~~~~~~~~~~~~~       ");
 	test("var a=[]; a.sort(123)", "TypeError: comparison function must be a function or undefined"
@@ -1019,51 +1019,51 @@ static void testArray (void)
 	test("function f(x,y){return arguments[0]<y?-1: x>arguments[1]?+1: 0};var a=['araignée',,,,'zèbre'];a.sort(f)", "araignée,zèbre,,,", NULL);
 	test("function f(x){return x<arguments[1]?-1: x>arguments[1]?+1: 0};var a=['araignée',,,,'zèbre'];a.sort(f)", "araignée,zèbre,,,", NULL);
 	test("function f(){return arguments[0]<arguments[1]?-1: arguments[0]>arguments[1]?+1: 0};var a=['araignée',,,,'zèbre'];a.sort(f)", "araignée,zèbre,,,", NULL);
-	test("var a = [], b = ''; a[34] = 34; io_libecc_Object.defineProperty(a, 12, {value: 12}); for (var i in a) b += i", "34", NULL);
+	test("var a = [], b = ''; a[34] = 34; Object.defineProperty(a, 12, {value: 12}); for (var i in a) b += i", "34", NULL);
 }
 
 static void testBoolean (void)
 {
-	test("io_libecc_Boolean", "function io_libecc_Boolean() [native code]", NULL);
-	test("io_libecc_Object.prototype.toString.call(io_libecc_Boolean.prototype)", "[object io_libecc_Boolean]", NULL);
-	test("io_libecc_Boolean.prototype.constructor", "function io_libecc_Boolean() [native code]", NULL);
-	test("io_libecc_Boolean.prototype", "false", NULL);
-	test("var b = new io_libecc_Boolean('a'); b.valueOf() === true", "true", NULL);
-	test("var b = io_libecc_Boolean('a'); b.valueOf() === true", "true", NULL);
-	test("var b = new io_libecc_boolean_0; b.toString()", "false", NULL);
-	test("var b = io_libecc_Boolean(); b.toString()", "false", NULL);
-	test("if (new io_libecc_boolean_false) 1; else 2;", "1", NULL);
-	test("io_libecc_Boolean.prototype.toString.call(123)", "TypeError: 'this' is not a boolean"
+	test("Boolean", "function Boolean() [native code]", NULL);
+	test("Object.prototype.toString.call(Boolean.prototype)", "[object Boolean]", NULL);
+	test("Boolean.prototype.constructor", "function Boolean() [native code]", NULL);
+	test("Boolean.prototype", "false", NULL);
+	test("var b = new Boolean('a'); b.valueOf() === true", "true", NULL);
+	test("var b = Boolean('a'); b.valueOf() === true", "true", NULL);
+	test("var b = new Boolean(0); b.toString()", "false", NULL);
+	test("var b = Boolean(); b.toString()", "false", NULL);
+	test("if (new Boolean(false)) 1; else 2;", "1", NULL);
+	test("Boolean.prototype.toString.call(123)", "TypeError: 'this' is not a boolean"
 	,    "                                ^~~ ");
-	test("io_libecc_Boolean.prototype.toString.call(false)", "false", NULL);
-	test("io_libecc_Boolean.prototype.toString.call(new io_libecc_boolean_0)", "false", NULL);
-	test("io_libecc_Boolean.prototype.toString.call(new io_libecc_boolean_true)", "true", NULL);
-	test("io_libecc_Boolean.prototype.toString(true)", "false", NULL);
+	test("Boolean.prototype.toString.call(false)", "false", NULL);
+	test("Boolean.prototype.toString.call(new Boolean(0))", "false", NULL);
+	test("Boolean.prototype.toString.call(new Boolean(true))", "true", NULL);
+	test("Boolean.prototype.toString(true)", "false", NULL);
 }
 
 static void testNumber (void)
 {
-	test("io_libecc_Number", "function io_libecc_Number() [native code]", NULL);
-	test("io_libecc_Object.prototype.toString.call(io_libecc_Number.prototype)", "[object io_libecc_Number]", NULL);
-	test("io_libecc_Number.prototype.constructor", "function io_libecc_Number() [native code]", NULL);
-	test("io_libecc_Number.prototype", "0", NULL);
-	test("io_libecc_Number.toString", "function toString() [native code]", NULL);
-	test("io_libecc_Number.toString()", "function io_libecc_Number() [native code]", NULL);
-	test("io_libecc_Number.toString.call(null)", "TypeError: 'this' is not a function"
+	test("Number", "function Number() [native code]", NULL);
+	test("Object.prototype.toString.call(Number.prototype)", "[object Number]", NULL);
+	test("Number.prototype.constructor", "function Number() [native code]", NULL);
+	test("Number.prototype", "0", NULL);
+	test("Number.toString", "function toString() [native code]", NULL);
+	test("Number.toString()", "function Number() [native code]", NULL);
+	test("Number.toString.call(null)", "TypeError: 'this' is not a function"
 	,    "                     ^~~~ ");
 	test("0xf", "15", NULL);
 	test("0xff", "255", NULL);
 	test("0xffff", "65535", NULL);
 	test("0xffffffff", "4294967295", NULL);
-	test("io_libecc_string_0xffffffffffffffff.slice(0, -4)", "1844674407370955", NULL);
-	test("io_libecc_string_0x3635c9adc5de9e0000.slice(0, -6)", "999999999999999", NULL);
+	test("String(0xffffffffffffffff).slice(0, -4)", "1844674407370955", NULL);
+	test("String(0x3635c9adc5de9e0000).slice(0, -6)", "999999999999999", NULL);
 	test("0x3635c9adc5de9f0000", "1e+21", NULL);
 	test("-0xf", "-15", NULL);
 	test("-0xff", "-255", NULL);
 	test("-0xffff", "-65535", NULL);
 	test("-0xffffffff", "-4294967295", NULL);
-	test("io_libecc_String(-0xffffffffffffffff).slice(0, -4)", "-1844674407370955", NULL);
-	test("io_libecc_String(-0x3635c9adc5de9e0000).slice(0, -6)", "-999999999999999", NULL);
+	test("String(-0xffffffffffffffff).slice(0, -4)", "-1844674407370955", NULL);
+	test("String(-0x3635c9adc5de9e0000).slice(0, -6)", "-999999999999999", NULL);
 	test("-0x3635c9adc5de9f0000", "-1e+21", NULL);
 	test("0x7fffffff | 0", "2147483647", NULL);
 	test("0xffffffff | 0", "-1", NULL);
@@ -1089,8 +1089,8 @@ static void testNumber (void)
 	test("(-2147483647).toString(2)", "-1111111111111111111111111111111", NULL);
 	test("2147483647..toString(8)", "17777777777", NULL);
 	test("(-2147483647).toString(8)", "-17777777777", NULL);
-	test("io_libecc_Number.MAX_VALUE.toString(10)", "1.79769e+308", NULL);
-	test("io_libecc_Number.MIN_VALUE.toString(10)", "4.94065645841247e-324", NULL);
+	test("Number.MAX_VALUE.toString(10)", "1.79769e+308", NULL);
+	test("Number.MIN_VALUE.toString(10)", "4.94065645841247e-324", NULL);
 	test("(2147483647).toString(16)", "7fffffff", NULL);
 	test("(-2147483647).toString(16)", "-7fffffff", NULL);
 	test("-2147483647..toString(16)", "NaN", NULL);
@@ -1102,129 +1102,129 @@ static void testNumber (void)
 	test("123.456.toExponential(10)", "1.2345600000e+2", NULL);
 	test("123.456.toFixed(10)", "123.4560000000", NULL);
 	test("123.456.toPrecision(10)", "123.456", NULL);
-	test("io_libecc_Math.round(2147483647.4)", "2147483647", NULL);
-	test("io_libecc_Math.round(-2147483647.5)", "-2147483647", NULL);
-	test("io_libecc_Math.round(2147483647.5)", "2147483648", NULL);
-	test("io_libecc_Math.round(-2147483647.6)", "-2147483648", NULL);
-	test("var orig = io_libecc_Number.prototype.toString; io_libecc_Number.prototype.toString = function(){ return this + 'abc' }; var r = 123..toString(); io_libecc_Number.prototype.toString = orig; r", "123abc", NULL);
-	test("io_libecc_Number()", "0", NULL);
-	test("io_libecc_number_undefined", "NaN", NULL);
-	test("io_libecc_Math.pow(-1, Infinity)", "NaN", NULL);
+	test("Math.round(2147483647.4)", "2147483647", NULL);
+	test("Math.round(-2147483647.5)", "-2147483647", NULL);
+	test("Math.round(2147483647.5)", "2147483648", NULL);
+	test("Math.round(-2147483647.6)", "-2147483648", NULL);
+	test("var orig = Number.prototype.toString; Number.prototype.toString = function(){ return this + 'abc' }; var r = 123..toString(); Number.prototype.toString = orig; r", "123abc", NULL);
+	test("Number()", "0", NULL);
+	test("Number(undefined)", "NaN", NULL);
+	test("Math.pow(-1, Infinity)", "NaN", NULL);
 }
 
 static void testDate (void)
 {
-	test("io_libecc_Date", "function io_libecc_Date() [native code]", NULL);
-	test("io_libecc_Object.prototype.toString.call(io_libecc_Date.prototype)", "[object io_libecc_Date]", NULL);
-	test("io_libecc_Date.prototype.constructor", "function io_libecc_Date() [native code]", NULL);
-	test("io_libecc_Date.prototype", "Invalid io_libecc_Date", NULL);
+	test("Date", "function Date() [native code]", NULL);
+	test("Object.prototype.toString.call(Date.prototype)", "[object Date]", NULL);
+	test("Date.prototype.constructor", "function Date() [native code]", NULL);
+	test("Date.prototype", "Invalid Date", NULL);
 	test("(new Date(0)).toISOString()", "1970-01-01T00:00:00.000Z", NULL);
 	test("(new Date(951782400000)).toISOString()", "2000-02-29T00:00:00.000Z", NULL);
 	test("(new Date(951868800000)).toISOString()", "2000-03-01T00:00:00.000Z", NULL);
 	test("(new Date(8640000000000000)).toISOString()", "+275760-09-13T00:00:00.000Z", NULL);
 	test("(new Date(-8640000000000000)).toISOString()", "-271821-04-20T00:00:00.000Z", NULL);
-	test("var x = new io_libecc_date_0; x.valueOf() == io_libecc_Date.parse(x.toString())", "true", NULL);
-	test("var x = new io_libecc_date_0; x.valueOf() == io_libecc_Date.parse(x.toUTCString())", "true", NULL);
-	test("var x = new io_libecc_date_0; x.valueOf() == io_libecc_Date.parse(x.toISOString())", "true", NULL);
-	test("var x = new io_libecc_date_951782400000; x.valueOf() == io_libecc_Date.parse(x.toString())", "true", NULL);
-	test("var x = new io_libecc_date_951868800000; x.valueOf() == io_libecc_Date.parse(x.toUTCString())", "true", NULL);
-	test("var x = new io_libecc_date_8640000000000000; x.valueOf() == io_libecc_Date.parse(x.toISOString())", "true", NULL);
-	test("new io_libecc_Date('1970-01-01').toISOString()", "1970-01-01T00:00:00.000Z", NULL);
-	test("new io_libecc_Date('1970/01/01 12:34:56 +0900').toISOString()", "1970-01-01T03:34:56.000Z", NULL);
-	test("new io_libecc_Date(1984, 07, 31, 01, 23, 45, 678).valueOf() - new io_libecc_Date().getTimezoneOffset() * 60000", "462763425678", NULL);
-	test("io_libecc_Date.UTC(70, 00, 01)", "0", NULL);
-	test("io_libecc_Date.UTC(70, 01, 01)", "2678400000", NULL);
-	test("io_libecc_Date.UTC(1984, 07, 31, 01, 23, 45, 678)", "462763425678", NULL);
-	test("(io_libecc_Date.parse('1984/08/31') - io_libecc_Date.parse('1984-08-31')) / 60000 == new io_libecc_Date().getTimezoneOffset()", "true", NULL);
-	test("var date = new io_libecc_Date('1995/12/25 00:00:00'); date.getFullYear()", "1995", NULL);
-	test("var date = new io_libecc_Date('1995/12/25 00:00:00'); date.getMonth()", "11", NULL);
-	test("var date = new io_libecc_Date('1995/12/25 23:59:00'); date.getDate()", "25", NULL);
-	test("var date = new io_libecc_Date('1995/12/25 00:00:00'); date.getDate()", "25", NULL);
-	test("var date = new io_libecc_Date('1995/12/25 23:59:00'); date.getDay()", "1", NULL);
-	test("var date = new io_libecc_Date('1995/12/24 00:00:00'); date.getDay()", "0", NULL);
-	test("var date = new io_libecc_Date('1995/12/23 23:59:00'); date.getDay()", "6", NULL);
-	test("var date = new io_libecc_Date('1995-12-25T12:34:56.789Z'); date.getMilliseconds()", "789", NULL);
-	test("var date = new io_libecc_Date('1995-12-25T00:00:00Z'); date.getUTCFullYear()", "1995", NULL);
-	test("var date = new io_libecc_Date('1995-12-25T00:00:00Z'); date.getUTCMonth()", "11", NULL);
-	test("var date = new io_libecc_Date('1995-12-25T23:59:00Z'); date.getUTCDate()", "25", NULL);
-	test("var date = new io_libecc_Date('1995-12-25T00:00:00Z'); date.getUTCDate()", "25", NULL);
-	test("var date = new io_libecc_Date('1995-12-25T23:59:00Z'); date.getUTCDay()", "1", NULL);
-	test("var date = new io_libecc_Date('1995-12-24T00:00:00Z'); date.getUTCDay()", "0", NULL);
-	test("var date = new io_libecc_Date('1995-12-23T23:59:00Z'); date.getUTCDay()", "6", NULL);
-	test("var date = new io_libecc_Date('1995-12-25T12:34:56.789Z'); date.getUTCMilliseconds()", "789", NULL);
-	test("var date = new io_libecc_Date('1995-12-25T12:34:56.789Z'); date.setUTCMilliseconds(11)", "819894896011", NULL);
-	test("var date = new io_libecc_Date('1995-12-25T12:34:56.789Z'); date.setUTCSeconds(11)", "819894851789", NULL);
-	test("var date = new io_libecc_Date('1995-12-25T12:34:56.789Z'); date.setUTCSeconds(11, 22)", "819894851022", NULL);
-	test("var date = new io_libecc_Date('1995-12-25T12:34:56.789Z'); date.setUTCMinutes(11)", "819893516789", NULL);
-	test("var date = new io_libecc_Date('1995-12-25T12:34:56.789Z'); date.setUTCMinutes(11, 22)", "819893482789", NULL);
-	test("var date = new io_libecc_Date('1995-12-25T12:34:56.789Z'); date.setUTCMinutes(11, 22, 33)", "819893482033", NULL);
-	test("var date = new io_libecc_Date('1995-12-25T12:34:56.789Z'); date.setUTCHours(11)", "819891296789", NULL);
-	test("var date = new io_libecc_Date('1995-12-25T12:34:56.789Z'); date.setUTCHours(11, 22)", "819890576789", NULL);
-	test("var date = new io_libecc_Date('1995-12-25T12:34:56.789Z'); date.setUTCHours(11, 22, 33)", "819890553789", NULL);
-	test("var date = new io_libecc_Date('1995-12-25T12:34:56.789Z'); date.setUTCHours(11, 22, 33, 444)", "819890553444", NULL);
-	test("var date = new io_libecc_Date('1995-12-25T12:34:56.789Z'); date.setUTCDate(11)", "818685296789", NULL);
-	test("var date = new io_libecc_Date('1995-12-25T12:34:56.789Z'); date.setUTCMonth(11)", "819894896789", NULL);
-	test("var date = new io_libecc_Date('1995-12-25T12:34:56.789Z'); date.setUTCMonth(11, 22)", "819635696789", NULL);
-	test("var date = new io_libecc_Date('1995-12-25T12:34:56.789Z'); date.setUTCFullYear(1)", "-62104620303211", NULL);
-	test("var date = new io_libecc_Date('1995-12-25T12:34:56.789Z'); date.setUTCFullYear(1, 2)", "-62128380303211", NULL);
-	test("var date = new io_libecc_Date('1995-12-25T12:34:56.789Z'); date.setUTCFullYear(1, 2, 3)", "-62130281103211", NULL);
-	test("var date = new io_libecc_date_NaN; date.setUTCFullYear(1, 2, 3)", "-62130326400000", NULL);
-	test("var date = new io_libecc_Date('1995-12-25T12:34:56.789Z'); date.setUTCMilliseconds()", "NaN", NULL);
-	test("var date = new io_libecc_Date('1995-12-25T12:34:56.789Z'); date.setUTCSeconds()", "NaN", NULL);
-	test("var date = new io_libecc_Date('1995-12-25T12:34:56.789Z'); date.setUTCFullYear()", "NaN", NULL);
-	test("var date = new io_libecc_Date('1995-12-25T12:34:56.789Z'); date.toISOString()", "1995-12-25T12:34:56.789Z", NULL);
-	test("var date = new io_libecc_Date(); date.toISOString = undefined; date.toJSON()", "TypeError: toISOString is not a function"
+	test("var x = new Date(0); x.valueOf() == Date.parse(x.toString())", "true", NULL);
+	test("var x = new Date(0); x.valueOf() == Date.parse(x.toUTCString())", "true", NULL);
+	test("var x = new Date(0); x.valueOf() == Date.parse(x.toISOString())", "true", NULL);
+	test("var x = new Date(951782400000); x.valueOf() == Date.parse(x.toString())", "true", NULL);
+	test("var x = new Date(951868800000); x.valueOf() == Date.parse(x.toUTCString())", "true", NULL);
+	test("var x = new Date(8640000000000000); x.valueOf() == Date.parse(x.toISOString())", "true", NULL);
+	test("new Date('1970-01-01').toISOString()", "1970-01-01T00:00:00.000Z", NULL);
+	test("new Date('1970/01/01 12:34:56 +0900').toISOString()", "1970-01-01T03:34:56.000Z", NULL);
+	test("new Date(1984, 07, 31, 01, 23, 45, 678).valueOf() - new Date().getTimezoneOffset() * 60000", "462763425678", NULL);
+	test("Date.UTC(70, 00, 01)", "0", NULL);
+	test("Date.UTC(70, 01, 01)", "2678400000", NULL);
+	test("Date.UTC(1984, 07, 31, 01, 23, 45, 678)", "462763425678", NULL);
+	test("(Date.parse('1984/08/31') - Date.parse('1984-08-31')) / 60000 == new Date().getTimezoneOffset()", "true", NULL);
+	test("var date = new Date('1995/12/25 00:00:00'); date.getFullYear()", "1995", NULL);
+	test("var date = new Date('1995/12/25 00:00:00'); date.getMonth()", "11", NULL);
+	test("var date = new Date('1995/12/25 23:59:00'); date.getDate()", "25", NULL);
+	test("var date = new Date('1995/12/25 00:00:00'); date.getDate()", "25", NULL);
+	test("var date = new Date('1995/12/25 23:59:00'); date.getDay()", "1", NULL);
+	test("var date = new Date('1995/12/24 00:00:00'); date.getDay()", "0", NULL);
+	test("var date = new Date('1995/12/23 23:59:00'); date.getDay()", "6", NULL);
+	test("var date = new Date('1995-12-25T12:34:56.789Z'); date.getMilliseconds()", "789", NULL);
+	test("var date = new Date('1995-12-25T00:00:00Z'); date.getUTCFullYear()", "1995", NULL);
+	test("var date = new Date('1995-12-25T00:00:00Z'); date.getUTCMonth()", "11", NULL);
+	test("var date = new Date('1995-12-25T23:59:00Z'); date.getUTCDate()", "25", NULL);
+	test("var date = new Date('1995-12-25T00:00:00Z'); date.getUTCDate()", "25", NULL);
+	test("var date = new Date('1995-12-25T23:59:00Z'); date.getUTCDay()", "1", NULL);
+	test("var date = new Date('1995-12-24T00:00:00Z'); date.getUTCDay()", "0", NULL);
+	test("var date = new Date('1995-12-23T23:59:00Z'); date.getUTCDay()", "6", NULL);
+	test("var date = new Date('1995-12-25T12:34:56.789Z'); date.getUTCMilliseconds()", "789", NULL);
+	test("var date = new Date('1995-12-25T12:34:56.789Z'); date.setUTCMilliseconds(11)", "819894896011", NULL);
+	test("var date = new Date('1995-12-25T12:34:56.789Z'); date.setUTCSeconds(11)", "819894851789", NULL);
+	test("var date = new Date('1995-12-25T12:34:56.789Z'); date.setUTCSeconds(11, 22)", "819894851022", NULL);
+	test("var date = new Date('1995-12-25T12:34:56.789Z'); date.setUTCMinutes(11)", "819893516789", NULL);
+	test("var date = new Date('1995-12-25T12:34:56.789Z'); date.setUTCMinutes(11, 22)", "819893482789", NULL);
+	test("var date = new Date('1995-12-25T12:34:56.789Z'); date.setUTCMinutes(11, 22, 33)", "819893482033", NULL);
+	test("var date = new Date('1995-12-25T12:34:56.789Z'); date.setUTCHours(11)", "819891296789", NULL);
+	test("var date = new Date('1995-12-25T12:34:56.789Z'); date.setUTCHours(11, 22)", "819890576789", NULL);
+	test("var date = new Date('1995-12-25T12:34:56.789Z'); date.setUTCHours(11, 22, 33)", "819890553789", NULL);
+	test("var date = new Date('1995-12-25T12:34:56.789Z'); date.setUTCHours(11, 22, 33, 444)", "819890553444", NULL);
+	test("var date = new Date('1995-12-25T12:34:56.789Z'); date.setUTCDate(11)", "818685296789", NULL);
+	test("var date = new Date('1995-12-25T12:34:56.789Z'); date.setUTCMonth(11)", "819894896789", NULL);
+	test("var date = new Date('1995-12-25T12:34:56.789Z'); date.setUTCMonth(11, 22)", "819635696789", NULL);
+	test("var date = new Date('1995-12-25T12:34:56.789Z'); date.setUTCFullYear(1)", "-62104620303211", NULL);
+	test("var date = new Date('1995-12-25T12:34:56.789Z'); date.setUTCFullYear(1, 2)", "-62128380303211", NULL);
+	test("var date = new Date('1995-12-25T12:34:56.789Z'); date.setUTCFullYear(1, 2, 3)", "-62130281103211", NULL);
+	test("var date = new Date(NaN); date.setUTCFullYear(1, 2, 3)", "-62130326400000", NULL);
+	test("var date = new Date('1995-12-25T12:34:56.789Z'); date.setUTCMilliseconds()", "NaN", NULL);
+	test("var date = new Date('1995-12-25T12:34:56.789Z'); date.setUTCSeconds()", "NaN", NULL);
+	test("var date = new Date('1995-12-25T12:34:56.789Z'); date.setUTCFullYear()", "NaN", NULL);
+	test("var date = new Date('1995-12-25T12:34:56.789Z'); date.toISOString()", "1995-12-25T12:34:56.789Z", NULL);
+	test("var date = new Date(); date.toISOString = undefined; date.toJSON()", "TypeError: toISOString is not a function"
 	,    "                                                     ^~~~~~~~~~~~~");
-	test("var o = {}; io_libecc_Date.prototype.toJSON.call(o)", "TypeError: toISOString is not a function"
+	test("var o = {}; Date.prototype.toJSON.call(o)", "TypeError: toISOString is not a function"
 	,    "            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
 	
 	// iso format
-	test("io_libecc_Date.parse('1984')", "441763200000", NULL);
-	test("io_libecc_Date.parse('1984-08')", "460166400000", NULL);
-	test("io_libecc_Date.parse('1984-08-31')", "462758400000", NULL);
-	test("io_libecc_Date.parse('1984-08-31T01:23Z')", "462763380000", NULL);
-	test("io_libecc_Date.parse('1984-08-31T01:23:45Z')", "462763425000", NULL);
-	test("io_libecc_Date.parse('1984-08-31T01:23:45.678Z')", "462763425678", NULL);
-	test("io_libecc_Date.parse('1984-08-31T01:23+12:34')", "462718140000", NULL);
-	test("io_libecc_Date.parse('1984-08-31T01:23:45+12:34')", "462718185000", NULL);
-	test("io_libecc_Date.parse('1984-08-31T01:23:45.678+12:34')", "462718185678", NULL);
+	test("Date.parse('1984')", "441763200000", NULL);
+	test("Date.parse('1984-08')", "460166400000", NULL);
+	test("Date.parse('1984-08-31')", "462758400000", NULL);
+	test("Date.parse('1984-08-31T01:23Z')", "462763380000", NULL);
+	test("Date.parse('1984-08-31T01:23:45Z')", "462763425000", NULL);
+	test("Date.parse('1984-08-31T01:23:45.678Z')", "462763425678", NULL);
+	test("Date.parse('1984-08-31T01:23+12:34')", "462718140000", NULL);
+	test("Date.parse('1984-08-31T01:23:45+12:34')", "462718185000", NULL);
+	test("Date.parse('1984-08-31T01:23:45.678+12:34')", "462718185678", NULL);
 	
 	// iso format with time and no offset is not supported: ES5 & ES6 are contradictory and hence not portable
-	test("io_libecc_Date.parse('1984-08-31T01:23')", "NaN", NULL);
-	test("io_libecc_Date.parse('1984-08-31T01:23:45')", "NaN", NULL);
-	test("io_libecc_Date.parse('1984-08-31T01:23:45.678')", "NaN", NULL);
+	test("Date.parse('1984-08-31T01:23')", "NaN", NULL);
+	test("Date.parse('1984-08-31T01:23:45')", "NaN", NULL);
+	test("Date.parse('1984-08-31T01:23:45.678')", "NaN", NULL);
 	
 	// iso format only support '+hh:mm' time offset
-	test("io_libecc_Date.parse('1984-08-31T01:23+1234')", "NaN", NULL);
-	test("io_libecc_Date.parse('1984-08-31T01:23 +12:34')", "NaN", NULL);
+	test("Date.parse('1984-08-31T01:23+1234')", "NaN", NULL);
+	test("Date.parse('1984-08-31T01:23 +12:34')", "NaN", NULL);
 	
 	// implementation format
-	test("io_libecc_Date.parse('1984/08/31 01:23 +0000')", "462763380000", NULL);
-	test("io_libecc_Date.parse('1984/08/31 01:23:45 +0000')", "462763425000", NULL);
-	test("io_libecc_Date.parse('100/08/31 01:23:45 +0000')", "-58990545375000", NULL);
+	test("Date.parse('1984/08/31 01:23 +0000')", "462763380000", NULL);
+	test("Date.parse('1984/08/31 01:23:45 +0000')", "462763425000", NULL);
+	test("Date.parse('100/08/31 01:23:45 +0000')", "-58990545375000", NULL);
 	
 	// implementation format years < 100 are not supported
-	test("io_libecc_Date.parse('99/08/31 01:23:45 +0000')", "NaN", NULL);
+	test("Date.parse('99/08/31 01:23:45 +0000')", "NaN", NULL);
 	
 	// implementation format only support ' +hhmm' time offset
-	test("io_libecc_Date.parse('1984/08')", "NaN", NULL);
-	test("io_libecc_Date.parse('1984/08/31 01:23:45+0000')", "NaN", NULL);
-	test("io_libecc_Date.parse('1984/08/31 01:23:45 +00:00')", "NaN", NULL);
-	test("io_libecc_Date.parse('1984/08/31 01:23:45  +0000')", "NaN", NULL);
+	test("Date.parse('1984/08')", "NaN", NULL);
+	test("Date.parse('1984/08/31 01:23:45+0000')", "NaN", NULL);
+	test("Date.parse('1984/08/31 01:23:45 +00:00')", "NaN", NULL);
+	test("Date.parse('1984/08/31 01:23:45  +0000')", "NaN", NULL);
 }
 
 static void testString (void)
 {
-	test("io_libecc_String", "function io_libecc_String() [native code]", NULL);
-	test("io_libecc_Object.prototype.toString.call(io_libecc_String.prototype)", "[object io_libecc_String]", NULL);
-	test("io_libecc_String.prototype.constructor", "function io_libecc_String() [native code]", NULL);
-	test("io_libecc_String.prototype", "", NULL);
+	test("String", "function String() [native code]", NULL);
+	test("Object.prototype.toString.call(String.prototype)", "[object String]", NULL);
+	test("String.prototype.constructor", "function String() [native code]", NULL);
+	test("String.prototype", "", NULL);
 	test("''.toString.call(123)", "TypeError: 'this' is not a string"
 	,    "                 ^~~ ");
 	test("''.valueOf.call(123)", "TypeError: 'this' is not a string"
 	,    "                ^~~ ");
 	test("'aべcaべc'.length", "6", NULL);
-	test("var a = new io_libecc_String('aべcaべc'); a.length = 12; a.length", "TypeError: 'length' is read-only"
+	test("var a = new String('aべcaべc'); a.length = 12; a.length", "TypeError: 'length' is read-only"
 	,    "                     べ  べ     ^~~~~~~~~~~~~          ");
 	test("'abせd'.slice()", "abせd", NULL);
 	test("'abせd'.slice(1)", "bせd", NULL);
@@ -1286,7 +1286,7 @@ static void testString (void)
 	test("'123'[3]", "undefined", NULL);
 	test("var a = '123'; a[1] = 5; a", "123", NULL);
 	test("var a = 'aべc'; a[1]", "べ", NULL);
-	test("var s = new io_libecc_String('abc'); s[1]", "b", NULL);
+	test("var s = new String('abc'); s[1]", "b", NULL);
 	test("''.split()[0]", "", NULL);
 	test("''.split('abc')[0]", "", NULL);
 	test("'aべc'.split()[0]", "aべc", NULL);
@@ -1314,13 +1314,13 @@ static void testString (void)
 	test("'A<B>bold</B>and<CODE>coded</CODE>'.split(/<(\\/)?([^<>]+)>/)", "A,,B,bold,/,B,and,,CODE,coded,/,CODE,", NULL);
 	test("'ΐßﬓlibecc'.toUpperCase()", "Ϊ́SSՄՆLIBECC", NULL);
 	test("'ẞLIBECCİB'.toLowerCase()", "ßlibecci̇b", NULL);
-	test("var s='abc'; io_libecc_string_s", "abc", NULL);
-	test("var s='abc'; new io_libecc_string_s", "abc", NULL);
-	test("var s='abc'; typeof io_libecc_string_s", "string", NULL);
-	test("var s='abc'; typeof new io_libecc_string_s", "object", NULL);
-	test("var s='abc'; io_libecc_string_s === s", "true", NULL);
-	test("var s='abc'; new io_libecc_string_s === s", "false", NULL);
-	test("io_libecc_Array.prototype.join.call('test', '*')", "t*e*s*t", NULL);
+	test("var s='abc'; s", "abc", NULL);
+	test("var s='abc'; new String(s)", "abc", NULL);
+	test("var s='abc'; typeof s", "string", NULL);
+	test("var s='abc'; typeof new String(s)", "object", NULL);
+	test("var s='abc'; s === s", "true", NULL);
+	test("var s='abc'; new String(s) === s", "false", NULL);
+	test("Array.prototype.join.call('test', '*')", "t*e*s*t", NULL);
 	test("'あ𐐷せ'.length", "4", NULL);
 	test("'a𐐷せ'.charAt(1)", "\xED\xA0\x81", NULL);
 	test("'あ𐐷せ'.charAt(2)", "\xED\xB0\xB7", NULL);
@@ -1328,7 +1328,7 @@ static void testString (void)
 	test("'あ𐐷せ'.charCodeAt(2)", "56375", NULL);
 	test("'\\uD801\\uDC37'", "𐐷", NULL);
 	test("'𐐷'.charAt(0) + '𐐷'.charAt(1)", "𐐷", NULL);
-	test("io_libecc_String.fromCharCode(0xD801, 0xDC37)", "𐐷", NULL);
+	test("String.fromCharCode(0xD801, 0xDC37)", "𐐷", NULL);
 	test("'あ𐐷𐐷せ'.indexOf('𐐷')", "1", NULL);
 	test("'あ𐐷𐐷せ'.indexOf('𐐷', 1)", "1", NULL);
 	test("'あ𐐷𐐷せ'.indexOf('𐐷', 2)", "3", NULL);
@@ -1366,15 +1366,15 @@ static void testString (void)
 	test("' abc  '.trim()", "abc", NULL);
 	test("'\\u00A0 abc  \\u00A0'.trim()", "abc", NULL);
 	test("'\\u2029 abc  \\u2029'.trim()", "abc", NULL);
-	test("var s = new io_libecc_String('123'); ++s[2]; ++s[2] + s", "4123", NULL);
+	test("var s = new String('123'); ++s[2]; ++s[2] + s", "4123", NULL);
 }
 
 static void testRegExp (void)
 {
-	test("io_libecc_RegExp", "function io_libecc_RegExp() [native code]", NULL);
-	test("io_libecc_Object.prototype.toString.call(io_libecc_RegExp.prototype)", "[object io_libecc_RegExp]", NULL);
-	test("io_libecc_RegExp.prototype.constructor", "function io_libecc_RegExp() [native code]", NULL);
-	test("io_libecc_RegExp.prototype", "/(?:)/", NULL);
+	test("RegExp", "function RegExp() [native code]", NULL);
+	test("Object.prototype.toString.call(RegExp.prototype)", "[object RegExp]", NULL);
+	test("RegExp.prototype.constructor", "function RegExp() [native code]", NULL);
+	test("RegExp.prototype", "/(?:)/", NULL);
 	test("/1/gg", "SyntaxError: invalid flag"
 	,    "    ^");
 	test("/(/", "SyntaxError: expect ')'"
@@ -1384,7 +1384,7 @@ static void testRegExp (void)
 	test("/a]ab/.exec('abc')", "null", NULL);
 	test("/a)ab/.exec('abc')", "SyntaxError: invalid character ')'"
 	,    "  ^               ");
-	test("var r = /a/; r instanceof io_libecc_RegExp", "true", NULL);
+	test("var r = /a/; r instanceof RegExp", "true", NULL);
 	test("var r = /a/g; r.global", "true", NULL);
 	test("var r = /a/i; r.ignoreCase", "true", NULL);
 	test("var r = /a/m; r.multiline", "true", NULL);
@@ -1429,14 +1429,14 @@ static void testRegExp (void)
 	test("/[ab]{0,2}/.exec('acabaaba')", "a", NULL);
 	test("/[ab]{2,5}/.exec('acabaaba')", "abaab", NULL);
 	test("var r=/(a*)*/.exec('b'); (typeof r[0])+','+(typeof r[1])", "string,undefined", NULL);
-	test("var r=/abc/gi; io_libecc_regexp_r", "/abc/gi", NULL);
-	test("var r=/abc/gi; io_libecc_RegExp(r, 'm')", "/abc/m", NULL);
-	test("var r=/abc/gi; io_libecc_regexp_r === r", "true", NULL);
-	test("var r=/abc/gi; io_libecc_RegExp(r, 'm') === r", "false", NULL);
-	test("var r=/abc/gi; new io_libecc_regexp_r", "/abc/gi", NULL);
-	test("var r=/abc/gi; new io_libecc_RegExp(r, 'm')", "/abc/m", NULL);
-	test("var r=/abc/gi; new io_libecc_regexp_r === r", "false", NULL);
-	test("var r=/abc/gi; new io_libecc_RegExp(r, 'm') === r", "false", NULL);
+	test("var r=/abc/gi; r", "/abc/gi", NULL);
+	test("var r=/abc/gi; RegExp(r, 'm')", "/abc/m", NULL);
+	test("var r=/abc/gi; r === r", "true", NULL);
+	test("var r=/abc/gi; RegExp(r, 'm') === r", "false", NULL);
+	test("var r=/abc/gi; new RegExp(r)", "/abc/gi", NULL);
+	test("var r=/abc/gi; new RegExp(r, 'm')", "/abc/m", NULL);
+	test("var r=/abc/gi; new RegExp(r) === r", "false", NULL);
+	test("var r=/abc/gi; new RegExp(r, 'm') === r", "false", NULL);
 	test("/^test$/.exec('test')", "test", NULL);
 	test("/^test$/.exec(' test')", "null", NULL);
 	test("/^test$/.exec('test ')", "null", NULL);
@@ -1444,45 +1444,45 @@ static void testRegExp (void)
 	test("/[a-c0-9]+/.exec('\\n\\n\\abc324234\\n')", "abc324234", NULL);
 	test("/[a-c\\d]+/.exec('\\n\\n\\abc324234\\n')", "abc324234", NULL);
 	test("/[^a-c\\d]+/.exec('abc324234zzz')", "zzz", NULL);
-	test("/\\0377/.exec(io_libecc_String.fromCharCode(0x00ff))", "ÿ", NULL);
+	test("/\\0377/.exec(String.fromCharCode(0x00ff))", "ÿ", NULL);
 	test("/\\0477/.exec('\\''+'77')", "'7", NULL);
 	test("/[a-z][^1-9][a-z]/.exec('a1b  b2c  c3d  def  f4g')", "def", NULL);
 	test("/[\\d][\\12-\\14]{1,}[^\\d]/.exec('line1\\n\\n\\n\\n\\nline2')", "1\n\n\n\n\nl", NULL);
-	test("io_libecc_RegExp('\\d', '1')", "SyntaxError: invalid flag"
+	test("RegExp('\\d', '1')", "SyntaxError: invalid flag"
 	,             "   " "^");
-	test("io_libecc_RegExp('\\d', 'igg')", "SyntaxError: invalid flag"
+	test("RegExp('\\d', 'igg')", "SyntaxError: invalid flag"
 	,             "   " "  ^");
 }
 
 static void testJSON (void)
 {
-	test("io_libecc_JSON", "[object io_libecc_JSON]", NULL);
-	test("io_libecc_JSON.parse('abc')", "SyntaxError: expect { or ["
+	test("JSON", "[object JSON]", NULL);
+	test("JSON.parse('abc')", "SyntaxError: expect { or ["
 	,                "^  ");
-	test("io_libecc_JSON.parse('{}}')", "SyntaxError: unexpected '}'"
+	test("JSON.parse('{}}')", "SyntaxError: unexpected '}'"
 	,                "  ^");
-	test("io_libecc_JSON.parse('{abc}')", "SyntaxError: expect property name"
+	test("JSON.parse('{abc}')", "SyntaxError: expect property name"
 	,                " ^   ");
-	test("io_libecc_JSON.parse('{\\n\\tabc\\n}')", "SyntaxError: expect property name"
+	test("JSON.parse('{\\n\\tabc\\n}')", "SyntaxError: expect property name"
 	,                      " ^   ");
-	test("io_libecc_JSON.parse('{\"abc\"}')", "SyntaxError: expect colon"
+	test("JSON.parse('{\"abc\"}')", "SyntaxError: expect colon"
 	,                  "      ^  ");
-	test("io_libecc_JSON.parse('{\"abc\": 123}')", "[object io_libecc_Object]", NULL);
-	test("io_libecc_JSON.parse('{\"abc\": 123.4e-2}').abc", "1.234", NULL);
-	test("io_libecc_JSON.parse('{\"abc\": 123,}').abc", "SyntaxError: expect property name"
+	test("JSON.parse('{\"abc\": 123}')", "[object Object]", NULL);
+	test("JSON.parse('{\"abc\": 123.4e-2}').abc", "1.234", NULL);
+	test("JSON.parse('{\"abc\": 123,}').abc", "SyntaxError: expect property name"
 	,                  "            ^");
-	test("io_libecc_JSON.parse('{\"abc\": \"ab\\\\\"c\"}').abc", "ab\\\"c", NULL);
-	test("io_libecc_JSON.parse('{\"abc\": [0,1,2,3]}').abc", "0,1,2,3", NULL);
-	test("io_libecc_JSON.parse('{\"abc\": [false,true,null]}').abc", "false,true,", NULL);
-	test("io_libecc_JSON.parse('{\"abc\": [0,1,2,3]}', function(k,v){ return typeof v == 'number'? v * 2: v }).abc", "0,2,4,6", NULL);
-	test("var r=''; io_libecc_JSON.parse('[1, 2, { \"a\": 4, \"b\": {\"c\": 6}}]', function(key, value) { r += key+','; return value; }); r", "0,1,a,c,b,2,,", NULL);
-	test("io_libecc_JSON.stringify({ uno: 1, dos: { tres: 123 } }, null, '\t')", "{\n\t\"uno\": 1,\n\t\"dos\": {\n\t\t\"tres\": 123\n\t}\n}", NULL);
-	test("io_libecc_JSON.stringify({ uno: 1, dos: { tres: 123 } }, null, '  ')", "{\n  \"uno\": 1,\n  \"dos\": {\n    \"tres\": 123\n  }\n}", NULL);
-	test("io_libecc_JSON.stringify({ uno: 1, dos: { tres: 123 } }, null, 3)", "{\n   \"uno\": 1,\n   \"dos\": {\n      \"tres\": 123\n   }\n}", NULL);
-	test("io_libecc_JSON.stringify({ uno: 1, dos: { tres: 123 } })", "{\"uno\":1,\"dos\":{\"tres\":123}}", NULL);
-	test("var r=''; io_libecc_JSON.stringify({ uno: 1, dos: { tres: 123 } }, function(key,value){ r+=key; return value }); r", "unodostres", NULL);
-	test("io_libecc_JSON.stringify({f:'M',w:4,t:'c',M:7}, function replacer(key,value){ return typeof value=='string'?undefined:value });", "{\"w\":4,\"M\":7}", NULL);
-	test("io_libecc_JSON.stringify({f:'M',w:4,t:'c',M:7}, ['w','M']);", "{\"w\":4,\"M\":7}", NULL);
+	test("JSON.parse('{\"abc\": \"ab\\\\\"c\"}').abc", "ab\\\"c", NULL);
+	test("JSON.parse('{\"abc\": [0,1,2,3]}').abc", "0,1,2,3", NULL);
+	test("JSON.parse('{\"abc\": [false,true,null]}').abc", "false,true,", NULL);
+	test("JSON.parse('{\"abc\": [0,1,2,3]}', function(k,v){ return typeof v == 'number'? v * 2: v }).abc", "0,2,4,6", NULL);
+	test("var r=''; JSON.parse('[1, 2, { \"a\": 4, \"b\": {\"c\": 6}}]', function(key, value) { r += key+','; return value; }); r", "0,1,a,c,b,2,,", NULL);
+	test("JSON.stringify({ uno: 1, dos: { tres: 123 } }, null, '\t')", "{\n\t\"uno\": 1,\n\t\"dos\": {\n\t\t\"tres\": 123\n\t}\n}", NULL);
+	test("JSON.stringify({ uno: 1, dos: { tres: 123 } }, null, '  ')", "{\n  \"uno\": 1,\n  \"dos\": {\n    \"tres\": 123\n  }\n}", NULL);
+	test("JSON.stringify({ uno: 1, dos: { tres: 123 } }, null, 3)", "{\n   \"uno\": 1,\n   \"dos\": {\n      \"tres\": 123\n   }\n}", NULL);
+	test("JSON.stringify({ uno: 1, dos: { tres: 123 } })", "{\"uno\":1,\"dos\":{\"tres\":123}}", NULL);
+	test("var r=''; JSON.stringify({ uno: 1, dos: { tres: 123 } }, function(key,value){ r+=key; return value }); r", "unodostres", NULL);
+	test("JSON.stringify({f:'M',w:4,t:'c',M:7}, function replacer(key,value){ return typeof value=='string'?undefined:value });", "{\"w\":4,\"M\":7}", NULL);
+	test("JSON.stringify({f:'M',w:4,t:'c',M:7}, ['w','M']);", "{\"w\":4,\"M\":7}", NULL);
 }
 
 static int runTest (int verbosity)
