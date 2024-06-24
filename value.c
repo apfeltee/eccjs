@@ -5,23 +5,17 @@
 //  Copyright (c) 2019 Aurélien Bouilland
 //  Licensed under MIT license, see LICENSE.txt file in project root
 //
-
-#define Implementation
-#include "value.h"
-
 #include "ecc.h"
-#include "op.h"
-#include "lexer.h"
 
 // MARK: - Private
 
 #define valueMake(T) { .type = io_libecc_value_##T, .check = 1 }
 
-const struct io_libecc_Value io_libecc_value_none = {{ 0 }};
-const struct io_libecc_Value io_libecc_value_undefined = valueMake(undefinedType);
-const struct io_libecc_Value io_libecc_value_true = valueMake(trueType);
-const struct io_libecc_Value io_libecc_value_false = valueMake(falseType);
-const struct io_libecc_Value io_libecc_value_null = valueMake(nullType);
+const struct eccvalue_t io_libecc_value_none = {{ 0 }};
+const struct eccvalue_t io_libecc_value_undefined = valueMake(undefinedType);
+const struct eccvalue_t io_libecc_value_true = valueMake(trueType);
+const struct eccvalue_t io_libecc_value_false = valueMake(falseType);
+const struct eccvalue_t io_libecc_value_null = valueMake(nullType);
 
 // MARK: - Static Members
 
@@ -30,53 +24,53 @@ const struct io_libecc_Value io_libecc_value_null = valueMake(nullType);
 
 // make
 
-static struct io_libecc_Value truth(int truth);
-static struct io_libecc_Value integer(int32_t integer);
-static struct io_libecc_Value binary(double binary);
-static struct io_libecc_Value buffer(const char buffer[7], uint8_t units);
-static struct io_libecc_Value key(struct io_libecc_Key key);
-static struct io_libecc_Value text(const struct io_libecc_Text* text);
-static struct io_libecc_Value chars(struct io_libecc_Chars* chars);
-static struct io_libecc_Value object(struct io_libecc_Object*);
-static struct io_libecc_Value error(struct io_libecc_Error*);
-static struct io_libecc_Value string(struct io_libecc_String*);
-static struct io_libecc_Value regexp(struct io_libecc_RegExp*);
-static struct io_libecc_Value number(struct io_libecc_Number*);
-static struct io_libecc_Value boolean(struct io_libecc_Boolean*);
-static struct io_libecc_Value date(struct io_libecc_Date*);
-static struct io_libecc_Value function(struct io_libecc_Function*);
-static struct io_libecc_Value host(struct io_libecc_Object*);
-static struct io_libecc_Value reference(struct io_libecc_Value*);
-static int isPrimitive(struct io_libecc_Value);
-static int isBoolean(struct io_libecc_Value);
-static int isNumber(struct io_libecc_Value);
-static int isString(struct io_libecc_Value);
-static int isObject(struct io_libecc_Value);
-static int isDynamic(struct io_libecc_Value);
-static int isTrue(struct io_libecc_Value);
-static struct io_libecc_Value toPrimitive(struct io_libecc_Context* const, struct io_libecc_Value, enum io_libecc_value_hintPrimitive);
-static struct io_libecc_Value toBinary(struct io_libecc_Context* const, struct io_libecc_Value);
-static struct io_libecc_Value toInteger(struct io_libecc_Context* const, struct io_libecc_Value);
-static struct io_libecc_Value binaryToString(double binary, int base);
-static struct io_libecc_Value toString(struct io_libecc_Context* const, struct io_libecc_Value);
-static int32_t stringLength(const struct io_libecc_Value*);
-static const char* stringBytes(const struct io_libecc_Value*);
-static struct io_libecc_Text textOf(const struct io_libecc_Value* string);
-static struct io_libecc_Value toObject(struct io_libecc_Context* const, struct io_libecc_Value);
-static struct io_libecc_Value objectValue(struct io_libecc_Object*);
-static int objectIsArray(struct io_libecc_Object*);
-static struct io_libecc_Value toType(struct io_libecc_Value);
-static struct io_libecc_Value equals(struct io_libecc_Context* const, struct io_libecc_Value, struct io_libecc_Value);
-static struct io_libecc_Value same(struct io_libecc_Context* const, struct io_libecc_Value, struct io_libecc_Value);
-static struct io_libecc_Value add(struct io_libecc_Context* const, struct io_libecc_Value, struct io_libecc_Value);
-static struct io_libecc_Value subtract(struct io_libecc_Context* const, struct io_libecc_Value, struct io_libecc_Value);
-static struct io_libecc_Value less(struct io_libecc_Context* const, struct io_libecc_Value, struct io_libecc_Value);
-static struct io_libecc_Value more(struct io_libecc_Context* const, struct io_libecc_Value, struct io_libecc_Value);
-static struct io_libecc_Value lessOrEqual(struct io_libecc_Context* const, struct io_libecc_Value, struct io_libecc_Value);
-static struct io_libecc_Value moreOrEqual(struct io_libecc_Context* const, struct io_libecc_Value, struct io_libecc_Value);
+static struct eccvalue_t truth(int truth);
+static struct eccvalue_t integer(int32_t integer);
+static struct eccvalue_t binary(double binary);
+static struct eccvalue_t buffer(const char buffer[7], uint8_t units);
+static struct eccvalue_t key(struct io_libecc_Key key);
+static struct eccvalue_t text(const struct io_libecc_Text* text);
+static struct eccvalue_t chars(struct io_libecc_Chars* chars);
+static struct eccvalue_t object(struct eccobject_t*);
+static struct eccvalue_t error(struct io_libecc_Error*);
+static struct eccvalue_t string(struct io_libecc_String*);
+static struct eccvalue_t regexp(struct io_libecc_RegExp*);
+static struct eccvalue_t number(struct io_libecc_Number*);
+static struct eccvalue_t boolean(struct io_libecc_Boolean*);
+static struct eccvalue_t date(struct io_libecc_Date*);
+static struct eccvalue_t function(struct io_libecc_Function*);
+static struct eccvalue_t host(struct eccobject_t*);
+static struct eccvalue_t reference(struct eccvalue_t*);
+static int isPrimitive(struct eccvalue_t);
+static int isBoolean(struct eccvalue_t);
+static int isNumber(struct eccvalue_t);
+static int isString(struct eccvalue_t);
+static int isObject(struct eccvalue_t);
+static int isDynamic(struct eccvalue_t);
+static int isTrue(struct eccvalue_t);
+static struct eccvalue_t toPrimitive(struct eccstate_t* const, struct eccvalue_t, enum io_libecc_value_hintPrimitive);
+static struct eccvalue_t toBinary(struct eccstate_t* const, struct eccvalue_t);
+static struct eccvalue_t toInteger(struct eccstate_t* const, struct eccvalue_t);
+static struct eccvalue_t binaryToString(double binary, int base);
+static struct eccvalue_t toString(struct eccstate_t* const, struct eccvalue_t);
+static int32_t stringLength(const struct eccvalue_t*);
+static const char* stringBytes(const struct eccvalue_t*);
+static struct io_libecc_Text textOf(const struct eccvalue_t* string);
+static struct eccvalue_t toObject(struct eccstate_t* const, struct eccvalue_t);
+static struct eccvalue_t objectValue(struct eccobject_t*);
+static int objectIsArray(struct eccobject_t*);
+static struct eccvalue_t toType(struct eccvalue_t);
+static struct eccvalue_t equals(struct eccstate_t* const, struct eccvalue_t, struct eccvalue_t);
+static struct eccvalue_t same(struct eccstate_t* const, struct eccvalue_t, struct eccvalue_t);
+static struct eccvalue_t add(struct eccstate_t* const, struct eccvalue_t, struct eccvalue_t);
+static struct eccvalue_t subtract(struct eccstate_t* const, struct eccvalue_t, struct eccvalue_t);
+static struct eccvalue_t less(struct eccstate_t* const, struct eccvalue_t, struct eccvalue_t);
+static struct eccvalue_t more(struct eccstate_t* const, struct eccvalue_t, struct eccvalue_t);
+static struct eccvalue_t lessOrEqual(struct eccstate_t* const, struct eccvalue_t, struct eccvalue_t);
+static struct eccvalue_t moreOrEqual(struct eccstate_t* const, struct eccvalue_t, struct eccvalue_t);
 static const char* typeName(enum io_libecc_value_Type);
 static const char* maskName(enum io_libecc_value_Mask);
-static void dumpTo(struct io_libecc_Value, FILE*);
+static void dumpTo(struct eccvalue_t, FILE*);
 const struct type_io_libecc_Value io_libecc_Value = {
     truth,       integer,  binary,    buffer,         key,       text,         chars,       object,      error,    string,      regexp,        number,
     boolean,     date,     function,  host,           reference, isPrimitive,  isBoolean,   isNumber,    isString, isObject,    isDynamic,     isTrue,
@@ -84,35 +78,35 @@ const struct type_io_libecc_Value io_libecc_Value = {
     equals,      same,     add,       subtract,       less,      more,         lessOrEqual, moreOrEqual, typeName, maskName,    dumpTo,
 };
 
-struct io_libecc_Value truth (int truth)
+struct eccvalue_t truth (int truth)
 {
-	return (struct io_libecc_Value){
+	return (struct eccvalue_t){
 		.type = truth? io_libecc_value_trueType: io_libecc_value_falseType,
 		.check = 1,
 	};
 }
 
-struct io_libecc_Value integer (int32_t integer)
+struct eccvalue_t integer (int32_t integer)
 {
-	return (struct io_libecc_Value){
+	return (struct eccvalue_t){
 		.data = { .integer = integer },
 		.type = io_libecc_value_integerType,
 		.check = 1,
 	};
 }
 
-struct io_libecc_Value binary (double binary)
+struct eccvalue_t binary (double binary)
 {
-	return (struct io_libecc_Value){
+	return (struct eccvalue_t){
 		.data = { .binary = binary },
 		.type = io_libecc_value_binaryType,
 		.check = 1,
 	};
 }
 
-struct io_libecc_Value buffer (const char b[7], uint8_t units)
+struct eccvalue_t buffer (const char b[7], uint8_t units)
 {
-	struct io_libecc_Value value = {
+	struct eccvalue_t value = {
 		.type = io_libecc_value_bufferType,
 		.check = 1,
 	};
@@ -121,139 +115,139 @@ struct io_libecc_Value buffer (const char b[7], uint8_t units)
 	return value;
 }
 
-struct io_libecc_Value key (struct io_libecc_Key key)
+struct eccvalue_t key (struct io_libecc_Key key)
 {
-	return (struct io_libecc_Value){
+	return (struct eccvalue_t){
 		.data = { .key = key },
 		.type = io_libecc_value_keyType,
 		.check = 0,
 	};
 }
 
-struct io_libecc_Value text (const struct io_libecc_Text *text)
+struct eccvalue_t text (const struct io_libecc_Text *text)
 {
-	return (struct io_libecc_Value){
+	return (struct eccvalue_t){
 		.data = { .text = text },
 		.type = io_libecc_value_textType,
 		.check = 1,
 	};
 }
 
-struct io_libecc_Value chars (struct io_libecc_Chars *chars)
+struct eccvalue_t chars (struct io_libecc_Chars *chars)
 {
 	assert(chars);
 	
-	return (struct io_libecc_Value){
+	return (struct eccvalue_t){
 		.data = { .chars = chars },
 		.type = io_libecc_value_charsType,
 		.check = 1,
 	};
 }
 
-struct io_libecc_Value object (struct io_libecc_Object *object)
+struct eccvalue_t object (struct eccobject_t *object)
 {
 	assert(object);
 	
-	return (struct io_libecc_Value){
+	return (struct eccvalue_t){
 		.data = { .object = object },
 		.type = io_libecc_value_objectType,
 		.check = 1,
 	};
 }
 
-struct io_libecc_Value error (struct io_libecc_Error *error)
+struct eccvalue_t error (struct io_libecc_Error *error)
 {
 	assert(error);
 	
-	return (struct io_libecc_Value){
+	return (struct eccvalue_t){
 		.data = { .error = error },
 		.type = io_libecc_value_errorType,
 		.check = 1,
 	};
 }
 
-struct io_libecc_Value string (struct io_libecc_String *string)
+struct eccvalue_t string (struct io_libecc_String *string)
 {
 	assert(string);
 	
-	return (struct io_libecc_Value){
+	return (struct eccvalue_t){
 		.data = { .string = string },
 		.type = io_libecc_value_stringType,
 		.check = 1,
 	};
 }
 
-struct io_libecc_Value regexp (struct io_libecc_RegExp *regexp)
+struct eccvalue_t regexp (struct io_libecc_RegExp *regexp)
 {
 	assert(regexp);
 	
-	return (struct io_libecc_Value){
+	return (struct eccvalue_t){
 		.data = { .regexp = regexp },
 		.type = io_libecc_value_regexpType,
 		.check = 1,
 	};
 }
 
-struct io_libecc_Value number (struct io_libecc_Number *number)
+struct eccvalue_t number (struct io_libecc_Number *number)
 {
 	assert(number);
 	
-	return (struct io_libecc_Value){
+	return (struct eccvalue_t){
 		.data = { .number = number },
 		.type = io_libecc_value_numberType,
 		.check = 1,
 	};
 }
 
-struct io_libecc_Value boolean (struct io_libecc_Boolean *boolean)
+struct eccvalue_t boolean (struct io_libecc_Boolean *boolean)
 {
 	assert(boolean);
 	
-	return (struct io_libecc_Value){
+	return (struct eccvalue_t){
 		.data = { .boolean = boolean },
 		.type = io_libecc_value_booleanType,
 		.check = 1,
 	};
 }
 
-struct io_libecc_Value date (struct io_libecc_Date *date)
+struct eccvalue_t date (struct io_libecc_Date *date)
 {
 	assert(date);
 	
-	return (struct io_libecc_Value){
+	return (struct eccvalue_t){
 		.data = { .date = date },
 		.type = io_libecc_value_dateType,
 		.check = 1,
 	};
 }
 
-struct io_libecc_Value function (struct io_libecc_Function *function)
+struct eccvalue_t function (struct io_libecc_Function *function)
 {
 	assert(function);
 	
-	return (struct io_libecc_Value){
+	return (struct eccvalue_t){
 		.data = { .function = function },
 		.type = io_libecc_value_functionType,
 		.check = 1,
 	};
 }
 
-struct io_libecc_Value host (struct io_libecc_Object *object)
+struct eccvalue_t host (struct eccobject_t *object)
 {
 	assert(object);
 	
-	return (struct io_libecc_Value){
+	return (struct eccvalue_t){
 		.data = { .object = object },
 		.type = io_libecc_value_hostType,
 		.check = 1,
 	};
 }
 
-struct io_libecc_Value reference (struct io_libecc_Value *reference)
+struct eccvalue_t reference (struct eccvalue_t *reference)
 {
 	assert(reference);
 	
-	return (struct io_libecc_Value){
+	return (struct eccvalue_t){
 		.data = { .reference = reference },
 		.type = io_libecc_value_referenceType,
 		.check = 0,
@@ -262,37 +256,37 @@ struct io_libecc_Value reference (struct io_libecc_Value *reference)
 
 // check
 
-int isPrimitive (struct io_libecc_Value value)
+int isPrimitive (struct eccvalue_t value)
 {
 	return !(value.type & io_libecc_value_objectMask);
 }
 
-int isBoolean (struct io_libecc_Value value)
+int isBoolean (struct eccvalue_t value)
 {
 	return value.type & io_libecc_value_booleanMask;
 }
 
-int isNumber (struct io_libecc_Value value)
+int isNumber (struct eccvalue_t value)
 {
 	return value.type & io_libecc_value_numberMask;
 }
 
-int isString (struct io_libecc_Value value)
+int isString (struct eccvalue_t value)
 {
 	return value.type & io_libecc_value_stringMask;
 }
 
-int isObject (struct io_libecc_Value value)
+int isObject (struct eccvalue_t value)
 {
 	return value.type & io_libecc_value_objectMask;
 }
 
-int isDynamic (struct io_libecc_Value value)
+int isDynamic (struct eccvalue_t value)
 {
 	return value.type & io_libecc_value_dynamicMask;
 }
 
-int isTrue (struct io_libecc_Value value)
+int isTrue (struct eccvalue_t value)
 {
 	if (value.type <= io_libecc_value_undefinedType)
 		return 0;
@@ -311,14 +305,14 @@ int isTrue (struct io_libecc_Value value)
 
 // convert
 
-struct io_libecc_Value toPrimitive (struct io_libecc_Context * const context, struct io_libecc_Value value, enum io_libecc_value_hintPrimitive hint)
+struct eccvalue_t toPrimitive (struct eccstate_t * const context, struct eccvalue_t value, enum io_libecc_value_hintPrimitive hint)
 {
-	struct io_libecc_Object *object;
+	struct eccobject_t *object;
 	struct io_libecc_Key aKey;
 	struct io_libecc_Key bKey;
-	struct io_libecc_Value aFunction;
-	struct io_libecc_Value bFunction;
-	struct io_libecc_Value result;
+	struct eccvalue_t aFunction;
+	struct eccvalue_t bFunction;
+	struct eccvalue_t result;
 	struct io_libecc_Text text;
 	
 	if (value.type < io_libecc_value_objectType)
@@ -335,7 +329,7 @@ struct io_libecc_Value toPrimitive (struct io_libecc_Context * const context, st
 	aFunction = io_libecc_Object.getMember(context, object, aKey);
 	if (aFunction.type == io_libecc_value_functionType)
 	{
-		struct io_libecc_Value result = io_libecc_Context.callFunction(context, aFunction.data.function, value, 0 | io_libecc_context_asAccessor);
+		struct eccvalue_t result = io_libecc_Context.callFunction(context, aFunction.data.function, value, 0 | io_libecc_context_asAccessor);
 		if (isPrimitive(result))
 			return result;
 	}
@@ -355,7 +349,7 @@ struct io_libecc_Value toPrimitive (struct io_libecc_Context * const context, st
 		io_libecc_Context.typeError(context, io_libecc_Chars.create("cannot convert value to primitive"));
 }
 
-struct io_libecc_Value toBinary (struct io_libecc_Context * const context, struct io_libecc_Value value)
+struct eccvalue_t toBinary (struct eccstate_t * const context, struct eccvalue_t value)
 {
 	switch ((enum io_libecc_value_Type)value.type)
 	{
@@ -415,7 +409,7 @@ struct io_libecc_Value toBinary (struct io_libecc_Context * const context, struc
 	io_libecc_Ecc.fatal("Invalid io_libecc_value_Type : %u", value.type);
 }
 
-struct io_libecc_Value toInteger (struct io_libecc_Context * const context, struct io_libecc_Value value)
+struct eccvalue_t toInteger (struct eccstate_t * const context, struct eccvalue_t value)
 {
 	const double modulus = (double)UINT32_MAX + 1;
 	double binary = toBinary(context, value).data.binary;
@@ -435,7 +429,7 @@ struct io_libecc_Value toInteger (struct io_libecc_Context * const context, stru
 	return integer(binary);
 }
 
-struct io_libecc_Value binaryToString (double binary, int base)
+struct eccvalue_t binaryToString (double binary, int base)
 {
 	struct io_libecc_chars_Append chars;
 	
@@ -458,7 +452,7 @@ struct io_libecc_Value binaryToString (double binary, int base)
 	return io_libecc_Chars.endAppend(&chars);
 }
 
-struct io_libecc_Value toString (struct io_libecc_Context * const context, struct io_libecc_Value value)
+struct eccvalue_t toString (struct eccstate_t * const context, struct eccvalue_t value)
 {
 	switch ((enum io_libecc_value_Type)value.type)
 	{
@@ -512,7 +506,7 @@ struct io_libecc_Value toString (struct io_libecc_Context * const context, struc
 	io_libecc_Ecc.fatal("Invalid io_libecc_value_Type : %u", value.type);
 }
 
-int32_t stringLength (const struct io_libecc_Value *value)
+int32_t stringLength (const struct eccvalue_t *value)
 {
 	switch (value->type)
 	{
@@ -533,7 +527,7 @@ int32_t stringLength (const struct io_libecc_Value *value)
 	}
 }
 
-const char * stringBytes (const struct io_libecc_Value *value)
+const char * stringBytes (const struct eccvalue_t *value)
 {
 	switch (value->type)
 	{
@@ -554,7 +548,7 @@ const char * stringBytes (const struct io_libecc_Value *value)
 	}
 }
 
-struct io_libecc_Text textOf (const struct io_libecc_Value *value)
+struct io_libecc_Text textOf (const struct eccvalue_t *value)
 {
 	switch (value->type)
 	{
@@ -578,7 +572,7 @@ struct io_libecc_Text textOf (const struct io_libecc_Value *value)
 	}
 }
 
-struct io_libecc_Value toObject (struct io_libecc_Context * const context, struct io_libecc_Value value)
+struct eccvalue_t toObject (struct eccstate_t * const context, struct eccvalue_t value)
 {
 	if (value.type >= io_libecc_value_objectType)
 		return value;
@@ -632,7 +626,7 @@ error:
 	}
 }
 
-struct io_libecc_Value objectValue (struct io_libecc_Object *object)
+struct eccvalue_t objectValue (struct eccobject_t *object)
 {
 	if (!object)
 		return io_libecc_value_undefined;
@@ -655,17 +649,17 @@ struct io_libecc_Value objectValue (struct io_libecc_Object *object)
 			|| object->type == &io_libecc_arguments_type
 			|| object->type == &io_libecc_math_type
 			)
-		return io_libecc_Value.object((struct io_libecc_Object *)object);
+		return io_libecc_Value.object((struct eccobject_t *)object);
 	else
 		return io_libecc_Value.host(object);
 }
 
-int objectIsArray (struct io_libecc_Object *object)
+int objectIsArray (struct eccobject_t *object)
 {
 	return object->type == &io_libecc_array_type || object->type == &io_libecc_arguments_type;
 }
 
-struct io_libecc_Value toType (struct io_libecc_Value value)
+struct eccvalue_t toType (struct eccvalue_t value)
 {
 	switch ((enum io_libecc_value_Type)value.type)
 	{
@@ -706,7 +700,7 @@ struct io_libecc_Value toType (struct io_libecc_Value value)
 	io_libecc_Ecc.fatal("Invalid io_libecc_value_Type : %u", value.type);
 }
 
-struct io_libecc_Value equals (struct io_libecc_Context * const context, struct io_libecc_Value a, struct io_libecc_Value b)
+struct eccvalue_t equals (struct eccstate_t * const context, struct eccvalue_t a, struct eccvalue_t b)
 {
 	if (isObject(a) && isObject(b))
 		return truth(a.data.object == b.data.object);
@@ -749,7 +743,7 @@ struct io_libecc_Value equals (struct io_libecc_Context * const context, struct 
 	return io_libecc_value_false;
 }
 
-struct io_libecc_Value same (struct io_libecc_Context * const context, struct io_libecc_Value a, struct io_libecc_Value b)
+struct eccvalue_t same (struct eccstate_t * const context, struct eccvalue_t a, struct eccvalue_t b)
 {
 	if (isObject(a) || isObject(b))
 		return truth(isObject(a) && isObject(b) && a.data.object == b.data.object);
@@ -770,7 +764,7 @@ struct io_libecc_Value same (struct io_libecc_Context * const context, struct io
 	return io_libecc_value_false;
 }
 
-struct io_libecc_Value add (struct io_libecc_Context * const context, struct io_libecc_Value a, struct io_libecc_Value b)
+struct eccvalue_t add (struct eccstate_t * const context, struct eccvalue_t a, struct eccvalue_t b)
 {
 	if (!isNumber(a) || !isNumber(b))
 	{
@@ -791,13 +785,13 @@ struct io_libecc_Value add (struct io_libecc_Context * const context, struct io_
 	return binary(toBinary(context, a).data.binary + toBinary(context, b).data.binary);
 }
 
-struct io_libecc_Value subtract (struct io_libecc_Context * const context, struct io_libecc_Value a, struct io_libecc_Value b)
+struct eccvalue_t subtract (struct eccstate_t * const context, struct eccvalue_t a, struct eccvalue_t b)
 {
 	return binary(toBinary(context, a).data.binary - toBinary(context, b).data.binary);
 }
 
 static
-struct io_libecc_Value compare (struct io_libecc_Context * const context, struct io_libecc_Value a, struct io_libecc_Value b)
+struct eccvalue_t compare (struct eccstate_t * const context, struct eccvalue_t a, struct eccvalue_t b)
 {
 	a = toPrimitive(context, a, io_libecc_value_hintNumber);
 	io_libecc_Context.setTextIndex(context, io_libecc_context_savedIndexAlt);
@@ -828,7 +822,7 @@ struct io_libecc_Value compare (struct io_libecc_Context * const context, struct
 	}
 }
 
-struct io_libecc_Value less (struct io_libecc_Context * const context, struct io_libecc_Value a, struct io_libecc_Value b)
+struct eccvalue_t less (struct eccstate_t * const context, struct eccvalue_t a, struct eccvalue_t b)
 {
 	a = compare(context, a, b);
 	if (a.type == io_libecc_value_undefinedType)
@@ -837,7 +831,7 @@ struct io_libecc_Value less (struct io_libecc_Context * const context, struct io
 		return a;
 }
 
-struct io_libecc_Value more (struct io_libecc_Context * const context, struct io_libecc_Value a, struct io_libecc_Value b)
+struct eccvalue_t more (struct eccstate_t * const context, struct eccvalue_t a, struct eccvalue_t b)
 {
 	a = compare(context, b, a);
 	if (a.type == io_libecc_value_undefinedType)
@@ -846,7 +840,7 @@ struct io_libecc_Value more (struct io_libecc_Context * const context, struct io
 		return a;
 }
 
-struct io_libecc_Value lessOrEqual (struct io_libecc_Context * const context, struct io_libecc_Value a, struct io_libecc_Value b)
+struct eccvalue_t lessOrEqual (struct eccstate_t * const context, struct eccvalue_t a, struct eccvalue_t b)
 {
 	a = compare(context, b, a);
 	if (a.type == io_libecc_value_undefinedType || a.type == io_libecc_value_trueType)
@@ -855,7 +849,7 @@ struct io_libecc_Value lessOrEqual (struct io_libecc_Context * const context, st
 		return io_libecc_value_true;
 }
 
-struct io_libecc_Value moreOrEqual (struct io_libecc_Context * const context, struct io_libecc_Value a, struct io_libecc_Value b)
+struct eccvalue_t moreOrEqual (struct eccstate_t * const context, struct eccvalue_t a, struct eccvalue_t b)
 {
 	a = compare(context, a, b);
 	if (a.type == io_libecc_value_undefinedType || a.type == io_libecc_value_trueType)
@@ -941,7 +935,7 @@ const char * maskName (enum io_libecc_value_Mask mask)
 	io_libecc_Ecc.fatal("Invalid io_libecc_value_Mask : %u", mask);
 }
 
-void dumpTo (struct io_libecc_Value value, FILE *file)
+void dumpTo (struct eccvalue_t value, FILE *file)
 {
 	switch ((enum io_libecc_value_Type)value.type)
 	{

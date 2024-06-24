@@ -13,8 +13,8 @@ static struct io_libecc_Ecc *ecc;
 static int runTest (int verbosity);
 static int alertUsage (void);
 
-static struct io_libecc_Value alert (struct io_libecc_Context * const context);
-static struct io_libecc_Value print (struct io_libecc_Context * const context);
+static struct eccvalue_t alert (struct eccstate_t * const context);
+static struct eccvalue_t print (struct eccstate_t * const context);
 
 int main (int argc, const char * argv[])
 {
@@ -35,7 +35,7 @@ int main (int argc, const char * argv[])
 		result = runTest(-1);
 	else
 	{
-		struct io_libecc_Object *arguments = io_libecc_Arguments.createWithCList(argc - 2, &argv[2]);
+		struct eccobject_t *arguments = io_libecc_Arguments.createWithCList(argc - 2, &argv[2]);
 		io_libecc_Ecc.addValue(ecc, "arguments", io_libecc_Value.object(arguments), 0);
 		result = io_libecc_Ecc.evalInput(ecc, io_libecc_Input.createFromFile(argv[1]), io_libecc_ecc_sloppyMode);
 	}
@@ -57,10 +57,10 @@ static int alertUsage (void)
 
 //
 
-static struct io_libecc_Value dumpTo (struct io_libecc_Context * const context, FILE *file, bool space, bool linefeed)
+static struct eccvalue_t dumpTo (struct eccstate_t * const context, FILE *file, bool space, bool linefeed)
 {
 	int index, count;
-	struct io_libecc_Value value;
+	struct eccvalue_t value;
 	
 	for (index = 0, count = io_libecc_Context.argumentCount(context); index < count; ++index)
 	{
@@ -78,12 +78,12 @@ static struct io_libecc_Value dumpTo (struct io_libecc_Context * const context, 
 	return io_libecc_value_undefined;
 }
 
-static struct io_libecc_Value alert (struct io_libecc_Context * const context)
+static struct eccvalue_t alert (struct eccstate_t * const context)
 {
 	return dumpTo(context, stderr, true, true);
 }
 
-static struct io_libecc_Value print (struct io_libecc_Context * const context)
+static struct eccvalue_t print (struct eccstate_t * const context)
 {
 	return dumpTo(context, stdout, false, false);
 }

@@ -5,12 +5,7 @@
 //  Copyright (c) 2019 Aurélien Bouilland
 //  Licensed under MIT license, see LICENSE.txt file in project root
 //
-
-#define Implementation
-#include "chars.h"
-
 #include "ecc.h"
-#include "pool.h"
 
 // MARK: - Private
 
@@ -21,10 +16,10 @@ static struct io_libecc_Chars* createWithBytes(int32_t length, const char* bytes
 static void beginAppend(struct io_libecc_chars_Append*);
 static void append(struct io_libecc_chars_Append*, const char* format, ...);
 static void appendCodepoint(struct io_libecc_chars_Append*, uint32_t cp);
-static void appendValue(struct io_libecc_chars_Append*, struct io_libecc_Context* const context, struct io_libecc_Value value);
+static void appendValue(struct io_libecc_chars_Append*, struct eccstate_t* const context, struct eccvalue_t value);
 static void appendBinary(struct io_libecc_chars_Append*, double binary, int base);
 static void normalizeBinary(struct io_libecc_chars_Append*);
-static struct io_libecc_Value endAppend(struct io_libecc_chars_Append*);
+static struct eccvalue_t endAppend(struct io_libecc_chars_Append*);
 static void destroy(struct io_libecc_Chars*);
 static uint8_t codepointLength(uint32_t cp);
 static uint8_t writeCodepoint(char*, uint32_t cp);
@@ -230,7 +225,7 @@ void appendCodepoint (struct io_libecc_chars_Append *chars, uint32_t cp)
 	appendText(chars, text);
 }
 
-void appendValue (struct io_libecc_chars_Append *chars, struct io_libecc_Context * const context, struct io_libecc_Value value)
+void appendValue (struct io_libecc_chars_Append *chars, struct eccstate_t * const context, struct eccvalue_t value)
 {
 	switch ((enum io_libecc_value_Type)value.type)
 	{
@@ -401,7 +396,7 @@ void normalizeBinary (struct io_libecc_chars_Append *chars)
 		chars->units = normalizeBinaryOfBytes(chars->buffer, chars->units);
 }
 
-struct io_libecc_Value endAppend (struct io_libecc_chars_Append *chars)
+struct eccvalue_t endAppend (struct io_libecc_chars_Append *chars)
 {
 	struct io_libecc_Chars *self = chars->value;
 	

@@ -5,12 +5,7 @@
 //  Copyright (c) 2019 Aurélien Bouilland
 //  Licensed under MIT license, see LICENSE.txt file in project root
 //
-
-#define Implementation
-#include "builtins.h"
-
 #include "ecc.h"
-#include "lexer.h"
 
 // MARK: - Private
 
@@ -30,11 +25,11 @@ const struct io_libecc_object_Type io_libecc_global_type = {
 // MARK: - Static Members
 
 static
-struct io_libecc_Value eval (struct io_libecc_Context * const context)
+struct eccvalue_t eval (struct eccstate_t * const context)
 {
-	struct io_libecc_Value value;
+	struct eccvalue_t value;
 	struct io_libecc_Input *input;
-	struct io_libecc_Context subContext = {
+	struct eccstate_t subContext = {
 		.parent = context,
 		.this = io_libecc_Value.object(&context->ecc->global->environment),
 		.ecc = context->ecc,
@@ -55,9 +50,9 @@ struct io_libecc_Value eval (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value parseInt (struct io_libecc_Context * const context)
+struct eccvalue_t parseInt (struct eccstate_t * const context)
 {
-	struct io_libecc_Value value;
+	struct eccvalue_t value;
 	struct io_libecc_Text text;
 	int32_t base;
 	
@@ -82,9 +77,9 @@ struct io_libecc_Value parseInt (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value parseFloat (struct io_libecc_Context * const context)
+struct eccvalue_t parseFloat (struct eccstate_t * const context)
 {
-	struct io_libecc_Value value;
+	struct eccvalue_t value;
 	struct io_libecc_Text text;
 	
 	value = io_libecc_Value.toString(context, io_libecc_Context.argument(context, 0));
@@ -93,28 +88,28 @@ struct io_libecc_Value parseFloat (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value isFinite (struct io_libecc_Context * const context)
+struct eccvalue_t isFinite (struct eccstate_t * const context)
 {
-	struct io_libecc_Value value;
+	struct eccvalue_t value;
 	
 	value = io_libecc_Value.toBinary(context, io_libecc_Context.argument(context, 0));
 	return io_libecc_Value.truth(!isnan(value.data.binary) && !isinf(value.data.binary));
 }
 
 static
-struct io_libecc_Value isNaN (struct io_libecc_Context * const context)
+struct eccvalue_t isNaN (struct eccstate_t * const context)
 {
-	struct io_libecc_Value value;
+	struct eccvalue_t value;
 	
 	value = io_libecc_Value.toBinary(context, io_libecc_Context.argument(context, 0));
 	return io_libecc_Value.truth(isnan(value.data.binary));
 }
 
 static
-struct io_libecc_Value decodeExcept (struct io_libecc_Context * const context, const char *exclude)
+struct eccvalue_t decodeExcept (struct eccstate_t * const context, const char *exclude)
 {
 	char buffer[5], *b;
-	struct io_libecc_Value value;
+	struct eccvalue_t value;
 	const char *bytes;
 	uint16_t index = 0, count;
 	struct io_libecc_chars_Append chars;
@@ -181,22 +176,22 @@ struct io_libecc_Value decodeExcept (struct io_libecc_Context * const context, c
 }
 
 static
-struct io_libecc_Value decodeURI (struct io_libecc_Context * const context)
+struct eccvalue_t decodeURI (struct eccstate_t * const context)
 {
 	return decodeExcept(context, ";/?:@&=+$,#");
 }
 
 static
-struct io_libecc_Value decodeURIComponent (struct io_libecc_Context * const context)
+struct eccvalue_t decodeURIComponent (struct eccstate_t * const context)
 {
 	return decodeExcept(context, NULL);
 }
 
 static
-struct io_libecc_Value encodeExpect (struct io_libecc_Context * const context, const char *exclude)
+struct eccvalue_t encodeExpect (struct eccstate_t * const context, const char *exclude)
 {
 	const char hex[] = "0123456789ABCDEF";
-	struct io_libecc_Value value;
+	struct eccvalue_t value;
 	const char *bytes;
 	uint16_t offset = 0, unit, length;
 	struct io_libecc_Chars *chars;
@@ -251,22 +246,22 @@ struct io_libecc_Value encodeExpect (struct io_libecc_Context * const context, c
 }
 
 static
-struct io_libecc_Value encodeURI (struct io_libecc_Context * const context)
+struct eccvalue_t encodeURI (struct eccstate_t * const context)
 {
 	return encodeExpect(context, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.!~*'()" ";/?:@&=+$,#");
 }
 
 static
-struct io_libecc_Value encodeURIComponent (struct io_libecc_Context * const context)
+struct eccvalue_t encodeURIComponent (struct eccstate_t * const context)
 {
 	return encodeExpect(context, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.!~*'()");
 }
 
 static
-struct io_libecc_Value escape (struct io_libecc_Context * const context)
+struct eccvalue_t escape (struct eccstate_t * const context)
 {
 	const char *exclude = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 @*_+-./";
-	struct io_libecc_Value value;
+	struct eccvalue_t value;
 	struct io_libecc_chars_Append chars;
 	struct io_libecc_Text text;
 	struct io_libecc_text_Char c;
@@ -301,9 +296,9 @@ struct io_libecc_Value escape (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value unescape (struct io_libecc_Context * const context)
+struct eccvalue_t unescape (struct eccstate_t * const context)
 {
-	struct io_libecc_Value value;
+	struct eccvalue_t value;
 	struct io_libecc_chars_Append chars;
 	struct io_libecc_Text text;
 	struct io_libecc_text_Char c;

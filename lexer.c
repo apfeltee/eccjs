@@ -5,11 +5,8 @@
 //  Copyright (c) 2019 Aurélien Bouilland
 //  Licensed under MIT license, see LICENSE.txt file in project root
 //
+#include "ecc.h"
 
-#define Implementation
-#include "lexer.h"
-
-#include "pool.h"
 
 // MARK: - Private
 
@@ -85,8 +82,8 @@ static struct io_libecc_Lexer* createWithInput(struct io_libecc_Input*);
 static void destroy(struct io_libecc_Lexer*);
 static enum io_libecc_lexer_Token nextToken(struct io_libecc_Lexer*);
 static const char* tokenChars(enum io_libecc_lexer_Token token, char buffer[4]);
-static struct io_libecc_Value scanBinary(struct io_libecc_Text text, enum io_libecc_lexer_ScanFlags);
-static struct io_libecc_Value scanInteger(struct io_libecc_Text text, int base, enum io_libecc_lexer_ScanFlags);
+static struct eccvalue_t scanBinary(struct io_libecc_Text text, enum io_libecc_lexer_ScanFlags);
+static struct eccvalue_t scanInteger(struct io_libecc_Text text, int base, enum io_libecc_lexer_ScanFlags);
 static uint32_t scanElement(struct io_libecc_Text text);
 static uint8_t uint8Hex(char a, char b);
 static uint16_t uint16Hex(char a, char b, char c, char d);
@@ -584,7 +581,7 @@ enum io_libecc_lexer_Token nextToken (struct io_libecc_Lexer *self)
 					{
 						struct io_libecc_Text text = self->text;
 						struct io_libecc_chars_Append chars;
-						struct io_libecc_Value value;
+						struct eccvalue_t value;
 						
 						io_libecc_Chars.beginAppend(&chars);
 						
@@ -735,7 +732,7 @@ const char * tokenChars (enum io_libecc_lexer_Token token, char buffer[4])
 	return "unknow";
 }
 
-struct io_libecc_Value scanBinary (struct io_libecc_Text text, enum io_libecc_lexer_ScanFlags flags)
+struct eccvalue_t scanBinary (struct io_libecc_Text text, enum io_libecc_lexer_ScanFlags flags)
 {
 	int lazy = flags & io_libecc_lexer_scanLazy;
 	char buffer[text.length + 1];
@@ -812,7 +809,7 @@ static double strtolHexFallback (struct io_libecc_Text text)
 	return binary * sign;
 }
 
-struct io_libecc_Value scanInteger (struct io_libecc_Text text, int base, enum io_libecc_lexer_ScanFlags flags)
+struct eccvalue_t scanInteger (struct io_libecc_Text text, int base, enum io_libecc_lexer_ScanFlags flags)
 {
 	int lazy = flags & io_libecc_lexer_scanLazy;
 	long integer;
@@ -863,7 +860,7 @@ struct io_libecc_Value scanInteger (struct io_libecc_Text text, int base, enum i
 
 uint32_t scanElement (struct io_libecc_Text text)
 {
-	struct io_libecc_Value value;
+	struct eccvalue_t value;
 	uint16_t index;
 	
 	if (!text.length)

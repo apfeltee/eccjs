@@ -5,19 +5,16 @@
 //  Copyright (c) 2019 Aurélien Bouilland
 //  Licensed under MIT license, see LICENSE.txt file in project root
 //
+#include "ecc.h"
 
-#define Implementation
-#include "builtins.h"
-#include "pool.h"
-#include "op.h"
 
 // MARK: - Private
 
-static void mark (struct io_libecc_Object *object);
-static void capture (struct io_libecc_Object *object);
-static void finalize (struct io_libecc_Object *object);
+static void mark (struct eccobject_t *object);
+static void capture (struct eccobject_t *object);
+static void finalize (struct eccobject_t *object);
 
-struct io_libecc_Object * io_libecc_string_prototype = NULL;
+struct eccobject_t * io_libecc_string_prototype = NULL;
 struct io_libecc_Function * io_libecc_string_constructor = NULL;
 
 const struct io_libecc_object_Type io_libecc_string_type = {
@@ -30,7 +27,7 @@ const struct io_libecc_object_Type io_libecc_string_type = {
 static void setup(void);
 static void teardown(void);
 static struct io_libecc_String* create(struct io_libecc_Chars*);
-static struct io_libecc_Value valueAtIndex(struct io_libecc_String*, int32_t index);
+static struct eccvalue_t valueAtIndex(struct io_libecc_String*, int32_t index);
 static struct io_libecc_Text textAtIndex(const char* chars, int32_t length, int32_t index, int enableReverse);
 static int32_t unitIndex(const char* chars, int32_t max, int32_t unit);
 const struct type_io_libecc_String io_libecc_String = {
@@ -38,7 +35,7 @@ const struct type_io_libecc_String io_libecc_String = {
 };
 
 static
-void mark (struct io_libecc_Object *object)
+void mark (struct eccobject_t *object)
 {
 	struct io_libecc_String *self = (struct io_libecc_String *)object;
 	
@@ -46,7 +43,7 @@ void mark (struct io_libecc_Object *object)
 }
 
 static
-void capture (struct io_libecc_Object *object)
+void capture (struct eccobject_t *object)
 {
 	struct io_libecc_String *self = (struct io_libecc_String *)object;
 	
@@ -54,7 +51,7 @@ void capture (struct io_libecc_Object *object)
 }
 
 static
-void finalize (struct io_libecc_Object *object)
+void finalize (struct eccobject_t *object)
 {
 	struct io_libecc_String *self = (struct io_libecc_String *)object;
 	
@@ -64,7 +61,7 @@ void finalize (struct io_libecc_Object *object)
 // MARK: - Static Members
 
 static
-struct io_libecc_Value toString (struct io_libecc_Context * const context)
+struct eccvalue_t toString (struct eccstate_t * const context)
 {
 	io_libecc_Context.assertThisType(context, io_libecc_value_stringType);
 	
@@ -72,7 +69,7 @@ struct io_libecc_Value toString (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value valueOf (struct io_libecc_Context * const context)
+struct eccvalue_t valueOf (struct eccstate_t * const context)
 {
 	io_libecc_Context.assertThisType(context, io_libecc_value_stringType);
 	
@@ -80,7 +77,7 @@ struct io_libecc_Value valueOf (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value charAt (struct io_libecc_Context * const context)
+struct eccvalue_t charAt (struct eccstate_t * const context)
 {
 	int32_t index, length;
 	const char *chars;
@@ -121,7 +118,7 @@ struct io_libecc_Value charAt (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value charCodeAt (struct io_libecc_Context * const context)
+struct eccvalue_t charCodeAt (struct eccstate_t * const context)
 {
 	int32_t index, length;
 	const char *chars;
@@ -157,7 +154,7 @@ struct io_libecc_Value charCodeAt (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value concat (struct io_libecc_Context * const context)
+struct eccvalue_t concat (struct eccstate_t * const context)
 {
 	struct io_libecc_chars_Append chars;
 	int32_t index, count;
@@ -175,10 +172,10 @@ struct io_libecc_Value concat (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value indexOf (struct io_libecc_Context * const context)
+struct eccvalue_t indexOf (struct eccstate_t * const context)
 {
 	struct io_libecc_Text text;
-	struct io_libecc_Value search, start;
+	struct eccvalue_t search, start;
 	int32_t index, length, searchLength;
 	const char *chars, *searchChars;
 	
@@ -217,10 +214,10 @@ struct io_libecc_Value indexOf (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value lastIndexOf (struct io_libecc_Context * const context)
+struct eccvalue_t lastIndexOf (struct eccstate_t * const context)
 {
 	struct io_libecc_Text text;
-	struct io_libecc_Value search, start;
+	struct eccvalue_t search, start;
 	int32_t index, length, searchLength;
 	const char *chars, *searchChars;
 	
@@ -262,9 +259,9 @@ struct io_libecc_Value lastIndexOf (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value localeCompare (struct io_libecc_Context * const context)
+struct eccvalue_t localeCompare (struct eccstate_t * const context)
 {
-	struct io_libecc_Value that;
+	struct eccvalue_t that;
 	struct io_libecc_Text a, b;
 	
 	io_libecc_Context.assertThisCoerciblePrimitive(context);
@@ -285,10 +282,10 @@ struct io_libecc_Value localeCompare (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value match (struct io_libecc_Context * const context)
+struct eccvalue_t match (struct eccstate_t * const context)
 {
 	struct io_libecc_RegExp *regexp;
-	struct io_libecc_Value value, lastIndex;
+	struct eccvalue_t value, lastIndex;
 	
 	context->this = io_libecc_Value.toString(context, io_libecc_Context.this(context));
 	
@@ -309,7 +306,7 @@ struct io_libecc_Value match (struct io_libecc_Context * const context)
 		struct io_libecc_Text text = textAtIndex(bytes, length, 0, 0);
 		const char *capture[regexp->count * 2];
 		const char *index[regexp->count * 2];
-		struct io_libecc_Object *array = io_libecc_Array.create();
+		struct eccobject_t *array = io_libecc_Array.create();
 		struct io_libecc_chars_Append chars;
 		uint32_t size = 0;
 		
@@ -432,11 +429,11 @@ void replaceText (struct io_libecc_chars_Append *chars, struct io_libecc_Text re
 }
 
 static
-struct io_libecc_Value replace (struct io_libecc_Context * const context)
+struct eccvalue_t replace (struct eccstate_t * const context)
 {
 	struct io_libecc_RegExp *regexp = NULL;
 	struct io_libecc_chars_Append chars;
-	struct io_libecc_Value value, replace;
+	struct eccvalue_t value, replace;
 	struct io_libecc_Text text;
 	const char *bytes, *searchBytes;
 	int32_t length, searchLength;
@@ -475,9 +472,9 @@ struct io_libecc_Value replace (struct io_libecc_Context * const context)
 				
 				if (replace.type == io_libecc_value_functionType)
 				{
-					struct io_libecc_Object *arguments = io_libecc_Array.createSized(regexp->count + 2);
+					struct eccobject_t *arguments = io_libecc_Array.createSized(regexp->count + 2);
 					int32_t index, count;
-					struct io_libecc_Value result;
+					struct eccvalue_t result;
 					
 					for (index = 0, count = regexp->count; index < count; ++index)
 					{
@@ -539,8 +536,8 @@ struct io_libecc_Value replace (struct io_libecc_Context * const context)
 		
 		if (replace.type == io_libecc_value_functionType)
 		{
-			struct io_libecc_Object *arguments = io_libecc_Array.createSized(1 + 2);
-			struct io_libecc_Value result;
+			struct eccobject_t *arguments = io_libecc_Array.createSized(1 + 2);
+			struct eccvalue_t result;
 			
 			arguments->element[0].value = io_libecc_Value.chars(io_libecc_Chars.createWithBytes(text.length, text.bytes));
 			arguments->element[1].value = io_libecc_Value.integer(io_libecc_String.unitIndex(bytes, length, (int32_t)(text.bytes - bytes)));
@@ -565,10 +562,10 @@ struct io_libecc_Value replace (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value search (struct io_libecc_Context * const context)
+struct eccvalue_t search (struct eccstate_t * const context)
 {
 	struct io_libecc_RegExp *regexp;
-	struct io_libecc_Value value;
+	struct eccvalue_t value;
 	
 	io_libecc_Context.assertThisCoerciblePrimitive(context);
 	
@@ -596,9 +593,9 @@ struct io_libecc_Value search (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value slice (struct io_libecc_Context * const context)
+struct eccvalue_t slice (struct eccstate_t * const context)
 {
-	struct io_libecc_Value from, to;
+	struct eccvalue_t from, to;
 	struct io_libecc_Text start, end;
 	const char *chars;
 	int32_t length;
@@ -664,11 +661,11 @@ struct io_libecc_Value slice (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value split (struct io_libecc_Context * const context)
+struct eccvalue_t split (struct eccstate_t * const context)
 {
-	struct io_libecc_Value separatorValue, limitValue;
+	struct eccvalue_t separatorValue, limitValue;
 	struct io_libecc_RegExp *regexp = NULL;
-	struct io_libecc_Object *array;
+	struct eccobject_t *array;
 	struct io_libecc_Chars *element;
 	struct io_libecc_Text text, separator = { 0 };
 	uint32_t size = 0, limit = UINT32_MAX;
@@ -689,7 +686,7 @@ struct io_libecc_Value split (struct io_libecc_Context * const context)
 	separatorValue = io_libecc_Context.argument(context, 0);
 	if (separatorValue.type == io_libecc_value_undefinedType)
 	{
-		struct io_libecc_Object *array = io_libecc_Array.createSized(1);
+		struct eccobject_t *array = io_libecc_Array.createSized(1);
 		array->element[0].value = context->this;
 		return io_libecc_Value.object(array);
 	}
@@ -821,9 +818,9 @@ struct io_libecc_Value split (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value substring (struct io_libecc_Context * const context)
+struct eccvalue_t substring (struct eccstate_t * const context)
 {
-	struct io_libecc_Value from, to;
+	struct eccvalue_t from, to;
 	struct io_libecc_Text start, end;
 	const char *chars;
 	int32_t length, head = 0, tail = 0;
@@ -893,7 +890,7 @@ struct io_libecc_Value substring (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value toLowerCase (struct io_libecc_Context * const context)
+struct eccvalue_t toLowerCase (struct eccstate_t * const context)
 {
 	struct io_libecc_Chars *chars;
 	struct io_libecc_Text text;
@@ -912,7 +909,7 @@ struct io_libecc_Value toLowerCase (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value toUpperCase (struct io_libecc_Context * const context)
+struct eccvalue_t toUpperCase (struct eccstate_t * const context)
 {
 	struct io_libecc_Chars *chars;
 	struct io_libecc_Text text;
@@ -929,7 +926,7 @@ struct io_libecc_Value toUpperCase (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value trim (struct io_libecc_Context * const context)
+struct eccvalue_t trim (struct eccstate_t * const context)
 {
 	struct io_libecc_Chars *chars;
 	struct io_libecc_Text text, last;
@@ -964,9 +961,9 @@ struct io_libecc_Value trim (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value constructor (struct io_libecc_Context * const context)
+struct eccvalue_t constructor (struct eccstate_t * const context)
 {
-	struct io_libecc_Value value;
+	struct eccvalue_t value;
 	
 	value = io_libecc_Context.argument(context, 0);
 	if (value.type == io_libecc_value_undefinedType)
@@ -981,7 +978,7 @@ struct io_libecc_Value constructor (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value fromCharCode (struct io_libecc_Context * const context)
+struct eccvalue_t fromCharCode (struct eccstate_t * const context)
 {
 	struct io_libecc_chars_Append chars;
 	int32_t index, count;
@@ -1059,7 +1056,7 @@ struct io_libecc_String * create (struct io_libecc_Chars *chars)
 	return self;
 }
 
-struct io_libecc_Value valueAtIndex (struct io_libecc_String *self, int32_t index)
+struct eccvalue_t valueAtIndex (struct io_libecc_String *self, int32_t index)
 {
 	struct io_libecc_text_Char c;
 	struct io_libecc_Text text;

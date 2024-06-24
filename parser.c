@@ -5,11 +5,6 @@
 //  Copyright (c) 2019 Aurélien Bouilland
 //  Licensed under MIT license, see LICENSE.txt file in project root
 //
-
-#define Implementation
-#include "parser.h"
-
-#include "oplist.h"
 #include "ecc.h"
 
 // MARK: - Private
@@ -29,7 +24,7 @@ static struct io_libecc_OpList * sourceElements (struct io_libecc_Parser *);
 
 static struct io_libecc_Parser* createWithLexer(struct io_libecc_Lexer*);
 static void destroy(struct io_libecc_Parser*);
-static struct io_libecc_Function* parseWithEnvironment(struct io_libecc_Parser* const, struct io_libecc_Object* environment, struct io_libecc_Object* global);
+static struct io_libecc_Function* parseWithEnvironment(struct io_libecc_Parser* const, struct eccobject_t* environment, struct eccobject_t* global);
 const struct type_io_libecc_Parser io_libecc_Parser = {
     createWithLexer,
     destroy,
@@ -141,8 +136,8 @@ static
 struct io_libecc_OpList * foldConstant (struct io_libecc_Parser *self, struct io_libecc_OpList * oplist)
 {
 	struct io_libecc_Ecc ecc = { .sloppyMode = self->lexer->allowUnicodeOutsideLiteral };
-	struct io_libecc_Context context = { oplist->ops, .ecc = &ecc };
-	struct io_libecc_Value value = context.ops->native(&context);
+	struct eccstate_t context = { oplist->ops, .ecc = &ecc };
+	struct eccvalue_t value = context.ops->native(&context);
 	struct io_libecc_Text text = io_libecc_OpList.text(oplist);
 	io_libecc_OpList.destroy(oplist);
 	return io_libecc_OpList.create(io_libecc_Op.value, value, text);
@@ -154,7 +149,7 @@ struct io_libecc_OpList * useBinary (struct io_libecc_Parser *self, struct io_li
 	if (oplist && oplist->ops[0].native == io_libecc_Op.value && (io_libecc_Value.isNumber(oplist->ops[0].value) || !add))
 	{
 		struct io_libecc_Ecc ecc = { .sloppyMode = self->lexer->allowUnicodeOutsideLiteral };
-		struct io_libecc_Context context = { oplist->ops, .ecc = &ecc };
+		struct eccstate_t context = { oplist->ops, .ecc = &ecc };
 		oplist->ops[0].value = io_libecc_Value.toBinary(&context, oplist->ops[0].value);
 	}
 	return oplist;
@@ -166,7 +161,7 @@ struct io_libecc_OpList * useInteger (struct io_libecc_Parser *self, struct io_l
 	if (oplist && oplist->ops[0].native == io_libecc_Op.value)
 	{
 		struct io_libecc_Ecc ecc = { .sloppyMode = self->lexer->allowUnicodeOutsideLiteral };
-		struct io_libecc_Context context = { oplist->ops, .ecc = &ecc };
+		struct eccstate_t context = { oplist->ops, .ecc = &ecc };
 		oplist->ops[0].value = io_libecc_Value.toInteger(&context, oplist->ops[0].value);
 	}
 	return oplist;
@@ -217,7 +212,7 @@ void semicolon (struct io_libecc_Parser *self)
 static
 struct io_libecc_Op identifier (struct io_libecc_Parser *self)
 {
-	struct io_libecc_Value value = self->lexer->value;
+	struct eccvalue_t value = self->lexer->value;
 	struct io_libecc_Text text = self->lexer->text;
 	if (!expectToken(self, io_libecc_lexer_identifierToken))
 		return (struct io_libecc_Op){ 0 };
@@ -452,7 +447,7 @@ struct io_libecc_OpList * member (struct io_libecc_Parser *self)
 	{
 		if (previewToken(self) == '.')
 		{
-			struct io_libecc_Value value;
+			struct eccvalue_t value;
 			
 			self->lexer->disallowKeyword = 1;
 			nextToken(self);
@@ -510,7 +505,7 @@ struct io_libecc_OpList * leftHandSide (struct io_libecc_Parser *self)
 {
 	struct io_libecc_OpList *oplist = new(self);
 	struct io_libecc_Text text = io_libecc_OpList.text(oplist);
-	struct io_libecc_Value value;
+	struct eccvalue_t value;
 	
 	while (1)
 	{
@@ -1127,7 +1122,7 @@ struct io_libecc_OpList * block (struct io_libecc_Parser *self)
 static
 struct io_libecc_OpList * variableDeclaration (struct io_libecc_Parser *self, int noIn)
 {
-	struct io_libecc_Value value = self->lexer->value;
+	struct eccvalue_t value = self->lexer->value;
 	struct io_libecc_Text text = self->lexer->text;
 	if (!expectToken(self, io_libecc_lexer_identifierToken))
 		return NULL;
@@ -1604,7 +1599,7 @@ struct io_libecc_OpList * parameters (struct io_libecc_Parser *self, int *count)
 static
 struct io_libecc_OpList * function (struct io_libecc_Parser *self, int isDeclaration, int isGetter, int isSetter)
 {
-	struct io_libecc_Value value;
+	struct eccvalue_t value;
 	struct io_libecc_Text text, textParameter;
 	
 	struct io_libecc_OpList *oplist = NULL;
@@ -1765,7 +1760,7 @@ void destroy (struct io_libecc_Parser *self)
 	free(self), self = NULL;
 }
 
-struct io_libecc_Function * parseWithEnvironment (struct io_libecc_Parser * const self, struct io_libecc_Object *environment, struct io_libecc_Object *global)
+struct io_libecc_Function * parseWithEnvironment (struct io_libecc_Parser * const self, struct eccobject_t *environment, struct eccobject_t *global)
 {
 	struct io_libecc_Function *function;
 	struct io_libecc_OpList *oplist;

@@ -5,16 +5,14 @@
 //  Copyright (c) 2019 Aurélien Bouilland
 //  Licensed under MIT license, see LICENSE.txt file in project root
 //
-
-#define Implementation
-#include "oplist.h"
+#include "ecc.h"
 
 // MARK: - Private
 
 // MARK: - Static Members
 
 // MARK: - Methods
-static struct io_libecc_OpList* create(const io_libecc_native_io_libecc_Function native, struct io_libecc_Value value, struct io_libecc_Text text);
+static struct io_libecc_OpList* create(const io_libecc_native_io_libecc_Function native, struct eccvalue_t value, struct io_libecc_Text text);
 static void destroy(struct io_libecc_OpList*);
 static struct io_libecc_OpList* join(struct io_libecc_OpList*, struct io_libecc_OpList*);
 static struct io_libecc_OpList* join3(struct io_libecc_OpList*, struct io_libecc_OpList*, struct io_libecc_OpList*);
@@ -27,7 +25,7 @@ static struct io_libecc_OpList* append(struct io_libecc_OpList*, struct io_libec
 static struct io_libecc_OpList* appendNoop(struct io_libecc_OpList*);
 static struct io_libecc_OpList*
 createLoop(struct io_libecc_OpList* initial, struct io_libecc_OpList* condition, struct io_libecc_OpList* step, struct io_libecc_OpList* body, int reverseCondition);
-static void optimizeWithEnvironment(struct io_libecc_OpList*, struct io_libecc_Object* environment, uint32_t index);
+static void optimizeWithEnvironment(struct io_libecc_OpList*, struct eccobject_t* environment, uint32_t index);
 static void dumpTo(struct io_libecc_OpList*, FILE* file);
 static struct io_libecc_Text text(struct io_libecc_OpList* oplist);
 const struct type_io_libecc_OpList io_libecc_OpList = {
@@ -35,7 +33,7 @@ const struct type_io_libecc_OpList io_libecc_OpList = {
     shift,  append,  appendNoop, createLoop, optimizeWithEnvironment, dumpTo,  text,
 };
 
-struct io_libecc_OpList * create (const io_libecc_native_io_libecc_Function native, struct io_libecc_Value value, struct io_libecc_Text text)
+struct io_libecc_OpList * create (const io_libecc_native_io_libecc_Function native, struct eccvalue_t value, struct io_libecc_Text text)
 {
 	struct io_libecc_OpList *self = malloc(sizeof(*self));
 	self->ops = malloc(sizeof(*self->ops) * 1);
@@ -185,7 +183,7 @@ struct io_libecc_OpList * createLoop (struct io_libecc_OpList * initial, struct 
 			condition->ops[0].native == io_libecc_Op.lessOrEqual ))
 			if (step->count >= 2 && step->ops[1].value.data.key.data.integer == condition->ops[1].value.data.key.data.integer)
 			{
-				struct io_libecc_Value stepValue;
+				struct eccvalue_t stepValue;
 				if (step->count == 2 && (step->ops[0].native == io_libecc_Op.incrementRef || step->ops[0].native == io_libecc_Op.postIncrementRef))
 					stepValue = io_libecc_Value.integer(1);
 				else if (step->count == 3 && step->ops[0].native == io_libecc_Op.addAssignRef && step->ops[2].native == io_libecc_Op.value && step->ops[2].value.type == io_libecc_value_integerType && step->ops[2].value.data.integer > 0)
@@ -213,7 +211,7 @@ struct io_libecc_OpList * createLoop (struct io_libecc_OpList * initial, struct 
 			condition->ops[0].native == io_libecc_Op.moreOrEqual ))
 			if (step->count >= 2 && step->ops[1].value.data.key.data.integer == condition->ops[1].value.data.key.data.integer)
 			{
-				struct io_libecc_Value stepValue;
+				struct eccvalue_t stepValue;
 				if (step->count == 2 && (step->ops[0].native == io_libecc_Op.decrementRef || step->ops[0].native == io_libecc_Op.postDecrementRef))
 					stepValue = io_libecc_Value.integer(1);
 				else if (step->count == 3 && step->ops[0].native == io_libecc_Op.minusAssignRef && step->ops[2].native == io_libecc_Op.value && step->ops[2].value.type == io_libecc_value_integerType && step->ops[2].value.data.integer > 0)
@@ -268,7 +266,7 @@ normal:
 	}
 }
 
-void optimizeWithEnvironment (struct io_libecc_OpList *self, struct io_libecc_Object *environment, uint32_t selfIndex)
+void optimizeWithEnvironment (struct io_libecc_OpList *self, struct eccobject_t *environment, uint32_t selfIndex)
 {
 	uint32_t index, count, slot, haveLocal = 0, environmentLevel = 0;
 	struct io_libecc_Key environments[0xff];
@@ -304,7 +302,7 @@ void optimizeWithEnvironment (struct io_libecc_OpList *self, struct io_libecc_Ob
 			|| self->ops[index].native == io_libecc_Op.deleteLocal
 			)
 		{
-			struct io_libecc_Object *searchEnvironment = environment;
+			struct eccobject_t *searchEnvironment = environment;
 			uint32_t level;
 			
 			level = environmentLevel;

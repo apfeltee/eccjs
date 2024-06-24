@@ -5,13 +5,11 @@
 //  Copyright (c) 2019 Aurélien Bouilland
 //  Licensed under MIT license, see LICENSE.txt file in project root
 //
-
-#define Implementation
-#include "builtins.h"
+#include "ecc.h"
 
 // MARK: - Private
 
-struct io_libecc_Object * io_libecc_arguments_prototype;
+struct eccobject_t * io_libecc_arguments_prototype;
 
 const struct io_libecc_object_Type io_libecc_arguments_type = {
 	.text = &io_libecc_text_argumentsType,
@@ -21,8 +19,8 @@ const struct io_libecc_object_Type io_libecc_arguments_type = {
 
 static void setup(void);
 static void teardown(void);
-static struct io_libecc_Object* createSized(uint32_t size);
-static struct io_libecc_Object* createWithCList(int count, const char* list[]);
+static struct eccobject_t* createSized(uint32_t size);
+static struct eccobject_t* createWithCList(int count, const char* list[]);
 const struct type_io_libecc_Arguments io_libecc_Arguments = {
     setup,
     teardown,
@@ -31,13 +29,13 @@ const struct type_io_libecc_Arguments io_libecc_Arguments = {
 };
 
 static
-struct io_libecc_Value getLength (struct io_libecc_Context * const context)
+struct eccvalue_t getLength (struct eccstate_t * const context)
 {
 	return io_libecc_Value.binary(context->this.data.object->elementCount);
 }
 
 static
-struct io_libecc_Value setLength (struct io_libecc_Context * const context)
+struct eccvalue_t setLength (struct eccstate_t * const context)
 {
 	double length;
 	
@@ -54,7 +52,7 @@ struct io_libecc_Value setLength (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value getCallee (struct io_libecc_Context * const context)
+struct eccvalue_t getCallee (struct eccstate_t * const context)
 {
 	io_libecc_Context.rewindStatement(context->parent);
 	io_libecc_Context.typeError(context, io_libecc_Chars.create("'callee' cannot be accessed in this context"));
@@ -63,7 +61,7 @@ struct io_libecc_Value getCallee (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value setCallee (struct io_libecc_Context * const context)
+struct eccvalue_t setCallee (struct eccstate_t * const context)
 {
 	io_libecc_Context.rewindStatement(context->parent);
 	io_libecc_Context.typeError(context, io_libecc_Chars.create("'callee' cannot be accessed in this context"));
@@ -89,18 +87,18 @@ void teardown (void)
 	io_libecc_arguments_prototype = NULL;
 }
 
-struct io_libecc_Object *createSized (uint32_t size)
+struct eccobject_t *createSized (uint32_t size)
 {
-	struct io_libecc_Object *self = io_libecc_Object.create(io_libecc_arguments_prototype);
+	struct eccobject_t *self = io_libecc_Object.create(io_libecc_arguments_prototype);
 	
 	io_libecc_Object.resizeElement(self, size);
 	
 	return self;
 }
 
-struct io_libecc_Object *createWithCList (int count, const char * list[])
+struct eccobject_t *createWithCList (int count, const char * list[])
 {
-	struct io_libecc_Object *self = createSized(count);
+	struct eccobject_t *self = createSized(count);
 	
 	io_libecc_Object.populateElementWithCList(self, count, list);
 	

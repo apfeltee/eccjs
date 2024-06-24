@@ -6,16 +6,11 @@
 //  Licensed under MIT license, see LICENSE.txt file in project root
 //
 
-#define Implementation
-#include "builtins.h"
-
 #include "ecc.h"
-#include "op.h"
-#include "oplist.h"
 
 // MARK: - Private
 
-struct io_libecc_Object * io_libecc_array_prototype = NULL;
+struct eccobject_t * io_libecc_array_prototype = NULL;
 struct io_libecc_Function * io_libecc_array_constructor = NULL;
 
 const struct io_libecc_object_Type io_libecc_array_type = {
@@ -26,8 +21,8 @@ const struct io_libecc_object_Type io_libecc_array_type = {
 
 static void setup(void);
 static void teardown(void);
-static struct io_libecc_Object* create(void);
-static struct io_libecc_Object* createSized(uint32_t size);
+static struct eccobject_t* create(void);
+static struct eccobject_t* createSized(uint32_t size);
 const struct type_io_libecc_Array io_libecc_Array = {
     setup,
     teardown,
@@ -36,13 +31,13 @@ const struct type_io_libecc_Array io_libecc_Array = {
 };
 
 static
-int valueIsArray (struct io_libecc_Value value)
+int valueIsArray (struct eccvalue_t value)
 {
 	return io_libecc_Value.isObject(value) && io_libecc_Value.objectIsArray(value.data.object);
 }
 
 static
-uint32_t valueArrayLength (struct io_libecc_Value value)
+uint32_t valueArrayLength (struct eccvalue_t value)
 {
 	if (valueIsArray(value))
 		return value.data.object->elementCount;
@@ -51,7 +46,7 @@ uint32_t valueArrayLength (struct io_libecc_Value value)
 }
 
 static
-uint32_t objectLength (struct io_libecc_Context * const context, struct io_libecc_Object *object)
+uint32_t objectLength (struct eccstate_t * const context, struct eccobject_t *object)
 {
 	if (object->type == &io_libecc_array_type)
 		return object->elementCount;
@@ -60,7 +55,7 @@ uint32_t objectLength (struct io_libecc_Context * const context, struct io_libec
 }
 
 static
-void objectResize (struct io_libecc_Context * const context, struct io_libecc_Object *object, uint32_t length)
+void objectResize (struct eccstate_t * const context, struct eccobject_t *object, uint32_t length)
 {
 	if (object->type == &io_libecc_array_type)
 	{
@@ -75,7 +70,7 @@ void objectResize (struct io_libecc_Context * const context, struct io_libecc_Ob
 }
 
 static
-void valueAppendFromElement (struct io_libecc_Context * const context, struct io_libecc_Value value, struct io_libecc_Object *object, uint32_t *element)
+void valueAppendFromElement (struct eccstate_t * const context, struct eccvalue_t value, struct eccobject_t *object, uint32_t *element)
 {
 	uint32_t index;
 	
@@ -87,9 +82,9 @@ void valueAppendFromElement (struct io_libecc_Context * const context, struct io
 }
 
 static
-struct io_libecc_Value isArray (struct io_libecc_Context * const context)
+struct eccvalue_t isArray (struct eccstate_t * const context)
 {
-	struct io_libecc_Value value;
+	struct eccvalue_t value;
 	
 	value = io_libecc_Context.argument(context, 0);
 	
@@ -97,10 +92,10 @@ struct io_libecc_Value isArray (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value toChars (struct io_libecc_Context * const context, struct io_libecc_Value this, struct io_libecc_Text separator)
+struct eccvalue_t toChars (struct eccstate_t * const context, struct eccvalue_t this, struct io_libecc_Text separator)
 {
-	struct io_libecc_Object *object = this.data.object;
-	struct io_libecc_Value value, length = io_libecc_Object.getMember(context, object, io_libecc_key_length);
+	struct eccobject_t *object = this.data.object;
+	struct eccvalue_t value, length = io_libecc_Object.getMember(context, object, io_libecc_key_length);
 	uint32_t index, count = io_libecc_Value.toInteger(context, length).data.integer;
 	struct io_libecc_chars_Append chars;
 	
@@ -120,9 +115,9 @@ struct io_libecc_Value toChars (struct io_libecc_Context * const context, struct
 }
 
 static
-struct io_libecc_Value toString (struct io_libecc_Context * const context)
+struct eccvalue_t toString (struct eccstate_t * const context)
 {
-	struct io_libecc_Value function;
+	struct eccvalue_t function;
 	
 	context->this = io_libecc_Value.toObject(context, io_libecc_Context.this(context));
 	function = io_libecc_Object.getMember(context, context->this.data.object, io_libecc_key_join);
@@ -134,11 +129,11 @@ struct io_libecc_Value toString (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value concat (struct io_libecc_Context * const context)
+struct eccvalue_t concat (struct eccstate_t * const context)
 {
-	struct io_libecc_Value value;
+	struct eccvalue_t value;
 	uint32_t element = 0, length = 0, index, count;
-	struct io_libecc_Object *array = NULL;
+	struct eccobject_t *array = NULL;
 	
 	value = io_libecc_Value.toObject(context, io_libecc_Context.this(context));
 	count = io_libecc_Context.argumentCount(context);
@@ -157,10 +152,10 @@ struct io_libecc_Value concat (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value join (struct io_libecc_Context * const context)
+struct eccvalue_t join (struct eccstate_t * const context)
 {
-	struct io_libecc_Value object;
-	struct io_libecc_Value value;
+	struct eccvalue_t object;
+	struct eccvalue_t value;
 	struct io_libecc_Text separator;
 	
 	value = io_libecc_Context.argument(context, 0);
@@ -178,10 +173,10 @@ struct io_libecc_Value join (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value pop (struct io_libecc_Context * const context)
+struct eccvalue_t pop (struct eccstate_t * const context)
 {
-	struct io_libecc_Value value = io_libecc_value_undefined;
-	struct io_libecc_Object *this;
+	struct eccvalue_t value = io_libecc_value_undefined;
+	struct eccobject_t *this;
 	uint32_t length;
 	
 	this = io_libecc_Value.toObject(context, io_libecc_Context.this(context)).data.object;
@@ -204,9 +199,9 @@ struct io_libecc_Value pop (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value push (struct io_libecc_Context * const context)
+struct eccvalue_t push (struct eccstate_t * const context)
 {
-	struct io_libecc_Object *this;
+	struct eccobject_t *this;
 	uint32_t length = 0, index, count, base;
 	
 	this = io_libecc_Value.toObject(context, io_libecc_Context.this(context)).data.object;
@@ -240,10 +235,10 @@ struct io_libecc_Value push (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value reverse (struct io_libecc_Context * const context)
+struct eccvalue_t reverse (struct eccstate_t * const context)
 {
-	struct io_libecc_Value temp;
-	struct io_libecc_Object *this;
+	struct eccvalue_t temp;
+	struct eccobject_t *this;
 	uint32_t index, half, last, length;
 	
 	this = io_libecc_Value.toObject(context, io_libecc_Context.this(context)).data.object;
@@ -265,10 +260,10 @@ struct io_libecc_Value reverse (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value shift (struct io_libecc_Context * const context)
+struct eccvalue_t shift (struct eccstate_t * const context)
 {
-	struct io_libecc_Value result;
-	struct io_libecc_Object *this;
+	struct eccvalue_t result;
+	struct eccobject_t *this;
 	uint32_t index, count, length;
 	
 	this = io_libecc_Value.toObject(context, io_libecc_Context.this(context)).data.object;
@@ -299,9 +294,9 @@ struct io_libecc_Value shift (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value unshift (struct io_libecc_Context * const context)
+struct eccvalue_t unshift (struct eccstate_t * const context)
 {
-	struct io_libecc_Object *this;
+	struct eccobject_t *this;
 	uint32_t length = 0, index, count;
 	
 	this = io_libecc_Value.toObject(context, io_libecc_Context.this(context)).data.object;
@@ -322,10 +317,10 @@ struct io_libecc_Value unshift (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value slice (struct io_libecc_Context * const context)
+struct eccvalue_t slice (struct eccstate_t * const context)
 {
-	struct io_libecc_Object *this, *result;
-	struct io_libecc_Value start, end;
+	struct eccobject_t *this, *result;
+	struct eccvalue_t start, end;
 	uint32_t from, to, length;
 	double binary;
 	
@@ -367,16 +362,16 @@ struct io_libecc_Value slice (struct io_libecc_Context * const context)
 }
 
 struct Compare {
-	struct io_libecc_Context context;
+	struct eccstate_t context;
 	struct io_libecc_Function * function;
-	struct io_libecc_Object * arguments;
+	struct eccobject_t * arguments;
 	const struct io_libecc_Op * ops;
 };
 
 static
-struct io_libecc_Value defaultComparison (struct io_libecc_Context * const context)
+struct eccvalue_t defaultComparison (struct eccstate_t * const context)
 {
-	struct io_libecc_Value left, right, result;
+	struct eccvalue_t left, right, result;
 	
 	left = io_libecc_Context.argument(context, 0);
 	right = io_libecc_Context.argument(context, 1);
@@ -398,9 +393,9 @@ int gcd(int m, int n)
 }
 
 static inline
-void rotate(struct io_libecc_Object *object, struct io_libecc_Context *context, uint32_t first, uint32_t half, uint32_t last)
+void rotate(struct eccobject_t *object, struct eccstate_t *context, uint32_t first, uint32_t half, uint32_t last)
 {
-	struct io_libecc_Value value, leftValue;
+	struct eccvalue_t value, leftValue;
 	uint32_t n, shift, a, b;
 	
 	if (first == half || half == last)
@@ -428,7 +423,7 @@ void rotate(struct io_libecc_Object *object, struct io_libecc_Context *context, 
 }
 
 static inline
-int compare (struct Compare *cmp, struct io_libecc_Value left, struct io_libecc_Value right)
+int compare (struct Compare *cmp, struct eccvalue_t left, struct eccvalue_t right)
 {
 	uint16_t hashmapCount;
 	
@@ -469,9 +464,9 @@ int compare (struct Compare *cmp, struct io_libecc_Value left, struct io_libecc_
 }
 
 static inline
-uint32_t search(struct io_libecc_Object *object, struct Compare *cmp, uint32_t first, uint32_t last, struct io_libecc_Value right)
+uint32_t search(struct eccobject_t *object, struct Compare *cmp, uint32_t first, uint32_t last, struct eccvalue_t right)
 {
-	struct io_libecc_Value left;
+	struct eccvalue_t left;
 	uint32_t half;
 	
 	while (first < last)
@@ -487,7 +482,7 @@ uint32_t search(struct io_libecc_Object *object, struct Compare *cmp, uint32_t f
 }
 
 static inline
-void merge(struct io_libecc_Object *object, struct Compare *cmp, uint32_t first, uint32_t pivot, uint32_t last, uint32_t len1, uint32_t len2)
+void merge(struct eccobject_t *object, struct Compare *cmp, uint32_t first, uint32_t pivot, uint32_t last, uint32_t len1, uint32_t len2)
 {
 	uint32_t left, right, half1, half2;
 	
@@ -496,7 +491,7 @@ void merge(struct io_libecc_Object *object, struct Compare *cmp, uint32_t first,
 	
 	if (len1 + len2 == 2)
 	{
-		struct io_libecc_Value left, right;
+		struct eccvalue_t left, right;
 		left = io_libecc_Object.getElement(&cmp->context, object, pivot);
 		right = io_libecc_Object.getElement(&cmp->context, object, first);
 		if (compare(cmp, left, right))
@@ -529,13 +524,13 @@ void merge(struct io_libecc_Object *object, struct Compare *cmp, uint32_t first,
 }
 
 static
-void sortAndMerge(struct io_libecc_Object *object, struct Compare *cmp, uint32_t first, uint32_t last)
+void sortAndMerge(struct eccobject_t *object, struct Compare *cmp, uint32_t first, uint32_t last)
 {
 	uint32_t half;
 	
 	if (last - first < 8)
 	{
-		struct io_libecc_Value left, right;
+		struct eccvalue_t left, right;
 		uint32_t i, j;
 		
 		for (i = first + 1; i < last; ++i)
@@ -561,7 +556,7 @@ void sortAndMerge(struct io_libecc_Object *object, struct Compare *cmp, uint32_t
 }
 
 static
-void sortInPlace (struct io_libecc_Context * const context, struct io_libecc_Object *object, struct io_libecc_Function *function, int first, int last)
+void sortInPlace (struct eccstate_t * const context, struct eccobject_t *object, struct io_libecc_Function *function, int first, int last)
 {
 	struct io_libecc_Op defaultOps = { defaultComparison, io_libecc_value_undefined, io_libecc_text_nativeCode };
 	const struct io_libecc_Op * ops = function? function->oplist->ops: &defaultOps;
@@ -582,7 +577,7 @@ void sortInPlace (struct io_libecc_Context * const context, struct io_libecc_Obj
 	
 	if (function && function->flags & io_libecc_function_needHeap)
 	{
-		struct io_libecc_Object *environment = io_libecc_Object.copy(&function->environment);
+		struct eccobject_t *environment = io_libecc_Object.copy(&function->environment);
 		
 		cmp.context.environment = environment;
 		cmp.arguments = io_libecc_Arguments.createSized(2);
@@ -594,8 +589,8 @@ void sortInPlace (struct io_libecc_Context * const context, struct io_libecc_Obj
 	}
 	else
 	{
-		struct io_libecc_Object environment = function? function->environment: io_libecc_Object.identity;
-		struct io_libecc_Object arguments = io_libecc_Object.identity;
+		struct eccobject_t environment = function? function->environment: io_libecc_Object.identity;
+		struct eccobject_t arguments = io_libecc_Object.identity;
 		union io_libecc_object_Hashmap hashmap[function? function->environment.hashmapCapacity: 3];
 		union io_libecc_object_Element element[2];
 		
@@ -617,10 +612,10 @@ void sortInPlace (struct io_libecc_Context * const context, struct io_libecc_Obj
 }
 
 static
-struct io_libecc_Value sort (struct io_libecc_Context * const context)
+struct eccvalue_t sort (struct eccstate_t * const context)
 {
-	struct io_libecc_Object *this;
-	struct io_libecc_Value compare;
+	struct eccobject_t *this;
+	struct eccvalue_t compare;
 	uint32_t count;
 	
 	this = io_libecc_Value.toObject(context, io_libecc_Context.this(context)).data.object;
@@ -638,9 +633,9 @@ struct io_libecc_Value sort (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value splice (struct io_libecc_Context * const context)
+struct eccvalue_t splice (struct eccstate_t * const context)
 {
-	struct io_libecc_Object *this, *result;
+	struct eccobject_t *this, *result;
 	uint32_t length, from, to, count = 0, add = 0, start = 0, delete = 0;
 	
 	count = io_libecc_Context.argumentCount(context);
@@ -707,10 +702,10 @@ struct io_libecc_Value splice (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value indexOf (struct io_libecc_Context * const context)
+struct eccvalue_t indexOf (struct eccstate_t * const context)
 {
-	struct io_libecc_Object *this;
-	struct io_libecc_Value search, start;
+	struct eccobject_t *this;
+	struct eccvalue_t search, start;
 	uint32_t length = 0;
 	int32_t index;
 	
@@ -732,10 +727,10 @@ struct io_libecc_Value indexOf (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value lastIndexOf (struct io_libecc_Context * const context)
+struct eccvalue_t lastIndexOf (struct eccstate_t * const context)
 {
-	struct io_libecc_Object *this;
-	struct io_libecc_Value search, start;
+	struct eccobject_t *this;
+	struct eccvalue_t search, start;
 	uint32_t length = 0;
 	int32_t index;
 	
@@ -759,13 +754,13 @@ struct io_libecc_Value lastIndexOf (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value getLength (struct io_libecc_Context * const context)
+struct eccvalue_t getLength (struct eccstate_t * const context)
 {
 	return io_libecc_Value.binary(context->this.data.object->elementCount);
 }
 
 static
-struct io_libecc_Value setLength (struct io_libecc_Context * const context)
+struct eccvalue_t setLength (struct eccstate_t * const context)
 {
 	double length;
 	
@@ -780,11 +775,11 @@ struct io_libecc_Value setLength (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value constructor (struct io_libecc_Context * const context)
+struct eccvalue_t constructor (struct eccstate_t * const context)
 {
-	struct io_libecc_Value value;
+	struct eccvalue_t value;
 	uint32_t index, count, length;
-	struct io_libecc_Object *array;
+	struct eccobject_t *array;
 	
 	length = count = io_libecc_Context.argumentCount(context);
 	value = io_libecc_Context.argument(context, 0);
@@ -849,14 +844,14 @@ void teardown (void)
 	io_libecc_array_constructor = NULL;
 }
 
-struct io_libecc_Object *create (void)
+struct eccobject_t *create (void)
 {
 	return createSized(0);
 }
 
-struct io_libecc_Object *createSized (uint32_t size)
+struct eccobject_t *createSized (uint32_t size)
 {
-	struct io_libecc_Object *self = io_libecc_Object.create(io_libecc_array_prototype);
+	struct eccobject_t *self = io_libecc_Object.create(io_libecc_array_prototype);
 	
 	io_libecc_Object.resizeElement(self, size);
 	

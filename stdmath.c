@@ -5,9 +5,7 @@
 //  Copyright (c) 2019 Aurélien Bouilland
 //  Licensed under MIT license, see LICENSE.txt file in project root
 //
-
-#define Implementation
-#include "builtins.h"
+#include "ecc.h"
 
 // MARK: - Private
 
@@ -24,9 +22,9 @@ const struct type_io_libecc_Math io_libecc_Math = {
 };
 
 static
-struct io_libecc_Value mathAbs (struct io_libecc_Context * const context)
+struct eccvalue_t mathAbs (struct eccstate_t * const context)
 {
-	struct io_libecc_Value value;
+	struct eccvalue_t value;
 	
 	value = io_libecc_Context.argument(context, 0);
 	if (value.type != io_libecc_value_binaryType)
@@ -36,9 +34,9 @@ struct io_libecc_Value mathAbs (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value mathACos (struct io_libecc_Context * const context)
+struct eccvalue_t mathACos (struct eccstate_t * const context)
 {
-	struct io_libecc_Value value;
+	struct eccvalue_t value;
 	
 	value = io_libecc_Context.argument(context, 0);
 	if (value.type != io_libecc_value_binaryType)
@@ -48,9 +46,9 @@ struct io_libecc_Value mathACos (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value mathASin (struct io_libecc_Context * const context)
+struct eccvalue_t mathASin (struct eccstate_t * const context)
 {
-	struct io_libecc_Value value;
+	struct eccvalue_t value;
 	
 	value = io_libecc_Context.argument(context, 0);
 	if (value.type != io_libecc_value_binaryType)
@@ -60,9 +58,9 @@ struct io_libecc_Value mathASin (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value mathATan (struct io_libecc_Context * const context)
+struct eccvalue_t mathATan (struct eccstate_t * const context)
 {
-	struct io_libecc_Value value;
+	struct eccvalue_t value;
 	
 	value = io_libecc_Context.argument(context, 0);
 	if (value.type != io_libecc_value_binaryType)
@@ -72,9 +70,9 @@ struct io_libecc_Value mathATan (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value mathATan2 (struct io_libecc_Context * const context)
+struct eccvalue_t mathATan2 (struct eccstate_t * const context)
 {
-	struct io_libecc_Value x, y;
+	struct eccvalue_t x, y;
 	
 	x = io_libecc_Context.argument(context, 0);
 	if (x.type != io_libecc_value_binaryType)
@@ -88,9 +86,9 @@ struct io_libecc_Value mathATan2 (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value mathCeil (struct io_libecc_Context * const context)
+struct eccvalue_t mathCeil (struct eccstate_t * const context)
 {
-	struct io_libecc_Value value;
+	struct eccvalue_t value;
 	
 	value = io_libecc_Context.argument(context, 0);
 	if (value.type != io_libecc_value_binaryType)
@@ -100,9 +98,9 @@ struct io_libecc_Value mathCeil (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value mathCos (struct io_libecc_Context * const context)
+struct eccvalue_t mathCos (struct eccstate_t * const context)
 {
-	struct io_libecc_Value value;
+	struct eccvalue_t value;
 	
 	value = io_libecc_Context.argument(context, 0);
 	if (value.type != io_libecc_value_binaryType)
@@ -112,9 +110,9 @@ struct io_libecc_Value mathCos (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value mathExp (struct io_libecc_Context * const context)
+struct eccvalue_t mathExp (struct eccstate_t * const context)
 {
-	struct io_libecc_Value value;
+	struct eccvalue_t value;
 	
 	value = io_libecc_Context.argument(context, 0);
 	if (value.type != io_libecc_value_binaryType)
@@ -124,9 +122,9 @@ struct io_libecc_Value mathExp (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value mathFloor (struct io_libecc_Context * const context)
+struct eccvalue_t mathFloor (struct eccstate_t * const context)
 {
-	struct io_libecc_Value value;
+	struct eccvalue_t value;
 	
 	value = io_libecc_Context.argument(context, 0);
 	if (value.type != io_libecc_value_binaryType)
@@ -136,9 +134,9 @@ struct io_libecc_Value mathFloor (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value mathLog (struct io_libecc_Context * const context)
+struct eccvalue_t mathLog (struct eccstate_t * const context)
 {
-	struct io_libecc_Value value;
+	struct eccvalue_t value;
 	
 	value = io_libecc_Context.argument(context, 0);
 	if (value.type != io_libecc_value_binaryType)
@@ -148,7 +146,7 @@ struct io_libecc_Value mathLog (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value mathMax (struct io_libecc_Context * const context)
+struct eccvalue_t mathMax (struct eccstate_t * const context)
 {
 	double result = -INFINITY, value;
 	int index, count;
@@ -171,7 +169,7 @@ struct io_libecc_Value mathMax (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value mathMin (struct io_libecc_Context * const context)
+struct eccvalue_t mathMin (struct eccstate_t * const context)
 {
 	double result = INFINITY, value;
 	int index, count;
@@ -194,9 +192,9 @@ struct io_libecc_Value mathMin (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value mathPow (struct io_libecc_Context * const context)
+struct eccvalue_t mathPow (struct eccstate_t * const context)
 {
-	struct io_libecc_Value x, y;
+	struct eccvalue_t x, y;
 	
 	x = io_libecc_Value.toBinary(context, io_libecc_Context.argument(context, 0));
 	y = io_libecc_Value.toBinary(context, io_libecc_Context.argument(context, 1));
@@ -208,15 +206,15 @@ struct io_libecc_Value mathPow (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value mathRandom (struct io_libecc_Context * const context)
+struct eccvalue_t mathRandom (struct eccstate_t * const context)
 {
 	return io_libecc_Value.binary((double)rand() / (double)RAND_MAX);
 }
 
 static
-struct io_libecc_Value mathRound (struct io_libecc_Context * const context)
+struct eccvalue_t mathRound (struct eccstate_t * const context)
 {
-	struct io_libecc_Value value;
+	struct eccvalue_t value;
 	
 	value = io_libecc_Context.argument(context, 0);
 	if (value.type != io_libecc_value_binaryType)
@@ -229,9 +227,9 @@ struct io_libecc_Value mathRound (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value mathSin (struct io_libecc_Context * const context)
+struct eccvalue_t mathSin (struct eccstate_t * const context)
 {
-	struct io_libecc_Value value;
+	struct eccvalue_t value;
 	
 	value = io_libecc_Context.argument(context, 0);
 	if (value.type != io_libecc_value_binaryType)
@@ -241,9 +239,9 @@ struct io_libecc_Value mathSin (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value mathSqrt (struct io_libecc_Context * const context)
+struct eccvalue_t mathSqrt (struct eccstate_t * const context)
 {
-	struct io_libecc_Value value;
+	struct eccvalue_t value;
 	
 	value = io_libecc_Context.argument(context, 0);
 	if (value.type != io_libecc_value_binaryType)
@@ -253,9 +251,9 @@ struct io_libecc_Value mathSqrt (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value mathTan (struct io_libecc_Context * const context)
+struct eccvalue_t mathTan (struct eccstate_t * const context)
 {
-	struct io_libecc_Value value;
+	struct eccvalue_t value;
 	
 	value = io_libecc_Context.argument(context, 0);
 	if (value.type != io_libecc_value_binaryType)
@@ -266,7 +264,7 @@ struct io_libecc_Value mathTan (struct io_libecc_Context * const context)
 
 // MARK: - Public
 
-struct io_libecc_Object * io_libecc_math_object = NULL;
+struct eccobject_t * io_libecc_math_object = NULL;
 
 void setup ()
 {

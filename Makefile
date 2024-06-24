@@ -17,8 +17,8 @@ unflags = \
 	-Wunused-variable
 
 
-#WFLAGS = -Wall -Wextra -Wshadow -Wpointer-arith -Wstrict-prototypes -Wmissing-prototypes $(unflags)
-WFLAGS = -w
+WFLAGS = -Wall -Wextra -Wshadow -Wpointer-arith -Wstrict-prototypes -Wmissing-prototypes $(unflags)
+#WFLAGS = -w
 
 
 CC = gcc  $(WFLAGS)

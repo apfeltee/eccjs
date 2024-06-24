@@ -6,8 +6,7 @@
 //  Licensed under MIT license, see LICENSE.txt file in project root
 //
 
-#define Implementation
-#include "env.h"
+#include "ecc.h"
 
 #if __MSDOS__
 	#include <conio.h>

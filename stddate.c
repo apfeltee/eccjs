@@ -6,16 +6,12 @@
 //  Licensed under MIT license, see LICENSE.txt file in project root
 //
 
-#define Implementation
-#include "builtins.h"
-
 #include "ecc.h"
-#include "pool.h"
-#include "env.h"
+
 
 // MARK: - Private
 
-struct io_libecc_Object * io_libecc_date_prototype = NULL;
+struct eccobject_t * io_libecc_date_prototype = NULL;
 struct io_libecc_Function * io_libecc_date_constructor = NULL;
 
 const struct io_libecc_object_Type io_libecc_date_type = {
@@ -86,9 +82,9 @@ double toUTC (double ms)
 }
 
 static
-double binaryArgumentOr (struct io_libecc_Context * const context, int index, double alternative)
+double binaryArgumentOr (struct eccstate_t * const context, int index, double alternative)
 {
-	struct io_libecc_Value value = io_libecc_Context.argument(context, index);
+	struct eccvalue_t value = io_libecc_Context.argument(context, index);
 	if (value.check == 1)
 		return io_libecc_Value.toBinary(context, io_libecc_Context.argument(context, index)).data.binary;
 	else
@@ -133,7 +129,7 @@ double msFromDateAndTime (struct date date, struct time time)
 }
 
 static
-double msFromArguments (struct io_libecc_Context * const context)
+double msFromArguments (struct eccstate_t * const context)
 {
 	uint16_t count;
 	struct date date;
@@ -349,7 +345,7 @@ unsigned int msToWeekday(double ms)
 // MARK: - Static Members
 
 static
-struct io_libecc_Value toString (struct io_libecc_Context * const context)
+struct eccvalue_t toString (struct eccstate_t * const context)
 {
 	io_libecc_Context.assertThisType(context, io_libecc_value_dateType);
 	
@@ -357,7 +353,7 @@ struct io_libecc_Value toString (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value toUTCString (struct io_libecc_Context * const context)
+struct eccvalue_t toUTCString (struct eccstate_t * const context)
 {
 	io_libecc_Context.assertThisType(context, io_libecc_value_dateType);
 	
@@ -365,11 +361,11 @@ struct io_libecc_Value toUTCString (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value toJSON (struct io_libecc_Context * const context)
+struct eccvalue_t toJSON (struct eccstate_t * const context)
 {
-	struct io_libecc_Value object = io_libecc_Value.toObject(context, io_libecc_Context.this(context));
-	struct io_libecc_Value tv = io_libecc_Value.toPrimitive(context, object, io_libecc_value_hintNumber);
-	struct io_libecc_Value toISO;
+	struct eccvalue_t object = io_libecc_Value.toObject(context, io_libecc_Context.this(context));
+	struct eccvalue_t tv = io_libecc_Value.toPrimitive(context, object, io_libecc_value_hintNumber);
+	struct eccvalue_t toISO;
 	
 	if (tv.type == io_libecc_value_binaryType && !isfinite(tv.data.binary))
 		return io_libecc_value_null;
@@ -384,7 +380,7 @@ struct io_libecc_Value toJSON (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value toISOString (struct io_libecc_Context * const context)
+struct eccvalue_t toISOString (struct eccstate_t * const context)
 {
 	const char *format;
 	struct date date;
@@ -413,7 +409,7 @@ struct io_libecc_Value toISOString (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value toDateString (struct io_libecc_Context * const context)
+struct eccvalue_t toDateString (struct eccstate_t * const context)
 {
 	struct date date;
 	
@@ -432,7 +428,7 @@ struct io_libecc_Value toDateString (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value toTimeString (struct io_libecc_Context * const context)
+struct eccvalue_t toTimeString (struct eccstate_t * const context)
 {
 	struct time time;
 	
@@ -453,7 +449,7 @@ struct io_libecc_Value toTimeString (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value valueOf (struct io_libecc_Context * const context)
+struct eccvalue_t valueOf (struct eccstate_t * const context)
 {
 	io_libecc_Context.assertThisType(context, io_libecc_value_dateType);
 	
@@ -461,7 +457,7 @@ struct io_libecc_Value valueOf (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value getYear (struct io_libecc_Context * const context)
+struct eccvalue_t getYear (struct eccstate_t * const context)
 {
 	struct date date;
 	
@@ -472,7 +468,7 @@ struct io_libecc_Value getYear (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value getFullYear (struct io_libecc_Context * const context)
+struct eccvalue_t getFullYear (struct eccstate_t * const context)
 {
 	struct date date;
 	
@@ -483,7 +479,7 @@ struct io_libecc_Value getFullYear (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value getUTCFullYear (struct io_libecc_Context * const context)
+struct eccvalue_t getUTCFullYear (struct eccstate_t * const context)
 {
 	struct date date;
 	
@@ -494,7 +490,7 @@ struct io_libecc_Value getUTCFullYear (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value getMonth (struct io_libecc_Context * const context)
+struct eccvalue_t getMonth (struct eccstate_t * const context)
 {
 	struct date date;
 	
@@ -505,7 +501,7 @@ struct io_libecc_Value getMonth (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value getUTCMonth (struct io_libecc_Context * const context)
+struct eccvalue_t getUTCMonth (struct eccstate_t * const context)
 {
 	struct date date;
 	
@@ -516,7 +512,7 @@ struct io_libecc_Value getUTCMonth (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value getDate (struct io_libecc_Context * const context)
+struct eccvalue_t getDate (struct eccstate_t * const context)
 {
 	struct date date;
 	
@@ -527,7 +523,7 @@ struct io_libecc_Value getDate (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value getUTCDate (struct io_libecc_Context * const context)
+struct eccvalue_t getUTCDate (struct eccstate_t * const context)
 {
 	struct date date;
 	
@@ -538,7 +534,7 @@ struct io_libecc_Value getUTCDate (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value getDay (struct io_libecc_Context * const context)
+struct eccvalue_t getDay (struct eccstate_t * const context)
 {
 	io_libecc_Context.assertThisType(context, io_libecc_value_dateType);
 	
@@ -546,7 +542,7 @@ struct io_libecc_Value getDay (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value getUTCDay (struct io_libecc_Context * const context)
+struct eccvalue_t getUTCDay (struct eccstate_t * const context)
 {
 	io_libecc_Context.assertThisType(context, io_libecc_value_dateType);
 	
@@ -554,7 +550,7 @@ struct io_libecc_Value getUTCDay (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value getHours (struct io_libecc_Context * const context)
+struct eccvalue_t getHours (struct eccstate_t * const context)
 {
 	io_libecc_Context.assertThisType(context, io_libecc_value_dateType);
 	
@@ -562,7 +558,7 @@ struct io_libecc_Value getHours (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value getUTCHours (struct io_libecc_Context * const context)
+struct eccvalue_t getUTCHours (struct eccstate_t * const context)
 {
 	io_libecc_Context.assertThisType(context, io_libecc_value_dateType);
 	
@@ -570,7 +566,7 @@ struct io_libecc_Value getUTCHours (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value getMinutes (struct io_libecc_Context * const context)
+struct eccvalue_t getMinutes (struct eccstate_t * const context)
 {
 	io_libecc_Context.assertThisType(context, io_libecc_value_dateType);
 	
@@ -578,7 +574,7 @@ struct io_libecc_Value getMinutes (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value getUTCMinutes (struct io_libecc_Context * const context)
+struct eccvalue_t getUTCMinutes (struct eccstate_t * const context)
 {
 	io_libecc_Context.assertThisType(context, io_libecc_value_dateType);
 	
@@ -586,7 +582,7 @@ struct io_libecc_Value getUTCMinutes (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value getSeconds (struct io_libecc_Context * const context)
+struct eccvalue_t getSeconds (struct eccstate_t * const context)
 {
 	io_libecc_Context.assertThisType(context, io_libecc_value_dateType);
 	
@@ -594,7 +590,7 @@ struct io_libecc_Value getSeconds (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value getUTCSeconds (struct io_libecc_Context * const context)
+struct eccvalue_t getUTCSeconds (struct eccstate_t * const context)
 {
 	io_libecc_Context.assertThisType(context, io_libecc_value_dateType);
 	
@@ -602,7 +598,7 @@ struct io_libecc_Value getUTCSeconds (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value getMilliseconds (struct io_libecc_Context * const context)
+struct eccvalue_t getMilliseconds (struct eccstate_t * const context)
 {
 	io_libecc_Context.assertThisType(context, io_libecc_value_dateType);
 	
@@ -610,7 +606,7 @@ struct io_libecc_Value getMilliseconds (struct io_libecc_Context * const context
 }
 
 static
-struct io_libecc_Value getUTCMilliseconds (struct io_libecc_Context * const context)
+struct eccvalue_t getUTCMilliseconds (struct eccstate_t * const context)
 {
 	io_libecc_Context.assertThisType(context, io_libecc_value_dateType);
 	
@@ -618,13 +614,13 @@ struct io_libecc_Value getUTCMilliseconds (struct io_libecc_Context * const cont
 }
 
 static
-struct io_libecc_Value getTimezoneOffset (struct io_libecc_Context * const context)
+struct eccvalue_t getTimezoneOffset (struct eccstate_t * const context)
 {
 	return io_libecc_Value.binary(-localOffset * 60);
 }
 
 static
-struct io_libecc_Value setTime (struct io_libecc_Context * const context)
+struct eccvalue_t setTime (struct eccstate_t * const context)
 {
 	double ms;
 	
@@ -636,7 +632,7 @@ struct io_libecc_Value setTime (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value setMilliseconds (struct io_libecc_Context * const context)
+struct eccvalue_t setMilliseconds (struct eccstate_t * const context)
 {
 	struct date date;
 	struct time time;
@@ -654,7 +650,7 @@ struct io_libecc_Value setMilliseconds (struct io_libecc_Context * const context
 }
 
 static
-struct io_libecc_Value setUTCMilliseconds (struct io_libecc_Context * const context)
+struct eccvalue_t setUTCMilliseconds (struct eccstate_t * const context)
 {
 	struct date date;
 	struct time time;
@@ -672,7 +668,7 @@ struct io_libecc_Value setUTCMilliseconds (struct io_libecc_Context * const cont
 }
 
 static
-struct io_libecc_Value setSeconds (struct io_libecc_Context * const context)
+struct eccvalue_t setSeconds (struct eccstate_t * const context)
 {
 	struct date date;
 	struct time time;
@@ -692,7 +688,7 @@ struct io_libecc_Value setSeconds (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value setUTCSeconds (struct io_libecc_Context * const context)
+struct eccvalue_t setUTCSeconds (struct eccstate_t * const context)
 {
 	struct date date;
 	struct time time;
@@ -712,7 +708,7 @@ struct io_libecc_Value setUTCSeconds (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value setMinutes (struct io_libecc_Context * const context)
+struct eccvalue_t setMinutes (struct eccstate_t * const context)
 {
 	struct date date;
 	struct time time;
@@ -734,7 +730,7 @@ struct io_libecc_Value setMinutes (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value setUTCMinutes (struct io_libecc_Context * const context)
+struct eccvalue_t setUTCMinutes (struct eccstate_t * const context)
 {
 	struct date date;
 	struct time time;
@@ -756,7 +752,7 @@ struct io_libecc_Value setUTCMinutes (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value setHours (struct io_libecc_Context * const context)
+struct eccvalue_t setHours (struct eccstate_t * const context)
 {
 	struct date date;
 	struct time time;
@@ -780,7 +776,7 @@ struct io_libecc_Value setHours (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value setUTCHours (struct io_libecc_Context * const context)
+struct eccvalue_t setUTCHours (struct eccstate_t * const context)
 {
 	struct date date;
 	struct time time;
@@ -804,7 +800,7 @@ struct io_libecc_Value setUTCHours (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value setDate (struct io_libecc_Context * const context)
+struct eccvalue_t setDate (struct eccstate_t * const context)
 {
 	struct date date;
 	double day, ms;
@@ -821,7 +817,7 @@ struct io_libecc_Value setDate (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value setUTCDate (struct io_libecc_Context * const context)
+struct eccvalue_t setUTCDate (struct eccstate_t * const context)
 {
 	struct date date;
 	double day, ms;
@@ -838,7 +834,7 @@ struct io_libecc_Value setUTCDate (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value setMonth (struct io_libecc_Context * const context)
+struct eccvalue_t setMonth (struct eccstate_t * const context)
 {
 	struct date date;
 	double month, day, ms;
@@ -857,7 +853,7 @@ struct io_libecc_Value setMonth (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value setUTCMonth (struct io_libecc_Context * const context)
+struct eccvalue_t setUTCMonth (struct eccstate_t * const context)
 {
 	struct date date;
 	double month, day, ms;
@@ -876,7 +872,7 @@ struct io_libecc_Value setUTCMonth (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value setFullYear (struct io_libecc_Context * const context)
+struct eccvalue_t setFullYear (struct eccstate_t * const context)
 {
 	struct date date;
 	double year, month, day, ms;
@@ -900,7 +896,7 @@ struct io_libecc_Value setFullYear (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value setYear (struct io_libecc_Context * const context)
+struct eccvalue_t setYear (struct eccstate_t * const context)
 {
 	struct date date;
 	double year, month, day, ms;
@@ -924,7 +920,7 @@ struct io_libecc_Value setYear (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value setUTCFullYear (struct io_libecc_Context * const context)
+struct eccvalue_t setUTCFullYear (struct eccstate_t * const context)
 {
 	struct date date;
 	double year, month, day, ms;
@@ -948,15 +944,15 @@ struct io_libecc_Value setUTCFullYear (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value now (struct io_libecc_Context * const context)
+struct eccvalue_t now (struct eccstate_t * const context)
 {
 	return io_libecc_Value.binary(msClip(io_libecc_Env.currentTime()));
 }
 
 static
-struct io_libecc_Value parse (struct io_libecc_Context * const context)
+struct eccvalue_t parse (struct eccstate_t * const context)
 {
-	struct io_libecc_Value value;
+	struct eccvalue_t value;
 	
 	value = io_libecc_Value.toString(context, io_libecc_Context.argument(context, 0));
 	
@@ -964,7 +960,7 @@ struct io_libecc_Value parse (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value UTC (struct io_libecc_Context * const context)
+struct eccvalue_t UTC (struct eccstate_t * const context)
 {
 	if (io_libecc_Context.argumentCount(context) > 1)
 		return io_libecc_Value.binary(msClip(msFromArguments(context)));
@@ -973,7 +969,7 @@ struct io_libecc_Value UTC (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value constructor (struct io_libecc_Context * const context)
+struct eccvalue_t constructor (struct eccstate_t * const context)
 {
 	double time;
 	uint16_t count;
@@ -987,7 +983,7 @@ struct io_libecc_Value constructor (struct io_libecc_Context * const context)
 		time = toUTC(msFromArguments(context));
 	else if (count)
 	{
-		struct io_libecc_Value value = io_libecc_Value.toPrimitive(context, io_libecc_Context.argument(context, 0), io_libecc_value_hintAuto);
+		struct eccvalue_t value = io_libecc_Value.toPrimitive(context, io_libecc_Context.argument(context, 0), io_libecc_value_hintAuto);
 		
 		if (io_libecc_Value.isString(value))
 			time = msFromBytes(io_libecc_Value.stringBytes(&value), io_libecc_Value.stringLength(&value));

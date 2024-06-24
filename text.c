@@ -5,11 +5,7 @@
 //  Copyright (c) 2019 Aurélien Bouilland
 //  Licensed under MIT license, see LICENSE.txt file in project root
 //
-
-#define Implementation
-#include "text.h"
-
-// MARK: - Private
+#include "ecc.h"
 
 
 

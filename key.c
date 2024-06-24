@@ -5,14 +5,7 @@
 //  Copyright (c) 2019 Aurélien Bouilland
 //  Licensed under MIT license, see LICENSE.txt file in project root
 //
-
-#define Implementation
-#include "key.h"
-
-#include "env.h"
-#include "lexer.h"
 #include "ecc.h"
-#include "builtins.h"
 
 // MARK: - Private
 

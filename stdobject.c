@@ -5,50 +5,45 @@
 //  Copyright (c) 2019 Aurélien Bouilland
 //  Licensed under MIT license, see LICENSE.txt file in project root
 //
-
-#define Implementation
-#include "builtins.h"
 #include "ecc.h"
-#include "pool.h"
-#include "lexer.h"
-#include "op.h"
+
 
 // MARK: - Private
 
 static void setup(void);
 static void teardown(void);
-static struct io_libecc_Object* create(struct io_libecc_Object* prototype);
-static struct io_libecc_Object* createSized(struct io_libecc_Object* prototype, uint16_t size);
-static struct io_libecc_Object* createTyped(const struct io_libecc_object_Type* type);
-static struct io_libecc_Object* initialize(struct io_libecc_Object* restrict, struct io_libecc_Object* restrict prototype);
-static struct io_libecc_Object* initializeSized(struct io_libecc_Object* restrict, struct io_libecc_Object* restrict prototype, uint16_t size);
-static struct io_libecc_Object* finalize(struct io_libecc_Object*);
-static struct io_libecc_Object* copy(const struct io_libecc_Object* original);
-static void destroy(struct io_libecc_Object*);
-static struct io_libecc_Value getMember(struct io_libecc_Context* const, struct io_libecc_Object*, struct io_libecc_Key key);
-static struct io_libecc_Value putMember(struct io_libecc_Context* const, struct io_libecc_Object*, struct io_libecc_Key key, struct io_libecc_Value);
-static struct io_libecc_Value* member(struct io_libecc_Object*, struct io_libecc_Key key, enum io_libecc_value_Flags);
-static struct io_libecc_Value* addMember(struct io_libecc_Object*, struct io_libecc_Key key, struct io_libecc_Value, enum io_libecc_value_Flags);
-static int deleteMember(struct io_libecc_Object*, struct io_libecc_Key key);
-static struct io_libecc_Value getElement(struct io_libecc_Context* const, struct io_libecc_Object*, uint32_t index);
-static struct io_libecc_Value putElement(struct io_libecc_Context* const, struct io_libecc_Object*, uint32_t index, struct io_libecc_Value);
-static struct io_libecc_Value* element(struct io_libecc_Object*, uint32_t index, enum io_libecc_value_Flags);
-static struct io_libecc_Value* addElement(struct io_libecc_Object*, uint32_t index, struct io_libecc_Value, enum io_libecc_value_Flags);
-static int deleteElement(struct io_libecc_Object*, uint32_t index);
-static struct io_libecc_Value getProperty(struct io_libecc_Context* const, struct io_libecc_Object*, struct io_libecc_Value primitive);
-static struct io_libecc_Value putProperty(struct io_libecc_Context* const, struct io_libecc_Object*, struct io_libecc_Value primitive, struct io_libecc_Value);
-static struct io_libecc_Value* property(struct io_libecc_Object*, struct io_libecc_Value primitive, enum io_libecc_value_Flags);
-static struct io_libecc_Value* addProperty(struct io_libecc_Object*, struct io_libecc_Value primitive, struct io_libecc_Value, enum io_libecc_value_Flags);
-static int deleteProperty(struct io_libecc_Object*, struct io_libecc_Value primitive);
-static struct io_libecc_Value putValue(struct io_libecc_Context* const, struct io_libecc_Object*, struct io_libecc_Value*, struct io_libecc_Value);
-static struct io_libecc_Value getValue(struct io_libecc_Context* const, struct io_libecc_Object*, struct io_libecc_Value*);
-static void packValue(struct io_libecc_Object*);
-static void stripMap(struct io_libecc_Object*);
-static void reserveSlots(struct io_libecc_Object*, uint16_t slots);
-static int resizeElement(struct io_libecc_Object*, uint32_t size);
-static void populateElementWithCList(struct io_libecc_Object*, uint32_t count, const char* list[]);
-static struct io_libecc_Value toString(struct io_libecc_Context* const);
-static void dumpTo(struct io_libecc_Object*, FILE* file);
+static struct eccobject_t* create(struct eccobject_t* prototype);
+static struct eccobject_t* createSized(struct eccobject_t* prototype, uint16_t size);
+static struct eccobject_t* createTyped(const struct io_libecc_object_Type* type);
+static struct eccobject_t* initialize(struct eccobject_t* restrict, struct eccobject_t* restrict prototype);
+static struct eccobject_t* initializeSized(struct eccobject_t* restrict, struct eccobject_t* restrict prototype, uint16_t size);
+static struct eccobject_t* finalize(struct eccobject_t*);
+static struct eccobject_t* copy(const struct eccobject_t* original);
+static void destroy(struct eccobject_t*);
+static struct eccvalue_t getMember(struct eccstate_t* const, struct eccobject_t*, struct io_libecc_Key key);
+static struct eccvalue_t putMember(struct eccstate_t* const, struct eccobject_t*, struct io_libecc_Key key, struct eccvalue_t);
+static struct eccvalue_t* member(struct eccobject_t*, struct io_libecc_Key key, enum io_libecc_value_Flags);
+static struct eccvalue_t* addMember(struct eccobject_t*, struct io_libecc_Key key, struct eccvalue_t, enum io_libecc_value_Flags);
+static int deleteMember(struct eccobject_t*, struct io_libecc_Key key);
+static struct eccvalue_t getElement(struct eccstate_t* const, struct eccobject_t*, uint32_t index);
+static struct eccvalue_t putElement(struct eccstate_t* const, struct eccobject_t*, uint32_t index, struct eccvalue_t);
+static struct eccvalue_t* element(struct eccobject_t*, uint32_t index, enum io_libecc_value_Flags);
+static struct eccvalue_t* addElement(struct eccobject_t*, uint32_t index, struct eccvalue_t, enum io_libecc_value_Flags);
+static int deleteElement(struct eccobject_t*, uint32_t index);
+static struct eccvalue_t getProperty(struct eccstate_t* const, struct eccobject_t*, struct eccvalue_t primitive);
+static struct eccvalue_t putProperty(struct eccstate_t* const, struct eccobject_t*, struct eccvalue_t primitive, struct eccvalue_t);
+static struct eccvalue_t* property(struct eccobject_t*, struct eccvalue_t primitive, enum io_libecc_value_Flags);
+static struct eccvalue_t* addProperty(struct eccobject_t*, struct eccvalue_t primitive, struct eccvalue_t, enum io_libecc_value_Flags);
+static int deleteProperty(struct eccobject_t*, struct eccvalue_t primitive);
+static struct eccvalue_t putValue(struct eccstate_t* const, struct eccobject_t*, struct eccvalue_t*, struct eccvalue_t);
+static struct eccvalue_t getValue(struct eccstate_t* const, struct eccobject_t*, struct eccvalue_t*);
+static void packValue(struct eccobject_t*);
+static void stripMap(struct eccobject_t*);
+static void reserveSlots(struct eccobject_t*, uint16_t slots);
+static int resizeElement(struct eccobject_t*, uint32_t size);
+static void populateElementWithCList(struct eccobject_t*, uint32_t count, const char* list[]);
+static struct eccvalue_t toString(struct eccstate_t* const);
+static void dumpTo(struct eccobject_t*, FILE* file);
 const struct type_io_libecc_Object io_libecc_Object = {
     setup,          teardown, create,     createSized,   createTyped, initialize,   initializeSized, finalize,
     copy,           destroy,  getMember,  putMember,     member,      addMember,    deleteMember,    getElement,
@@ -62,7 +57,7 @@ const uint32_t io_libecc_object_ElementMax = 0xffffff;
 
 static const int defaultSize = 8;
 
-struct io_libecc_Object * io_libecc_object_prototype = NULL;
+struct eccobject_t * io_libecc_object_prototype = NULL;
 struct io_libecc_Function * io_libecc_object_constructor = NULL;
 
 const struct io_libecc_object_Type io_libecc_object_type = {
@@ -72,7 +67,7 @@ const struct io_libecc_object_Type io_libecc_object_type = {
 // MARK: - Static Members
 
 static inline
-uint16_t getSlot (const struct io_libecc_Object * const self, const struct io_libecc_Key key)
+uint16_t getSlot (const struct eccobject_t * const self, const struct io_libecc_Key key)
 {
 	return
 		self->hashmap[
@@ -86,7 +81,7 @@ uint16_t getSlot (const struct io_libecc_Object * const self, const struct io_li
 }
 
 static inline
-uint32_t getIndexOrKey (struct io_libecc_Value property, struct io_libecc_Key *key)
+uint32_t getIndexOrKey (struct eccvalue_t property, struct io_libecc_Key *key)
 {
 	uint32_t index = UINT32_MAX;
 	
@@ -140,7 +135,7 @@ uint32_t nextPowerOfTwo(uint32_t v)
 }
 
 static inline
-uint32_t elementCount (struct io_libecc_Object *self)
+uint32_t elementCount (struct eccobject_t *self)
 {
 	if (self->elementCount < io_libecc_object_ElementMax)
 		return self->elementCount;
@@ -149,7 +144,7 @@ uint32_t elementCount (struct io_libecc_Object *self)
 }
 
 static
-void readonlyError(struct io_libecc_Context * const context, struct io_libecc_Value *ref, struct io_libecc_Object *this)
+void readonlyError(struct eccstate_t * const context, struct eccvalue_t *ref, struct eccobject_t *this)
 {
 	struct io_libecc_Text text;
 	
@@ -175,9 +170,9 @@ void readonlyError(struct io_libecc_Context * const context, struct io_libecc_Va
 //
 
 static
-struct io_libecc_Object *checkObject (struct io_libecc_Context * const context, int argument)
+struct eccobject_t *checkObject (struct eccstate_t * const context, int argument)
 {
-	struct io_libecc_Value value = io_libecc_Context.argument(context, argument);
+	struct eccvalue_t value = io_libecc_Context.argument(context, argument);
 	if (!io_libecc_Value.isObject(value))
 		io_libecc_Context.typeError(context, io_libecc_Chars.create("not an object"));
 	
@@ -185,16 +180,16 @@ struct io_libecc_Object *checkObject (struct io_libecc_Context * const context, 
 }
 
 static
-struct io_libecc_Value valueOf (struct io_libecc_Context * const context)
+struct eccvalue_t valueOf (struct eccstate_t * const context)
 {
 	return io_libecc_Value.toObject(context, io_libecc_Context.this(context));
 }
 
 static
-struct io_libecc_Value hasOwnProperty (struct io_libecc_Context * const context)
+struct eccvalue_t hasOwnProperty (struct eccstate_t * const context)
 {
-	struct io_libecc_Object *self;
-	struct io_libecc_Value value;
+	struct eccobject_t *self;
+	struct eccvalue_t value;
 	struct io_libecc_Key key;
 	uint32_t index;
 	
@@ -209,16 +204,16 @@ struct io_libecc_Value hasOwnProperty (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value isPrototypeOf (struct io_libecc_Context * const context)
+struct eccvalue_t isPrototypeOf (struct eccstate_t * const context)
 {
-	struct io_libecc_Value arg0;
+	struct eccvalue_t arg0;
 	
 	arg0 = io_libecc_Context.argument(context, 0);
 	
 	if (io_libecc_Value.isObject(arg0))
 	{
-		struct io_libecc_Object *v = arg0.data.object;
-		struct io_libecc_Object *o = io_libecc_Value.toObject(context, io_libecc_Context.this(context)).data.object;
+		struct eccobject_t *v = arg0.data.object;
+		struct eccobject_t *o = io_libecc_Value.toObject(context, io_libecc_Context.this(context)).data.object;
 		
 		do
 			if (v == o)
@@ -230,11 +225,11 @@ struct io_libecc_Value isPrototypeOf (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value propertyIsEnumerable (struct io_libecc_Context * const context)
+struct eccvalue_t propertyIsEnumerable (struct eccstate_t * const context)
 {
-	struct io_libecc_Value value;
-	struct io_libecc_Object *object;
-	struct io_libecc_Value *ref;
+	struct eccvalue_t value;
+	struct eccobject_t *object;
+	struct eccvalue_t *ref;
 	
 	value = io_libecc_Value.toPrimitive(context, io_libecc_Context.argument(context, 0), io_libecc_value_hintString);
 	object = io_libecc_Value.toObject(context, io_libecc_Context.this(context)).data.object;
@@ -247,9 +242,9 @@ struct io_libecc_Value propertyIsEnumerable (struct io_libecc_Context * const co
 }
 
 static
-struct io_libecc_Value constructor (struct io_libecc_Context * const context)
+struct eccvalue_t constructor (struct eccstate_t * const context)
 {
-	struct io_libecc_Value value;
+	struct eccvalue_t value;
 	
 	value = io_libecc_Context.argument(context, 0);
 	
@@ -262,9 +257,9 @@ struct io_libecc_Value constructor (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value getPrototypeOf (struct io_libecc_Context * const context)
+struct eccvalue_t getPrototypeOf (struct eccstate_t * const context)
 {
-	struct io_libecc_Object *object;
+	struct eccobject_t *object;
 	
 	object = io_libecc_Value.toObject(context, io_libecc_Context.argument(context, 0)).data.object;
 	
@@ -272,11 +267,11 @@ struct io_libecc_Value getPrototypeOf (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value getOwnPropertyDescriptor (struct io_libecc_Context * const context)
+struct eccvalue_t getOwnPropertyDescriptor (struct eccstate_t * const context)
 {
-	struct io_libecc_Object *object;
-	struct io_libecc_Value value;
-	struct io_libecc_Value *ref;
+	struct eccobject_t *object;
+	struct eccvalue_t value;
+	struct eccvalue_t *ref;
 	
 	object = io_libecc_Value.toObject(context, io_libecc_Context.argument(context, 0)).data.object;
 	value = io_libecc_Value.toPrimitive(context, io_libecc_Context.argument(context, 1), io_libecc_value_hintString);
@@ -284,7 +279,7 @@ struct io_libecc_Value getOwnPropertyDescriptor (struct io_libecc_Context * cons
 	
 	if (ref)
 	{
-		struct io_libecc_Object *result = create(io_libecc_object_prototype);
+		struct eccobject_t *result = create(io_libecc_object_prototype);
 		
 		if (ref->flags & io_libecc_value_accessor)
 		{
@@ -316,10 +311,10 @@ struct io_libecc_Value getOwnPropertyDescriptor (struct io_libecc_Context * cons
 }
 
 static
-struct io_libecc_Value getOwnPropertyNames (struct io_libecc_Context * const context)
+struct eccvalue_t getOwnPropertyNames (struct eccstate_t * const context)
 {
-	struct io_libecc_Object *object, *parent;
-	struct io_libecc_Object *result;
+	struct eccobject_t *object, *parent;
+	struct eccobject_t *result;
 	uint32_t index, count, length;
 	
 	object = checkObject(context, 0);
@@ -335,7 +330,7 @@ struct io_libecc_Value getOwnPropertyNames (struct io_libecc_Context * const con
 	{
 		for (index = 2; index < parent->hashmapCount; ++index)
 		{
-			struct io_libecc_Value value = parent->hashmap[index].value;
+			struct eccvalue_t value = parent->hashmap[index].value;
 			if (value.check == 1 && value.flags & io_libecc_value_asOwn)
 				addElement(result, length++, io_libecc_Value.text(io_libecc_Key.textOf(value.key)), 0);
 		}
@@ -349,10 +344,10 @@ struct io_libecc_Value getOwnPropertyNames (struct io_libecc_Context * const con
 }
 
 static
-struct io_libecc_Value defineProperty (struct io_libecc_Context * const context)
+struct eccvalue_t defineProperty (struct eccstate_t * const context)
 {
-	struct io_libecc_Object *object, *descriptor;
-	struct io_libecc_Value property, value, *getter, *setter, *current, *flag;
+	struct eccobject_t *object, *descriptor;
+	struct eccvalue_t property, value, *getter, *setter, *current, *flag;
 	struct io_libecc_Key key;
 	uint32_t index;
 	
@@ -483,13 +478,13 @@ sealedError:
 }
 
 static
-struct io_libecc_Value defineProperties (struct io_libecc_Context * const context)
+struct eccvalue_t defineProperties (struct eccstate_t * const context)
 {
 	union io_libecc_object_Hashmap *originalHashmap = context->environment->hashmap;
 	uint16_t originalHashmapCount = context->environment->hashmapCount;
 	
 	uint16_t index, count, hashmapCount = 6;
-	struct io_libecc_Object *object, *properties;
+	struct eccobject_t *object, *properties;
 	union io_libecc_object_Hashmap hashmap[hashmapCount];
 	
 	memset(hashmap, 0, hashmapCount * sizeof(*hashmap));
@@ -529,10 +524,10 @@ struct io_libecc_Value defineProperties (struct io_libecc_Context * const contex
 }
 
 static
-struct io_libecc_Value objectCreate (struct io_libecc_Context * const context)
+struct eccvalue_t objectCreate (struct eccstate_t * const context)
 {
-	struct io_libecc_Object *object, *result;
-	struct io_libecc_Value properties;
+	struct eccobject_t *object, *result;
+	struct eccvalue_t properties;
 	
 	object = checkObject(context, 0);
 	properties = io_libecc_Context.argument(context, 1);
@@ -548,9 +543,9 @@ struct io_libecc_Value objectCreate (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value seal (struct io_libecc_Context * const context)
+struct eccvalue_t seal (struct eccstate_t * const context)
 {
-	struct io_libecc_Object *object;
+	struct eccobject_t *object;
 	uint32_t index, count;
 	
 	object = checkObject(context, 0);
@@ -568,9 +563,9 @@ struct io_libecc_Value seal (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value freeze (struct io_libecc_Context * const context)
+struct eccvalue_t freeze (struct eccstate_t * const context)
 {
-	struct io_libecc_Object *object;
+	struct eccobject_t *object;
 	uint32_t index, count;
 	
 	object = checkObject(context, 0);
@@ -588,9 +583,9 @@ struct io_libecc_Value freeze (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value preventExtensions (struct io_libecc_Context * const context)
+struct eccvalue_t preventExtensions (struct eccstate_t * const context)
 {
-	struct io_libecc_Object *object;
+	struct eccobject_t *object;
 	
 	object = checkObject(context, 0);
 	object->flags |= io_libecc_object_sealed;
@@ -599,9 +594,9 @@ struct io_libecc_Value preventExtensions (struct io_libecc_Context * const conte
 }
 
 static
-struct io_libecc_Value isSealed (struct io_libecc_Context * const context)
+struct eccvalue_t isSealed (struct eccstate_t * const context)
 {
-	struct io_libecc_Object *object;
+	struct eccobject_t *object;
 	uint32_t index, count;
 	
 	object = checkObject(context, 0);
@@ -620,9 +615,9 @@ struct io_libecc_Value isSealed (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value isFrozen (struct io_libecc_Context * const context)
+struct eccvalue_t isFrozen (struct eccstate_t * const context)
 {
-	struct io_libecc_Object *object;
+	struct eccobject_t *object;
 	uint32_t index, count;
 	
 	object = checkObject(context, 0);
@@ -641,19 +636,19 @@ struct io_libecc_Value isFrozen (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value isExtensible (struct io_libecc_Context * const context)
+struct eccvalue_t isExtensible (struct eccstate_t * const context)
 {
-	struct io_libecc_Object *object;
+	struct eccobject_t *object;
 	
 	object = checkObject(context, 0);
 	return io_libecc_Value.truth(!(object->flags & io_libecc_object_sealed));
 }
 
 static
-struct io_libecc_Value keys (struct io_libecc_Context * const context)
+struct eccvalue_t keys (struct eccstate_t * const context)
 {
-	struct io_libecc_Object *object, *parent;
-	struct io_libecc_Object *result;
+	struct eccobject_t *object, *parent;
+	struct eccobject_t *result;
 	uint32_t index, count, length;
 	
 	object = checkObject(context, 0);
@@ -669,7 +664,7 @@ struct io_libecc_Value keys (struct io_libecc_Context * const context)
 	{
 		for (index = 2; index < parent->hashmapCount; ++index)
 		{
-			struct io_libecc_Value value = parent->hashmap[index].value;
+			struct eccvalue_t value = parent->hashmap[index].value;
 			if (value.check == 1 && value.flags & io_libecc_value_asOwn & !(value.flags & io_libecc_value_hidden))
 				addElement(result, length++, io_libecc_Value.text(io_libecc_Key.textOf(value.key)), 0);
 		}
@@ -723,31 +718,31 @@ void teardown (void)
 	io_libecc_object_constructor = NULL;
 }
 
-struct io_libecc_Object * create (struct io_libecc_Object *prototype)
+struct eccobject_t * create (struct eccobject_t *prototype)
 {
 	return createSized(prototype, defaultSize);
 }
 
-struct io_libecc_Object * createSized (struct io_libecc_Object *prototype, uint16_t size)
+struct eccobject_t * createSized (struct eccobject_t *prototype, uint16_t size)
 {
-	struct io_libecc_Object *self = calloc(sizeof(*self), 1);
+	struct eccobject_t *self = calloc(sizeof(*self), 1);
 	io_libecc_Pool.addObject(self);
 	return initializeSized(self, prototype, size);
 }
 
-struct io_libecc_Object * createTyped (const struct io_libecc_object_Type *type)
+struct eccobject_t * createTyped (const struct io_libecc_object_Type *type)
 {
-	struct io_libecc_Object *self = createSized(io_libecc_object_prototype, defaultSize);
+	struct eccobject_t *self = createSized(io_libecc_object_prototype, defaultSize);
 	self->type = type;
 	return self;
 }
 
-struct io_libecc_Object * initialize (struct io_libecc_Object * restrict self, struct io_libecc_Object * restrict prototype)
+struct eccobject_t * initialize (struct eccobject_t * restrict self, struct eccobject_t * restrict prototype)
 {
 	return initializeSized(self, prototype, defaultSize);
 }
 
-struct io_libecc_Object * initializeSized (struct io_libecc_Object * restrict self, struct io_libecc_Object * restrict prototype, uint16_t size)
+struct eccobject_t * initializeSized (struct eccobject_t * restrict self, struct eccobject_t * restrict prototype, uint16_t size)
 {
 	size_t byteSize;
 	
@@ -779,7 +774,7 @@ struct io_libecc_Object * initializeSized (struct io_libecc_Object * restrict se
 	return self;
 }
 
-struct io_libecc_Object * finalize (struct io_libecc_Object *self)
+struct eccobject_t * finalize (struct eccobject_t *self)
 {
 	assert(self);
 	
@@ -792,11 +787,11 @@ struct io_libecc_Object * finalize (struct io_libecc_Object *self)
 	return self;
 }
 
-struct io_libecc_Object * copy (const struct io_libecc_Object *original)
+struct eccobject_t * copy (const struct eccobject_t *original)
 {
 	size_t byteSize;
 	
-	struct io_libecc_Object *self = malloc(sizeof(*self));
+	struct eccobject_t *self = malloc(sizeof(*self));
 	io_libecc_Pool.addObject(self);
 	
 	*self = *original;
@@ -812,18 +807,18 @@ struct io_libecc_Object * copy (const struct io_libecc_Object *original)
 	return self;
 }
 
-void destroy (struct io_libecc_Object *self)
+void destroy (struct eccobject_t *self)
 {
 	assert(self);
 	
 	free(self), self = NULL;
 }
 
-struct io_libecc_Value * member (struct io_libecc_Object *self, struct io_libecc_Key member, enum io_libecc_value_Flags flags)
+struct eccvalue_t * member (struct eccobject_t *self, struct io_libecc_Key member, enum io_libecc_value_Flags flags)
 {
 	int lookupChain = !(flags & io_libecc_value_asOwn);
-	struct io_libecc_Object *object = self;
-	struct io_libecc_Value *ref = NULL;
+	struct eccobject_t *object = self;
+	struct eccvalue_t *ref = NULL;
 	uint32_t slot;
 	
 	assert(self);
@@ -842,17 +837,17 @@ struct io_libecc_Value * member (struct io_libecc_Object *self, struct io_libecc
 	return NULL;
 }
 
-struct io_libecc_Value * element (struct io_libecc_Object *self, uint32_t index, enum io_libecc_value_Flags flags)
+struct eccvalue_t * element (struct eccobject_t *self, uint32_t index, enum io_libecc_value_Flags flags)
 {
 	int lookupChain = !(flags & io_libecc_value_asOwn);
-	struct io_libecc_Object *object = self;
-	struct io_libecc_Value *ref = NULL;
+	struct eccobject_t *object = self;
+	struct eccvalue_t *ref = NULL;
 	
 	assert(self);
 	
 	if (self->type == &io_libecc_string_type)
 	{
-		struct io_libecc_Value *ref = io_libecc_Object.addMember(self, io_libecc_key_none, io_libecc_String.valueAtIndex((struct io_libecc_String *)self, index), 0);
+		struct eccvalue_t *ref = io_libecc_Object.addMember(self, io_libecc_key_none, io_libecc_String.valueAtIndex((struct io_libecc_String *)self, index), 0);
 		ref->check = 0;
 		return ref;
 	}
@@ -877,7 +872,7 @@ struct io_libecc_Value * element (struct io_libecc_Object *self, uint32_t index,
 	return NULL;
 }
 
-struct io_libecc_Value * property (struct io_libecc_Object *self, struct io_libecc_Value property, enum io_libecc_value_Flags flags)
+struct eccvalue_t * property (struct eccobject_t *self, struct eccvalue_t property, enum io_libecc_value_Flags flags)
 {
 	struct io_libecc_Key key;
 	uint32_t index = getIndexOrKey(property, &key);
@@ -888,7 +883,7 @@ struct io_libecc_Value * property (struct io_libecc_Object *self, struct io_libe
 		return member(self, key, flags);
 }
 
-struct io_libecc_Value getValue (struct io_libecc_Context *context, struct io_libecc_Object *self, struct io_libecc_Value *ref)
+struct eccvalue_t getValue (struct eccstate_t *context, struct eccobject_t *self, struct eccvalue_t *ref)
 {
 	if (!ref)
 		return io_libecc_value_undefined;
@@ -909,12 +904,12 @@ struct io_libecc_Value getValue (struct io_libecc_Context *context, struct io_li
 	return *ref;
 }
 
-struct io_libecc_Value getMember (struct io_libecc_Context *context, struct io_libecc_Object *self, struct io_libecc_Key key)
+struct eccvalue_t getMember (struct eccstate_t *context, struct eccobject_t *self, struct io_libecc_Key key)
 {
 	return getValue(context, self, member(self, key, 0));
 }
 
-struct io_libecc_Value getElement (struct io_libecc_Context *context, struct io_libecc_Object *self, uint32_t index)
+struct eccvalue_t getElement (struct eccstate_t *context, struct eccobject_t *self, uint32_t index)
 {
 	if (self->type == &io_libecc_string_type)
 		return io_libecc_String.valueAtIndex((struct io_libecc_String *)self, index);
@@ -922,7 +917,7 @@ struct io_libecc_Value getElement (struct io_libecc_Context *context, struct io_
 		return getValue(context, self, element(self, index, 0));
 }
 
-struct io_libecc_Value getProperty (struct io_libecc_Context *context, struct io_libecc_Object *self, struct io_libecc_Value property)
+struct eccvalue_t getProperty (struct eccstate_t *context, struct eccobject_t *self, struct eccvalue_t property)
 {
 	struct io_libecc_Key key;
 	uint32_t index = getIndexOrKey(property, &key);
@@ -933,7 +928,7 @@ struct io_libecc_Value getProperty (struct io_libecc_Context *context, struct io
 		return getMember(context, self, key);
 }
 
-struct io_libecc_Value putValue (struct io_libecc_Context *context, struct io_libecc_Object *self, struct io_libecc_Value *ref, struct io_libecc_Value value)
+struct eccvalue_t putValue (struct eccstate_t *context, struct eccobject_t *self, struct eccvalue_t *ref, struct eccvalue_t value)
 {
 	if (ref->flags & io_libecc_value_accessor)
 	{
@@ -965,9 +960,9 @@ struct io_libecc_Value putValue (struct io_libecc_Context *context, struct io_li
 	return *ref = value;
 }
 
-struct io_libecc_Value putMember (struct io_libecc_Context *context, struct io_libecc_Object *self, struct io_libecc_Key key, struct io_libecc_Value value)
+struct eccvalue_t putMember (struct eccstate_t *context, struct eccobject_t *self, struct io_libecc_Key key, struct eccvalue_t value)
 {
-	struct io_libecc_Value *ref;
+	struct eccvalue_t *ref;
 	
 	value.flags = 0;
 	
@@ -985,9 +980,9 @@ struct io_libecc_Value putMember (struct io_libecc_Context *context, struct io_l
 	return *addMember(self, key, value, 0);
 }
 
-struct io_libecc_Value putElement (struct io_libecc_Context *context, struct io_libecc_Object *self, uint32_t index, struct io_libecc_Value value)
+struct eccvalue_t putElement (struct eccstate_t *context, struct eccobject_t *self, uint32_t index, struct eccvalue_t value)
 {
-	struct io_libecc_Value *ref;
+	struct eccvalue_t *ref;
 	
 	if (index > io_libecc_object_ElementMax)
 	{
@@ -1015,7 +1010,7 @@ struct io_libecc_Value putElement (struct io_libecc_Context *context, struct io_
 	return *addElement(self, index, value, 0);
 }
 
-struct io_libecc_Value putProperty (struct io_libecc_Context *context, struct io_libecc_Object *self, struct io_libecc_Value primitive, struct io_libecc_Value value)
+struct eccvalue_t putProperty (struct eccstate_t *context, struct eccobject_t *self, struct eccvalue_t primitive, struct eccvalue_t value)
 {
 	struct io_libecc_Key key;
 	uint32_t index = getIndexOrKey(primitive, &key);
@@ -1026,7 +1021,7 @@ struct io_libecc_Value putProperty (struct io_libecc_Context *context, struct io
 		return putMember(context, self, key, value);
 }
 
-struct io_libecc_Value * addMember (struct io_libecc_Object *self, struct io_libecc_Key key, struct io_libecc_Value value, enum io_libecc_value_Flags flags)
+struct eccvalue_t * addMember (struct eccobject_t *self, struct io_libecc_Key key, struct eccvalue_t value, enum io_libecc_value_Flags flags)
 {
 	uint32_t slot = 1;
 	int depth = 0;
@@ -1074,9 +1069,9 @@ struct io_libecc_Value * addMember (struct io_libecc_Object *self, struct io_lib
 	return &self->hashmap[slot].value;
 }
 
-struct io_libecc_Value * addElement (struct io_libecc_Object *self, uint32_t index, struct io_libecc_Value value, enum io_libecc_value_Flags flags)
+struct eccvalue_t * addElement (struct eccobject_t *self, uint32_t index, struct eccvalue_t value, enum io_libecc_value_Flags flags)
 {
-	struct io_libecc_Value *ref;
+	struct eccvalue_t *ref;
 	
 	assert(self);
 	
@@ -1096,7 +1091,7 @@ struct io_libecc_Value * addElement (struct io_libecc_Object *self, uint32_t ind
 	return ref;
 }
 
-struct io_libecc_Value * addProperty (struct io_libecc_Object *self, struct io_libecc_Value primitive, struct io_libecc_Value value, enum io_libecc_value_Flags flags)
+struct eccvalue_t * addProperty (struct eccobject_t *self, struct eccvalue_t primitive, struct eccvalue_t value, enum io_libecc_value_Flags flags)
 {
 	struct io_libecc_Key key;
 	uint32_t index = getIndexOrKey(primitive, &key);
@@ -1107,9 +1102,9 @@ struct io_libecc_Value * addProperty (struct io_libecc_Object *self, struct io_l
 		return addMember(self, key, value, flags);
 }
 
-int deleteMember (struct io_libecc_Object *self, struct io_libecc_Key member)
+int deleteMember (struct eccobject_t *self, struct io_libecc_Key member)
 {
-	struct io_libecc_Object *object = self;
+	struct eccobject_t *object = self;
 	uint32_t slot, refSlot;
 	
 	assert(object);
@@ -1136,7 +1131,7 @@ int deleteMember (struct io_libecc_Object *self, struct io_libecc_Key member)
 	return 1;
 }
 
-int deleteElement (struct io_libecc_Object *self, uint32_t index)
+int deleteElement (struct eccobject_t *self, uint32_t index)
 {
 	assert(self);
 	
@@ -1160,7 +1155,7 @@ int deleteElement (struct io_libecc_Object *self, uint32_t index)
 	return 1;
 }
 
-int deleteProperty (struct io_libecc_Object *self, struct io_libecc_Value primitive)
+int deleteProperty (struct eccobject_t *self, struct eccvalue_t primitive)
 {
 	struct io_libecc_Key key;
 	uint32_t index = getIndexOrKey(primitive, &key);
@@ -1171,7 +1166,7 @@ int deleteProperty (struct io_libecc_Object *self, struct io_libecc_Value primit
 		return deleteMember(self, key);
 }
 
-void packValue (struct io_libecc_Object *self)
+void packValue (struct eccobject_t *self)
 {
 	union io_libecc_object_Hashmap data;
 	uint32_t index = 2, valueIndex = 2, copyIndex, slot;
@@ -1208,7 +1203,7 @@ void packValue (struct io_libecc_Object *self)
 		self->elementCapacity = self->elementCount;
 }
 
-void stripMap (struct io_libecc_Object *self)
+void stripMap (struct eccobject_t *self)
 {
 	uint32_t index = 2;
 	
@@ -1223,7 +1218,7 @@ void stripMap (struct io_libecc_Object *self)
 	memset(self->hashmap + 1, 0, sizeof(*self->hashmap));
 }
 
-void reserveSlots (struct io_libecc_Object *self, uint16_t slots)
+void reserveSlots (struct eccobject_t *self, uint16_t slots)
 {
 	int need = (slots * 4) - (self->hashmapCapacity - self->hashmapCount);
 	
@@ -1238,7 +1233,7 @@ void reserveSlots (struct io_libecc_Object *self, uint16_t slots)
 	}
 }
 
-int resizeElement (struct io_libecc_Object *self, uint32_t size)
+int resizeElement (struct eccobject_t *self, uint32_t size)
 {
 	uint32_t capacity;
 	
@@ -1336,7 +1331,7 @@ int resizeElement (struct io_libecc_Object *self, uint32_t size)
 	return 0;
 }
 
-void populateElementWithCList (struct io_libecc_Object *self, uint32_t count, const char * list[])
+void populateElementWithCList (struct eccobject_t *self, uint32_t count, const char * list[])
 {
 	double binary;
 	char *end;
@@ -1365,7 +1360,7 @@ void populateElementWithCList (struct io_libecc_Object *self, uint32_t count, co
 	}
 }
 
-struct io_libecc_Value toString (struct io_libecc_Context * const context)
+struct eccvalue_t toString (struct eccstate_t * const context)
 {
 	if (context->this.type == io_libecc_value_nullType)
 		return io_libecc_Value.text(&io_libecc_text_nullType);
@@ -1385,7 +1380,7 @@ struct io_libecc_Value toString (struct io_libecc_Context * const context)
 	return io_libecc_value_undefined;
 }
 
-void dumpTo(struct io_libecc_Object *self, FILE *file)
+void dumpTo(struct eccobject_t *self, FILE *file)
 {
 	uint32_t index, count;
 	int isArray;

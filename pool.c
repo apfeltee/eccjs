@@ -5,14 +5,12 @@
 //  Copyright (c) 2019 Aurélien Bouilland
 //  Licensed under MIT license, see LICENSE.txt file in project root
 //
-
-#define Implementation
-#include "pool.h"
+#include "ecc.h"
 
 // MARK: - Private
 
-static void markValue (struct io_libecc_Value value);
-static void cleanupObject(struct io_libecc_Object *object);
+static void markValue (struct eccvalue_t value);
+static void cleanupObject(struct eccobject_t *object);
 
 static struct io_libecc_Pool *self = NULL;
 
@@ -21,11 +19,11 @@ static struct io_libecc_Pool *self = NULL;
 static void setup(void);
 static void teardown(void);
 static void addFunction(struct io_libecc_Function* function);
-static void addObject(struct io_libecc_Object* object);
+static void addObject(struct eccobject_t* object);
 static void addChars(struct io_libecc_Chars* chars);
 static void unmarkAll(void);
-static void markValue(struct io_libecc_Value value);
-static void markObject(struct io_libecc_Object* object);
+static void markValue(struct eccvalue_t value);
+static void markObject(struct eccobject_t* object);
 static void collectUnmarked(void);
 static void collectUnreferencedFromIndices(uint32_t indices[3]);
 static void unreferenceFromIndices(uint32_t indices[3]);
@@ -45,7 +43,7 @@ const struct type_io_libecc_Pool io_libecc_Pool = {
     getIndices,
 };
 
-void markObject (struct io_libecc_Object *object)
+void markObject (struct eccobject_t *object)
 {
 	uint32_t index, count;
 	
@@ -116,7 +114,7 @@ void addFunction (struct io_libecc_Function *function)
 	self->functionList[self->functionCount++] = function;
 }
 
-void addObject (struct io_libecc_Object *object)
+void addObject (struct eccobject_t *object)
 {
 	assert(object);
 	
@@ -164,7 +162,7 @@ void unmarkAll (void)
 		self->charsList[index]->flags &= ~io_libecc_chars_mark;
 }
 
-void markValue (struct io_libecc_Value value)
+void markValue (struct eccvalue_t value)
 {
 	if (value.type >= io_libecc_value_objectType)
 		markObject(value.data.object);
@@ -173,14 +171,14 @@ void markValue (struct io_libecc_Value value)
 }
 
 static
-void releaseObject(struct io_libecc_Object *object)
+void releaseObject(struct eccobject_t *object)
 {
 	if (object->referenceCount > 0 && !--object->referenceCount)
 		cleanupObject(object);
 }
 
 static
-struct io_libecc_Value releaseValue(struct io_libecc_Value value)
+struct eccvalue_t releaseValue(struct eccvalue_t value)
 {
 	if (value.type == io_libecc_value_charsType)
 		--value.data.chars->referenceCount;
@@ -190,10 +188,10 @@ struct io_libecc_Value releaseValue(struct io_libecc_Value value)
 	return value;
 }
 
-static void captureObject (struct io_libecc_Object *object);
+static void captureObject (struct eccobject_t *object);
 
 static
-struct io_libecc_Value retainValue(struct io_libecc_Value value)
+struct eccvalue_t retainValue(struct eccvalue_t value)
 {
 	if (value.type == io_libecc_value_charsType)
 		++value.data.chars->referenceCount;
@@ -210,9 +208,9 @@ struct io_libecc_Value retainValue(struct io_libecc_Value value)
 }
 
 static
-void cleanupObject(struct io_libecc_Object *object)
+void cleanupObject(struct eccobject_t *object)
 {
-	struct io_libecc_Value value;
+	struct eccvalue_t value;
 	
 	if (object->prototype && object->prototype->referenceCount)
 		--object->prototype->referenceCount;
@@ -229,7 +227,7 @@ void cleanupObject(struct io_libecc_Object *object)
 }
 
 static
-void captureObject (struct io_libecc_Object *object)
+void captureObject (struct eccobject_t *object)
 {
 	uint32_t index, count;
 	union io_libecc_object_Element *element;

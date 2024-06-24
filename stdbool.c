@@ -5,15 +5,12 @@
 //  Copyright (c) 2019 Aurélien Bouilland
 //  Licensed under MIT license, see LICENSE.txt file in project root
 //
+#include "ecc.h"
 
-#define Implementation
-#include "builtins.h"
-
-#include "pool.h"
 
 // MARK: - Private
 
-struct io_libecc_Object * io_libecc_boolean_prototype = NULL;
+struct eccobject_t * io_libecc_boolean_prototype = NULL;
 struct io_libecc_Function * io_libecc_boolean_constructor = NULL;
 
 const struct io_libecc_object_Type io_libecc_boolean_type = {
@@ -32,7 +29,7 @@ const struct type_io_libecc_Boolean io_libecc_Boolean = {
 };
 
 static
-struct io_libecc_Value toString (struct io_libecc_Context * const context)
+struct eccvalue_t toString (struct eccstate_t * const context)
 {
 	int truth;
 	
@@ -44,7 +41,7 @@ struct io_libecc_Value toString (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value valueOf (struct io_libecc_Context * const context)
+struct eccvalue_t valueOf (struct eccstate_t * const context)
 {
 	int truth;
 	
@@ -56,7 +53,7 @@ struct io_libecc_Value valueOf (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value constructor (struct io_libecc_Context * const context)
+struct eccvalue_t constructor (struct eccstate_t * const context)
 {
 	char truth;
 	

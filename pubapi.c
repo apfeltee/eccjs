@@ -5,25 +5,19 @@
 //  Copyright (c) 2019 Aurélien Bouilland
 //  Licensed under MIT license, see LICENSE.txt file in project root
 //
-
-#define Implementation
 #include "ecc.h"
-
-#include "parser.h"
-#include "oplist.h"
-#include "pool.h"
 
 // MARK: - Private
 
 static struct io_libecc_Ecc* create(void);
 static void destroy(struct io_libecc_Ecc*);
-static void addValue(struct io_libecc_Ecc*, const char* name, struct io_libecc_Value value, enum io_libecc_value_Flags);
+static void addValue(struct io_libecc_Ecc*, const char* name, struct eccvalue_t value, enum io_libecc_value_Flags);
 static void addFunction(struct io_libecc_Ecc*, const char* name, const io_libecc_native_io_libecc_Function native, int argumentCount, enum io_libecc_value_Flags);
 static int evalInput(struct io_libecc_Ecc*, struct io_libecc_Input*, enum io_libecc_ecc_EvalFlags);
-static void evalInputWithContext(struct io_libecc_Ecc*, struct io_libecc_Input*, struct io_libecc_Context* context);
+static void evalInputWithContext(struct io_libecc_Ecc*, struct io_libecc_Input*, struct eccstate_t* context);
 static jmp_buf* pushEnv(struct io_libecc_Ecc*);
 static void popEnv(struct io_libecc_Ecc*);
-static void jmpEnv(struct io_libecc_Ecc*, struct io_libecc_Value value) __attribute__((noreturn));
+static void jmpEnv(struct io_libecc_Ecc*, struct eccvalue_t value) __attribute__((noreturn));
 static void fatal(const char* format, ...) __attribute__((noreturn));
 static struct io_libecc_Input* findInput(struct io_libecc_Ecc* self, struct io_libecc_Text text);
 static void printTextInput(struct io_libecc_Ecc*, struct io_libecc_Text text, int fullLine);
@@ -96,7 +90,7 @@ void addFunction (struct io_libecc_Ecc *self, const char *name, const io_libecc_
 	io_libecc_Function.addFunction(self->global, name, native, argumentCount, flags);
 }
 
-void addValue (struct io_libecc_Ecc *self, const char *name, struct io_libecc_Value value, enum io_libecc_value_Flags flags)
+void addValue (struct io_libecc_Ecc *self, const char *name, struct eccvalue_t value, enum io_libecc_value_Flags flags)
 {
 	assert(self);
 	
@@ -107,7 +101,7 @@ io_libecc_ecc_useframe
 int evalInput (struct io_libecc_Ecc *self, struct io_libecc_Input *input, enum io_libecc_ecc_EvalFlags flags)
 {
 	volatile int result = EXIT_SUCCESS, trap = !self->envCount || flags & io_libecc_ecc_primitiveResult, catch = 0;
-	struct io_libecc_Context context = {
+	struct eccstate_t context = {
 		.environment = &self->global->environment,
 		.this = io_libecc_Value.object(&self->global->environment),
 		.ecc = self,
@@ -150,7 +144,7 @@ int evalInput (struct io_libecc_Ecc *self, struct io_libecc_Input *input, enum i
 	return result;
 }
 
-void evalInputWithContext (struct io_libecc_Ecc *self, struct io_libecc_Input *input, struct io_libecc_Context *context)
+void evalInputWithContext (struct io_libecc_Ecc *self, struct io_libecc_Input *input, struct eccstate_t *context)
 {
 	struct io_libecc_Lexer *lexer;
 	struct io_libecc_Parser *parser;
@@ -203,7 +197,7 @@ void popEnv(struct io_libecc_Ecc *self)
 	--self->envCount;
 }
 
-void jmpEnv (struct io_libecc_Ecc *self, struct io_libecc_Value value)
+void jmpEnv (struct io_libecc_Ecc *self, struct eccvalue_t value)
 {
 	assert(self);
 	assert(self->envCount);

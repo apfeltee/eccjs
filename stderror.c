@@ -5,21 +5,17 @@
 //  Copyright (c) 2019 Aurélien Bouilland
 //  Licensed under MIT license, see LICENSE.txt file in project root
 //
-
-#define Implementation
-#include "builtins.h"
-
-#include "pool.h"
+#include "ecc.h"
 
 // MARK: - Private
 
-struct io_libecc_Object * io_libecc_error_prototype = NULL;
-struct io_libecc_Object * io_libecc_error_rangePrototype = NULL;
-struct io_libecc_Object * io_libecc_error_referencePrototype = NULL;
-struct io_libecc_Object * io_libecc_error_syntaxPrototype = NULL;
-struct io_libecc_Object * io_libecc_error_typePrototype = NULL;
-struct io_libecc_Object * io_libecc_error_uriPrototype = NULL;
-struct io_libecc_Object * io_libecc_error_evalPrototype = NULL;
+struct eccobject_t * io_libecc_error_prototype = NULL;
+struct eccobject_t * io_libecc_error_rangePrototype = NULL;
+struct eccobject_t * io_libecc_error_referencePrototype = NULL;
+struct eccobject_t * io_libecc_error_syntaxPrototype = NULL;
+struct eccobject_t * io_libecc_error_typePrototype = NULL;
+struct eccobject_t * io_libecc_error_uriPrototype = NULL;
+struct eccobject_t * io_libecc_error_evalPrototype = NULL;
 
 struct io_libecc_Function * io_libecc_error_constructor = NULL;
 struct io_libecc_Function * io_libecc_error_rangeConstructor = NULL;
@@ -51,7 +47,7 @@ const struct type_io_libecc_Error io_libecc_Error = {
 static struct io_libecc_Error * evalError (struct io_libecc_Text text, struct io_libecc_Chars *message);
 
 static
-struct io_libecc_Chars *messageValue (struct io_libecc_Context * const context, struct io_libecc_Value value)
+struct io_libecc_Chars *messageValue (struct eccstate_t * const context, struct eccvalue_t value)
 {
 	if (value.type == io_libecc_value_undefinedType)
 		return NULL;
@@ -65,10 +61,10 @@ struct io_libecc_Chars *messageValue (struct io_libecc_Context * const context, 
 }
 
 static
-struct io_libecc_Value toChars (struct io_libecc_Context * const context, struct io_libecc_Value value)
+struct eccvalue_t toChars (struct eccstate_t * const context, struct eccvalue_t value)
 {
-	struct io_libecc_Value name, message;
-	struct io_libecc_Object *self;
+	struct eccvalue_t name, message;
+	struct eccobject_t *self;
 	struct io_libecc_chars_Append chars;
 	
 	assert(value.type == io_libecc_value_errorType);
@@ -100,7 +96,7 @@ struct io_libecc_Value toChars (struct io_libecc_Context * const context, struct
 }
 
 static
-struct io_libecc_Error * create (struct io_libecc_Object *errorPrototype, struct io_libecc_Text text, struct io_libecc_Chars *message)
+struct io_libecc_Error * create (struct eccobject_t *errorPrototype, struct io_libecc_Text text, struct io_libecc_Chars *message)
 {
 	struct io_libecc_Error *self = malloc(sizeof(*self));
 	io_libecc_Pool.addObject(&self->object);
@@ -121,7 +117,7 @@ struct io_libecc_Error * create (struct io_libecc_Object *errorPrototype, struct
 }
 
 static
-struct io_libecc_Value toString (struct io_libecc_Context * const context)
+struct eccvalue_t toString (struct eccstate_t * const context)
 {
 	io_libecc_Context.assertThisMask(context, io_libecc_value_objectMask);
 	
@@ -129,7 +125,7 @@ struct io_libecc_Value toString (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value errorConstructor (struct io_libecc_Context * const context)
+struct eccvalue_t errorConstructor (struct eccstate_t * const context)
 {
 	struct io_libecc_Chars *message;
 	
@@ -139,7 +135,7 @@ struct io_libecc_Value errorConstructor (struct io_libecc_Context * const contex
 }
 
 static
-struct io_libecc_Value rangeErrorConstructor (struct io_libecc_Context * const context)
+struct eccvalue_t rangeErrorConstructor (struct eccstate_t * const context)
 {
 	struct io_libecc_Chars *message;
 	
@@ -149,7 +145,7 @@ struct io_libecc_Value rangeErrorConstructor (struct io_libecc_Context * const c
 }
 
 static
-struct io_libecc_Value referenceErrorConstructor (struct io_libecc_Context * const context)
+struct eccvalue_t referenceErrorConstructor (struct eccstate_t * const context)
 {
 	struct io_libecc_Chars *message;
 	
@@ -159,7 +155,7 @@ struct io_libecc_Value referenceErrorConstructor (struct io_libecc_Context * con
 }
 
 static
-struct io_libecc_Value syntaxErrorConstructor (struct io_libecc_Context * const context)
+struct eccvalue_t syntaxErrorConstructor (struct eccstate_t * const context)
 {
 	struct io_libecc_Chars *message;
 	
@@ -169,7 +165,7 @@ struct io_libecc_Value syntaxErrorConstructor (struct io_libecc_Context * const 
 }
 
 static
-struct io_libecc_Value typeErrorConstructor (struct io_libecc_Context * const context)
+struct eccvalue_t typeErrorConstructor (struct eccstate_t * const context)
 {
 	struct io_libecc_Chars *message;
 	
@@ -179,7 +175,7 @@ struct io_libecc_Value typeErrorConstructor (struct io_libecc_Context * const co
 }
 
 static
-struct io_libecc_Value uriErrorConstructor (struct io_libecc_Context * const context)
+struct eccvalue_t uriErrorConstructor (struct eccstate_t * const context)
 {
 	struct io_libecc_Chars *message;
 	
@@ -189,7 +185,7 @@ struct io_libecc_Value uriErrorConstructor (struct io_libecc_Context * const con
 }
 
 static
-struct io_libecc_Value evalErrorConstructor (struct io_libecc_Context * const context)
+struct eccvalue_t evalErrorConstructor (struct eccstate_t * const context)
 {
 	struct io_libecc_Chars *message;
 	
@@ -199,7 +195,7 @@ struct io_libecc_Value evalErrorConstructor (struct io_libecc_Context * const co
 }
 
 static
-void setupBuiltinObject (struct io_libecc_Function **constructor, const io_libecc_native_io_libecc_Function native, int parameterCount, struct io_libecc_Object **prototype, const struct io_libecc_Text *name)
+void setupBuiltinObject (struct io_libecc_Function **constructor, const io_libecc_native_io_libecc_Function native, int parameterCount, struct eccobject_t **prototype, const struct io_libecc_Text *name)
 {
 	io_libecc_Function.setupBuiltinObject(
 		constructor, native, 1,

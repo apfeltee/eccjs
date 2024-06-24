@@ -5,11 +5,8 @@
 //  Copyright (c) 2019 Aurélien Bouilland
 //  Licensed under MIT license, see LICENSE.txt file in project root
 //
+#include "ecc.h"
 
-#define Implementation
-#include "input.h"
-
-#include "chars.h"
 
 // MARK: - Private
 
@@ -20,7 +17,7 @@ static struct io_libecc_Input* createFromBytes(const char* bytes, uint32_t lengt
 static void destroy(struct io_libecc_Input*);
 static void printText(struct io_libecc_Input*, struct io_libecc_Text text, int32_t ofLine, struct io_libecc_Text ofText, const char* ofInput, int fullLine);
 static int32_t findLine(struct io_libecc_Input*, struct io_libecc_Text text);
-static struct io_libecc_Value attachValue(struct io_libecc_Input*, struct io_libecc_Value value);
+static struct eccvalue_t attachValue(struct io_libecc_Input*, struct eccvalue_t value);
 const struct type_io_libecc_Input io_libecc_Input = {
     createFromFile, createFromBytes, destroy, printText, findLine, attachValue,
 };
@@ -233,7 +230,7 @@ int32_t findLine (struct io_libecc_Input *self, struct io_libecc_Text text)
 	return -1;
 }
 
-struct io_libecc_Value attachValue (struct io_libecc_Input *self, struct io_libecc_Value value)
+struct eccvalue_t attachValue (struct io_libecc_Input *self, struct eccvalue_t value)
 {
 	if (value.type == io_libecc_value_charsType)
 		value.data.chars->referenceCount++;

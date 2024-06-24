@@ -5,15 +5,11 @@
 //  Copyright (c) 2019 Aurélien Bouilland
 //  Licensed under MIT license, see LICENSE.txt file in project root
 //
-
-#define Implementation
-#include "builtins.h"
 #include "ecc.h"
-#include "pool.h"
 
 // MARK: - Private
 
-struct io_libecc_Object * io_libecc_number_prototype = NULL;
+struct eccobject_t * io_libecc_number_prototype = NULL;
 struct io_libecc_Function * io_libecc_number_constructor = NULL;
 
 const struct io_libecc_object_Type io_libecc_number_type = {
@@ -32,10 +28,10 @@ const struct type_io_libecc_Number io_libecc_Number = {
 };
 
 static
-struct io_libecc_Value toExponential (struct io_libecc_Context * const context)
+struct eccvalue_t toExponential (struct eccstate_t * const context)
 {
 	struct io_libecc_chars_Append chars;
-	struct io_libecc_Value value;
+	struct eccvalue_t value;
 	double binary, precision = 0;
 	
 	io_libecc_Context.assertThisMask(context, io_libecc_value_numberMask);
@@ -71,10 +67,10 @@ struct io_libecc_Value toExponential (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value toFixed (struct io_libecc_Context * const context)
+struct eccvalue_t toFixed (struct eccstate_t * const context)
 {
 	struct io_libecc_chars_Append chars;
-	struct io_libecc_Value value;
+	struct eccvalue_t value;
 	double binary, precision = 0;
 	
 	io_libecc_Context.assertThisMask(context, io_libecc_value_numberMask);
@@ -109,10 +105,10 @@ struct io_libecc_Value toFixed (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value toPrecision (struct io_libecc_Context * const context)
+struct eccvalue_t toPrecision (struct eccstate_t * const context)
 {
 	struct io_libecc_chars_Append chars;
-	struct io_libecc_Value value;
+	struct eccvalue_t value;
 	double binary, precision = 0;
 	
 	io_libecc_Context.assertThisMask(context, io_libecc_value_numberMask);
@@ -150,9 +146,9 @@ struct io_libecc_Value toPrecision (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value toString (struct io_libecc_Context * const context)
+struct eccvalue_t toString (struct eccstate_t * const context)
 {
-	struct io_libecc_Value value;
+	struct eccvalue_t value;
 	int32_t radix = 10;
 	double binary;
 	
@@ -174,7 +170,7 @@ struct io_libecc_Value toString (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value valueOf (struct io_libecc_Context * const context)
+struct eccvalue_t valueOf (struct eccstate_t * const context)
 {
 	io_libecc_Context.assertThisType(context, io_libecc_value_numberType);
 	
@@ -182,9 +178,9 @@ struct io_libecc_Value valueOf (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value constructor (struct io_libecc_Context * const context)
+struct eccvalue_t constructor (struct eccstate_t * const context)
 {
-	struct io_libecc_Value value;
+	struct eccvalue_t value;
 	
 	value = io_libecc_Context.argument(context, 0);
 	if (value.type == io_libecc_value_undefinedType)

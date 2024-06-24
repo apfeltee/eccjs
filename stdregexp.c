@@ -6,27 +6,23 @@
 //  Licensed under MIT license, see LICENSE.txt file in project root
 //
 
-#define Implementation
-#include "builtins.h"
-#include "pool.h"
 #include "ecc.h"
-#include "lexer.h"
 
 // MARK: - Private
 
-static void mark (struct io_libecc_Object *object);
-static void capture (struct io_libecc_Object *object);
-static void finalize (struct io_libecc_Object *object);
+static void mark (struct eccobject_t *object);
+static void capture (struct eccobject_t *object);
+static void finalize (struct eccobject_t *object);
 static void setup(void);
 static void teardown(void);
 static struct io_libecc_RegExp* create(struct io_libecc_Chars* pattern, struct io_libecc_Error**, enum io_libecc_regexp_Options);
-static struct io_libecc_RegExp* createWith(struct io_libecc_Context* context, struct io_libecc_Value pattern, struct io_libecc_Value flags);
+static struct io_libecc_RegExp* createWith(struct eccstate_t* context, struct eccvalue_t pattern, struct eccvalue_t flags);
 static int matchWithState(struct io_libecc_RegExp*, struct io_libecc_regexp_State*);
 const struct type_io_libecc_RegExp io_libecc_RegExp = {
     setup, teardown, create, createWith, matchWithState,
 };
 
-struct io_libecc_Object * io_libecc_regexp_prototype = NULL;
+struct eccobject_t * io_libecc_regexp_prototype = NULL;
 struct io_libecc_Function * io_libecc_regexp_constructor = NULL;
 
 const struct io_libecc_object_Type io_libecc_regexp_type = {
@@ -85,7 +81,7 @@ struct Parse {
 static struct io_libecc_regexp_Node * disjunction (struct Parse *p, struct io_libecc_Error **error);
 
 static
-void mark (struct io_libecc_Object *object)
+void mark (struct eccobject_t *object)
 {
 	struct io_libecc_RegExp *self = (struct io_libecc_RegExp *)object;
 	
@@ -94,7 +90,7 @@ void mark (struct io_libecc_Object *object)
 }
 
 static
-void capture (struct io_libecc_Object *object)
+void capture (struct eccobject_t *object)
 {
 	struct io_libecc_RegExp *self = (struct io_libecc_RegExp *)object;
 	
@@ -103,7 +99,7 @@ void capture (struct io_libecc_Object *object)
 }
 
 static
-void finalize (struct io_libecc_Object *object)
+void finalize (struct eccobject_t *object)
 {
 	struct io_libecc_RegExp *self = (struct io_libecc_RegExp *)object;
 	struct io_libecc_regexp_Node *n = self->program;
@@ -1086,9 +1082,9 @@ jump:
 // MARK: - Static Members
 
 static
-struct io_libecc_Value constructor (struct io_libecc_Context * const context)
+struct eccvalue_t constructor (struct eccstate_t * const context)
 {
-	struct io_libecc_Value pattern, flags;
+	struct eccvalue_t pattern, flags;
 	
 	pattern = io_libecc_Context.argument(context, 0);
 	flags = io_libecc_Context.argument(context, 1);
@@ -1097,7 +1093,7 @@ struct io_libecc_Value constructor (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value toString (struct io_libecc_Context * const context)
+struct eccvalue_t toString (struct eccstate_t * const context)
 {
 	struct io_libecc_RegExp *self = context->this.data.regexp;
 	
@@ -1107,10 +1103,10 @@ struct io_libecc_Value toString (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value exec (struct io_libecc_Context * const context)
+struct eccvalue_t exec (struct eccstate_t * const context)
 {
 	struct io_libecc_RegExp *self = context->this.data.regexp;
-	struct io_libecc_Value value, lastIndex;
+	struct eccvalue_t value, lastIndex;
 	
 	io_libecc_Context.assertThisType(context, io_libecc_value_regexpType);
 	
@@ -1136,7 +1132,7 @@ struct io_libecc_Value exec (struct io_libecc_Context * const context)
 		
 		if (state.start >= bytes && state.start <= state.end && matchWithState(self, &state))
 		{
-			struct io_libecc_Object *array = io_libecc_Array.createSized(self->count);
+			struct eccobject_t *array = io_libecc_Array.createSized(self->count);
 			int32_t index, count;
 			
 			for (index = 0, count = self->count; index < count; ++index)
@@ -1163,10 +1159,10 @@ struct io_libecc_Value exec (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value test (struct io_libecc_Context * const context)
+struct eccvalue_t test (struct eccstate_t * const context)
 {
 	struct io_libecc_RegExp *self = context->this.data.regexp;
-	struct io_libecc_Value value, lastIndex;
+	struct eccvalue_t value, lastIndex;
 	
 	io_libecc_Context.assertThisType(context, io_libecc_value_regexpType);
 	
@@ -1328,12 +1324,12 @@ struct io_libecc_RegExp * create (struct io_libecc_Chars *s, struct io_libecc_Er
 	return self;
 }
 
-struct io_libecc_RegExp * createWith (struct io_libecc_Context *context, struct io_libecc_Value pattern, struct io_libecc_Value flags)
+struct io_libecc_RegExp * createWith (struct eccstate_t *context, struct eccvalue_t pattern, struct eccvalue_t flags)
 {
 	struct io_libecc_Error *error = NULL;
 	struct io_libecc_chars_Append chars;
 	struct io_libecc_RegExp *regexp;
-	struct io_libecc_Value value;
+	struct eccvalue_t value;
 	
 	if (pattern.type == io_libecc_value_regexpType && flags.type == io_libecc_value_undefinedType)
 	{

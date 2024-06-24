@@ -5,37 +5,31 @@
 //  Copyright (c) 2019 Aurélien Bouilland
 //  Licensed under MIT license, see LICENSE.txt file in project root
 //
-
-#define Implementation
-#include "builtins.h"
-
 #include "ecc.h"
-#include "oplist.h"
-#include "pool.h"
 
 static void setup(void);
 static void teardown(void);
-static struct io_libecc_Function* create(struct io_libecc_Object* environment);
-static struct io_libecc_Function* createSized(struct io_libecc_Object* environment, uint32_t size);
+static struct io_libecc_Function* create(struct eccobject_t* environment);
+static struct io_libecc_Function* createSized(struct eccobject_t* environment, uint32_t size);
 static struct io_libecc_Function* createWithNative(const io_libecc_native_io_libecc_Function native, int parameterCount);
 static struct io_libecc_Function* copy(struct io_libecc_Function* original);
 static void destroy(struct io_libecc_Function*);
-static void addMember(struct io_libecc_Function*, const char* name, struct io_libecc_Value value, enum io_libecc_value_Flags);
-static void addValue(struct io_libecc_Function*, const char* name, struct io_libecc_Value value, enum io_libecc_value_Flags);
+static void addMember(struct io_libecc_Function*, const char* name, struct eccvalue_t value, enum io_libecc_value_Flags);
+static void addValue(struct io_libecc_Function*, const char* name, struct eccvalue_t value, enum io_libecc_value_Flags);
 static struct io_libecc_Function*
 addMethod(struct io_libecc_Function*, const char* name, const io_libecc_native_io_libecc_Function native, int argumentCount, enum io_libecc_value_Flags);
 static struct io_libecc_Function*
 addFunction(struct io_libecc_Function*, const char* name, const io_libecc_native_io_libecc_Function native, int argumentCount, enum io_libecc_value_Flags);
 static struct io_libecc_Function*
-addToObject(struct io_libecc_Object* object, const char* name, const io_libecc_native_io_libecc_Function native, int parameterCount, enum io_libecc_value_Flags);
-static void linkPrototype(struct io_libecc_Function*, struct io_libecc_Value prototype, enum io_libecc_value_Flags);
+addToObject(struct eccobject_t* object, const char* name, const io_libecc_native_io_libecc_Function native, int parameterCount, enum io_libecc_value_Flags);
+static void linkPrototype(struct io_libecc_Function*, struct eccvalue_t prototype, enum io_libecc_value_Flags);
 static void setupBuiltinObject(struct io_libecc_Function**,
                                const io_libecc_native_io_libecc_Function,
                                int parameterCount,
-                               struct io_libecc_Object**,
-                               struct io_libecc_Value prototype,
+                               struct eccobject_t**,
+                               struct eccvalue_t prototype,
                                const struct io_libecc_object_Type* type);
-static struct io_libecc_Value accessor(const io_libecc_native_io_libecc_Function getter, const io_libecc_native_io_libecc_Function setter);
+static struct eccvalue_t accessor(const io_libecc_native_io_libecc_Function getter, const io_libecc_native_io_libecc_Function setter);
 const struct type_io_libecc_Function io_libecc_Function = {
     setup,     teardown,    create,      createSized,   createWithNative,   copy,     destroy, addMember, addValue,
     addMethod, addFunction, addToObject, linkPrototype, setupBuiltinObject, accessor,
@@ -46,10 +40,10 @@ const struct type_io_libecc_Function io_libecc_Function = {
 
 static va_list empty_ap;
 
-static void mark (struct io_libecc_Object *object);
-static void capture (struct io_libecc_Object *object);
+static void mark (struct eccobject_t *object);
+static void capture (struct eccobject_t *object);
 
-struct io_libecc_Object * io_libecc_function_prototype = NULL;
+struct eccobject_t * io_libecc_function_prototype = NULL;
 struct io_libecc_Function * io_libecc_function_constructor = NULL;
 
 const struct io_libecc_object_Type io_libecc_function_type = {
@@ -60,7 +54,7 @@ const struct io_libecc_object_Type io_libecc_function_type = {
 };
 
 static
-void capture (struct io_libecc_Object *object)
+void capture (struct eccobject_t *object)
 {
 	struct io_libecc_Function *self = (struct io_libecc_Function *)object;
 	
@@ -72,7 +66,7 @@ void capture (struct io_libecc_Object *object)
 }
 
 static
-void mark (struct io_libecc_Object *object)
+void mark (struct eccobject_t *object)
 {
 	struct io_libecc_Function *self = (struct io_libecc_Function *)object;
 	
@@ -88,7 +82,7 @@ void mark (struct io_libecc_Object *object)
 // MARK: - Static Members
 
 static
-struct io_libecc_Value toChars (struct io_libecc_Context * const context, struct io_libecc_Value value)
+struct eccvalue_t toChars (struct eccstate_t * const context, struct eccvalue_t value)
 {
 	struct io_libecc_Function *self;
 	struct io_libecc_chars_Append chars;
@@ -110,7 +104,7 @@ struct io_libecc_Value toChars (struct io_libecc_Context * const context, struct
 }
 
 static
-struct io_libecc_Value toString (struct io_libecc_Context * const context)
+struct eccvalue_t toString (struct eccstate_t * const context)
 {
 	io_libecc_Context.assertThisType(context, io_libecc_value_functionType);
 	
@@ -118,9 +112,9 @@ struct io_libecc_Value toString (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value apply (struct io_libecc_Context * const context)
+struct eccvalue_t apply (struct eccstate_t * const context)
 {
-	struct io_libecc_Value this, arguments;
+	struct eccvalue_t this, arguments;
 	
 	io_libecc_Context.assertThisType(context, io_libecc_value_functionType);
 	
@@ -144,9 +138,9 @@ struct io_libecc_Value apply (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value call (struct io_libecc_Context * const context)
+struct eccvalue_t call (struct eccstate_t * const context)
 {
-	struct io_libecc_Object arguments;
+	struct eccobject_t arguments;
 	
 	io_libecc_Context.assertThisType(context, io_libecc_value_functionType);
 	
@@ -156,7 +150,7 @@ struct io_libecc_Value call (struct io_libecc_Context * const context)
 	
 	if (arguments.elementCount)
 	{
-		struct io_libecc_Value this = io_libecc_Context.argument(context, 0);
+		struct eccvalue_t this = io_libecc_Context.argument(context, 0);
 		if (this.type != io_libecc_value_undefinedType && this.type != io_libecc_value_nullType)
 			this = io_libecc_Value.toObject(context, this);
 		
@@ -176,10 +170,10 @@ struct io_libecc_Value call (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value bindCall (struct io_libecc_Context * const context)
+struct eccvalue_t bindCall (struct eccstate_t * const context)
 {
 	struct io_libecc_Function *function;
-	struct io_libecc_Object *arguments;
+	struct eccobject_t *arguments;
 	uint16_t count, length;
 	
 	io_libecc_Context.assertThisType(context, io_libecc_value_functionType);
@@ -199,7 +193,7 @@ struct io_libecc_Value bindCall (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value bind (struct io_libecc_Context * const context)
+struct eccvalue_t bind (struct eccstate_t * const context)
 {
 	struct io_libecc_Function *function;
 	uint16_t index, count;
@@ -226,13 +220,13 @@ struct io_libecc_Value bind (struct io_libecc_Context * const context)
 }
 
 static
-struct io_libecc_Value prototypeConstructor (struct io_libecc_Context * const context)
+struct eccvalue_t prototypeConstructor (struct eccstate_t * const context)
 {
 	return io_libecc_value_undefined;
 }
 
 static
-struct io_libecc_Value constructor (struct io_libecc_Context * const context)
+struct eccvalue_t constructor (struct eccstate_t * const context)
 {
 	int argumentCount;
 	
@@ -240,10 +234,10 @@ struct io_libecc_Value constructor (struct io_libecc_Context * const context)
 	
 	{
 		int_fast32_t index;
-		struct io_libecc_Value value;
+		struct eccvalue_t value;
 		struct io_libecc_chars_Append chars;
 		struct io_libecc_Input *input;
-		struct io_libecc_Context subContext = {
+		struct eccstate_t subContext = {
 			.parent = context,
 			.this = io_libecc_Value.object(&context->ecc->global->environment),
 			.ecc = context->ecc,
@@ -304,12 +298,12 @@ void teardown (void)
 	io_libecc_function_constructor = NULL;
 }
 
-struct io_libecc_Function * create (struct io_libecc_Object *environment)
+struct io_libecc_Function * create (struct eccobject_t *environment)
 {
 	return createSized(environment, 8);
 }
 
-struct io_libecc_Function * createSized (struct io_libecc_Object *environment, uint32_t size)
+struct io_libecc_Function * createSized (struct eccobject_t *environment, uint32_t size)
 {
 	struct io_libecc_Function *self = malloc(sizeof(*self));
 	io_libecc_Pool.addFunction(self);
@@ -376,7 +370,7 @@ void destroy (struct io_libecc_Function *self)
 	free(self), self = NULL;
 }
 
-void addMember(struct io_libecc_Function *self, const char *name, struct io_libecc_Value value, enum io_libecc_value_Flags flags)
+void addMember(struct io_libecc_Function *self, const char *name, struct eccvalue_t value, enum io_libecc_value_Flags flags)
 {
 	assert(self);
 	
@@ -393,7 +387,7 @@ struct io_libecc_Function * addMethod(struct io_libecc_Function *self, const cha
 	return addToObject(&self->object, name, native, parameterCount, flags);
 }
 
-void addValue(struct io_libecc_Function *self, const char *name, struct io_libecc_Value value, enum io_libecc_value_Flags flags)
+void addValue(struct io_libecc_Function *self, const char *name, struct eccvalue_t value, enum io_libecc_value_Flags flags)
 {
 	assert(self);
 	
@@ -410,7 +404,7 @@ struct io_libecc_Function * addFunction(struct io_libecc_Function *self, const c
 	return addToObject(&self->environment, name, native, parameterCount, flags);
 }
 
-struct io_libecc_Function * addToObject(struct io_libecc_Object *object, const char *name, const io_libecc_native_io_libecc_Function native, int parameterCount, enum io_libecc_value_Flags flags)
+struct io_libecc_Function * addToObject(struct eccobject_t *object, const char *name, const io_libecc_native_io_libecc_Function native, int parameterCount, enum io_libecc_value_Flags flags)
 {
 	struct io_libecc_Function *function;
 	
@@ -424,7 +418,7 @@ struct io_libecc_Function * addToObject(struct io_libecc_Object *object, const c
 	return function;
 }
 
-void linkPrototype (struct io_libecc_Function *self, struct io_libecc_Value prototype, enum io_libecc_value_Flags flags)
+void linkPrototype (struct io_libecc_Function *self, struct eccvalue_t prototype, enum io_libecc_value_Flags flags)
 {
 	assert(self);
 	
@@ -432,13 +426,13 @@ void linkPrototype (struct io_libecc_Function *self, struct io_libecc_Value prot
 	io_libecc_Object.addMember(&self->object, io_libecc_key_prototype, prototype, flags);
 }
 
-void setupBuiltinObject (struct io_libecc_Function **constructor, const io_libecc_native_io_libecc_Function native, int parameterCount, struct io_libecc_Object **prototype, struct io_libecc_Value prototypeValue, const struct io_libecc_object_Type *type)
+void setupBuiltinObject (struct io_libecc_Function **constructor, const io_libecc_native_io_libecc_Function native, int parameterCount, struct eccobject_t **prototype, struct eccvalue_t prototypeValue, const struct io_libecc_object_Type *type)
 {
 	struct io_libecc_Function *function = createWithNative(native, parameterCount);
 	
 	if (prototype)
 	{
-		struct io_libecc_Object *object = prototypeValue.data.object;
+		struct eccobject_t *object = prototypeValue.data.object;
 		object->type = type;
 		
 		if (!object->prototype)
@@ -451,9 +445,9 @@ void setupBuiltinObject (struct io_libecc_Function **constructor, const io_libec
 	*constructor = function;
 }
 
-struct io_libecc_Value accessor (const io_libecc_native_io_libecc_Function getter, const io_libecc_native_io_libecc_Function setter)
+struct eccvalue_t accessor (const io_libecc_native_io_libecc_Function getter, const io_libecc_native_io_libecc_Function setter)
 {
-	struct io_libecc_Value value;
+	struct eccvalue_t value;
 	struct io_libecc_Function *getterFunction = NULL, *setterFunction = NULL;
 	if (setter)
 		setterFunction = io_libecc_Function.createWithNative(setter, 1);
