@@ -23,7 +23,7 @@ static eccoplist_t* sourceElements(eccastparser_t*);
 static eccastparser_t* createWithLexer(eccastlexer_t*);
 static void destroy(eccastparser_t*);
 static eccobjscriptfunction_t* parseWithEnvironment(eccastparser_t* const, eccobject_t* environment, eccobject_t* global);
-const struct type_io_libecc_Parser io_libecc_Parser = {
+const struct eccpseudonsparser_t io_libecc_Parser = {
     createWithLexer,
     destroy,
     parseWithEnvironment,
@@ -336,7 +336,7 @@ static eccoplist_t* primary(eccastparser_t* self)
         oplist = io_libecc_OpList.create(io_libecc_Op.getLocal, self->lexer->value, self->lexer->text);
 
         if(io_libecc_Key.isEqual(self->lexer->value.data.key, io_libecc_key_arguments))
-            self->function->flags |= io_libecc_function_needArguments | io_libecc_function_needHeap;
+            self->function->flags |= ECC_SCRIPTFUNCFLAG_NEEDARGUMENTS | ECC_SCRIPTFUNCFLAG_NEEDHEAP;
     }
     else if(previewToken(self) == ECC_TOK_STRING)
         oplist = io_libecc_OpList.create(io_libecc_Op.text, ECCValConstUndefined, self->lexer->text);
@@ -1086,7 +1086,7 @@ static eccoplist_t* variableDeclaration(eccastparser_t* self, int noIn)
     else if(self->strictMode && io_libecc_Key.isEqual(value.data.key, io_libecc_key_arguments))
         syntaxError(self, text, io_libecc_Chars.create("redefining arguments is not allowed"));
 
-    if(self->function->flags & io_libecc_function_strictMode || self->sourceDepth > 1)
+    if(self->function->flags & ECC_SCRIPTFUNCFLAG_STRICTMODE || self->sourceDepth > 1)
         ECCNSObject.addMember(&self->function->environment, value.data.key, ECCValConstUndefined, ECC_VALFLAG_SEALED);
     else
         ECCNSObject.addMember(self->global, value.data.key, ECCValConstUndefined, ECC_VALFLAG_SEALED);
@@ -1102,7 +1102,7 @@ static eccoplist_t* variableDeclaration(eccastparser_t* self, int noIn)
         tokenError(self, "expression");
         return NULL;
     }
-    //	else if (!(self->function->flags & io_libecc_function_strictMode) && self->sourceDepth <= 1)
+    //	else if (!(self->function->flags & ECC_SCRIPTFUNCFLAG_STRICTMODE) && self->sourceDepth <= 1)
     //		return io_libecc_OpList.unshift(io_libecc_Op.make(io_libecc_Op.discard, ECCValConstUndefined, ECC_ConstString_Empty), io_libecc_OpList.create(io_libecc_Op.createLocalRef, value, text));
     else
         return io_libecc_OpList.create(io_libecc_Op.next, value, text);
@@ -1580,7 +1580,7 @@ static eccoplist_t* function(eccastparser_t* self, int isDeclaration, int isGett
     }
 
     parentFunction = self->function;
-    parentFunction->flags |= io_libecc_function_needHeap;
+    parentFunction->flags |= ECC_SCRIPTFUNCFLAG_NEEDHEAP;
 
     function = io_libecc_Function.create(&self->function->environment);
 
@@ -1606,8 +1606,8 @@ static eccoplist_t* function(eccastparser_t* self, int isDeclaration, int isGett
     expectToken(self, ')');
     expectToken(self, '{');
 
-    if(parentFunction->flags & io_libecc_function_strictMode)
-        self->function->flags |= io_libecc_function_strictMode;
+    if(parentFunction->flags & ECC_SCRIPTFUNCFLAG_STRICTMODE)
+        self->function->flags |= ECC_SCRIPTFUNCFLAG_STRICTMODE;
 
     oplist = io_libecc_OpList.join(oplist, sourceElements(self));
     text.length = (int32_t)(self->lexer->text.bytes - text.bytes) + 1;
@@ -1624,7 +1624,7 @@ static eccoplist_t* function(eccastparser_t* self, int isDeclaration, int isGett
 
     if(isDeclaration)
     {
-        if(self->function->flags & io_libecc_function_strictMode || self->sourceDepth > 1)
+        if(self->function->flags & ECC_SCRIPTFUNCFLAG_STRICTMODE || self->sourceDepth > 1)
             ECCNSObject.addMember(&parentFunction->environment, identifierOp.value.data.key, ECCValConstUndefined, ECC_VALFLAG_HIDDEN);
         else
             ECCNSObject.addMember(self->global, identifierOp.value.data.key, ECCValConstUndefined, ECC_VALFLAG_HIDDEN);
@@ -1658,7 +1658,7 @@ static eccoplist_t* sourceElements(eccastparser_t* self)
     self->function->oplist = NULL;
 
     if(previewToken(self) == ECC_TOK_STRING && self->lexer->text.length == 10 && !memcmp("use strict", self->lexer->text.bytes, 10))
-        self->function->flags |= io_libecc_function_strictMode;
+        self->function->flags |= ECC_SCRIPTFUNCFLAG_STRICTMODE;
 
     oplist = statementList(self);
 
@@ -1716,7 +1716,7 @@ eccobjscriptfunction_t* parseWithEnvironment(eccastparser_t* const self, eccobje
     self->global = global;
     self->reserveGlobalSlots = 0;
     if(self->strictMode)
-        function->flags |= io_libecc_function_strictMode;
+        function->flags |= ECC_SCRIPTFUNCFLAG_STRICTMODE;
 
     nextToken(self);
     oplist = sourceElements(self);

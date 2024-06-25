@@ -45,7 +45,7 @@ const eccobjinterntype_t io_libecc_json_type = {
 
 static void setup(void);
 static void teardown(void);
-const struct type_io_libecc_JSON io_libecc_JSON = {
+const struct eccpseudonsjson_t io_libecc_JSON = {
     setup,
     teardown,
     {}
@@ -231,7 +231,7 @@ static eccvalue_t object(eccjsonparser_t* parse)
             if(c.codepoint != '"')
                 return error(parse, -c.units, io_libecc_Chars.create("expect property name"));
 
-            key = io_libecc_Key.makeWithText(string(parse), io_libecc_key_copyOnCreate);
+            key = io_libecc_Key.makeWithText(string(parse), ECC_INDEXFLAG_COPYONCREATE);
 
             c = nextc(parse);
             if(c.codepoint != ':')
@@ -371,7 +371,7 @@ static eccvalue_t jsonParse(eccstate_t* context)
 			.parent = context,
 			.ecc = context->ecc,
 			.depth = context->depth + 1,
-			.textIndex = io_libecc_context_callIndex,
+			.textIndex = ECC_CTXINDEXTYPE_CALL,
 		},
 	};
 
@@ -394,14 +394,14 @@ static eccvalue_t jsonParse(eccstate_t* context)
 
     if(result.type == ECC_VALTYPE_ERROR)
     {
-        ECCNSContext.setTextIndex(context, io_libecc_context_noIndex);
+        ECCNSContext.setTextIndex(context, ECC_CTXINDEXTYPE_NO);
         context->ecc->ofLine = parse.line;
         context->ecc->ofText = errorOfLine(&parse);
         context->ecc->ofInput = "(parse)";
         ECCNSContext.doThrow(context, result);
     }
 
-    if(parse.function && parse.function->flags & io_libecc_function_needHeap)
+    if(parse.function && parse.function->flags & ECC_SCRIPTFUNCFLAG_NEEDHEAP)
     {
         eccobject_t* environment = ECCNSObject.copy(&parse.function->environment);
 
@@ -574,7 +574,7 @@ static eccvalue_t jsonStringify(eccstate_t* context)
 			.parent = context,
 			.ecc = context->ecc,
 			.depth = context->depth + 1,
-			.textIndex = io_libecc_context_callIndex,
+			.textIndex = ECC_CTXINDEXTYPE_CALL,
 		},
 		.spaces = { 0 },
 	};
@@ -605,7 +605,7 @@ static eccvalue_t jsonStringify(eccstate_t* context)
 
     io_libecc_Chars.beginAppend(&stringify.chars);
 
-    if(stringify.function && stringify.function->flags & io_libecc_function_needHeap)
+    if(stringify.function && stringify.function->flags & ECC_SCRIPTFUNCFLAG_NEEDHEAP)
     {
         eccobject_t* environment = ECCNSObject.copy(&stringify.function->environment);
 

@@ -460,7 +460,7 @@ static int isSpace(ecctextchar_t);
 static int isDigit(ecctextchar_t);
 static int isWord(ecctextchar_t);
 static int isLineFeed(ecctextchar_t);
-const struct type_io_libecc_Text ECCNSText = {
+const struct eccpseudonstext_t ECCNSText = {
     make, join, character, nextCharacter, prevCharacter, advance, toUTF16Length, toUTF16, toLower, toUpper, isSpace, isDigit, isWord, isLineFeed,
     {},
 };

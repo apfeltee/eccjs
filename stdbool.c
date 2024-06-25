@@ -18,13 +18,13 @@ const eccobjinterntype_t io_libecc_boolean_type = {
 
 // MARK: - Static Members
 
-static void setup(void);
-static void teardown(void);
-static eccobjbool_t* create(int);
-const struct type_io_libecc_Boolean io_libecc_Boolean = {
-    setup,
-    teardown,
-    create,
+static void nsboolfn_setup(void);
+static void nsboolfn_teardown(void);
+static eccobjbool_t* nsboolfn_create(int);
+const struct eccpseudonsboolean_t io_libecc_Boolean = {
+    nsboolfn_setup,
+    nsboolfn_teardown,
+    nsboolfn_create,
     {}
 };
 
@@ -63,23 +63,23 @@ static eccvalue_t constructor(eccstate_t* context)
 
 // MARK: - Methods
 
-void setup()
+void nsboolfn_setup()
 {
     const eccvalflag_t h = ECC_VALFLAG_HIDDEN;
 
-    io_libecc_Function.setupBuiltinObject(&io_libecc_boolean_constructor, constructor, 1, &io_libecc_boolean_prototype, ECCNSValue.boolean(create(0)), &io_libecc_boolean_type);
+    io_libecc_Function.setupBuiltinObject(&io_libecc_boolean_constructor, constructor, 1, &io_libecc_boolean_prototype, ECCNSValue.boolean(nsboolfn_create(0)), &io_libecc_boolean_type);
 
     io_libecc_Function.addToObject(io_libecc_boolean_prototype, "toString", toString, 0, h);
     io_libecc_Function.addToObject(io_libecc_boolean_prototype, "valueOf", valueOf, 0, h);
 }
 
-void teardown(void)
+void nsboolfn_teardown(void)
 {
     io_libecc_boolean_prototype = NULL;
     io_libecc_boolean_constructor = NULL;
 }
 
-eccobjbool_t* create(int truth)
+eccobjbool_t* nsboolfn_create(int truth)
 {
     eccobjbool_t* self = malloc(sizeof(*self));
     *self = io_libecc_Boolean.identity;

@@ -13,66 +13,66 @@
 
 // MARK: - Methods
 
-static void rangeError(eccstate_t*, ecccharbuffer_t*) __attribute__((noreturn));
-static void referenceError(eccstate_t*, ecccharbuffer_t*) __attribute__((noreturn));
-static void syntaxError(eccstate_t*, ecccharbuffer_t*) __attribute__((noreturn));
-static void typeError(eccstate_t*, ecccharbuffer_t*) __attribute__((noreturn));
-static void uriError(eccstate_t*, ecccharbuffer_t*) __attribute__((noreturn));
+static void ctxfn_rangeError(eccstate_t*, ecccharbuffer_t*) __attribute__((noreturn));
+static void ctxfn_referenceError(eccstate_t*, ecccharbuffer_t*) __attribute__((noreturn));
+static void ctxfn_syntaxError(eccstate_t*, ecccharbuffer_t*) __attribute__((noreturn));
+static void ctxfn_typeError(eccstate_t*, ecccharbuffer_t*) __attribute__((noreturn));
+static void ctxfn_uriError(eccstate_t*, ecccharbuffer_t*) __attribute__((noreturn));
 static void ctxfn_throw(eccstate_t*, eccvalue_t) __attribute__((noreturn));
-static eccvalue_t callFunction(eccstate_t*, eccobjscriptfunction_t* function, eccvalue_t thisval, int argumentCount, ...);
-static int argumentCount(eccstate_t*);
-static eccvalue_t argument(eccstate_t*, int argumentIndex);
-static void replaceArgument(eccstate_t*, int argumentIndex, eccvalue_t value);
+static eccvalue_t ctxfn_callFunction(eccstate_t*, eccobjscriptfunction_t* function, eccvalue_t thisval, int argumentCount, ...);
+static int ctxfn_argumentCount(eccstate_t*);
+static eccvalue_t ctxfn_argument(eccstate_t*, int argumentIndex);
+static void ctxfn_replaceArgument(eccstate_t*, int argumentIndex, eccvalue_t value);
 static eccvalue_t ctxfn_this(eccstate_t*);
-static void assertThisType(eccstate_t*, eccvaltype_t);
-static void assertThisMask(eccstate_t*, eccvalmask_t);
-static void assertThisCoerciblePrimitive(eccstate_t*);
-static void setText(eccstate_t*, const ecctextstring_t* text);
-static void setTexts(eccstate_t*, const ecctextstring_t* text, const ecctextstring_t* textAlt);
-static void setTextIndex(eccstate_t*, enum io_libecc_context_Index index);
-static void setTextIndexArgument(eccstate_t*, int argument);
-static ecctextstring_t textSeek(eccstate_t*);
-static void rewindStatement(eccstate_t*);
-static void printBacktrace(eccstate_t* context);
-static eccobject_t* environmentRoot(eccstate_t* context);
-const struct type_io_libecc_Context ECCNSContext = {
-    rangeError,     referenceError,
-    syntaxError,    typeError,
-    uriError,       ctxfn_throw,
-    callFunction,   argumentCount,
-    argument,       replaceArgument,
-    ctxfn_this,           assertThisType,
-    assertThisMask, assertThisCoerciblePrimitive,
-    setText,        setTexts,
-    setTextIndex,   setTextIndexArgument,
-    textSeek,       rewindStatement,
-    printBacktrace, environmentRoot,
+static void ctxfn_assertThisType(eccstate_t*, eccvaltype_t);
+static void ctxfn_assertThisMask(eccstate_t*, eccvalmask_t);
+static void ctxfn_assertThisCoerciblePrimitive(eccstate_t*);
+static void ctxfn_setText(eccstate_t*, const ecctextstring_t* text);
+static void ctxfn_setTexts(eccstate_t*, const ecctextstring_t* text, const ecctextstring_t* textAlt);
+static void ctxfn_setTextIndex(eccstate_t*, eccctxindextype_t index);
+static void ctxfn_setTextIndexArgument(eccstate_t*, int argument);
+static ecctextstring_t ctxfn_textSeek(eccstate_t*);
+static void ctxfn_rewindStatement(eccstate_t*);
+static void ctxfn_printBacktrace(eccstate_t* context);
+static eccobject_t* ctxfn_environmentRoot(eccstate_t* context);
+const struct eccpseudonscontext_t ECCNSContext = {
+    ctxfn_rangeError,     ctxfn_referenceError,
+    ctxfn_syntaxError,    ctxfn_typeError,
+    ctxfn_uriError,       ctxfn_throw,
+    ctxfn_callFunction,   ctxfn_argumentCount,
+    ctxfn_argument,       ctxfn_replaceArgument,
+    ctxfn_this,           ctxfn_assertThisType,
+    ctxfn_assertThisMask, ctxfn_assertThisCoerciblePrimitive,
+    ctxfn_setText,        ctxfn_setTexts,
+    ctxfn_setTextIndex,   ctxfn_setTextIndexArgument,
+    ctxfn_textSeek,       ctxfn_rewindStatement,
+    ctxfn_printBacktrace, ctxfn_environmentRoot,
     {}
 };
 
-void rangeError(eccstate_t* self, ecccharbuffer_t* chars)
+void ctxfn_rangeError(eccstate_t* self, ecccharbuffer_t* chars)
 {
-    ctxfn_throw(self, ECCNSValue.error(io_libecc_Error.rangeError(textSeek(self), chars)));
+    ctxfn_throw(self, ECCNSValue.error(io_libecc_Error.rangeError(ctxfn_textSeek(self), chars)));
 }
 
-void referenceError(eccstate_t* self, ecccharbuffer_t* chars)
+void ctxfn_referenceError(eccstate_t* self, ecccharbuffer_t* chars)
 {
-    ctxfn_throw(self, ECCNSValue.error(io_libecc_Error.referenceError(textSeek(self), chars)));
+    ctxfn_throw(self, ECCNSValue.error(io_libecc_Error.referenceError(ctxfn_textSeek(self), chars)));
 }
 
-void syntaxError(eccstate_t* self, ecccharbuffer_t* chars)
+void ctxfn_syntaxError(eccstate_t* self, ecccharbuffer_t* chars)
 {
-    ctxfn_throw(self, ECCNSValue.error(io_libecc_Error.syntaxError(textSeek(self), chars)));
+    ctxfn_throw(self, ECCNSValue.error(io_libecc_Error.syntaxError(ctxfn_textSeek(self), chars)));
 }
 
-void typeError(eccstate_t* self, ecccharbuffer_t* chars)
+void ctxfn_typeError(eccstate_t* self, ecccharbuffer_t* chars)
 {
-    ctxfn_throw(self, ECCNSValue.error(io_libecc_Error.typeError(textSeek(self), chars)));
+    ctxfn_throw(self, ECCNSValue.error(io_libecc_Error.typeError(ctxfn_textSeek(self), chars)));
 }
 
-void uriError(eccstate_t* self, ecccharbuffer_t* chars)
+void ctxfn_uriError(eccstate_t* self, ecccharbuffer_t* chars)
 {
-    ctxfn_throw(self, ECCNSValue.error(io_libecc_Error.uriError(textSeek(self), chars)));
+    ctxfn_throw(self, ECCNSValue.error(io_libecc_Error.uriError(ctxfn_textSeek(self), chars)));
 }
 
 void ctxfn_throw(eccstate_t * self, eccvalue_t value)
@@ -98,32 +98,32 @@ void ctxfn_throw(eccstate_t * self, eccvalue_t value)
 
         ECCNSEnv.newline();
         ECCNSEnv.printError(ECCNSValue.stringLength(&name), ECCNSValue.stringBytes(&name), "%.*s", ECCNSValue.stringLength(&message), ECCNSValue.stringBytes(&message));
-        printBacktrace(self);
+        ctxfn_printBacktrace(self);
         ECCNSScript.printTextInput(self->ecc, self->ecc->text, 1);
     }
 
     ECCNSScript.jmpEnv(self->ecc, value);
 }
 
-eccvalue_t callFunction(eccstate_t* self, eccobjscriptfunction_t* function, eccvalue_t thisval, int argumentCount, ...)
+eccvalue_t ctxfn_callFunction(eccstate_t* self, eccobjscriptfunction_t* function, eccvalue_t thisval, int argumentCount, ...)
 {
     eccvalue_t result;
     va_list ap;
     int offset = 0;
 
-    if(argumentCount & io_libecc_context_asAccessor)
+    if(argumentCount & ECC_CTXSPECIALTYPE_ASACCESSOR)
     {
-        offset = io_libecc_context_accessorOffset;
+        offset = ECC_CTXOFFSET_ACCESSOR;
     }
 
     va_start(ap, argumentCount);
-    result = io_libecc_Op.callFunctionVA(self, offset, function, thisval, argumentCount & io_libecc_context_countMask, ap);
+    result = io_libecc_Op.callFunctionVA(self, offset, function, thisval, argumentCount & ECC_CTXSPECIALTYPE_COUNTMASK, ap);
     va_end(ap);
 
     return result;
 }
 
-int argumentCount(eccstate_t* self)
+int ctxfn_argumentCount(eccstate_t* self)
 {
     if(self->environment->hashmap[2].value.type == ECC_VALTYPE_OBJECT)
         return self->environment->hashmap[2].value.data.object->elementCount;
@@ -131,7 +131,7 @@ int argumentCount(eccstate_t* self)
         return self->environment->hashmapCount - 3;
 }
 
-eccvalue_t argument(eccstate_t* self, int argumentIndex)
+eccvalue_t ctxfn_argument(eccstate_t* self, int argumentIndex)
 {
     self->textIndex = argumentIndex + 4;
 
@@ -146,7 +146,7 @@ eccvalue_t argument(eccstate_t* self, int argumentIndex)
     return ECCValConstNone;
 }
 
-void replaceArgument(eccstate_t* self, int argumentIndex, eccvalue_t value)
+void ctxfn_replaceArgument(eccstate_t* self, int argumentIndex, eccvalue_t value)
 {
     if(self->environment->hashmap[2].value.type == ECC_VALTYPE_OBJECT)
     {
@@ -159,67 +159,67 @@ void replaceArgument(eccstate_t* self, int argumentIndex, eccvalue_t value)
 
 eccvalue_t ctxfn_this(eccstate_t* self)
 {
-    self->textIndex = io_libecc_context_thisIndex;
+    self->textIndex = ECC_CTXINDEXTYPE_THIS;
     return self->thisvalue;
 }
 
-void assertThisType(eccstate_t* self, eccvaltype_t type)
+void ctxfn_assertThisType(eccstate_t* self, eccvaltype_t type)
 {
     if(self->thisvalue.type != type)
     {
-        setTextIndex(self, io_libecc_context_thisIndex);
-        typeError(self, io_libecc_Chars.create("'this' is not a %s", ECCNSValue.typeName(type)));
+        ctxfn_setTextIndex(self, ECC_CTXINDEXTYPE_THIS);
+        ctxfn_typeError(self, io_libecc_Chars.create("'this' is not a %s", ECCNSValue.typeName(type)));
     }
 }
 
-void assertThisMask(eccstate_t* self, eccvalmask_t mask)
+void ctxfn_assertThisMask(eccstate_t* self, eccvalmask_t mask)
 {
     if(!(self->thisvalue.type & mask))
     {
-        setTextIndex(self, io_libecc_context_thisIndex);
-        typeError(self, io_libecc_Chars.create("'this' is not a %s", ECCNSValue.maskName(mask)));
+        ctxfn_setTextIndex(self, ECC_CTXINDEXTYPE_THIS);
+        ctxfn_typeError(self, io_libecc_Chars.create("'this' is not a %s", ECCNSValue.maskName(mask)));
     }
 }
 
-void assertThisCoerciblePrimitive(eccstate_t* self)
+void ctxfn_assertThisCoerciblePrimitive(eccstate_t* self)
 {
     if(self->thisvalue.type == ECC_VALTYPE_UNDEFINED || self->thisvalue.type == ECC_VALTYPE_NULL)
     {
-        setTextIndex(self, io_libecc_context_thisIndex);
-        typeError(self, io_libecc_Chars.create("'this' cannot be null or undefined"));
+        ctxfn_setTextIndex(self, ECC_CTXINDEXTYPE_THIS);
+        ctxfn_typeError(self, io_libecc_Chars.create("'this' cannot be null or undefined"));
     }
 }
 
-void setText(eccstate_t* self, const ecctextstring_t* text)
+void ctxfn_setText(eccstate_t* self, const ecctextstring_t* text)
 {
-    self->textIndex = io_libecc_context_savedIndex;
+    self->textIndex = ECC_CTXINDEXTYPE_SAVED;
     self->text = text;
 }
 
-void setTexts(eccstate_t* self, const ecctextstring_t* text, const ecctextstring_t* textAlt)
+void ctxfn_setTexts(eccstate_t* self, const ecctextstring_t* text, const ecctextstring_t* textAlt)
 {
-    self->textIndex = io_libecc_context_savedIndex;
+    self->textIndex = ECC_CTXINDEXTYPE_SAVED;
     self->text = text;
     self->textAlt = textAlt;
 }
 
-void setTextIndex(eccstate_t* self, enum io_libecc_context_Index index)
+void ctxfn_setTextIndex(eccstate_t* self, eccctxindextype_t index)
 {
     self->textIndex = index;
 }
 
-void setTextIndexArgument(eccstate_t* self, int argument)
+void ctxfn_setTextIndexArgument(eccstate_t* self, int argument)
 {
     self->textIndex = argument + 4;
 }
 
-ecctextstring_t textSeek(eccstate_t* self)
+ecctextstring_t ctxfn_textSeek(eccstate_t* self)
 {
     const char* bytes;
     eccstate_t seek = *self;
     uint32_t breakArray = 0, argumentCount = 0;
     ecctextstring_t callText;
-    enum io_libecc_context_Index index;
+    eccctxindextype_t index;
     int isAccessor = 0;
 
     assert(self);
@@ -227,10 +227,10 @@ ecctextstring_t textSeek(eccstate_t* self)
 
     index = self->textIndex;
 
-    if(index == io_libecc_context_savedIndex)
+    if(index == ECC_CTXINDEXTYPE_SAVED)
         return *self->text;
 
-    if(index == io_libecc_context_savedIndexAlt)
+    if(index == ECC_CTXINDECTYPE_SAVEDINDEXALT)
         return *self->textAlt;
 
     while(seek.ops->text.bytes == ECC_ConstString_NativeCode.bytes)
@@ -238,15 +238,15 @@ ecctextstring_t textSeek(eccstate_t* self)
         if(!seek.parent)
             return seek.ops->text;
 
-        isAccessor = seek.argumentOffset == io_libecc_context_accessorOffset;
+        isAccessor = seek.argumentOffset == ECC_CTXOFFSET_ACCESSOR;
 
-        if(seek.argumentOffset > 0 && index >= io_libecc_context_thisIndex)
+        if(seek.argumentOffset > 0 && index >= ECC_CTXINDEXTYPE_THIS)
         {
             ++index;
             ++argumentCount;
             breakArray <<= 1;
 
-            if(seek.argumentOffset == io_libecc_context_applyOffset)
+            if(seek.argumentOffset == ECC_CTXOFFSET_APPLY)
                 breakArray |= 2;
         }
         seek = *seek.parent;
@@ -257,10 +257,10 @@ ecctextstring_t textSeek(eccstate_t* self)
 
     if(isAccessor)
     {
-        if(index > io_libecc_context_thisIndex)
+        if(index > ECC_CTXINDEXTYPE_THIS)
             ECCNSContext.rewindStatement(&seek);
     }
-    else if(index > io_libecc_context_noIndex)
+    else if(index > ECC_CTXINDEXTYPE_NO)
     {
         while(seek.ops->text.bytes != seek.textCall->bytes || seek.ops->text.length != seek.textCall->length)
             --seek.ops;
@@ -269,15 +269,15 @@ ecctextstring_t textSeek(eccstate_t* self)
         callText = seek.ops->text;
 
         // func
-        if(index-- > io_libecc_context_callIndex)
+        if(index-- > ECC_CTXINDEXTYPE_CALL)
             ++seek.ops;
 
         // this
-        if(index-- > io_libecc_context_callIndex && (seek.ops + 1)->text.bytes <= seek.ops->text.bytes)
+        if(index-- > ECC_CTXINDEXTYPE_CALL && (seek.ops + 1)->text.bytes <= seek.ops->text.bytes)
             ++seek.ops;
 
         // arguments
-        while(index-- > io_libecc_context_callIndex)
+        while(index-- > ECC_CTXINDEXTYPE_CALL)
         {
             if(!argumentCount--)
                 return ECCNSText.make(callText.bytes + callText.length - 1, 0);
@@ -296,20 +296,20 @@ ecctextstring_t textSeek(eccstate_t* self)
     return seek.ops->text;
 }
 
-void rewindStatement(eccstate_t* context)
+void ctxfn_rewindStatement(eccstate_t* context)
 {
     while(!(context->ops->text.flags & ECC_TEXTFLAG_BREAKFLAG))
         --context->ops;
 }
 
-void printBacktrace(eccstate_t* context)
+void ctxfn_printBacktrace(eccstate_t* context)
 {
     int depth = context->depth, count, skip;
     eccstate_t frame;
 
     if(depth > 12)
     {
-        ECCNSEnv.printColor(0, io_libecc_env_bold, "...");
+        ECCNSEnv.printColor(0, ECC_ENVATTR_BOLD, "...");
         fprintf(stderr, " (%d more)\n", depth - 12);
         depth = 12;
     }
@@ -324,9 +324,9 @@ void printBacktrace(eccstate_t* context)
         {
             --skip;
 
-            if(frame.argumentOffset == io_libecc_context_callOffset || frame.argumentOffset == io_libecc_context_applyOffset)
+            if(frame.argumentOffset == ECC_CTXOFFSET_CALL || frame.argumentOffset == ECC_CTXOFFSET_APPLY)
                 skip = 2;
-            else if(frame.textIndex > io_libecc_context_noIndex && frame.ops->text.bytes == ECC_ConstString_NativeCode.bytes)
+            else if(frame.textIndex > ECC_CTXINDEXTYPE_NO && frame.ops->text.bytes == ECC_ConstString_NativeCode.bytes)
                 skip = 1;
 
             frame = *frame.parent;
@@ -341,7 +341,7 @@ void printBacktrace(eccstate_t* context)
     }
 }
 
-eccobject_t* environmentRoot(eccstate_t* context)
+eccobject_t* ctxfn_environmentRoot(eccstate_t* context)
 {
     eccobject_t* environment = context->strictMode ? context->environment : &context->ecc->global->environment;
 

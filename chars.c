@@ -23,7 +23,7 @@ static eccvalue_t endAppend(eccappendbuffer_t*);
 static void destroy(ecccharbuffer_t*);
 static uint8_t codepointLength(uint32_t cp);
 static uint8_t writeCodepoint(char*, uint32_t cp);
-const struct type_io_libecc_Chars io_libecc_Chars = {
+const struct eccpseudonschars_t io_libecc_Chars = {
     createVA,    create,       createSized,     createWithBytes, beginAppend, append,          appendCodepoint,
     appendValue, appendBinary, normalizeBinary, endAppend,       destroy,     codepointLength, writeCodepoint,
     {}

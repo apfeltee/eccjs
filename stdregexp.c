@@ -68,7 +68,7 @@ static void teardown(void);
 static eccobjregexp_t* create(ecccharbuffer_t* pattern, eccobjerror_t**, eccrxoptions_t);
 static eccobjregexp_t* createWith(eccstate_t* context, eccvalue_t pattern, eccvalue_t flags);
 static int matchWithState(eccobjregexp_t*, eccrxstate_t*);
-const struct type_io_libecc_RegExp io_libecc_RegExp = {
+const struct eccpseudonsregexp_t io_libecc_RegExp = {
     setup, teardown, create, createWith, matchWithState,
     {}
 };
@@ -1353,7 +1353,7 @@ eccobjregexp_t* create(ecccharbuffer_t* s, eccobjerror_t** error, eccrxoptions_t
                     break;
                 case '\\':
                     {
-                        if(options & io_libecc_regexp_allowUnicodeFlags)
+                        if(options & ECC_REGEXOPT_ALLOWUNICODEFLAGS)
                         {
                             if(!memcmp(p.c + 1, "u0067", 5))
                             {
@@ -1439,10 +1439,10 @@ eccobjregexp_t* createWith(eccstate_t* context, eccvalue_t pattern, eccvalue_t f
     }
 
     assert(value.type == ECC_VALTYPE_CHARS);
-    regexp = create(value.data.chars, &error, context->ecc->sloppyMode ? io_libecc_regexp_allowUnicodeFlags : 0);
+    regexp = create(value.data.chars, &error, context->ecc->sloppyMode ? ECC_REGEXOPT_ALLOWUNICODEFLAGS : 0);
     if(error)
     {
-        ECCNSContext.setTextIndex(context, io_libecc_context_noIndex);
+        ECCNSContext.setTextIndex(context, ECC_CTXINDEXTYPE_NO);
         context->ecc->ofLine = 1;
         context->ecc->ofText = ECCNSValue.textOf(&value);
         context->ecc->ofInput = "(io_libecc_RegExp)";

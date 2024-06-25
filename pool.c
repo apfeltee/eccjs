@@ -28,7 +28,7 @@ static void collectUnmarked(void);
 static void collectUnreferencedFromIndices(uint32_t indices[3]);
 static void unreferenceFromIndices(uint32_t indices[3]);
 static void getIndices(uint32_t indices[3]);
-const struct type_io_libecc_Pool io_libecc_Pool = {
+const struct eccpseudonspool_t io_libecc_Pool = {
     setup,
     teardown,
     addFunction,
@@ -48,10 +48,10 @@ void markObject(eccobject_t* object)
 {
     uint32_t index, count;
 
-    if(object->flags & io_libecc_object_mark)
+    if(object->flags & ECC_OBJFLAG_MARK)
         return;
 
-    object->flags |= io_libecc_object_mark;
+    object->flags |= ECC_OBJFLAG_MARK;
 
     if(object->prototype)
         markObject(object->prototype);
@@ -70,10 +70,10 @@ void markObject(eccobject_t* object)
 
 static void markChars(ecccharbuffer_t* chars)
 {
-    if(chars->flags & io_libecc_chars_mark)
+    if(chars->flags & ECC_CHARBUFFLAG_MARK)
         return;
 
-    chars->flags |= io_libecc_chars_mark;
+    chars->flags |= ECC_CHARBUFFLAG_MARK;
 }
 
 // MARK: - Methods
@@ -151,15 +151,15 @@ void unmarkAll(void)
 
     for(index = 0, count = self->functionCount; index < count; ++index)
     {
-        self->functionList[index]->object.flags &= ~io_libecc_object_mark;
-        self->functionList[index]->environment.flags &= ~io_libecc_object_mark;
+        self->functionList[index]->object.flags &= ~ECC_OBJFLAG_MARK;
+        self->functionList[index]->environment.flags &= ~ECC_OBJFLAG_MARK;
     }
 
     for(index = 0, count = self->objectCount; index < count; ++index)
-        self->objectList[index]->flags &= ~io_libecc_object_mark;
+        self->objectList[index]->flags &= ~ECC_OBJFLAG_MARK;
 
     for(index = 0, count = self->charsCount; index < count; ++index)
-        self->charsList[index]->flags &= ~io_libecc_chars_mark;
+        self->charsList[index]->flags &= ~ECC_CHARBUFFLAG_MARK;
 }
 
 void markValue(eccvalue_t value)
@@ -195,9 +195,9 @@ static eccvalue_t retainValue(eccvalue_t value)
     if(value.type >= ECC_VALTYPE_OBJECT)
     {
         ++value.data.object->referenceCount;
-        if(!(value.data.object->flags & io_libecc_object_mark))
+        if(!(value.data.object->flags & ECC_OBJFLAG_MARK))
         {
-            value.data.object->flags |= io_libecc_object_mark;
+            value.data.object->flags |= ECC_OBJFLAG_MARK;
             captureObject(value.data.object);
         }
     }
@@ -231,9 +231,9 @@ static void captureObject(eccobject_t* object)
     if(object->prototype)
     {
         ++object->prototype->referenceCount;
-        if(!(object->prototype->flags & io_libecc_object_mark))
+        if(!(object->prototype->flags & ECC_OBJFLAG_MARK))
         {
-            object->prototype->flags |= io_libecc_object_mark;
+            object->prototype->flags |= ECC_OBJFLAG_MARK;
             captureObject(object->prototype);
         }
     }
@@ -266,7 +266,7 @@ void collectUnmarked(void)
 
     index = self->functionCount;
     while(index--)
-        if(!(self->functionList[index]->object.flags & io_libecc_object_mark) && !(self->functionList[index]->environment.flags & io_libecc_object_mark))
+        if(!(self->functionList[index]->object.flags & ECC_OBJFLAG_MARK) && !(self->functionList[index]->environment.flags & ECC_OBJFLAG_MARK))
         {
             io_libecc_Function.destroy(self->functionList[index]);
             self->functionList[index] = self->functionList[--self->functionCount];
@@ -274,7 +274,7 @@ void collectUnmarked(void)
 
     index = self->objectCount;
     while(index--)
-        if(!(self->objectList[index]->flags & io_libecc_object_mark))
+        if(!(self->objectList[index]->flags & ECC_OBJFLAG_MARK))
         {
             ECCNSObject.finalize(self->objectList[index]);
             ECCNSObject.destroy(self->objectList[index]);
@@ -283,7 +283,7 @@ void collectUnmarked(void)
 
     index = self->charsCount;
     while(index--)
-        if(!(self->charsList[index]->flags & io_libecc_chars_mark))
+        if(!(self->charsList[index]->flags & ECC_CHARBUFFLAG_MARK))
         {
             io_libecc_Chars.destroy(self->charsList[index]);
             self->charsList[index] = self->charsList[--self->charsCount];
@@ -303,9 +303,9 @@ void collectUnreferencedFromIndices(uint32_t indices[3])
 
     index = self->objectCount;
     while(index-- > indices[1])
-        if(self->objectList[index]->referenceCount > 0 && !(self->objectList[index]->flags & io_libecc_object_mark))
+        if(self->objectList[index]->referenceCount > 0 && !(self->objectList[index]->flags & ECC_OBJFLAG_MARK))
         {
-            self->objectList[index]->flags |= io_libecc_object_mark;
+            self->objectList[index]->flags |= ECC_OBJFLAG_MARK;
             captureObject(self->objectList[index]);
         }
 

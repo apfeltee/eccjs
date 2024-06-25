@@ -13,7 +13,7 @@ static eccscriptcontext_t* create(void);
 static void destroy(eccscriptcontext_t*);
 static void addValue(eccscriptcontext_t*, const char* name, eccvalue_t value, eccvalflag_t);
 static void addFunction(eccscriptcontext_t*, const char* name, const eccnativefuncptr_t native, int argumentCount, eccvalflag_t);
-static int evalInput(eccscriptcontext_t*, eccioinput_t*, enum io_libecc_ecc_EvalFlags);
+static int evalInput(eccscriptcontext_t*, eccioinput_t*, eccscriptevalflags_t);
 static void evalInputWithContext(eccscriptcontext_t*, eccioinput_t*, eccstate_t* context);
 static jmp_buf* pushEnv(eccscriptcontext_t*);
 static void popEnv(eccscriptcontext_t*);
@@ -22,7 +22,7 @@ static void fatal(const char* format, ...) __attribute__((noreturn));
 static eccioinput_t* findInput(eccscriptcontext_t* self, ecctextstring_t text);
 static void printTextInput(eccscriptcontext_t*, ecctextstring_t text, int fullLine);
 static void garbageCollect(eccscriptcontext_t*);
-const struct type_io_libecc_Ecc ECCNSScript = {
+const struct eccpseudonsecc_t ECCNSScript = {
     create, destroy, addValue, addFunction, evalInput, evalInputWithContext, pushEnv, popEnv, jmpEnv, fatal, findInput, printTextInput, garbageCollect,
     {}
 };
@@ -96,20 +96,20 @@ void addValue(eccscriptcontext_t* self, const char* name, eccvalue_t value, eccv
     io_libecc_Function.addValue(self->global, name, value, flags);
 }
 
-io_libecc_ecc_useframe int evalInput(eccscriptcontext_t* self, eccioinput_t* input, enum io_libecc_ecc_EvalFlags flags)
+io_libecc_ecc_useframe int evalInput(eccscriptcontext_t* self, eccioinput_t* input, eccscriptevalflags_t flags)
 {
-    volatile int result = EXIT_SUCCESS, trap = !self->envCount || flags & io_libecc_ecc_primitiveResult, catch = 0;
+    volatile int result = EXIT_SUCCESS, trap = !self->envCount || flags & ECC_SCRIPTEVAL_PRIMITIVERESULT, catch = 0;
     eccstate_t context = {
         .environment = &self->global->environment,
         .thisvalue = ECCNSValue.object(&self->global->environment),
         .ecc = self,
-        .strictMode = !(flags & io_libecc_ecc_sloppyMode),
+        .strictMode = !(flags & ECC_SCRIPTEVAL_SLOPPYMODE),
     };
 
     if(!input)
         return EXIT_FAILURE;
 
-    self->sloppyMode = flags & io_libecc_ecc_sloppyMode;
+    self->sloppyMode = flags & ECC_SCRIPTEVAL_SLOPPYMODE;
 
     if(trap)
     {
@@ -122,12 +122,12 @@ io_libecc_ecc_useframe int evalInput(eccscriptcontext_t* self, eccioinput_t* inp
     else
         evalInputWithContext(self, input, &context);
 
-    if(flags & io_libecc_ecc_primitiveResult)
+    if(flags & ECC_SCRIPTEVAL_PRIMITIVERESULT)
     {
         ECCNSContext.rewindStatement(&context);
         context.text = &context.ops->text;
 
-        if((flags & io_libecc_ecc_stringResult) == io_libecc_ecc_stringResult)
+        if((flags & ECC_SCRIPTEVAL_STRINGRESULT) == ECC_SCRIPTEVAL_STRINGRESULT)
             self->result = ECCNSValue.toString(&context, self->result);
         else
             self->result = ECCNSValue.toPrimitive(&context, self->result, ECC_VALHINT_AUTO);

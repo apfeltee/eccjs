@@ -17,7 +17,7 @@ static void destroy(eccioinput_t*);
 static void printText(eccioinput_t*, ecctextstring_t text, int32_t ofLine, ecctextstring_t ofText, const char* ofInput, int fullLine);
 static int32_t findLine(eccioinput_t*, ecctextstring_t text);
 static eccvalue_t attachValue(eccioinput_t*, eccvalue_t value);
-const struct type_io_libecc_Input io_libecc_Input = {
+const struct eccpseudonsinput_t io_libecc_Input = {
     createFromFile, createFromBytes, destroy, printText, findLine, attachValue,
     {}
 };
@@ -38,11 +38,11 @@ eccioinput_t* ecc_input_create(void)
 static void printInput(const char* name, uint16_t line)
 {
     if(name[0] == '(')
-        ECCNSEnv.printColor(0, io_libecc_env_dim, "%s", name);
+        ECCNSEnv.printColor(0, ECC_ENVATTR_DIM, "%s", name);
     else
-        ECCNSEnv.printColor(0, io_libecc_env_bold, "%s", name);
+        ECCNSEnv.printColor(0, ECC_ENVATTR_BOLD, "%s", name);
 
-    ECCNSEnv.printColor(0, io_libecc_env_bold, " line:%d", line);
+    ECCNSEnv.printColor(0, ECC_ENVATTR_BOLD, " line:%d", line);
 }
 
 // MARK: - Methods
@@ -206,9 +206,9 @@ void printText(eccioinput_t* self, ecctextstring_t text, int32_t ofLine, ecctext
             mark[index] = '\0';
 
             if((text.bytes - bytes) > 0)
-                ECCNSEnv.printColor(0, io_libecc_env_invisible, "%.*s", (text.bytes - bytes), mark);
+                ECCNSEnv.printColor(0, ECC_ENVATTR_INVISIBLE, "%.*s", (text.bytes - bytes), mark);
 
-            ECCNSEnv.printColor(io_libecc_env_green, io_libecc_env_bold, "%s", mark + (text.bytes - bytes));
+            ECCNSEnv.printColor(ECC_COLOR_GREEN, ECC_ENVATTR_BOLD, "%s", mark + (text.bytes - bytes));
         }
     }
 

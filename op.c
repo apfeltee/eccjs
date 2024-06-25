@@ -46,10 +46,10 @@ static int debug = 0;
 
 extern void usage(void)
 {
-    ECCNSEnv.printColor(0, io_libecc_env_bold, "\n\t-- libecc: basic gdb/lldb commands --\n");
-    ECCNSEnv.printColor(io_libecc_env_green, io_libecc_env_bold, "\tstep-in\n");
+    ECCNSEnv.printColor(0, ECC_ENVATTR_BOLD, "\n\t-- libecc: basic gdb/lldb commands --\n");
+    ECCNSEnv.printColor(ECC_COLOR_GREEN, ECC_ENVATTR_BOLD, "\tstep-in\n");
     fprintf(stderr, "\t  c\n");
-    ECCNSEnv.printColor(io_libecc_env_green, io_libecc_env_bold, "\tcontinue\n");
+    ECCNSEnv.printColor(ECC_COLOR_GREEN, ECC_ENVATTR_BOLD, "\tcontinue\n");
     fprintf(stderr, "\t  p debug=0\n");
     fprintf(stderr, "\t  c\n\n");
 }
@@ -82,229 +82,229 @@ static eccvalue_t trapOp(eccstate_t* context, int offset)
 
 //
 
-static eccoperand_t opfn_make(const eccnativefuncptr_t native, eccvalue_t value, ecctextstring_t text);
-static const char* opfn_tochars(const eccnativefuncptr_t native);
-static eccvalue_t opfn_callfunctionarguments(eccstate_t*, enum io_libecc_context_Offset, eccobjscriptfunction_t* function, eccvalue_t thisval, eccobject_t* arguments);
-static eccvalue_t opfn_callfunctionva(eccstate_t*, enum io_libecc_context_Offset, eccobjscriptfunction_t* function, eccvalue_t thisval, int argumentCount, va_list ap);
-static eccvalue_t opfn_noop(eccstate_t*);
-static eccvalue_t opfn_value(eccstate_t*);
-static eccvalue_t valueConstRef(eccstate_t*);
-static eccvalue_t text(eccstate_t*);
-static eccvalue_t function(eccstate_t*);
-static eccvalue_t object(eccstate_t*);
-static eccvalue_t array(eccstate_t*);
-static eccvalue_t regexp(eccstate_t*);
-static eccvalue_t opfn_this(eccstate_t*);
-static eccvalue_t createLocalRef(eccstate_t*);
-static eccvalue_t getLocalRefOrNull(eccstate_t*);
-static eccvalue_t getLocalRef(eccstate_t*);
-static eccvalue_t getLocal(eccstate_t*);
-static eccvalue_t setLocal(eccstate_t*);
-static eccvalue_t deleteLocal(eccstate_t*);
-static eccvalue_t getLocalSlotRef(eccstate_t*);
-static eccvalue_t getLocalSlot(eccstate_t*);
-static eccvalue_t setLocalSlot(eccstate_t*);
-static eccvalue_t deleteLocalSlot(eccstate_t*);
-static eccvalue_t getParentSlotRef(eccstate_t*);
-static eccvalue_t getParentSlot(eccstate_t*);
-static eccvalue_t setParentSlot(eccstate_t*);
-static eccvalue_t deleteParentSlot(eccstate_t*);
-static eccvalue_t getMemberRef(eccstate_t*);
-static eccvalue_t getMember(eccstate_t*);
-static eccvalue_t setMember(eccstate_t*);
-static eccvalue_t callMember(eccstate_t*);
-static eccvalue_t deleteMember(eccstate_t*);
-static eccvalue_t getPropertyRef(eccstate_t*);
-static eccvalue_t getProperty(eccstate_t*);
-static eccvalue_t setProperty(eccstate_t*);
-static eccvalue_t callProperty(eccstate_t*);
-static eccvalue_t deleteProperty(eccstate_t*);
-static eccvalue_t pushEnvironment(eccstate_t*);
-static eccvalue_t popEnvironment(eccstate_t*);
-static eccvalue_t exchange(eccstate_t*);
-static eccvalue_t typeOf(eccstate_t*);
-static eccvalue_t equal(eccstate_t*);
-static eccvalue_t notEqual(eccstate_t*);
-static eccvalue_t identical(eccstate_t*);
-static eccvalue_t notIdentical(eccstate_t*);
-static eccvalue_t less(eccstate_t*);
-static eccvalue_t lessOrEqual(eccstate_t*);
-static eccvalue_t more(eccstate_t*);
-static eccvalue_t moreOrEqual(eccstate_t*);
-static eccvalue_t instanceOf(eccstate_t*);
-static eccvalue_t in(eccstate_t*);
-static eccvalue_t add(eccstate_t*);
-static eccvalue_t minus(eccstate_t*);
-static eccvalue_t multiply(eccstate_t*);
-static eccvalue_t divide(eccstate_t*);
-static eccvalue_t modulo(eccstate_t*);
-static eccvalue_t leftShift(eccstate_t*);
-static eccvalue_t rightShift(eccstate_t*);
-static eccvalue_t unsignedRightShift(eccstate_t*);
-static eccvalue_t bitwiseAnd(eccstate_t*);
-static eccvalue_t bitwiseXor(eccstate_t*);
-static eccvalue_t bitwiseOr(eccstate_t*);
-static eccvalue_t logicalAnd(eccstate_t*);
-static eccvalue_t logicalOr(eccstate_t*);
-static eccvalue_t positive(eccstate_t*);
-static eccvalue_t negative(eccstate_t*);
-static eccvalue_t invert(eccstate_t*);
-static eccvalue_t opfn_logicalnot(eccstate_t*);
-static eccvalue_t construct(eccstate_t*);
-static eccvalue_t call(eccstate_t*);
-static eccvalue_t eval(eccstate_t*);
-static eccvalue_t incrementRef(eccstate_t*);
-static eccvalue_t decrementRef(eccstate_t*);
-static eccvalue_t postIncrementRef(eccstate_t*);
-static eccvalue_t postDecrementRef(eccstate_t*);
-static eccvalue_t addAssignRef(eccstate_t*);
-static eccvalue_t minusAssignRef(eccstate_t*);
-static eccvalue_t multiplyAssignRef(eccstate_t*);
-static eccvalue_t divideAssignRef(eccstate_t*);
-static eccvalue_t moduloAssignRef(eccstate_t*);
-static eccvalue_t leftShiftAssignRef(eccstate_t*);
-static eccvalue_t rightShiftAssignRef(eccstate_t*);
-static eccvalue_t unsignedRightShiftAssignRef(eccstate_t*);
-static eccvalue_t bitAndAssignRef(eccstate_t*);
-static eccvalue_t bitXorAssignRef(eccstate_t*);
-static eccvalue_t bitOrAssignRef(eccstate_t*);
-static eccvalue_t debugger(eccstate_t*);
-static eccvalue_t opfn_try(eccstate_t*);
-static eccvalue_t opfn_throw(eccstate_t*);
-static eccvalue_t with(eccstate_t*);
-static eccvalue_t next(eccstate_t*);
-static eccvalue_t nextIf(eccstate_t*);
-static eccvalue_t autoreleaseExpression(eccstate_t*);
-static eccvalue_t autoreleaseDiscard(eccstate_t*);
-static eccvalue_t expression(eccstate_t*);
-static eccvalue_t discard(eccstate_t*);
-static eccvalue_t discardN(eccstate_t*);
-static eccvalue_t jump(eccstate_t*);
-static eccvalue_t jumpIf(eccstate_t*);
-static eccvalue_t jumpIfNot(eccstate_t*);
-static eccvalue_t repopulate(eccstate_t*);
-static eccvalue_t result(eccstate_t*);
-static eccvalue_t resultVoid(eccstate_t*);
-static eccvalue_t switchOp(eccstate_t*);
-static eccvalue_t breaker(eccstate_t*);
-static eccvalue_t iterate(eccstate_t*);
-static eccvalue_t iterateLessRef(eccstate_t*);
-static eccvalue_t iterateMoreRef(eccstate_t*);
-static eccvalue_t iterateLessOrEqualRef(eccstate_t*);
-static eccvalue_t iterateMoreOrEqualRef(eccstate_t*);
-static eccvalue_t iterateInRef(eccstate_t*);
-const struct type_io_libecc_Op io_libecc_Op = {
-    opfn_make,
-    opfn_tochars,
-    opfn_callfunctionarguments,
-    opfn_callfunctionva,
-    opfn_noop,
-    opfn_value,
-    valueConstRef,
-    text,
-    function,
-    object,
-    array,
-    regexp,
-    opfn_this,
-    createLocalRef,
-    getLocalRefOrNull,
-    getLocalRef,
-    getLocal,
-    setLocal,
-    deleteLocal,
-    getLocalSlotRef,
-    getLocalSlot,
-    setLocalSlot,
-    deleteLocalSlot,
-    getParentSlotRef,
-    getParentSlot,
-    setParentSlot,
-    deleteParentSlot,
-    getMemberRef,
-    getMember,
-    setMember,
-    callMember,
-    deleteMember,
-    getPropertyRef,
-    getProperty,
-    setProperty,
-    callProperty,
-    deleteProperty,
-    pushEnvironment,
-    popEnvironment,
-    exchange,
-    typeOf,
-    equal,
-    notEqual,
-    identical,
-    notIdentical,
-    less,
-    lessOrEqual,
-    more,
-    moreOrEqual,
-    instanceOf,
-    in,
-    add,
-    minus,
-    multiply,
-    divide,
-    modulo,
-    leftShift,
-    rightShift,
-    unsignedRightShift,
-    bitwiseAnd,
-    bitwiseXor,
-    bitwiseOr,
-    logicalAnd,
-    logicalOr,
-    positive,
-    negative,
-    invert,
-    opfn_logicalnot,
-    construct,
-    call,
-    eval,
-    incrementRef,
-    decrementRef,
-    postIncrementRef,
-    postDecrementRef,
-    addAssignRef,
-    minusAssignRef,
-    multiplyAssignRef,
-    divideAssignRef,
-    moduloAssignRef,
-    leftShiftAssignRef,
-    rightShiftAssignRef,
-    unsignedRightShiftAssignRef,
-    bitAndAssignRef,
-    bitXorAssignRef,
-    bitOrAssignRef,
-    debugger,
-    opfn_try,
-    opfn_throw,
-    with,
-    next,
-    nextIf,
-    autoreleaseExpression,
-    autoreleaseDiscard,
-    expression,
-    discard,
-    discardN,
-    jump,
-    jumpIf,
-    jumpIfNot,
-    repopulate,
-    result,
-    resultVoid,
-    switchOp,
-    breaker,
-    iterate,
-    iterateLessRef,
-    iterateMoreRef,
-    iterateLessOrEqualRef,
-    iterateMoreOrEqualRef,
-    iterateInRef,
+static eccoperand_t nsopfn_make(const eccnativefuncptr_t native, eccvalue_t value, ecctextstring_t text);
+static const char* nsopfn_tochars(const eccnativefuncptr_t native);
+static eccvalue_t nsopfn_callfunctionarguments(eccstate_t*, eccctxoffsettype_t, eccobjscriptfunction_t* function, eccvalue_t thisval, eccobject_t* arguments);
+static eccvalue_t nsopfn_callfunctionva(eccstate_t*, eccctxoffsettype_t, eccobjscriptfunction_t* function, eccvalue_t thisval, int argumentCount, va_list ap);
+static eccvalue_t nsopfn_noop(eccstate_t*);
+static eccvalue_t nsopfn_value(eccstate_t*);
+static eccvalue_t nsopfn_valueConstRef(eccstate_t*);
+static eccvalue_t nsopfn_text(eccstate_t*);
+static eccvalue_t nsopfn_function(eccstate_t*);
+static eccvalue_t nsopfn_object(eccstate_t*);
+static eccvalue_t nsopfn_array(eccstate_t*);
+static eccvalue_t nsopfn_regexp(eccstate_t*);
+static eccvalue_t nsopfn_this(eccstate_t*);
+static eccvalue_t nsopfn_createLocalRef(eccstate_t*);
+static eccvalue_t nsopfn_getLocalRefOrNull(eccstate_t*);
+static eccvalue_t nsopfn_getLocalRef(eccstate_t*);
+static eccvalue_t nsopfn_getLocal(eccstate_t*);
+static eccvalue_t nsopfn_setLocal(eccstate_t*);
+static eccvalue_t nsopfn_deleteLocal(eccstate_t*);
+static eccvalue_t nsopfn_getLocalSlotRef(eccstate_t*);
+static eccvalue_t nsopfn_getLocalSlot(eccstate_t*);
+static eccvalue_t nsopfn_setLocalSlot(eccstate_t*);
+static eccvalue_t nsopfn_deleteLocalSlot(eccstate_t*);
+static eccvalue_t nsopfn_getParentSlotRef(eccstate_t*);
+static eccvalue_t nsopfn_getParentSlot(eccstate_t*);
+static eccvalue_t nsopfn_setParentSlot(eccstate_t*);
+static eccvalue_t nsopfn_deleteParentSlot(eccstate_t*);
+static eccvalue_t nsopfn_getMemberRef(eccstate_t*);
+static eccvalue_t nsopfn_getMember(eccstate_t*);
+static eccvalue_t nsopfn_setMember(eccstate_t*);
+static eccvalue_t nsopfn_callMember(eccstate_t*);
+static eccvalue_t nsopfn_deleteMember(eccstate_t*);
+static eccvalue_t nsopfn_getPropertyRef(eccstate_t*);
+static eccvalue_t nsopfn_getProperty(eccstate_t*);
+static eccvalue_t nsopfn_setProperty(eccstate_t*);
+static eccvalue_t nsopfn_callProperty(eccstate_t*);
+static eccvalue_t nsopfn_deleteProperty(eccstate_t*);
+static eccvalue_t nsopfn_pushEnvironment(eccstate_t*);
+static eccvalue_t nsopfn_popEnvironment(eccstate_t*);
+static eccvalue_t nsopfn_exchange(eccstate_t*);
+static eccvalue_t nsopfn_typeOf(eccstate_t*);
+static eccvalue_t nsopfn_equal(eccstate_t*);
+static eccvalue_t nsopfn_notEqual(eccstate_t*);
+static eccvalue_t nsopfn_identical(eccstate_t*);
+static eccvalue_t nsopfn_notIdentical(eccstate_t*);
+static eccvalue_t nsopfn_less(eccstate_t*);
+static eccvalue_t nsopfn_lessOrEqual(eccstate_t*);
+static eccvalue_t nsopfn_more(eccstate_t*);
+static eccvalue_t nsopfn_moreOrEqual(eccstate_t*);
+static eccvalue_t nsopfn_instanceOf(eccstate_t*);
+static eccvalue_t nsopfn_in(eccstate_t*);
+static eccvalue_t nsopfn_add(eccstate_t*);
+static eccvalue_t nsopfn_minus(eccstate_t*);
+static eccvalue_t nsopfn_multiply(eccstate_t*);
+static eccvalue_t nsopfn_divide(eccstate_t*);
+static eccvalue_t nsopfn_modulo(eccstate_t*);
+static eccvalue_t nsopfn_leftShift(eccstate_t*);
+static eccvalue_t nsopfn_rightShift(eccstate_t*);
+static eccvalue_t nsopfn_unsignedRightShift(eccstate_t*);
+static eccvalue_t nsopfn_bitwiseAnd(eccstate_t*);
+static eccvalue_t nsopfn_bitwiseXor(eccstate_t*);
+static eccvalue_t nsopfn_bitwiseOr(eccstate_t*);
+static eccvalue_t nsopfn_logicalAnd(eccstate_t*);
+static eccvalue_t nsopfn_logicalOr(eccstate_t*);
+static eccvalue_t nsopfn_positive(eccstate_t*);
+static eccvalue_t nsopfn_negative(eccstate_t*);
+static eccvalue_t nsopfn_invert(eccstate_t*);
+static eccvalue_t nsopfn_logicalnot(eccstate_t*);
+static eccvalue_t nsopfn_construct(eccstate_t*);
+static eccvalue_t nsopfn_call(eccstate_t*);
+static eccvalue_t nsopfn_eval(eccstate_t*);
+static eccvalue_t nsopfn_incrementRef(eccstate_t*);
+static eccvalue_t nsopfn_decrementRef(eccstate_t*);
+static eccvalue_t nsopfn_postIncrementRef(eccstate_t*);
+static eccvalue_t nsopfn_postDecrementRef(eccstate_t*);
+static eccvalue_t nsopfn_addAssignRef(eccstate_t*);
+static eccvalue_t nsopfn_minusAssignRef(eccstate_t*);
+static eccvalue_t nsopfn_multiplyAssignRef(eccstate_t*);
+static eccvalue_t nsopfn_divideAssignRef(eccstate_t*);
+static eccvalue_t nsopfn_moduloAssignRef(eccstate_t*);
+static eccvalue_t nsopfn_leftShiftAssignRef(eccstate_t*);
+static eccvalue_t nsopfn_rightShiftAssignRef(eccstate_t*);
+static eccvalue_t nsopfn_unsignedRightShiftAssignRef(eccstate_t*);
+static eccvalue_t nsopfn_bitAndAssignRef(eccstate_t*);
+static eccvalue_t nsopfn_bitXorAssignRef(eccstate_t*);
+static eccvalue_t nsopfn_bitOrAssignRef(eccstate_t*);
+static eccvalue_t nsopfn_debugger(eccstate_t*);
+static eccvalue_t nsopfn_try(eccstate_t*);
+static eccvalue_t nsopfn_throw(eccstate_t*);
+static eccvalue_t nsopfn_with(eccstate_t*);
+static eccvalue_t nsopfn_next(eccstate_t*);
+static eccvalue_t nsopfn_nextIf(eccstate_t*);
+static eccvalue_t nsopfn_autoreleaseExpression(eccstate_t*);
+static eccvalue_t nsopfn_autoreleaseDiscard(eccstate_t*);
+static eccvalue_t nsopfn_expression(eccstate_t*);
+static eccvalue_t nsopfn_discard(eccstate_t*);
+static eccvalue_t nsopfn_discardN(eccstate_t*);
+static eccvalue_t nsopfn_jump(eccstate_t*);
+static eccvalue_t nsopfn_jumpIf(eccstate_t*);
+static eccvalue_t nsopfn_jumpIfNot(eccstate_t*);
+static eccvalue_t nsopfn_repopulate(eccstate_t*);
+static eccvalue_t nsopfn_result(eccstate_t*);
+static eccvalue_t nsopfn_resultVoid(eccstate_t*);
+static eccvalue_t nsopfn_switchOp(eccstate_t*);
+static eccvalue_t nsopfn_breaker(eccstate_t*);
+static eccvalue_t nsopfn_iterate(eccstate_t*);
+static eccvalue_t nsopfn_iterateLessRef(eccstate_t*);
+static eccvalue_t nsopfn_iterateMoreRef(eccstate_t*);
+static eccvalue_t nsopfn_iterateLessOrEqualRef(eccstate_t*);
+static eccvalue_t nsopfn_iterateMoreOrEqualRef(eccstate_t*);
+static eccvalue_t nsopfn_iterateInRef(eccstate_t*);
+const struct eccpseudonsop_t io_libecc_Op = {
+    nsopfn_make,
+    nsopfn_tochars,
+    nsopfn_callfunctionarguments,
+    nsopfn_callfunctionva,
+    nsopfn_noop,
+    nsopfn_value,
+    nsopfn_valueConstRef,
+    nsopfn_text,
+    nsopfn_function,
+    nsopfn_object,
+    nsopfn_array,
+    nsopfn_regexp,
+    nsopfn_this,
+    nsopfn_createLocalRef,
+    nsopfn_getLocalRefOrNull,
+    nsopfn_getLocalRef,
+    nsopfn_getLocal,
+    nsopfn_setLocal,
+    nsopfn_deleteLocal,
+    nsopfn_getLocalSlotRef,
+    nsopfn_getLocalSlot,
+    nsopfn_setLocalSlot,
+    nsopfn_deleteLocalSlot,
+    nsopfn_getParentSlotRef,
+    nsopfn_getParentSlot,
+    nsopfn_setParentSlot,
+    nsopfn_deleteParentSlot,
+    nsopfn_getMemberRef,
+    nsopfn_getMember,
+    nsopfn_setMember,
+    nsopfn_callMember,
+    nsopfn_deleteMember,
+    nsopfn_getPropertyRef,
+    nsopfn_getProperty,
+    nsopfn_setProperty,
+    nsopfn_callProperty,
+    nsopfn_deleteProperty,
+    nsopfn_pushEnvironment,
+    nsopfn_popEnvironment,
+    nsopfn_exchange,
+    nsopfn_typeOf,
+    nsopfn_equal,
+    nsopfn_notEqual,
+    nsopfn_identical,
+    nsopfn_notIdentical,
+    nsopfn_less,
+    nsopfn_lessOrEqual,
+    nsopfn_more,
+    nsopfn_moreOrEqual,
+    nsopfn_instanceOf,
+    nsopfn_in,
+    nsopfn_add,
+    nsopfn_minus,
+    nsopfn_multiply,
+    nsopfn_divide,
+    nsopfn_modulo,
+    nsopfn_leftShift,
+    nsopfn_rightShift,
+    nsopfn_unsignedRightShift,
+    nsopfn_bitwiseAnd,
+    nsopfn_bitwiseXor,
+    nsopfn_bitwiseOr,
+    nsopfn_logicalAnd,
+    nsopfn_logicalOr,
+    nsopfn_positive,
+    nsopfn_negative,
+    nsopfn_invert,
+    nsopfn_logicalnot,
+    nsopfn_construct,
+    nsopfn_call,
+    nsopfn_eval,
+    nsopfn_incrementRef,
+    nsopfn_decrementRef,
+    nsopfn_postIncrementRef,
+    nsopfn_postDecrementRef,
+    nsopfn_addAssignRef,
+    nsopfn_minusAssignRef,
+    nsopfn_multiplyAssignRef,
+    nsopfn_divideAssignRef,
+    nsopfn_moduloAssignRef,
+    nsopfn_leftShiftAssignRef,
+    nsopfn_rightShiftAssignRef,
+    nsopfn_unsignedRightShiftAssignRef,
+    nsopfn_bitAndAssignRef,
+    nsopfn_bitXorAssignRef,
+    nsopfn_bitOrAssignRef,
+    nsopfn_debugger,
+    nsopfn_try,
+    nsopfn_throw,
+    nsopfn_with,
+    nsopfn_next,
+    nsopfn_nextIf,
+    nsopfn_autoreleaseExpression,
+    nsopfn_autoreleaseDiscard,
+    nsopfn_expression,
+    nsopfn_discard,
+    nsopfn_discardN,
+    nsopfn_jump,
+    nsopfn_jumpIf,
+    nsopfn_jumpIfNot,
+    nsopfn_repopulate,
+    nsopfn_result,
+    nsopfn_resultVoid,
+    nsopfn_switchOp,
+    nsopfn_breaker,
+    nsopfn_iterate,
+    nsopfn_iterateLessRef,
+    nsopfn_iterateMoreRef,
+    nsopfn_iterateLessOrEqualRef,
+    nsopfn_iterateMoreOrEqualRef,
+    nsopfn_iterateInRef,
     {},
 };
 
@@ -366,125 +366,125 @@ static int integerWontOverflowNegative(int32_t a, int32_t negative)
 
 // MARK: - Methods
 
-eccoperand_t opfn_make(const eccnativefuncptr_t native, eccvalue_t value, ecctextstring_t text)
+eccoperand_t nsopfn_make(const eccnativefuncptr_t native, eccvalue_t value, ecctextstring_t text)
 {
     return (eccoperand_t){ native, value, text };
 }
 
-const char* opfn_tochars(const eccnativefuncptr_t native)
+const char* nsopfn_tochars(const eccnativefuncptr_t native)
 {
     static const struct
     {
         const char* name;
         const eccnativefuncptr_t native;
     } functionList[] = {
-        { "noop", opfn_noop },
-        { "value", opfn_value },
-        { "valueConstRef", valueConstRef },
-        { "text", text },
-        { "function", function },
-        { "object", object },
-        { "array", array },
-        { "regexp", regexp },
-        { "this", opfn_this },
-        { "createLocalRef", createLocalRef },
-        { "getLocalRefOrNull", getLocalRefOrNull },
-        { "getLocalRef", getLocalRef },
-        { "getLocal", getLocal },
-        { "setLocal", setLocal },
-        { "deleteLocal", deleteLocal },
-        { "getLocalSlotRef", getLocalSlotRef },
-        { "getLocalSlot", getLocalSlot },
-        { "setLocalSlot", setLocalSlot },
-        { "deleteLocalSlot", deleteLocalSlot },
-        { "getParentSlotRef", getParentSlotRef },
-        { "getParentSlot", getParentSlot },
-        { "setParentSlot", setParentSlot },
-        { "deleteParentSlot", deleteParentSlot },
-        { "getMemberRef", getMemberRef },
-        { "getMember", getMember },
-        { "setMember", setMember },
-        { "callMember", callMember },
-        { "deleteMember", deleteMember },
-        { "getPropertyRef", getPropertyRef },
-        { "getProperty", getProperty },
-        { "setProperty", setProperty },
-        { "callProperty", callProperty },
-        { "deleteProperty", deleteProperty },
-        { "pushEnvironment", pushEnvironment },
-        { "popEnvironment", popEnvironment },
-        { "exchange", exchange },
-        { "typeOf", typeOf },
-        { "equal", equal },
-        { "notEqual", notEqual },
-        { "identical", identical },
-        { "notIdentical", notIdentical },
-        { "less", less },
-        { "lessOrEqual", lessOrEqual },
-        { "more", more },
-        { "moreOrEqual", moreOrEqual },
-        { "instanceOf", instanceOf },
-        { "in", in },
-        { "add", add },
-        { "minus", minus },
-        { "multiply", multiply },
-        { "divide", divide },
-        { "modulo", modulo },
-        { "leftShift", leftShift },
-        { "rightShift", rightShift },
-        { "unsignedRightShift", unsignedRightShift },
-        { "bitwiseAnd", bitwiseAnd },
-        { "bitwiseXor", bitwiseXor },
-        { "bitwiseOr", bitwiseOr },
-        { "logicalAnd", logicalAnd },
-        { "logicalOr", logicalOr },
-        { "positive", positive },
-        { "negative", negative },
-        { "invert", invert },
-        { "not", opfn_logicalnot },
-        { "construct", construct },
-        { "call", call },
-        { "eval", eval },
-        { "incrementRef", incrementRef },
-        { "decrementRef", decrementRef },
-        { "postIncrementRef", postIncrementRef },
-        { "postDecrementRef", postDecrementRef },
-        { "addAssignRef", addAssignRef },
-        { "minusAssignRef", minusAssignRef },
-        { "multiplyAssignRef", multiplyAssignRef },
-        { "divideAssignRef", divideAssignRef },
-        { "moduloAssignRef", moduloAssignRef },
-        { "leftShiftAssignRef", leftShiftAssignRef },
-        { "rightShiftAssignRef", rightShiftAssignRef },
-        { "unsignedRightShiftAssignRef", unsignedRightShiftAssignRef },
-        { "bitAndAssignRef", bitAndAssignRef },
-        { "bitXorAssignRef", bitXorAssignRef },
-        { "bitOrAssignRef", bitOrAssignRef },
-        { "debugger", debugger },
-        { "try", opfn_try },
-        { "throw", opfn_throw },
-        { "with", with },
-        { "next", next },
-        { "nextIf", nextIf },
-        { "autoreleaseExpression", autoreleaseExpression },
-        { "autoreleaseDiscard", autoreleaseDiscard },
-        { "expression", expression },
-        { "discard", discard },
-        { "discardN", discardN },
-        { "jump", jump },
-        { "jumpIf", jumpIf },
-        { "jumpIfNot", jumpIfNot },
-        { "repopulate", repopulate },
-        { "result", result },
-        { "resultVoid", resultVoid },
-        { "switchOp", switchOp },
-        { "breaker", breaker },
-        { "iterate", iterate },
-        { "iterateLessRef", iterateLessRef },
-        { "iterateMoreRef", iterateMoreRef },
-        { "iterateLessOrEqualRef", iterateLessOrEqualRef },
-        { "iterateMoreOrEqualRef", iterateMoreOrEqualRef },
-        { "iterateInRef", iterateInRef },
+        { "noop", nsopfn_noop },
+        { "value", nsopfn_value },
+        { "valueConstRef", nsopfn_valueConstRef },
+        { "text", nsopfn_text },
+        { "function", nsopfn_function },
+        { "object", nsopfn_object },
+        { "array", nsopfn_array },
+        { "regexp", nsopfn_regexp },
+        { "this", nsopfn_this },
+        { "createLocalRef", nsopfn_createLocalRef },
+        { "getLocalRefOrNull", nsopfn_getLocalRefOrNull },
+        { "getLocalRef", nsopfn_getLocalRef },
+        { "getLocal", nsopfn_getLocal },
+        { "setLocal", nsopfn_setLocal },
+        { "deleteLocal", nsopfn_deleteLocal },
+        { "getLocalSlotRef", nsopfn_getLocalSlotRef },
+        { "getLocalSlot", nsopfn_getLocalSlot },
+        { "setLocalSlot", nsopfn_setLocalSlot },
+        { "deleteLocalSlot", nsopfn_deleteLocalSlot },
+        { "getParentSlotRef", nsopfn_getParentSlotRef },
+        { "getParentSlot", nsopfn_getParentSlot },
+        { "setParentSlot", nsopfn_setParentSlot },
+        { "deleteParentSlot", nsopfn_deleteParentSlot },
+        { "getMemberRef", nsopfn_getMemberRef },
+        { "getMember", nsopfn_getMember },
+        { "setMember", nsopfn_setMember },
+        { "callMember", nsopfn_callMember },
+        { "deleteMember", nsopfn_deleteMember },
+        { "getPropertyRef", nsopfn_getPropertyRef },
+        { "getProperty", nsopfn_getProperty },
+        { "setProperty", nsopfn_setProperty },
+        { "callProperty", nsopfn_callProperty },
+        { "deleteProperty", nsopfn_deleteProperty },
+        { "pushEnvironment", nsopfn_pushEnvironment },
+        { "popEnvironment", nsopfn_popEnvironment },
+        { "exchange", nsopfn_exchange },
+        { "typeOf", nsopfn_typeOf },
+        { "equal", nsopfn_equal },
+        { "notEqual", nsopfn_notEqual },
+        { "identical", nsopfn_identical },
+        { "notIdentical", nsopfn_notIdentical },
+        { "less", nsopfn_less },
+        { "lessOrEqual", nsopfn_lessOrEqual },
+        { "more", nsopfn_more },
+        { "moreOrEqual", nsopfn_moreOrEqual },
+        { "instanceOf", nsopfn_instanceOf },
+        { "in", nsopfn_in },
+        { "add", nsopfn_add },
+        { "minus", nsopfn_minus },
+        { "multiply", nsopfn_multiply },
+        { "divide", nsopfn_divide },
+        { "modulo", nsopfn_modulo },
+        { "leftShift", nsopfn_leftShift },
+        { "rightShift", nsopfn_rightShift },
+        { "unsignedRightShift", nsopfn_unsignedRightShift },
+        { "bitwiseAnd", nsopfn_bitwiseAnd },
+        { "bitwiseXor", nsopfn_bitwiseXor },
+        { "bitwiseOr", nsopfn_bitwiseOr },
+        { "logicalAnd", nsopfn_logicalAnd },
+        { "logicalOr", nsopfn_logicalOr },
+        { "positive", nsopfn_positive },
+        { "negative", nsopfn_negative },
+        { "invert", nsopfn_invert },
+        { "not", nsopfn_logicalnot },
+        { "construct", nsopfn_construct },
+        { "call", nsopfn_call },
+        { "eval", nsopfn_eval },
+        { "incrementRef", nsopfn_incrementRef },
+        { "decrementRef", nsopfn_decrementRef },
+        { "postIncrementRef", nsopfn_postIncrementRef },
+        { "postDecrementRef", nsopfn_postDecrementRef },
+        { "addAssignRef", nsopfn_addAssignRef },
+        { "minusAssignRef", nsopfn_minusAssignRef },
+        { "multiplyAssignRef", nsopfn_multiplyAssignRef },
+        { "divideAssignRef", nsopfn_divideAssignRef },
+        { "moduloAssignRef", nsopfn_moduloAssignRef },
+        { "leftShiftAssignRef", nsopfn_leftShiftAssignRef },
+        { "rightShiftAssignRef", nsopfn_rightShiftAssignRef },
+        { "unsignedRightShiftAssignRef", nsopfn_unsignedRightShiftAssignRef },
+        { "bitAndAssignRef", nsopfn_bitAndAssignRef },
+        { "bitXorAssignRef", nsopfn_bitXorAssignRef },
+        { "bitOrAssignRef", nsopfn_bitOrAssignRef },
+        { "debugger", nsopfn_debugger },
+        { "try", nsopfn_try },
+        { "throw", nsopfn_throw },
+        { "with", nsopfn_with },
+        { "next", nsopfn_next },
+        { "nextIf", nsopfn_nextIf },
+        { "autoreleaseExpression", nsopfn_autoreleaseExpression },
+        { "autoreleaseDiscard", nsopfn_autoreleaseDiscard },
+        { "expression", nsopfn_expression },
+        { "discard", nsopfn_discard },
+        { "discardN", nsopfn_discardN },
+        { "jump", nsopfn_jump },
+        { "jumpIf", nsopfn_jumpIf },
+        { "jumpIfNot", nsopfn_jumpIfNot },
+        { "repopulate", nsopfn_repopulate },
+        { "result", nsopfn_result },
+        { "resultVoid", nsopfn_resultVoid },
+        { "switchOp", nsopfn_switchOp },
+        { "breaker", nsopfn_breaker },
+        { "iterate", nsopfn_iterate },
+        { "iterateLessRef", nsopfn_iterateLessRef },
+        { "iterateMoreRef", nsopfn_iterateMoreRef },
+        { "iterateLessOrEqualRef", nsopfn_iterateLessOrEqualRef },
+        { "iterateMoreOrEqualRef", nsopfn_iterateMoreOrEqualRef },
+        { "iterateInRef", nsopfn_iterateInRef },
     };
 
     int index;
@@ -496,7 +496,6 @@ const char* opfn_tochars(const eccnativefuncptr_t native)
     return "unknow";
 }
 
-// MARK: call
 
 static eccvalue_t nextOpValue(eccstate_t* context)
 {
@@ -637,7 +636,7 @@ static inline void populateEnvironmentWithOps(eccstate_t* context, eccobject_t* 
     }
 }
 
-eccvalue_t opfn_callfunctionarguments(eccstate_t* context, enum io_libecc_context_Offset offset, eccobjscriptfunction_t* function, eccvalue_t thisval, eccobject_t* arguments)
+eccvalue_t nsopfn_callfunctionarguments(eccstate_t* context, eccctxoffsettype_t offset, eccobjscriptfunction_t* function, eccvalue_t thisval, eccobject_t* arguments)
 {
     eccstate_t subContext = {
         .ops = function->oplist->ops,
@@ -646,15 +645,15 @@ eccvalue_t opfn_callfunctionarguments(eccstate_t* context, enum io_libecc_contex
         .ecc = context->ecc,
         .argumentOffset = offset,
         .depth = context->depth + 1,
-        .strictMode = function->flags & io_libecc_function_strictMode,
+        .strictMode = function->flags & ECC_SCRIPTFUNCFLAG_STRICTMODE,
         .refObject = function->refObject,
     };
 
-    if(function->flags & io_libecc_function_needHeap)
+    if(function->flags & ECC_SCRIPTFUNCFLAG_NEEDHEAP)
     {
         eccobject_t* environment = ECCNSObject.copy(&function->environment);
 
-        if(function->flags & io_libecc_function_needArguments)
+        if(function->flags & ECC_SCRIPTFUNCFLAG_NEEDARGUMENTS)
         {
             eccobject_t* copy = ECCNSArguments.createSized(arguments->elementCount);
             memcpy(copy->element, arguments->element, sizeof(*copy->element) * copy->elementCount);
@@ -677,7 +676,7 @@ eccvalue_t opfn_callfunctionarguments(eccstate_t* context, enum io_libecc_contex
     }
 }
 
-eccvalue_t opfn_callfunctionva(eccstate_t* context, enum io_libecc_context_Offset offset, eccobjscriptfunction_t* function, eccvalue_t thisval, int argumentCount, va_list ap)
+eccvalue_t nsopfn_callfunctionva(eccstate_t* context, eccctxoffsettype_t offset, eccobjscriptfunction_t* function, eccvalue_t thisval, int argumentCount, va_list ap)
 {
     eccstate_t subContext = {
         .ops = function->oplist->ops,
@@ -686,15 +685,15 @@ eccvalue_t opfn_callfunctionva(eccstate_t* context, enum io_libecc_context_Offse
         .ecc = context->ecc,
         .argumentOffset = offset,
         .depth = context->depth + 1,
-        .strictMode = function->flags & io_libecc_function_strictMode,
+        .strictMode = function->flags & ECC_SCRIPTFUNCFLAG_STRICTMODE,
         .refObject = function->refObject,
     };
 
-    if(function->flags & io_libecc_function_needHeap)
+    if(function->flags & ECC_SCRIPTFUNCFLAG_NEEDHEAP)
     {
         eccobject_t* environment = ECCNSObject.copy(&function->environment);
 
-        if(function->flags & io_libecc_function_needArguments)
+        if(function->flags & ECC_SCRIPTFUNCFLAG_NEEDARGUMENTS)
         {
             populateEnvironmentAndArgumentsWithVA(environment, function->parameterCount, argumentCount, ap);
 
@@ -732,15 +731,15 @@ static inline eccvalue_t callFunction(eccstate_t* context, eccobjscriptfunction_
         .ecc = context->ecc,
         .construct = construct,
         .depth = context->depth + 1,
-        .strictMode = function->flags & io_libecc_function_strictMode,
+        .strictMode = function->flags & ECC_SCRIPTFUNCFLAG_STRICTMODE,
         .refObject = function->refObject,
     };
 
-    if(function->flags & io_libecc_function_needHeap)
+    if(function->flags & ECC_SCRIPTFUNCFLAG_NEEDHEAP)
     {
         eccobject_t* environment = ECCNSObject.copy(&function->environment);
 
-        if(function->flags & io_libecc_function_needArguments)
+        if(function->flags & ECC_SCRIPTFUNCFLAG_NEEDARGUMENTS)
         {
             populateEnvironmentAndArgumentsWithOps(context, environment, ECCNSArguments.createSized(argumentCount), function->parameterCount, argumentCount);
 
@@ -755,7 +754,7 @@ static inline eccvalue_t callFunction(eccstate_t* context, eccobjscriptfunction_
 
         return callOps(&subContext, environment);
     }
-    else if(function->flags & io_libecc_function_needArguments)
+    else if(function->flags & ECC_SCRIPTFUNCFLAG_NEEDARGUMENTS)
     {
         eccobject_t environment = function->environment;
         eccobject_t arguments = ECCNSObject.identity;
@@ -793,7 +792,7 @@ static inline eccvalue_t callValue(eccstate_t* context, eccvalue_t value, eccval
 
     context->textCall = textCall;
 
-    if(value.data.function->flags & io_libecc_function_useBoundThis)
+    if(value.data.function->flags & ECC_SCRIPTFUNCFLAG_USEBOUNDTHIS)
         result = callFunction(context, value.data.function, value.data.function->boundThis, argumentCount, construct);
     else
         result = callFunction(context, value.data.function, thisval, argumentCount, construct);
@@ -802,7 +801,7 @@ static inline eccvalue_t callValue(eccstate_t* context, eccvalue_t value, eccval
     return result;
 }
 
-eccvalue_t construct(eccstate_t* context)
+eccvalue_t nsopfn_construct(eccstate_t* context)
 {
     const ecctextstring_t* textCall = opmac_text(0);
     const ecctextstring_t* text = opmac_text(1);
@@ -838,11 +837,11 @@ eccvalue_t construct(eccstate_t* context)
 
 error:
     context->textCall = textCall;
-    ECCNSContext.setTextIndex(context, io_libecc_context_funcIndex);
+    ECCNSContext.setTextIndex(context, ECC_CTXINDEXTYPE_FUNC);
     ECCNSContext.typeError(context, io_libecc_Chars.create("'%.*s' is not a constructor", text->length, text->bytes));
 }
 
-eccvalue_t call(eccstate_t* context)
+eccvalue_t nsopfn_call(eccstate_t* context)
 {
     const ecctextstring_t* textCall = opmac_text(0);
     const ecctextstring_t* text = opmac_text(1);
@@ -869,7 +868,7 @@ eccvalue_t call(eccstate_t* context)
     return callValue(context, value, thisval, argumentCount, 0, textCall);
 }
 
-eccvalue_t eval(eccstate_t* context)
+eccvalue_t nsopfn_eval(eccstate_t* context)
 {
     eccvalue_t value;
     eccioinput_t* input;
@@ -903,33 +902,33 @@ eccvalue_t eval(eccstate_t* context)
 
 // Expression
 
-eccvalue_t opfn_noop(eccstate_t* context)
+eccvalue_t nsopfn_noop(eccstate_t* context)
 {
     (void)context;
     return ECCValConstUndefined;
 }
 
-eccvalue_t opfn_value(eccstate_t* context)
+eccvalue_t nsopfn_value(eccstate_t* context)
 {
     return opmac_value();
 }
 
-eccvalue_t valueConstRef(eccstate_t* context)
+eccvalue_t nsopfn_valueConstRef(eccstate_t* context)
 {
     return ECCNSValue.reference((eccvalue_t*)&opmac_value());
 }
 
-eccvalue_t text(eccstate_t* context)
+eccvalue_t nsopfn_text(eccstate_t* context)
 {
     return ECCNSValue.text(opmac_text(0));
 }
 
-eccvalue_t regexp(eccstate_t* context)
+eccvalue_t nsopfn_regexp(eccstate_t* context)
 {
     const ecctextstring_t* text = opmac_text(0);
     eccobjerror_t* error = NULL;
     ecccharbuffer_t* chars = io_libecc_Chars.createWithBytes(text->length, text->bytes);
-    eccobjregexp_t* regexp = io_libecc_RegExp.create(chars, &error, context->ecc->sloppyMode ? io_libecc_regexp_allowUnicodeFlags : 0);
+    eccobjregexp_t* regexp = io_libecc_RegExp.create(chars, &error, context->ecc->sloppyMode ? ECC_REGEXOPT_ALLOWUNICODEFLAGS : 0);
     if(error)
     {
         error->text.bytes = text->bytes + (error->text.bytes - chars->bytes);
@@ -938,7 +937,7 @@ eccvalue_t regexp(eccstate_t* context)
     return ECCNSValue.regexp(regexp);
 }
 
-eccvalue_t function(eccstate_t* context)
+eccvalue_t nsopfn_function(eccstate_t* context)
 {
     eccobject_t* prototype;
     eccvalue_t value = opmac_value(), result;
@@ -964,13 +963,13 @@ eccvalue_t function(eccstate_t* context)
     return result;
 }
 
-eccvalue_t object(eccstate_t* context)
+eccvalue_t nsopfn_object(eccstate_t* context)
 {
     eccobject_t* object = ECCNSObject.create(io_libecc_object_prototype);
     eccvalue_t property, value;
     uint32_t count;
 
-    object->flags |= io_libecc_object_mark;
+    object->flags |= ECC_OBJFLAG_MARK;
 
     for(count = opmac_value().data.integer; count--;)
     {
@@ -985,14 +984,14 @@ eccvalue_t object(eccstate_t* context)
     return ECCNSValue.object(object);
 }
 
-eccvalue_t array(eccstate_t* context)
+eccvalue_t nsopfn_array(eccstate_t* context)
 {
     uint32_t length = opmac_value().data.integer;
     eccobject_t* object = io_libecc_Array.createSized(length);
     eccvalue_t value;
     uint32_t index;
 
-    object->flags |= io_libecc_object_mark;
+    object->flags |= ECC_OBJFLAG_MARK;
 
     for(index = 0; index < length; ++index)
     {
@@ -1002,7 +1001,7 @@ eccvalue_t array(eccstate_t* context)
     return ECCNSValue.object(object);
 }
 
-eccvalue_t opfn_this(eccstate_t* context)
+eccvalue_t nsopfn_this(eccstate_t* context)
 {
     return context->thisvalue;
 }
@@ -1031,7 +1030,7 @@ static eccvalue_t* localRef(eccstate_t* context, eccindexkey_t key, const ecctex
     return ref;
 }
 
-eccvalue_t createLocalRef(eccstate_t* context)
+eccvalue_t nsopfn_createLocalRef(eccstate_t* context)
 {
     eccindexkey_t key = opmac_value().data.key;
     eccvalue_t* ref = localRef(context, key, opmac_text(0), context->strictMode);
@@ -1042,22 +1041,22 @@ eccvalue_t createLocalRef(eccstate_t* context)
     return ECCNSValue.reference(ref);
 }
 
-eccvalue_t getLocalRefOrNull(eccstate_t* context)
+eccvalue_t nsopfn_getLocalRefOrNull(eccstate_t* context)
 {
     return ECCNSValue.reference(localRef(context, opmac_value().data.key, opmac_text(0), 0));
 }
 
-eccvalue_t getLocalRef(eccstate_t* context)
+eccvalue_t nsopfn_getLocalRef(eccstate_t* context)
 {
     return ECCNSValue.reference(localRef(context, opmac_value().data.key, opmac_text(0), 1));
 }
 
-eccvalue_t getLocal(eccstate_t* context)
+eccvalue_t nsopfn_getLocal(eccstate_t* context)
 {
     return *localRef(context, opmac_value().data.key, opmac_text(0), 1);
 }
 
-eccvalue_t setLocal(eccstate_t* context)
+eccvalue_t nsopfn_setLocal(eccstate_t* context)
 {
     const ecctextstring_t* text = opmac_text(0);
     eccindexkey_t key = opmac_value().data.key;
@@ -1077,7 +1076,7 @@ eccvalue_t setLocal(eccstate_t* context)
     return value;
 }
 
-eccvalue_t deleteLocal(eccstate_t* context)
+eccvalue_t nsopfn_deleteLocal(eccstate_t* context)
 {
     eccvalue_t* ref = localRef(context, opmac_value().data.key, opmac_text(0), 0);
 
@@ -1091,17 +1090,17 @@ eccvalue_t deleteLocal(eccstate_t* context)
     return ECCValConstTrue;
 }
 
-eccvalue_t getLocalSlotRef(eccstate_t* context)
+eccvalue_t nsopfn_getLocalSlotRef(eccstate_t* context)
 {
     return ECCNSValue.reference(&context->environment->hashmap[opmac_value().data.integer].value);
 }
 
-eccvalue_t getLocalSlot(eccstate_t* context)
+eccvalue_t nsopfn_getLocalSlot(eccstate_t* context)
 {
     return context->environment->hashmap[opmac_value().data.integer].value;
 }
 
-eccvalue_t setLocalSlot(eccstate_t* context)
+eccvalue_t nsopfn_setLocalSlot(eccstate_t* context)
 {
     int32_t slot = opmac_value().data.integer;
     eccvalue_t value = opmac_next();
@@ -1116,13 +1115,13 @@ eccvalue_t setLocalSlot(eccstate_t* context)
     return value;
 }
 
-eccvalue_t deleteLocalSlot(eccstate_t* context)
+eccvalue_t nsopfn_deleteLocalSlot(eccstate_t* context)
 {
     (void)context;
     return ECCValConstFalse;
 }
 
-eccvalue_t getParentSlotRef(eccstate_t* context)
+eccvalue_t nsopfn_getParentSlotRef(eccstate_t* context)
 {
     int32_t slot = opmac_value().data.integer & 0xffff;
     int32_t count = opmac_value().data.integer >> 16;
@@ -1133,15 +1132,15 @@ eccvalue_t getParentSlotRef(eccstate_t* context)
     return ECCNSValue.reference(&object->hashmap[slot].value);
 }
 
-eccvalue_t getParentSlot(eccstate_t* context)
+eccvalue_t nsopfn_getParentSlot(eccstate_t* context)
 {
-    return *getParentSlotRef(context).data.reference;
+    return *nsopfn_getParentSlotRef(context).data.reference;
 }
 
-eccvalue_t setParentSlot(eccstate_t* context)
+eccvalue_t nsopfn_setParentSlot(eccstate_t* context)
 {
     const ecctextstring_t* text = opmac_text(0);
-    eccvalue_t* ref = getParentSlotRef(context).data.reference;
+    eccvalue_t* ref = nsopfn_getParentSlotRef(context).data.reference;
     eccvalue_t value = opmac_next();
     if(ref->flags & ECC_VALFLAG_READONLY)
     {
@@ -1161,7 +1160,7 @@ eccvalue_t setParentSlot(eccstate_t* context)
     return value;
 }
 
-eccvalue_t deleteParentSlot(eccstate_t* context)
+eccvalue_t nsopfn_deleteParentSlot(eccstate_t* context)
 {
     (void)context;
     return ECCValConstFalse;
@@ -1179,7 +1178,7 @@ static void prepareObject(eccstate_t* context, eccvalue_t* object)
     }
 }
 
-eccvalue_t getMemberRef(eccstate_t* context)
+eccvalue_t nsopfn_getMemberRef(eccstate_t* context)
 {
     const ecctextstring_t* text = opmac_text(0);
     eccindexkey_t key = opmac_value().data.key;
@@ -1192,7 +1191,7 @@ eccvalue_t getMemberRef(eccstate_t* context)
 
     if(!ref)
     {
-        if(object.data.object->flags & io_libecc_object_sealed)
+        if(object.data.object->flags & ECC_OBJFLAG_SEALED)
         {
             ECCNSContext.setText(context, text);
             ECCNSContext.typeError(context, io_libecc_Chars.create("object is not extensible"));
@@ -1203,7 +1202,7 @@ eccvalue_t getMemberRef(eccstate_t* context)
     return ECCNSValue.reference(ref);
 }
 
-eccvalue_t getMember(eccstate_t* context)
+eccvalue_t nsopfn_getMember(eccstate_t* context)
 {
     eccindexkey_t key = opmac_value().data.key;
     eccvalue_t object;
@@ -1213,7 +1212,7 @@ eccvalue_t getMember(eccstate_t* context)
     return ECCNSObject.getMember(context, object.data.object, key);
 }
 
-eccvalue_t setMember(eccstate_t* context)
+eccvalue_t nsopfn_setMember(eccstate_t* context)
 {
     const ecctextstring_t* text = opmac_text(0);
     eccindexkey_t key = opmac_value().data.key;
@@ -1228,7 +1227,7 @@ eccvalue_t setMember(eccstate_t* context)
     return value;
 }
 
-eccvalue_t callMember(eccstate_t* context)
+eccvalue_t nsopfn_callMember(eccstate_t* context)
 {
     const ecctextstring_t* textCall = opmac_text(0);
     int32_t argumentCount = opmac_value().data.integer;
@@ -1242,7 +1241,7 @@ eccvalue_t callMember(eccstate_t* context)
     return callValue(context, ECCNSObject.getMember(context, object.data.object, key), object, argumentCount, 0, textCall);
 }
 
-eccvalue_t deleteMember(eccstate_t* context)
+eccvalue_t nsopfn_deleteMember(eccstate_t* context)
 {
     const ecctextstring_t* text = opmac_text(0);
     eccindexkey_t key = opmac_value().data.key;
@@ -1277,7 +1276,7 @@ static void prepareObjectProperty(eccstate_t* context, eccvalue_t* object, eccva
     }
 }
 
-eccvalue_t getPropertyRef(eccstate_t* context)
+eccvalue_t nsopfn_getPropertyRef(eccstate_t* context)
 {
     const ecctextstring_t* text = opmac_text(1);
     eccvalue_t object, property;
@@ -1290,7 +1289,7 @@ eccvalue_t getPropertyRef(eccstate_t* context)
 
     if(!ref)
     {
-        if(object.data.object->flags & io_libecc_object_sealed)
+        if(object.data.object->flags & ECC_OBJFLAG_SEALED)
         {
             ECCNSContext.setText(context, text);
             ECCNSContext.typeError(context, io_libecc_Chars.create("object is not extensible"));
@@ -1301,7 +1300,7 @@ eccvalue_t getPropertyRef(eccstate_t* context)
     return ECCNSValue.reference(ref);
 }
 
-eccvalue_t getProperty(eccstate_t* context)
+eccvalue_t nsopfn_getProperty(eccstate_t* context)
 {
     eccvalue_t object, property;
 
@@ -1310,7 +1309,7 @@ eccvalue_t getProperty(eccstate_t* context)
     return ECCNSObject.getProperty(context, object.data.object, property);
 }
 
-eccvalue_t setProperty(eccstate_t* context)
+eccvalue_t nsopfn_setProperty(eccstate_t* context)
 {
     const ecctextstring_t* text = opmac_text(0);
     eccvalue_t object, property, value;
@@ -1326,7 +1325,7 @@ eccvalue_t setProperty(eccstate_t* context)
     return value;
 }
 
-eccvalue_t callProperty(eccstate_t* context)
+eccvalue_t nsopfn_callProperty(eccstate_t* context)
 {
     const ecctextstring_t* textCall = opmac_text(0);
     int32_t argumentCount = opmac_value().data.integer;
@@ -1339,7 +1338,7 @@ eccvalue_t callProperty(eccstate_t* context)
     return callValue(context, ECCNSObject.getProperty(context, object.data.object, property), object, argumentCount, 0, textCall);
 }
 
-eccvalue_t deleteProperty(eccstate_t* context)
+eccvalue_t nsopfn_deleteProperty(eccstate_t* context)
 {
     const ecctextstring_t* text = opmac_text(0);
     eccvalue_t object, property;
@@ -1357,7 +1356,7 @@ eccvalue_t deleteProperty(eccstate_t* context)
     return ECCNSValue.truth(result);
 }
 
-eccvalue_t pushEnvironment(eccstate_t* context)
+eccvalue_t nsopfn_pushEnvironment(eccstate_t* context)
 {
     if(context->refObject)
         context->refObject = ECCNSObject.create(context->refObject);
@@ -1367,7 +1366,7 @@ eccvalue_t pushEnvironment(eccstate_t* context)
     return opmac_value();
 }
 
-eccvalue_t popEnvironment(eccstate_t* context)
+eccvalue_t nsopfn_popEnvironment(eccstate_t* context)
 {
     if(context->refObject)
     {
@@ -1384,14 +1383,14 @@ eccvalue_t popEnvironment(eccstate_t* context)
     return opmac_value();
 }
 
-eccvalue_t exchange(eccstate_t* context)
+eccvalue_t nsopfn_exchange(eccstate_t* context)
 {
     eccvalue_t value = opmac_value();
     opmac_next();
     return value;
 }
 
-eccvalue_t typeOf(eccstate_t* context)
+eccvalue_t nsopfn_typeOf(eccstate_t* context)
 {
     eccvalue_t value = opmac_next();
     if(value.type == ECC_VALTYPE_REFERENCE)
@@ -1411,7 +1410,7 @@ eccvalue_t typeOf(eccstate_t* context)
     const ecctextstring_t* textAlt = opmac_text(1); \
     eccvalue_t b = opmac_next();
 
-eccvalue_t equal(eccstate_t* context)
+eccvalue_t nsopfn_equal(eccstate_t* context)
 {
     prepareAB
 
@@ -1423,7 +1422,7 @@ eccvalue_t equal(eccstate_t* context)
     }
 }
 
-eccvalue_t notEqual(eccstate_t* context)
+eccvalue_t nsopfn_notEqual(eccstate_t* context)
 {
     prepareAB
 
@@ -1435,7 +1434,7 @@ eccvalue_t notEqual(eccstate_t* context)
     }
 }
 
-eccvalue_t identical(eccstate_t* context)
+eccvalue_t nsopfn_identical(eccstate_t* context)
 {
     prepareAB
 
@@ -1447,7 +1446,7 @@ eccvalue_t identical(eccstate_t* context)
     }
 }
 
-eccvalue_t notIdentical(eccstate_t* context)
+eccvalue_t nsopfn_notIdentical(eccstate_t* context)
 {
     prepareAB
 
@@ -1459,7 +1458,7 @@ eccvalue_t notIdentical(eccstate_t* context)
     }
 }
 
-eccvalue_t less(eccstate_t* context)
+eccvalue_t nsopfn_less(eccstate_t* context)
 {
     prepareAB
 
@@ -1471,7 +1470,7 @@ eccvalue_t less(eccstate_t* context)
     }
 }
 
-eccvalue_t lessOrEqual(eccstate_t* context)
+eccvalue_t nsopfn_lessOrEqual(eccstate_t* context)
 {
     prepareAB
 
@@ -1483,7 +1482,7 @@ eccvalue_t lessOrEqual(eccstate_t* context)
     }
 }
 
-eccvalue_t more(eccstate_t* context)
+eccvalue_t nsopfn_more(eccstate_t* context)
 {
     prepareAB
 
@@ -1495,7 +1494,7 @@ eccvalue_t more(eccstate_t* context)
     }
 }
 
-eccvalue_t moreOrEqual(eccstate_t* context)
+eccvalue_t nsopfn_moreOrEqual(eccstate_t* context)
 {
     prepareAB
 
@@ -1507,7 +1506,7 @@ eccvalue_t moreOrEqual(eccstate_t* context)
     }
 }
 
-eccvalue_t instanceOf(eccstate_t* context)
+eccvalue_t nsopfn_instanceOf(eccstate_t* context)
 {
     eccvalue_t a = opmac_next();
     const ecctextstring_t* textAlt = opmac_text(1);
@@ -1538,7 +1537,7 @@ eccvalue_t instanceOf(eccstate_t* context)
     return ECCValConstFalse;
 }
 
-eccvalue_t in(eccstate_t* context)
+eccvalue_t nsopfn_in(eccstate_t* context)
 {
     eccvalue_t property = opmac_next();
     eccvalue_t object = opmac_next();
@@ -1552,7 +1551,7 @@ eccvalue_t in(eccstate_t* context)
     return ECCNSValue.truth(ref != NULL);
 }
 
-eccvalue_t add(eccstate_t* context)
+eccvalue_t nsopfn_add(eccstate_t* context)
 {
     prepareAB
 
@@ -1568,7 +1567,7 @@ eccvalue_t add(eccstate_t* context)
     }
 }
 
-eccvalue_t minus(eccstate_t* context)
+eccvalue_t nsopfn_minus(eccstate_t* context)
 {
     eccvalue_t a = opmac_next();
     eccvalue_t b = opmac_next();
@@ -1581,7 +1580,7 @@ eccvalue_t minus(eccstate_t* context)
         return ECCNSValue.binary(ECCNSValue.toBinary(context, a).data.binary - ECCNSValue.toBinary(context, b).data.binary);
 }
 
-eccvalue_t multiply(eccstate_t* context)
+eccvalue_t nsopfn_multiply(eccstate_t* context)
 {
     eccvalue_t a = opmac_next();
     eccvalue_t b = opmac_next();
@@ -1594,7 +1593,7 @@ eccvalue_t multiply(eccstate_t* context)
         return ECCNSValue.binary(ECCNSValue.toBinary(context, a).data.binary * ECCNSValue.toBinary(context, b).data.binary);
 }
 
-eccvalue_t divide(eccstate_t* context)
+eccvalue_t nsopfn_divide(eccstate_t* context)
 {
     eccvalue_t a = opmac_next();
     eccvalue_t b = opmac_next();
@@ -1607,7 +1606,7 @@ eccvalue_t divide(eccstate_t* context)
         return ECCNSValue.binary(ECCNSValue.toBinary(context, a).data.binary / ECCNSValue.toBinary(context, b).data.binary);
 }
 
-eccvalue_t modulo(eccstate_t* context)
+eccvalue_t nsopfn_modulo(eccstate_t* context)
 {
     eccvalue_t a = opmac_next();
     eccvalue_t b = opmac_next();
@@ -1620,49 +1619,49 @@ eccvalue_t modulo(eccstate_t* context)
         return ECCNSValue.binary(fmod(ECCNSValue.toBinary(context, a).data.binary, ECCNSValue.toBinary(context, b).data.binary));
 }
 
-eccvalue_t leftShift(eccstate_t* context)
+eccvalue_t nsopfn_leftShift(eccstate_t* context)
 {
     eccvalue_t a = opmac_next();
     eccvalue_t b = opmac_next();
     return ECCNSValue.binary(ECCNSValue.toInteger(context, a).data.integer << (uint32_t)ECCNSValue.toInteger(context, b).data.integer);
 }
 
-eccvalue_t rightShift(eccstate_t* context)
+eccvalue_t nsopfn_rightShift(eccstate_t* context)
 {
     eccvalue_t a = opmac_next();
     eccvalue_t b = opmac_next();
     return ECCNSValue.binary(ECCNSValue.toInteger(context, a).data.integer >> (uint32_t)ECCNSValue.toInteger(context, b).data.integer);
 }
 
-eccvalue_t unsignedRightShift(eccstate_t* context)
+eccvalue_t nsopfn_unsignedRightShift(eccstate_t* context)
 {
     eccvalue_t a = opmac_next();
     eccvalue_t b = opmac_next();
     return ECCNSValue.binary((uint32_t)ECCNSValue.toInteger(context, a).data.integer >> (uint32_t)ECCNSValue.toInteger(context, b).data.integer);
 }
 
-eccvalue_t bitwiseAnd(eccstate_t* context)
+eccvalue_t nsopfn_bitwiseAnd(eccstate_t* context)
 {
     eccvalue_t a = opmac_next();
     eccvalue_t b = opmac_next();
     return ECCNSValue.binary(ECCNSValue.toInteger(context, a).data.integer & ECCNSValue.toInteger(context, b).data.integer);
 }
 
-eccvalue_t bitwiseXor(eccstate_t* context)
+eccvalue_t nsopfn_bitwiseXor(eccstate_t* context)
 {
     eccvalue_t a = opmac_next();
     eccvalue_t b = opmac_next();
     return ECCNSValue.binary(ECCNSValue.toInteger(context, a).data.integer ^ ECCNSValue.toInteger(context, b).data.integer);
 }
 
-eccvalue_t bitwiseOr(eccstate_t* context)
+eccvalue_t nsopfn_bitwiseOr(eccstate_t* context)
 {
     eccvalue_t a = opmac_next();
     eccvalue_t b = opmac_next();
     return ECCNSValue.binary(ECCNSValue.toInteger(context, a).data.integer | ECCNSValue.toInteger(context, b).data.integer);
 }
 
-eccvalue_t logicalAnd(eccstate_t* context)
+eccvalue_t nsopfn_logicalAnd(eccstate_t* context)
 {
     const int32_t opCount = opmac_value().data.integer;
     eccvalue_t value = opmac_next();
@@ -1676,7 +1675,7 @@ eccvalue_t logicalAnd(eccstate_t* context)
         return opmac_next();
 }
 
-eccvalue_t logicalOr(eccstate_t* context)
+eccvalue_t nsopfn_logicalOr(eccstate_t* context)
 {
     const int32_t opCount = opmac_value().data.integer;
     eccvalue_t value = opmac_next();
@@ -1690,7 +1689,7 @@ eccvalue_t logicalOr(eccstate_t* context)
         return opmac_next();
 }
 
-eccvalue_t positive(eccstate_t* context)
+eccvalue_t nsopfn_positive(eccstate_t* context)
 {
     eccvalue_t a = opmac_next();
     if(a.type == ECC_VALTYPE_BINARY)
@@ -1699,7 +1698,7 @@ eccvalue_t positive(eccstate_t* context)
         return ECCNSValue.toBinary(context, a);
 }
 
-eccvalue_t negative(eccstate_t* context)
+eccvalue_t nsopfn_negative(eccstate_t* context)
 {
     eccvalue_t a = opmac_next();
     if(a.type == ECC_VALTYPE_BINARY)
@@ -1708,13 +1707,13 @@ eccvalue_t negative(eccstate_t* context)
         return ECCNSValue.binary(-ECCNSValue.toBinary(context, a).data.binary);
 }
 
-eccvalue_t invert(eccstate_t* context)
+eccvalue_t nsopfn_invert(eccstate_t* context)
 {
     eccvalue_t a = opmac_next();
     return ECCNSValue.binary(~ECCNSValue.toInteger(context, a).data.integer);
 }
 
-eccvalue_t opfn_logicalnot(eccstate_t * context)
+eccvalue_t nsopfn_logicalnot(eccstate_t * context)
 {
     eccvalue_t a = opmac_next();
     return ECCNSValue.truth(!ECCNSValue.isTrue(a));
@@ -1746,13 +1745,13 @@ eccvalue_t opfn_logicalnot(eccstate_t * context)
     context->refObject = refObject;                                                                        \
     return ECCNSValue.binary(result);
 
-eccvalue_t incrementRef(eccstate_t* context){ unaryBinaryOpRef(++a.data.binary) }
+eccvalue_t nsopfn_incrementRef(eccstate_t* context){ unaryBinaryOpRef(++a.data.binary) }
 
-eccvalue_t decrementRef(eccstate_t* context){ unaryBinaryOpRef(--a.data.binary) }
+eccvalue_t nsopfn_decrementRef(eccstate_t* context){ unaryBinaryOpRef(--a.data.binary) }
 
-eccvalue_t postIncrementRef(eccstate_t* context){ unaryBinaryOpRef(a.data.binary++) }
+eccvalue_t nsopfn_postIncrementRef(eccstate_t* context){ unaryBinaryOpRef(a.data.binary++) }
 
-eccvalue_t postDecrementRef(eccstate_t* context){ unaryBinaryOpRef(a.data.binary--) }
+eccvalue_t nsopfn_postDecrementRef(eccstate_t* context){ unaryBinaryOpRef(a.data.binary--) }
 
 #define assignOpRef(OP, TYPE, CONV)                                                \
     eccobject_t* refObject = context->refObject;                                   \
@@ -1782,7 +1781,7 @@ eccvalue_t postDecrementRef(eccstate_t* context){ unaryBinaryOpRef(a.data.binary
 #define assignBinaryOpRef(OP) assignOpRef(OP, ECC_VALTYPE_BINARY, ECCNSValue.toBinary)
 #define assignIntegerOpRef(OP) assignOpRef(OP, ECC_VALTYPE_INTEGER, ECCNSValue.toInteger)
 
-eccvalue_t addAssignRef(eccstate_t* context)
+eccvalue_t nsopfn_addAssignRef(eccstate_t* context)
 {
     eccobject_t* refObject = context->refObject;
     const ecctextstring_t* text = opmac_text(1);
@@ -1812,59 +1811,59 @@ eccvalue_t addAssignRef(eccstate_t* context)
     return a;
 }
 
-eccvalue_t minusAssignRef(eccstate_t* context)
+eccvalue_t nsopfn_minusAssignRef(eccstate_t* context)
 {
     assignBinaryOpRef(a.data.binary -= b.data.binary);
 }
 
-eccvalue_t multiplyAssignRef(eccstate_t* context)
+eccvalue_t nsopfn_multiplyAssignRef(eccstate_t* context)
 {
     assignBinaryOpRef(a.data.binary *= b.data.binary);
 }
 
-eccvalue_t divideAssignRef(eccstate_t* context)
+eccvalue_t nsopfn_divideAssignRef(eccstate_t* context)
 {
     assignBinaryOpRef(a.data.binary /= b.data.binary);
 }
 
-eccvalue_t moduloAssignRef(eccstate_t* context)
+eccvalue_t nsopfn_moduloAssignRef(eccstate_t* context)
 {
     assignBinaryOpRef(a.data.binary = fmod(a.data.binary, b.data.binary));
 }
 
-eccvalue_t leftShiftAssignRef(eccstate_t* context)
+eccvalue_t nsopfn_leftShiftAssignRef(eccstate_t* context)
 {
     assignIntegerOpRef(a.data.integer <<= (uint32_t)b.data.integer);
 }
 
-eccvalue_t rightShiftAssignRef(eccstate_t* context)
+eccvalue_t nsopfn_rightShiftAssignRef(eccstate_t* context)
 {
     assignIntegerOpRef(a.data.integer >>= (uint32_t)b.data.integer);
 }
 
-eccvalue_t unsignedRightShiftAssignRef(eccstate_t* context)
+eccvalue_t nsopfn_unsignedRightShiftAssignRef(eccstate_t* context)
 {
     assignIntegerOpRef(a.data.integer = (uint32_t)a.data.integer >> (uint32_t)b.data.integer);
 }
 
-eccvalue_t bitAndAssignRef(eccstate_t* context)
+eccvalue_t nsopfn_bitAndAssignRef(eccstate_t* context)
 {
     assignIntegerOpRef(a.data.integer &= (uint32_t)b.data.integer);
 }
 
-eccvalue_t bitXorAssignRef(eccstate_t* context)
+eccvalue_t nsopfn_bitXorAssignRef(eccstate_t* context)
 {
     assignIntegerOpRef(a.data.integer ^= (uint32_t)b.data.integer);
 }
 
-eccvalue_t bitOrAssignRef(eccstate_t* context)
+eccvalue_t nsopfn_bitOrAssignRef(eccstate_t* context)
 {
     assignIntegerOpRef(a.data.integer |= (uint32_t)b.data.integer);
 }
 
 // MARK: Statement
 
-eccvalue_t debugger(eccstate_t* context)
+eccvalue_t nsopfn_debugger(eccstate_t* context)
 {
 #if DEBUG
     debug = 1;
@@ -1872,7 +1871,7 @@ eccvalue_t debugger(eccstate_t* context)
     return trapOp(context, 0);
 }
 
-io_libecc_ecc_useframe eccvalue_t opfn_try(eccstate_t* context)
+io_libecc_ecc_useframe eccvalue_t nsopfn_try(eccstate_t* context)
 {
     eccobject_t* environment = context->environment;
     eccobject_t* refObject = context->refObject;
@@ -1909,18 +1908,18 @@ io_libecc_ecc_useframe eccvalue_t opfn_try(eccstate_t* context)
             {
                 if(value.type == ECC_VALTYPE_FUNCTION)
                 {
-                    value.data.function->flags |= io_libecc_function_useBoundThis;
+                    value.data.function->flags |= ECC_SCRIPTFUNCFLAG_USEBOUNDTHIS;
                     value.data.function->boundThis = ECCNSValue.object(context->environment);
                 }
                 ECCNSObject.addMember(context->environment, key, value, ECC_VALFLAG_SEALED);
                 value = opmac_next();// execute until noop
                 rethrow = 0;
                 if(context->breaker)
-                    popEnvironment(context);
+                    nsopfn_popEnvironment(context);
             }
         }
         else// rethrow
-            popEnvironment(context);
+            nsopfn_popEnvironment(context);
     }
 
     ECCNSScript.popEnv(context->ecc);
@@ -1946,13 +1945,13 @@ io_libecc_ecc_useframe eccvalue_t opfn_try(eccstate_t* context)
         return opmac_next();
 }
 
-io_libecc_ecc_noreturn eccvalue_t opfn_throw(eccstate_t * context)
+io_libecc_ecc_noreturn eccvalue_t nsopfn_throw(eccstate_t * context)
 {
     context->ecc->text = *opmac_text(1);
     ECCNSContext.doThrow(context, retain(trapOp(context, 0)));
 }
 
-eccvalue_t with(eccstate_t* context)
+eccvalue_t nsopfn_with(eccstate_t* context)
 {
     eccobject_t* environment = context->environment;
     eccobject_t* refObject = context->refObject;
@@ -1973,12 +1972,12 @@ eccvalue_t with(eccstate_t* context)
         return opmac_next();
 }
 
-eccvalue_t next(eccstate_t* context)
+eccvalue_t nsopfn_next(eccstate_t* context)
 {
     return opmac_next();
 }
 
-eccvalue_t nextIf(eccstate_t* context)
+eccvalue_t nsopfn_nextIf(eccstate_t* context)
 {
     eccvalue_t value = opmac_value();
 
@@ -1988,7 +1987,7 @@ eccvalue_t nextIf(eccstate_t* context)
     return opmac_next();
 }
 
-eccvalue_t autoreleaseExpression(eccstate_t* context)
+eccvalue_t nsopfn_autoreleaseExpression(eccstate_t* context)
 {
     uint32_t indices[3];
 
@@ -1999,7 +1998,7 @@ eccvalue_t autoreleaseExpression(eccstate_t* context)
     return opmac_next();
 }
 
-eccvalue_t autoreleaseDiscard(eccstate_t* context)
+eccvalue_t nsopfn_autoreleaseDiscard(eccstate_t* context)
 {
     uint32_t indices[3];
 
@@ -2009,20 +2008,20 @@ eccvalue_t autoreleaseDiscard(eccstate_t* context)
     return opmac_next();
 }
 
-eccvalue_t expression(eccstate_t* context)
+eccvalue_t nsopfn_expression(eccstate_t* context)
 {
     release(context->ecc->result);
     context->ecc->result = retain(trapOp(context, 1));
     return opmac_next();
 }
 
-eccvalue_t discard(eccstate_t* context)
+eccvalue_t nsopfn_discard(eccstate_t* context)
 {
     trapOp(context, 1);
     return opmac_next();
 }
 
-eccvalue_t discardN(eccstate_t* context)
+eccvalue_t nsopfn_discardN(eccstate_t* context)
 {
     switch(opmac_value().data.integer)
     {
@@ -2115,14 +2114,14 @@ eccvalue_t discardN(eccstate_t* context)
     return opmac_next();
 }
 
-eccvalue_t jump(eccstate_t* context)
+eccvalue_t nsopfn_jump(eccstate_t* context)
 {
     int32_t offset = opmac_value().data.integer;
     context->ops += offset;
     return opmac_next();
 }
 
-eccvalue_t jumpIf(eccstate_t* context)
+eccvalue_t nsopfn_jumpIf(eccstate_t* context)
 {
     int32_t offset = opmac_value().data.integer;
     eccvalue_t value;
@@ -2134,7 +2133,7 @@ eccvalue_t jumpIf(eccstate_t* context)
     return opmac_next();
 }
 
-eccvalue_t jumpIfNot(eccstate_t* context)
+eccvalue_t nsopfn_jumpIfNot(eccstate_t* context)
 {
     int32_t offset = opmac_value().data.integer;
     eccvalue_t value;
@@ -2146,14 +2145,14 @@ eccvalue_t jumpIfNot(eccstate_t* context)
     return opmac_next();
 }
 
-eccvalue_t result(eccstate_t* context)
+eccvalue_t nsopfn_result(eccstate_t* context)
 {
     eccvalue_t result = trapOp(context, 0);
     context->breaker = -1;
     return result;
 }
 
-eccvalue_t repopulate(eccstate_t* context)
+eccvalue_t nsopfn_repopulate(eccstate_t* context)
 {
     uint32_t index, count, arguments = opmac_value().data.integer + 3;
     int32_t offset = opmac_next().data.integer;
@@ -2199,14 +2198,14 @@ eccvalue_t repopulate(eccstate_t* context)
     return opmac_next();
 }
 
-eccvalue_t resultVoid(eccstate_t* context)
+eccvalue_t nsopfn_resultVoid(eccstate_t* context)
 {
     eccvalue_t result = ECCValConstUndefined;
     context->breaker = -1;
     return result;
 }
 
-eccvalue_t switchOp(eccstate_t* context)
+eccvalue_t nsopfn_switchOp(eccstate_t* context)
 {
     int32_t offset = opmac_value().data.integer;
     const eccoperand_t* nextOps = context->ops + offset;
@@ -2262,13 +2261,13 @@ eccvalue_t switchOp(eccstate_t* context)
         }                                                           \
     }
 
-eccvalue_t breaker(eccstate_t* context)
+eccvalue_t nsopfn_breaker(eccstate_t* context)
 {
     context->breaker = opmac_value().data.integer;
     return ECCValConstUndefined;
 }
 
-eccvalue_t iterate(eccstate_t* context)
+eccvalue_t nsopfn_iterate(eccstate_t* context)
 {
     const eccoperand_t* startOps = context->ops;
     const eccoperand_t* endOps = startOps;
@@ -2334,27 +2333,27 @@ done:
     return opmac_next();
 }
 
-eccvalue_t iterateLessRef(eccstate_t* context)
+eccvalue_t nsopfn_iterateLessRef(eccstate_t* context)
 {
     return iterateIntegerRef(context, integerLess, integerWontOverflowPositive, ECCNSValue.less, ECCNSValue.add);
 }
 
-eccvalue_t iterateLessOrEqualRef(eccstate_t* context)
+eccvalue_t nsopfn_iterateLessOrEqualRef(eccstate_t* context)
 {
     return iterateIntegerRef(context, integerLessOrEqual, integerWontOverflowPositive, ECCNSValue.lessOrEqual, ECCNSValue.add);
 }
 
-eccvalue_t iterateMoreRef(eccstate_t* context)
+eccvalue_t nsopfn_iterateMoreRef(eccstate_t* context)
 {
     return iterateIntegerRef(context, integerMore, integerWontOverflowNegative, ECCNSValue.more, ECCNSValue.subtract);
 }
 
-eccvalue_t iterateMoreOrEqualRef(eccstate_t* context)
+eccvalue_t nsopfn_iterateMoreOrEqualRef(eccstate_t* context)
 {
     return iterateIntegerRef(context, integerMoreOrEqual, integerWontOverflowNegative, ECCNSValue.moreOrEqual, ECCNSValue.subtract);
 }
 
-eccvalue_t iterateInRef(eccstate_t* context)
+eccvalue_t nsopfn_iterateInRef(eccstate_t* context)
 {
     eccobject_t* refObject = context->refObject;
     eccvalue_t* ref = opmac_next().data.reference;

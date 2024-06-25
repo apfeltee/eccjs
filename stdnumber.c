@@ -21,7 +21,7 @@ const eccobjinterntype_t io_libecc_number_type = {
 static void setup(void);
 static void teardown(void);
 static eccobjnumber_t* create(double);
-const struct type_io_libecc_Number io_libecc_Number = {
+const struct eccpseudonsnumber_t io_libecc_Number = {
     setup,
     teardown,
     create,

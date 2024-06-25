@@ -16,7 +16,7 @@ const eccobjinterntype_t io_libecc_math_type = {
 // MARK: - Static Members
 static void setup(void);
 static void teardown(void);
-const struct type_io_libecc_Math io_libecc_Math = {
+const struct eccpseudonsmath_t io_libecc_Math = {
     setup,
     teardown,
     {},

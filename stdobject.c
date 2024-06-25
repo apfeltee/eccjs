@@ -43,7 +43,7 @@ static int resizeElement(eccobject_t*, uint32_t size);
 static void populateElementWithCList(eccobject_t*, uint32_t count, const char* list[]);
 static eccvalue_t toString(eccstate_t*);
 static void dumpTo(eccobject_t*, FILE* file);
-const struct type_io_libecc_Object ECCNSObject = {
+const struct eccpseudonsobject_t ECCNSObject = {
     setup,          teardown, create,     createSized,   createTyped, initialize,   initializeSized, finalize,
     copy,           destroy,  getMember,  putMember,     member,      addMember,    deleteMember,    getElement,
     putElement,     element,  addElement, deleteElement, getProperty, putProperty,  property,        addProperty,
@@ -89,7 +89,7 @@ static inline uint32_t getIndexOrKey(eccvalue_t property, eccindexkey_t* key)
         {
             ecctextstring_t text = ECCNSValue.textOf(&property);
             if((index = io_libecc_Lexer.scanElement(text)) == UINT32_MAX)
-                *key = io_libecc_Key.makeWithText(text, io_libecc_key_copyOnCreate);
+                *key = io_libecc_Key.makeWithText(text, ECC_INDEXFLAG_COPYONCREATE);
         }
         else
             return getIndexOrKey(ECCNSValue.toString(NULL, property), key);
@@ -105,7 +105,7 @@ static inline eccindexkey_t keyOfIndex(uint32_t index, int create)
 
     length = snprintf(buffer, sizeof(buffer), "%u", (unsigned)index);
     if(create)
-        return io_libecc_Key.makeWithText(ECCNSText.make(buffer, length), io_libecc_key_copyOnCreate);
+        return io_libecc_Key.makeWithText(ECCNSText.make(buffer, length), ECC_INDEXFLAG_COPYONCREATE);
     else
         return io_libecc_Key.search(ECCNSText.make(buffer, length));
 }
@@ -522,7 +522,7 @@ static eccvalue_t seal(eccstate_t* context)
     uint32_t index, count;
 
     object = checkObject(context, 0);
-    object->flags |= io_libecc_object_sealed;
+    object->flags |= ECC_OBJFLAG_SEALED;
 
     for(index = 0, count = elementCount(object); index < count; ++index)
         if(object->element[index].value.check == 1)
@@ -541,7 +541,7 @@ static eccvalue_t freeze(eccstate_t* context)
     uint32_t index, count;
 
     object = checkObject(context, 0);
-    object->flags |= io_libecc_object_sealed;
+    object->flags |= ECC_OBJFLAG_SEALED;
 
     for(index = 0, count = elementCount(object); index < count; ++index)
         if(object->element[index].value.check == 1)
@@ -559,7 +559,7 @@ static eccvalue_t preventExtensions(eccstate_t* context)
     eccobject_t* object;
 
     object = checkObject(context, 0);
-    object->flags |= io_libecc_object_sealed;
+    object->flags |= ECC_OBJFLAG_SEALED;
 
     return ECCNSValue.object(object);
 }
@@ -570,7 +570,7 @@ static eccvalue_t isSealed(eccstate_t* context)
     uint32_t index, count;
 
     object = checkObject(context, 0);
-    if(!(object->flags & io_libecc_object_sealed))
+    if(!(object->flags & ECC_OBJFLAG_SEALED))
         return ECCValConstFalse;
 
     for(index = 0, count = elementCount(object); index < count; ++index)
@@ -590,7 +590,7 @@ static eccvalue_t isFrozen(eccstate_t* context)
     uint32_t index, count;
 
     object = checkObject(context, 0);
-    if(!(object->flags & io_libecc_object_sealed))
+    if(!(object->flags & ECC_OBJFLAG_SEALED))
         return ECCValConstFalse;
 
     for(index = 0, count = elementCount(object); index < count; ++index)
@@ -609,7 +609,7 @@ static eccvalue_t isExtensible(eccstate_t* context)
     eccobject_t* object;
 
     object = checkObject(context, 0);
-    return ECCNSValue.truth(!(object->flags & io_libecc_object_sealed));
+    return ECCNSValue.truth(!(object->flags & ECC_OBJFLAG_SEALED));
 }
 
 static eccvalue_t keys(eccstate_t* context)
@@ -856,9 +856,9 @@ eccvalue_t getValue(eccstate_t* context, eccobject_t* self, eccvalue_t* ref)
             ECCNSScript.fatal("cannot use getter outside context");
 
         if(ref->flags & ECC_VALFLAG_GETTER)
-            return ECCNSContext.callFunction(context, ref->data.function, ECCNSValue.object(self), 0 | io_libecc_context_asAccessor);
+            return ECCNSContext.callFunction(context, ref->data.function, ECCNSValue.object(self), 0 | ECC_CTXSPECIALTYPE_ASACCESSOR);
         else if(ref->data.function->pair)
-            return ECCNSContext.callFunction(context, ref->data.function->pair, ECCNSValue.object(self), 0 | io_libecc_context_asAccessor);
+            return ECCNSContext.callFunction(context, ref->data.function->pair, ECCNSValue.object(self), 0 | ECC_CTXSPECIALTYPE_ASACCESSOR);
         else
             return ECCValConstUndefined;
     }
@@ -897,9 +897,9 @@ eccvalue_t putValue(eccstate_t* context, eccobject_t* self, eccvalue_t* ref, ecc
         assert(context);
 
         if(ref->flags & ECC_VALFLAG_SETTER)
-            ECCNSContext.callFunction(context, ref->data.function, ECCNSValue.object(self), 1 | io_libecc_context_asAccessor, value);
+            ECCNSContext.callFunction(context, ref->data.function, ECCNSValue.object(self), 1 | ECC_CTXSPECIALTYPE_ASACCESSOR, value);
         else if(ref->data.function->pair)
-            ECCNSContext.callFunction(context, ref->data.function->pair, ECCNSValue.object(self), 1 | io_libecc_context_asAccessor, value);
+            ECCNSContext.callFunction(context, ref->data.function->pair, ECCNSValue.object(self), 1 | ECC_CTXSPECIALTYPE_ASACCESSOR, value);
         else if(context->strictMode || (context->parent && context->parent->strictMode))
             readonlyError(context, ref, self);
 
@@ -936,7 +936,7 @@ eccvalue_t putMember(eccstate_t* context, eccobject_t* self, eccindexkey_t key, 
             ECCNSContext.typeError(context, io_libecc_Chars.create("'%.*s' is readonly", io_libecc_Key.textOf(key)->length, io_libecc_Key.textOf(key)->bytes));
     }
 
-    if(self->flags & io_libecc_object_sealed)
+    if(self->flags & ECC_OBJFLAG_SEALED)
         ECCNSContext.typeError(context, io_libecc_Chars.create("object is not extensible"));
 
     return *addMember(self, key, value, 0);
@@ -966,7 +966,7 @@ eccvalue_t putElement(eccstate_t* context, eccobject_t* self, uint32_t index, ec
             ECCNSContext.typeError(context, io_libecc_Chars.create("'%u' is readonly", index, index));
     }
 
-    if(self->flags & io_libecc_object_sealed)
+    if(self->flags & ECC_OBJFLAG_SEALED)
         ECCNSContext.typeError(context, io_libecc_Chars.create("object is not extensible"));
 
     return *addElement(self, index, value, 0);

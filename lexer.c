@@ -66,12 +66,12 @@ static eccastlexer_t* createWithInput(eccioinput_t*);
 static void destroy(eccastlexer_t*);
 static eccasttoktype_t nextToken(eccastlexer_t*);
 static const char* tokenChars(eccasttoktype_t token, char buffer[4]);
-static eccvalue_t scanBinary(ecctextstring_t text, enum io_libecc_lexer_ScanFlags);
-static eccvalue_t scanInteger(ecctextstring_t text, int base, enum io_libecc_lexer_ScanFlags);
+static eccvalue_t scanBinary(ecctextstring_t text, eccastlexflags_t);
+static eccvalue_t scanInteger(ecctextstring_t text, int base, eccastlexflags_t);
 static uint32_t scanElement(ecctextstring_t text);
 static uint8_t uint8Hex(char a, char b);
 static uint16_t uint16Hex(char a, char b, char c, char d);
-const struct type_io_libecc_Lexer io_libecc_Lexer = {
+const struct eccpseudonslexer_t io_libecc_Lexer = {
     createWithInput, destroy, nextToken, tokenChars, scanBinary, scanInteger, scanElement, uint8Hex, uint16Hex,
     {}
 };
@@ -775,14 +775,14 @@ const char* tokenChars(eccasttoktype_t token, char buffer[4])
     return "unknown";
 }
 
-eccvalue_t scanBinary(ecctextstring_t text, enum io_libecc_lexer_ScanFlags flags)
+eccvalue_t scanBinary(ecctextstring_t text, eccastlexflags_t flags)
 {
-    int lazy = flags & io_libecc_lexer_scanLazy;
+    int lazy = flags & ECC_LEXFLAG_SCANLAZY;
     char buffer[text.length + 1];
     char* end = buffer;
     double binary = NAN;
 
-    if(flags & io_libecc_lexer_scanSloppy)
+    if(flags & ECC_LEXFLAG_SCANSLOPPY)
     {
         ecctextstring_t tail = ECCNSText.make(text.bytes + text.length, text.length);
 
@@ -853,14 +853,14 @@ static double strtolHexFallback(ecctextstring_t text)
     return binary * sign;
 }
 
-eccvalue_t scanInteger(ecctextstring_t text, int base, enum io_libecc_lexer_ScanFlags flags)
+eccvalue_t scanInteger(ecctextstring_t text, int base, eccastlexflags_t flags)
 {
-    int lazy = flags & io_libecc_lexer_scanLazy;
+    int lazy = flags & ECC_LEXFLAG_SCANLAZY;
     long integer;
     char buffer[text.length + 1];
     char* end;
 
-    if(flags & io_libecc_lexer_scanSloppy)
+    if(flags & ECC_LEXFLAG_SCANSLOPPY)
     {
         ecctextstring_t tail = ECCNSText.make(text.bytes + text.length, text.length);
 

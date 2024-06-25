@@ -42,13 +42,13 @@ static const double msPerMinute = 60000;
 static const double msPerHour = 3600000;
 static const double msPerDay = 86400000;
 
-static void setup(void);
-static void teardown(void);
-static eccobjdate_t* create(double);
-const struct type_io_libecc_Date io_libecc_Date = {
-    setup,
-    teardown,
-    create,
+static void nsdatefn_setup(void);
+static void nsdatefn_teardown(void);
+static eccobjdate_t* nsdatefn_create(double);
+const struct eccpseudonsdate_t io_libecc_Date = {
+    nsdatefn_setup,
+    nsdatefn_teardown,
+    nsdatefn_create,
     {},
 };
 
@@ -361,7 +361,7 @@ static eccvalue_t toJSON(eccstate_t* context)
     toISO = ECCNSObject.getMember(context, object.data.object, io_libecc_key_toISOString);
     if(toISO.type != ECC_VALTYPE_FUNCTION)
     {
-        ECCNSContext.setTextIndex(context, io_libecc_context_callIndex);
+        ECCNSContext.setTextIndex(context, ECC_CTXINDEXTYPE_CALL);
         ECCNSContext.typeError(context, io_libecc_Chars.create("toISOString is not a function"));
     }
     return ECCNSContext.callFunction(context, toISO.data.function, object, 0);
@@ -924,18 +924,18 @@ static eccvalue_t constructor(eccstate_t* context)
     else
         time = ECCNSEnv.currentTime();
 
-    return ECCNSValue.date(create(time));
+    return ECCNSValue.date(nsdatefn_create(time));
 }
 
 // MARK: - Methods
 
-void setup(void)
+void nsdatefn_setup(void)
 {
     const eccvalflag_t h = ECC_VALFLAG_HIDDEN;
 
     setupLocalOffset();
 
-    io_libecc_Function.setupBuiltinObject(&io_libecc_date_constructor, constructor, -7, &io_libecc_date_prototype, ECCNSValue.date(create(NAN)), &io_libecc_date_type);
+    io_libecc_Function.setupBuiltinObject(&io_libecc_date_constructor, constructor, -7, &io_libecc_date_prototype, ECCNSValue.date(nsdatefn_create(NAN)), &io_libecc_date_type);
 
     io_libecc_Function.addMethod(io_libecc_date_constructor, "parse", parse, 1, h);
     io_libecc_Function.addMethod(io_libecc_date_constructor, "UTC", UTC, -7, h);
@@ -989,13 +989,13 @@ void setup(void)
     io_libecc_Function.addToObject(io_libecc_date_prototype, "toJSON", toJSON, 1, h);
 }
 
-void teardown(void)
+void nsdatefn_teardown(void)
 {
     io_libecc_date_prototype = NULL;
     io_libecc_date_constructor = NULL;
 }
 
-eccobjdate_t* create(double ms)
+eccobjdate_t* nsdatefn_create(double ms)
 {
     eccobjdate_t* self = malloc(sizeof(*self));
     *self = io_libecc_Date.identity;

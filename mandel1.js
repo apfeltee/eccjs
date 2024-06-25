@@ -1,4 +1,3 @@
-import * as std from "std";
 /*
  * This is an integer ascii Mandelbrot generator
  */
@@ -40,9 +39,9 @@ while (y0 > bottom_edge)
             x = x_x - y_y + x0;
             i = i + 1;
         }
-        std.out.printf(String.fromCharCode(the_char));
+        print(String.fromCharCode(the_char));
         x0 = x0 + x_step;
     }
     y0 = y0 - y_step;
-    std.out.printf("\n");
+    print("\n");
 }

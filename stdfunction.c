@@ -23,7 +23,7 @@ static void linkPrototype(eccobjscriptfunction_t*, eccvalue_t prototype, eccvalf
 static void
 setupBuiltinObject(eccobjscriptfunction_t**, const eccnativefuncptr_t, int parameterCount, eccobject_t**, eccvalue_t prototype, const eccobjinterntype_t* type);
 static eccvalue_t accessor(const eccnativefuncptr_t getter, const eccnativefuncptr_t setter);
-const struct type_io_libecc_Function io_libecc_Function = {
+const struct eccpseudonsfunction_t io_libecc_Function = {
     setup,     teardown,    create,      createSized,   createWithNative,   copy,     destroy, addMember, addValue,
     addMethod, addFunction, addToObject, linkPrototype, setupBuiltinObject, accessor,
     {}
@@ -113,13 +113,13 @@ static eccvalue_t apply(eccstate_t* context)
     arguments = ECCNSContext.argument(context, 1);
 
     if(arguments.type == ECC_VALTYPE_UNDEFINED || arguments.type == ECC_VALTYPE_NULL)
-        return io_libecc_Op.callFunctionVA(context, io_libecc_context_applyOffset, context->thisvalue.data.function, thisval, 0, empty_ap);
+        return io_libecc_Op.callFunctionVA(context, ECC_CTXOFFSET_APPLY, context->thisvalue.data.function, thisval, 0, empty_ap);
     else
     {
         if(!ECCNSValue.isObject(arguments))
             ECCNSContext.typeError(context, io_libecc_Chars.create("arguments is not an object"));
 
-        return io_libecc_Op.callFunctionArguments(context, io_libecc_context_applyOffset, context->thisvalue.data.function, thisval, arguments.data.object);
+        return io_libecc_Op.callFunctionArguments(context, ECC_CTXOFFSET_APPLY, context->thisvalue.data.function, thisval, arguments.data.object);
     }
 }
 
@@ -148,10 +148,10 @@ static eccvalue_t call(eccstate_t* context)
             arguments.elementCapacity = 0;
         }
 
-        return io_libecc_Op.callFunctionArguments(context, io_libecc_context_callOffset, context->thisvalue.data.function, thisval, &arguments);
+        return io_libecc_Op.callFunctionArguments(context, ECC_CTXOFFSET_CALL, context->thisvalue.data.function, thisval, &arguments);
     }
     else
-        return io_libecc_Op.callFunctionVA(context, io_libecc_context_callOffset, context->thisvalue.data.function, ECCValConstUndefined, 0, empty_ap);
+        return io_libecc_Op.callFunctionVA(context, ECC_CTXOFFSET_CALL, context->thisvalue.data.function, ECCValConstUndefined, 0, empty_ap);
 }
 
 static eccvalue_t bindCall(eccstate_t* context)
@@ -198,7 +198,7 @@ static eccvalue_t bind(eccstate_t* context)
 
     function->pair = context->thisvalue.data.function;
     function->boundThis = ECCNSValue.function(function);
-    function->flags |= io_libecc_function_needArguments | io_libecc_function_useBoundThis;
+    function->flags |= ECC_SCRIPTFUNCFLAG_NEEDARGUMENTS | ECC_SCRIPTFUNCFLAG_USEBOUNDTHIS;
 
     return ECCNSValue.function(function);
 }
@@ -249,7 +249,7 @@ static eccvalue_t constructor(eccstate_t* context)
 
         value = io_libecc_Chars.endAppend(&chars);
         input = io_libecc_Input.createFromBytes(ECCNSValue.stringBytes(&value), ECCNSValue.stringLength(&value), "(io_libecc_Function)");
-        ECCNSContext.setTextIndex(context, io_libecc_context_noIndex);
+        ECCNSContext.setTextIndex(context, ECC_CTXINDEXTYPE_NO);
         ECCNSScript.evalInputWithContext(context->ecc, input, &subContext);
     }
 
@@ -304,7 +304,7 @@ eccobjscriptfunction_t* createWithNative(const eccnativefuncptr_t native, int pa
     if(parameterCount < 0)
     {
         self = createSized(NULL, 3);
-        self->flags |= io_libecc_function_needArguments;
+        self->flags |= ECC_SCRIPTFUNCFLAG_NEEDARGUMENTS;
     }
     else
     {

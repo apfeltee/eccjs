@@ -12,7 +12,7 @@
 static void setup(void);
 static void teardown(void);
 static eccobjscriptfunction_t* create(void);
-const struct type_io_libecc_Global io_libecc_Global = {
+const struct eccpseudonsglobal_t io_libecc_Global = {
     setup,
     teardown,
     create,
@@ -43,7 +43,7 @@ static eccvalue_t eval(eccstate_t* context)
 
     input = io_libecc_Input.createFromBytes(ECCNSValue.stringBytes(&value), ECCNSValue.stringLength(&value), "(eval)");
 
-    ECCNSContext.setTextIndex(context, io_libecc_context_noIndex);
+    ECCNSContext.setTextIndex(context, ECC_CTXINDEXTYPE_NO);
     ECCNSScript.evalInputWithContext(context->ecc, input, &subContext);
 
     return context->ecc->result;
@@ -72,7 +72,7 @@ static eccvalue_t parseInt(eccstate_t* context)
             base = 10;
     }
 
-    return io_libecc_Lexer.scanInteger(text, base, io_libecc_lexer_scanLazy | (context->ecc->sloppyMode ? io_libecc_lexer_scanSloppy : 0));
+    return io_libecc_Lexer.scanInteger(text, base, ECC_LEXFLAG_SCANLAZY | (context->ecc->sloppyMode ? ECC_LEXFLAG_SCANSLOPPY : 0));
 }
 
 static eccvalue_t parseFloat(eccstate_t* context)
@@ -82,7 +82,7 @@ static eccvalue_t parseFloat(eccstate_t* context)
 
     value = ECCNSValue.toString(context, ECCNSContext.argument(context, 0));
     text = ECCNSValue.textOf(&value);
-    return io_libecc_Lexer.scanBinary(text, io_libecc_lexer_scanLazy | (context->ecc->sloppyMode ? io_libecc_lexer_scanSloppy : 0));
+    return io_libecc_Lexer.scanBinary(text, ECC_LEXFLAG_SCANLAZY | (context->ecc->sloppyMode ? ECC_LEXFLAG_SCANSLOPPY : 0));
 }
 
 static eccvalue_t isFinite(eccstate_t* context)

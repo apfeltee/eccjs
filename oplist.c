@@ -12,28 +12,41 @@
 // MARK: - Static Members
 
 // MARK: - Methods
-static eccoplist_t* create(const eccnativefuncptr_t native, eccvalue_t value, ecctextstring_t text);
-static void destroy(eccoplist_t*);
-static eccoplist_t* join(eccoplist_t*, eccoplist_t*);
-static eccoplist_t* join3(eccoplist_t*, eccoplist_t*, eccoplist_t*);
-static eccoplist_t* joinDiscarded(eccoplist_t*, uint16_t n, eccoplist_t*);
-static eccoplist_t* unshift(eccoperand_t op, eccoplist_t*);
-static eccoplist_t* unshiftJoin(eccoperand_t op, eccoplist_t*, eccoplist_t*);
-static eccoplist_t* unshiftJoin3(eccoperand_t op, eccoplist_t*, eccoplist_t*, eccoplist_t*);
-static eccoplist_t* shift(eccoplist_t*);
-static eccoplist_t* append(eccoplist_t*, eccoperand_t op);
-static eccoplist_t* appendNoop(eccoplist_t*);
-static eccoplist_t* createLoop(eccoplist_t* initial, eccoplist_t* condition, eccoplist_t* step, eccoplist_t* body, int reverseCondition);
-static void optimizeWithEnvironment(eccoplist_t*, eccobject_t* environment, uint32_t index);
-static void dumpTo(eccoplist_t*, FILE* file);
-static ecctextstring_t text(eccoplist_t* oplist);
-const struct type_io_libecc_OpList io_libecc_OpList = {
-    create, destroy, join,       join3,      joinDiscarded,           unshift, unshiftJoin, unshiftJoin3,
-    shift,  append,  appendNoop, createLoop, optimizeWithEnvironment, dumpTo,  text,
+static eccoplist_t* oplistfn_create(const eccnativefuncptr_t native, eccvalue_t value, ecctextstring_t text);
+static void oplistfn_destroy(eccoplist_t*);
+static eccoplist_t* oplistfn_join(eccoplist_t*, eccoplist_t*);
+static eccoplist_t* oplistfn_join3(eccoplist_t*, eccoplist_t*, eccoplist_t*);
+static eccoplist_t* oplistfn_joinDiscarded(eccoplist_t*, uint16_t n, eccoplist_t*);
+static eccoplist_t* oplistfn_unshift(eccoperand_t op, eccoplist_t*);
+static eccoplist_t* oplistfn_unshiftJoin(eccoperand_t op, eccoplist_t*, eccoplist_t*);
+static eccoplist_t* oplistfn_unshiftJoin3(eccoperand_t op, eccoplist_t*, eccoplist_t*, eccoplist_t*);
+static eccoplist_t* oplistfn_shift(eccoplist_t*);
+static eccoplist_t* oplistfn_append(eccoplist_t*, eccoperand_t op);
+static eccoplist_t* oplistfn_appendNoop(eccoplist_t*);
+static eccoplist_t* oplistfn_createLoop(eccoplist_t* initial, eccoplist_t* condition, eccoplist_t* step, eccoplist_t* body, int reverseCondition);
+static void oplistfn_optimizeWithEnvironment(eccoplist_t*, eccobject_t* environment, uint32_t index);
+static void oplistfn_dumpTo(eccoplist_t*, FILE* file);
+static ecctextstring_t oplistfn_text(eccoplist_t* oplist);
+const struct eccpseudonsoplist_t io_libecc_OpList = {
+    oplistfn_create,
+    oplistfn_destroy,
+    oplistfn_join,
+    oplistfn_join3,
+    oplistfn_joinDiscarded,
+    oplistfn_unshift,
+    oplistfn_unshiftJoin,
+    oplistfn_unshiftJoin3,
+    oplistfn_shift,
+    oplistfn_append,
+    oplistfn_appendNoop,
+    oplistfn_createLoop,
+    oplistfn_optimizeWithEnvironment,
+    oplistfn_dumpTo,
+    oplistfn_text,
     {}
 };
 
-eccoplist_t* create(const eccnativefuncptr_t native, eccvalue_t value, ecctextstring_t text)
+eccoplist_t* oplistfn_create(const eccnativefuncptr_t native, eccvalue_t value, ecctextstring_t text)
 {
     eccoplist_t* self = malloc(sizeof(*self));
     self->ops = malloc(sizeof(*self->ops) * 1);
@@ -42,7 +55,7 @@ eccoplist_t* create(const eccnativefuncptr_t native, eccvalue_t value, ecctextst
     return self;
 }
 
-void destroy(eccoplist_t* self)
+void oplistfn_destroy(eccoplist_t* self)
 {
     assert(self);
 
@@ -50,7 +63,7 @@ void destroy(eccoplist_t* self)
     free(self), self = NULL;
 }
 
-eccoplist_t* join(eccoplist_t* self, eccoplist_t* with)
+eccoplist_t* oplistfn_join(eccoplist_t* self, eccoplist_t* with)
 {
     if(!self)
         return with;
@@ -61,32 +74,32 @@ eccoplist_t* join(eccoplist_t* self, eccoplist_t* with)
     memcpy(self->ops + self->count, with->ops, sizeof(*self->ops) * with->count);
     self->count += with->count;
 
-    destroy(with), with = NULL;
+    oplistfn_destroy(with), with = NULL;
 
     return self;
 }
 
-eccoplist_t* join3(eccoplist_t* self, eccoplist_t* a, eccoplist_t* b)
+eccoplist_t* oplistfn_join3(eccoplist_t* self, eccoplist_t* a, eccoplist_t* b)
 {
     if(!self)
-        return join(a, b);
+        return oplistfn_join(a, b);
     else if(!a)
-        return join(self, b);
+        return oplistfn_join(self, b);
     else if(!b)
-        return join(self, a);
+        return oplistfn_join(self, a);
 
     self->ops = realloc(self->ops, sizeof(*self->ops) * (self->count + a->count + b->count));
     memcpy(self->ops + self->count, a->ops, sizeof(*self->ops) * a->count);
     memcpy(self->ops + self->count + a->count, b->ops, sizeof(*self->ops) * b->count);
     self->count += a->count + b->count;
 
-    destroy(a), a = NULL;
-    destroy(b), b = NULL;
+    oplistfn_destroy(a), a = NULL;
+    oplistfn_destroy(b), b = NULL;
 
     return self;
 }
 
-eccoplist_t* joinDiscarded(eccoplist_t* self, uint16_t n, eccoplist_t* with)
+eccoplist_t* oplistfn_joinDiscarded(eccoplist_t* self, uint16_t n, eccoplist_t* with)
 {
     while(n > 16)
     {
@@ -99,13 +112,13 @@ eccoplist_t* joinDiscarded(eccoplist_t* self, uint16_t n, eccoplist_t* with)
     else
         self = io_libecc_OpList.append(self, io_libecc_Op.make(io_libecc_Op.discardN, ECCNSValue.integer(n), ECC_ConstString_Empty));
 
-    return join(self, with);
+    return oplistfn_join(self, with);
 }
 
-eccoplist_t* unshift(eccoperand_t op, eccoplist_t* self)
+eccoplist_t* oplistfn_unshift(eccoperand_t op, eccoplist_t* self)
 {
     if(!self)
-        return create(op.native, op.value, op.text);
+        return oplistfn_create(op.native, op.value, op.text);
 
     self->ops = realloc(self->ops, sizeof(*self->ops) * (self->count + 1));
     memmove(self->ops + 1, self->ops, sizeof(*self->ops) * self->count++);
@@ -113,12 +126,12 @@ eccoplist_t* unshift(eccoperand_t op, eccoplist_t* self)
     return self;
 }
 
-eccoplist_t* unshiftJoin(eccoperand_t op, eccoplist_t* self, eccoplist_t* with)
+eccoplist_t* oplistfn_unshiftJoin(eccoperand_t op, eccoplist_t* self, eccoplist_t* with)
 {
     if(!self)
-        return unshift(op, with);
+        return oplistfn_unshift(op, with);
     else if(!with)
-        return unshift(op, self);
+        return oplistfn_unshift(op, self);
 
     self->ops = realloc(self->ops, sizeof(*self->ops) * (self->count + with->count + 1));
     memmove(self->ops + 1, self->ops, sizeof(*self->ops) * self->count);
@@ -126,19 +139,19 @@ eccoplist_t* unshiftJoin(eccoperand_t op, eccoplist_t* self, eccoplist_t* with)
     self->ops[0] = op;
     self->count += with->count + 1;
 
-    destroy(with), with = NULL;
+    oplistfn_destroy(with), with = NULL;
 
     return self;
 }
 
-eccoplist_t* unshiftJoin3(eccoperand_t op, eccoplist_t* self, eccoplist_t* a, eccoplist_t* b)
+eccoplist_t* oplistfn_unshiftJoin3(eccoperand_t op, eccoplist_t* self, eccoplist_t* a, eccoplist_t* b)
 {
     if(!self)
-        return unshiftJoin(op, a, b);
+        return oplistfn_unshiftJoin(op, a, b);
     else if(!a)
-        return unshiftJoin(op, self, b);
+        return oplistfn_unshiftJoin(op, self, b);
     else if(!b)
-        return unshiftJoin(op, self, a);
+        return oplistfn_unshiftJoin(op, self, a);
 
     self->ops = realloc(self->ops, sizeof(*self->ops) * (self->count + a->count + b->count + 1));
     memmove(self->ops + 1, self->ops, sizeof(*self->ops) * self->count);
@@ -147,34 +160,34 @@ eccoplist_t* unshiftJoin3(eccoperand_t op, eccoplist_t* self, eccoplist_t* a, ec
     self->ops[0] = op;
     self->count += a->count + b->count + 1;
 
-    destroy(a), a = NULL;
-    destroy(b), b = NULL;
+    oplistfn_destroy(a), a = NULL;
+    oplistfn_destroy(b), b = NULL;
 
     return self;
 }
 
-eccoplist_t* shift(eccoplist_t* self)
+eccoplist_t* oplistfn_shift(eccoplist_t* self)
 {
     memmove(self->ops, self->ops + 1, sizeof(*self->ops) * --self->count);
     return self;
 }
 
-eccoplist_t* append(eccoplist_t* self, eccoperand_t op)
+eccoplist_t* oplistfn_append(eccoplist_t* self, eccoperand_t op)
 {
     if(!self)
-        return create(op.native, op.value, op.text);
+        return oplistfn_create(op.native, op.value, op.text);
 
     self->ops = realloc(self->ops, sizeof(*self->ops) * (self->count + 1));
     self->ops[self->count++] = op;
     return self;
 }
 
-eccoplist_t* appendNoop(eccoplist_t* self)
+eccoplist_t* oplistfn_appendNoop(eccoplist_t* self)
 {
-    return append(self, io_libecc_Op.make(io_libecc_Op.noop, ECCValConstUndefined, ECC_ConstString_Empty));
+    return oplistfn_append(self, io_libecc_Op.make(io_libecc_Op.noop, ECCValConstUndefined, ECC_ConstString_Empty));
 }
 
-eccoplist_t* createLoop(eccoplist_t* initial, eccoplist_t* condition, eccoplist_t* step, eccoplist_t* body, int reverseCondition)
+eccoplist_t* oplistfn_createLoop(eccoplist_t* initial, eccoplist_t* condition, eccoplist_t* step, eccoplist_t* body, int reverseCondition)
 {
     if(condition && step && condition->count == 3 && !reverseCondition)
     {
@@ -270,7 +283,7 @@ normal:
 }
 }
 
-void optimizeWithEnvironment(eccoplist_t* self, eccobject_t* environment, uint32_t selfIndex)
+void oplistfn_optimizeWithEnvironment(eccoplist_t* self, eccobject_t* environment, uint32_t selfIndex)
 {
     uint32_t index, count, slot, haveLocal = 0, environmentLevel = 0;
     eccindexkey_t environments[0xff];
@@ -289,7 +302,7 @@ void optimizeWithEnvironment(eccoplist_t* self, eccobject_t* environment, uint32
         if(self->ops[index].native == io_libecc_Op.function)
         {
             uint32_t subselfidx = ((index && (self->ops[index - 1].native == io_libecc_Op.setLocalSlot)) ? self->ops[index - 1].value.data.integer : 0);
-            optimizeWithEnvironment(self->ops[index].value.data.function->oplist, &self->ops[index].value.data.function->environment, subselfidx);
+            oplistfn_optimizeWithEnvironment(self->ops[index].value.data.function->oplist, &self->ops[index].value.data.function->environment, subselfidx);
         }
 
         if(self->ops[index].native == io_libecc_Op.pushEnvironment)
@@ -372,7 +385,7 @@ void optimizeWithEnvironment(eccoplist_t* self, eccobject_t* environment, uint32
         ECCNSObject.stripMap(environment);
 }
 
-void dumpTo(eccoplist_t* self, FILE* file)
+void oplistfn_dumpTo(eccoplist_t* self, FILE* file)
 {
     uint32_t i;
 
@@ -408,7 +421,7 @@ void dumpTo(eccoplist_t* self, FILE* file)
     }
 }
 
-ecctextstring_t text(eccoplist_t* oplist)
+ecctextstring_t oplistfn_text(eccoplist_t* oplist)
 {
     uint16_t length;
     if(!oplist)

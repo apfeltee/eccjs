@@ -21,7 +21,7 @@ static void setup(void);
 static void teardown(void);
 static eccobject_t* createSized(uint32_t size);
 static eccobject_t* createWithCList(int count, const char* list[]);
-const struct type_io_libecc_Arguments ECCNSArguments = {
+const struct eccpseudonsarguments_t ECCNSArguments = {
     setup,
     teardown,
     createSized,

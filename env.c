@@ -28,12 +28,12 @@
 static void setup(void);
 static void teardown(void);
 static void print(const char* format, ...);
-static void printColor(enum io_libecc_env_Color color, enum io_libecc_env_Attribute attribute, const char* format, ...);
+static void printColor(eccenvcolor_t color, eccenvattribute_t attribute, const char* format, ...);
 static void printError(int typeLength, const char* type, const char* format, ...);
 static void printWarning(const char* format, ...);
 static void newline(void);
 static double currentTime(void);
-const struct type_io_libecc_Env ECCNSEnv = {
+const struct eccpseudonsenv_t ECCNSEnv = {
     setup, teardown, print, printColor, printError, printWarning, newline, currentTime,
     {}
 };
@@ -85,19 +85,19 @@ void teardown(void)
     newline();
 }
 
-static void textc(enum io_libecc_env_Color c, enum io_libecc_env_Attribute a)
+static void textc(eccenvcolor_t c, eccenvattribute_t a)
 {
 #if __MSDOS__ || _WIN32
-    if(a == io_libecc_env_invisible)
+    if(a == ECC_ENVATTR_INVISIBLE)
         c = (env.attribute >> 4) & 0x7;
-    else if(c == io_libecc_env_white || !c)
-        c = a == io_libecc_env_bold ? 0xf : 0x7;
-    else if(c == io_libecc_env_black)
-        c = a == io_libecc_env_bold ? 0x7 : 0x8;
+    else if(c == ECC_COLOR_WHITE || !c)
+        c = a == ECC_ENVATTR_BOLD ? 0xf : 0x7;
+    else if(c == ECC_COLOR_BLACK)
+        c = a == ECC_ENVATTR_BOLD ? 0x7 : 0x8;
     else
     {
         c -= 30;
-        c = (a == io_libecc_env_bold ? 0x8 : 0) | ((c << 2) & 0x4) | (c & 0x2) | ((c >> 2) & 0x1);
+        c = (a == ECC_ENVATTR_BOLD ? 0x8 : 0) | ((c << 2) & 0x4) | (c & 0x2) | ((c >> 2) & 0x1);
     }
     c |= env.attribute & 0xf0;
 
@@ -150,7 +150,7 @@ void print(const char* format, ...)
     va_end(ap);
 }
 
-void printColor(enum io_libecc_env_Color color, enum io_libecc_env_Attribute attribute, const char* format, ...)
+void printColor(eccenvcolor_t color, eccenvattribute_t attribute, const char* format, ...)
 {
     va_list ap;
 
@@ -165,11 +165,11 @@ void printError(int typeLength, const char* type, const char* format, ...)
 {
     va_list ap;
 
-    printColor(io_libecc_env_red, io_libecc_env_bold, "%.*s", typeLength, type);
+    printColor(ECC_COLOR_RED, ECC_ENVATTR_BOLD, "%.*s", typeLength, type);
     print(": ");
 
     va_start(ap, format);
-    textc(0, io_libecc_env_bold);
+    textc(0, ECC_ENVATTR_BOLD);
     vprintc(format, ap);
     textc(0, 0);
     va_end(ap);
@@ -181,11 +181,11 @@ void printWarning(const char* format, ...)
 {
     va_list ap;
 
-    printColor(io_libecc_env_yellow, io_libecc_env_bold, "Warning");
+    printColor(ECC_COLOR_YELLOW, ECC_ENVATTR_BOLD, "Warning");
     print(": ");
 
     va_start(ap, format);
-    textc(0, io_libecc_env_bold);
+    textc(0, ECC_ENVATTR_BOLD);
     vprintc(format, ap);
     textc(0, 0);
     va_end(ap);

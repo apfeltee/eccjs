@@ -29,7 +29,7 @@ static eccobjstring_t* create(ecccharbuffer_t*);
 static eccvalue_t valueAtIndex(eccobjstring_t*, int32_t index);
 static ecctextstring_t textAtIndex(const char* chars, int32_t length, int32_t index, int enableReverse);
 static int32_t unitIndex(const char* chars, int32_t max, int32_t unit);
-const struct type_io_libecc_String io_libecc_String = {
+const struct eccpseudonsstring_t io_libecc_String = {
     setup, teardown, create, valueAtIndex, textAtIndex, unitIndex,
     {}
 };
@@ -690,7 +690,7 @@ static eccvalue_t split(eccstate_t* context)
         separator = ECCNSValue.textOf(&separatorValue);
     }
 
-    ECCNSContext.setTextIndex(context, io_libecc_context_callIndex);
+    ECCNSContext.setTextIndex(context, ECC_CTXINDEXTYPE_CALL);
 
     array = io_libecc_Array.create();
 
@@ -1032,7 +1032,7 @@ eccobjstring_t* create(ecccharbuffer_t* chars)
     self->value = chars;
     if(length == (uint32_t)chars->length)
     {
-        chars->flags |= io_libecc_chars_asciiOnly;
+        chars->flags |= ECC_CHARBUFFLAG_ASCIIONLY;
     }
     return self;
 }

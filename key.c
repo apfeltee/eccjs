@@ -49,12 +49,12 @@ eccindexkey_t io_libecc_key_source;
 static void setup(void);
 static void teardown(void);
 static eccindexkey_t makeWithCString(const char* cString);
-static eccindexkey_t makeWithText(const ecctextstring_t text, enum io_libecc_key_Flags flags);
+static eccindexkey_t makeWithText(const ecctextstring_t text, eccindexflags_t flags);
 static eccindexkey_t search(const ecctextstring_t text);
 static int isEqual(eccindexkey_t, eccindexkey_t);
 static const ecctextstring_t* textOf(eccindexkey_t);
 static void dumpTo(eccindexkey_t, FILE*);
-const struct type_io_libecc_Key io_libecc_Key = {
+const struct eccpseudonskey_t io_libecc_Key = {
     setup, teardown, makeWithCString, makeWithText, search, isEqual, textOf, dumpTo,
     {}
 };
@@ -71,7 +71,7 @@ static eccindexkey_t makeWithNumber(uint16_t number)
     return key;
 }
 
-static eccindexkey_t addWithText(const ecctextstring_t text, enum io_libecc_key_Flags flags)
+static eccindexkey_t addWithText(const ecctextstring_t text, eccindexflags_t flags)
 {
     if(keyCount >= keyCapacity)
     {
@@ -86,7 +86,7 @@ static eccindexkey_t addWithText(const ecctextstring_t text, enum io_libecc_key_
         ECCNSEnv.printWarning("Creating identifier '%.*s'; %u identifier(s) left. Using array of length > 0x%x, or negative-integer/floating-point as property name is discouraged",
                               text.length, text.bytes, UINT16_MAX - keyCount, io_libecc_object_ElementMax);
 
-    if(flags & io_libecc_key_copyOnCreate)
+    if(flags & ECC_INDEXFLAG_COPYONCREATE)
     {
         char* chars = malloc(text.length + 1);
         memcpy(chars, text.bytes, text.length);
@@ -225,7 +225,7 @@ eccindexkey_t makeWithCString(const char* cString)
     return makeWithText(ECCNSText.make(cString, (uint16_t)strlen(cString)), 0);
 }
 
-eccindexkey_t makeWithText(const ecctextstring_t text, enum io_libecc_key_Flags flags)
+eccindexkey_t makeWithText(const ecctextstring_t text, eccindexflags_t flags)
 {
     eccindexkey_t key = search(text);
 
