@@ -9,9 +9,9 @@
 
 // MARK: - Private
 
-#define nextOp() (++context->ops)->native(context)
-#define opValue() (context->ops)->value
-#define opText(O) &(context->ops + O)->text
+#define opmac_next() (++context->ops)->native(context)
+#define opmac_value() (context->ops)->value
+#define opmac_text(O) &(context->ops + O)->text
 
 #if DEBUG
 
@@ -56,7 +56,7 @@ extern void usage(void)
 
 static eccvalue_t trapOp_(eccstate_t* context, int offset)
 {
-    const ecctextstring_t* text = opText(offset);
+    const ecctextstring_t* text = opmac_text(offset);
     if(debug && text->bytes && text->length)
     {
         ECCNSEnv.newline();
@@ -64,7 +64,7 @@ static eccvalue_t trapOp_(eccstate_t* context, int offset)
         ECCNSScript.printTextInput(context->ecc, *text, 1);
         trap();
     }
-    return nextOp();
+    return opmac_next();
 }
 
     #define _ return trapOp_(context, offset);
@@ -77,24 +77,24 @@ static eccvalue_t trapOp(eccstate_t* context, int offset)
     #undef _
 
 #else
-    #define trapOp(context, offset) nextOp()
+    #define trapOp(context, offset) opmac_next()
 #endif
 
 //
 
-static eccoperand_t make(const io_libecc_native_io_libecc_Function native, eccvalue_t value, ecctextstring_t text);
-static const char* toChars(const io_libecc_native_io_libecc_Function native);
-static eccvalue_t callFunctionArguments(eccstate_t*, enum io_libecc_context_Offset, eccobjscriptfunction_t* function, eccvalue_t this, eccobject_t* arguments);
-static eccvalue_t callFunctionVA(eccstate_t*, enum io_libecc_context_Offset, eccobjscriptfunction_t* function, eccvalue_t this, int argumentCount, va_list ap);
-static eccvalue_t noop(eccstate_t*);
-static eccvalue_t value(eccstate_t*);
+static eccoperand_t opfn_make(const eccnativefuncptr_t native, eccvalue_t value, ecctextstring_t text);
+static const char* opfn_tochars(const eccnativefuncptr_t native);
+static eccvalue_t opfn_callfunctionarguments(eccstate_t*, enum io_libecc_context_Offset, eccobjscriptfunction_t* function, eccvalue_t thisval, eccobject_t* arguments);
+static eccvalue_t opfn_callfunctionva(eccstate_t*, enum io_libecc_context_Offset, eccobjscriptfunction_t* function, eccvalue_t thisval, int argumentCount, va_list ap);
+static eccvalue_t opfn_noop(eccstate_t*);
+static eccvalue_t opfn_value(eccstate_t*);
 static eccvalue_t valueConstRef(eccstate_t*);
 static eccvalue_t text(eccstate_t*);
 static eccvalue_t function(eccstate_t*);
 static eccvalue_t object(eccstate_t*);
 static eccvalue_t array(eccstate_t*);
 static eccvalue_t regexp(eccstate_t*);
-static eccvalue_t this(eccstate_t*);
+static eccvalue_t opfn_this(eccstate_t*);
 static eccvalue_t createLocalRef(eccstate_t*);
 static eccvalue_t getLocalRefOrNull(eccstate_t*);
 static eccvalue_t getLocalRef(eccstate_t*);
@@ -149,7 +149,7 @@ static eccvalue_t logicalOr(eccstate_t*);
 static eccvalue_t positive(eccstate_t*);
 static eccvalue_t negative(eccstate_t*);
 static eccvalue_t invert(eccstate_t*);
-static eccvalue_t not(eccstate_t*);
+static eccvalue_t opfn_logicalnot(eccstate_t*);
 static eccvalue_t construct(eccstate_t*);
 static eccvalue_t call(eccstate_t*);
 static eccvalue_t eval(eccstate_t*);
@@ -169,8 +169,8 @@ static eccvalue_t bitAndAssignRef(eccstate_t*);
 static eccvalue_t bitXorAssignRef(eccstate_t*);
 static eccvalue_t bitOrAssignRef(eccstate_t*);
 static eccvalue_t debugger(eccstate_t*);
-static eccvalue_t try(eccstate_t*);
-static eccvalue_t throw(eccstate_t*);
+static eccvalue_t opfn_try(eccstate_t*);
+static eccvalue_t opfn_throw(eccstate_t*);
 static eccvalue_t with(eccstate_t*);
 static eccvalue_t next(eccstate_t*);
 static eccvalue_t nextIf(eccstate_t*);
@@ -194,19 +194,19 @@ static eccvalue_t iterateLessOrEqualRef(eccstate_t*);
 static eccvalue_t iterateMoreOrEqualRef(eccstate_t*);
 static eccvalue_t iterateInRef(eccstate_t*);
 const struct type_io_libecc_Op io_libecc_Op = {
-    make,
-    toChars,
-    callFunctionArguments,
-    callFunctionVA,
-    noop,
-    value,
+    opfn_make,
+    opfn_tochars,
+    opfn_callfunctionarguments,
+    opfn_callfunctionva,
+    opfn_noop,
+    opfn_value,
     valueConstRef,
     text,
     function,
     object,
     array,
     regexp,
-    this,
+    opfn_this,
     createLocalRef,
     getLocalRefOrNull,
     getLocalRef,
@@ -261,7 +261,7 @@ const struct type_io_libecc_Op io_libecc_Op = {
     positive,
     negative,
     invert,
-    not,
+    opfn_logicalnot,
     construct,
     call,
     eval,
@@ -281,8 +281,8 @@ const struct type_io_libecc_Op io_libecc_Op = {
     bitXorAssignRef,
     bitOrAssignRef,
     debugger,
-    try,
-    throw,
+    opfn_try,
+    opfn_throw,
     with,
     next,
     nextIf,
@@ -305,6 +305,7 @@ const struct type_io_libecc_Op io_libecc_Op = {
     iterateLessOrEqualRef,
     iterateMoreOrEqualRef,
     iterateInRef,
+    {},
 };
 
 static eccvalue_t retain(eccvalue_t value)
@@ -365,27 +366,27 @@ static int integerWontOverflowNegative(int32_t a, int32_t negative)
 
 // MARK: - Methods
 
-eccoperand_t make(const io_libecc_native_io_libecc_Function native, eccvalue_t value, ecctextstring_t text)
+eccoperand_t opfn_make(const eccnativefuncptr_t native, eccvalue_t value, ecctextstring_t text)
 {
     return (eccoperand_t){ native, value, text };
 }
 
-const char* toChars(const io_libecc_native_io_libecc_Function native)
+const char* opfn_tochars(const eccnativefuncptr_t native)
 {
-    struct
+    static const struct
     {
         const char* name;
-        const io_libecc_native_io_libecc_Function native;
-    } static const functionList[] = {
-        { "noop", noop },
-        { "value", value },
+        const eccnativefuncptr_t native;
+    } functionList[] = {
+        { "noop", opfn_noop },
+        { "value", opfn_value },
         { "valueConstRef", valueConstRef },
         { "text", text },
         { "function", function },
         { "object", object },
         { "array", array },
         { "regexp", regexp },
-        { "this", this },
+        { "this", opfn_this },
         { "createLocalRef", createLocalRef },
         { "getLocalRefOrNull", getLocalRefOrNull },
         { "getLocalRef", getLocalRef },
@@ -440,7 +441,7 @@ const char* toChars(const io_libecc_native_io_libecc_Function native)
         { "positive", positive },
         { "negative", negative },
         { "invert", invert },
-        { "not", not },
+        { "not", opfn_logicalnot },
         { "construct", construct },
         { "call", call },
         { "eval", eval },
@@ -460,8 +461,8 @@ const char* toChars(const io_libecc_native_io_libecc_Function native)
         { "bitXorAssignRef", bitXorAssignRef },
         { "bitOrAssignRef", bitOrAssignRef },
         { "debugger", debugger },
-        { "try", try },
-        { "throw", throw },
+        { "try", opfn_try },
+        { "throw", opfn_throw },
         { "with", with },
         { "next", next },
         { "nextIf", nextIf },
@@ -487,7 +488,7 @@ const char* toChars(const io_libecc_native_io_libecc_Function native)
     };
 
     int index;
-    for(index = 0; index < sizeof(functionList); ++index)
+    for(index = 0; index < (int)sizeof(functionList); ++index)
         if(functionList[index].native == native)
             return functionList[index].name;
 
@@ -499,7 +500,7 @@ const char* toChars(const io_libecc_native_io_libecc_Function native)
 
 static eccvalue_t nextOpValue(eccstate_t* context)
 {
-    eccvalue_t value = nextOp();
+    eccvalue_t value = opmac_next();
     value.flags &= ~(ECC_VALFLAG_READONLY | ECC_VALFLAG_HIDDEN | ECC_VALFLAG_SEALED);
     return value;
 }
@@ -519,8 +520,8 @@ static inline eccvalue_t callOps(eccstate_t* context, eccobject_t* environment)
         ECCNSContext.rangeError(context, io_libecc_Chars.create("maximum depth exceeded"));
 
     //	if (!context->parent->strictMode)
-    //		if (context->this.type == ECC_VALTYPE_UNDEFINED || context->this.type == ECC_VALTYPE_NULL)
-    //			context->this = ECCNSValue.object(&context->ecc->global->environment);
+    //		if (context->thisvalue.type == ECC_VALTYPE_UNDEFINED || context->thisvalue.type == ECC_VALTYPE_NULL)
+    //			context->thisvalue = ECCNSValue.object(&context->ecc->global->environment);
 
     context->environment = environment;
     return context->ops->native(context);
@@ -632,15 +633,15 @@ static inline void populateEnvironmentWithOps(eccstate_t* context, eccobject_t* 
             environment->hashmap[index + 3].value = retain(nextOpValue());
 
         for(; index < argumentCount; ++index)
-            nextOp();
+            opmac_next();
     }
 }
 
-eccvalue_t callFunctionArguments(eccstate_t* context, enum io_libecc_context_Offset offset, eccobjscriptfunction_t* function, eccvalue_t this, eccobject_t* arguments)
+eccvalue_t opfn_callfunctionarguments(eccstate_t* context, enum io_libecc_context_Offset offset, eccobjscriptfunction_t* function, eccvalue_t thisval, eccobject_t* arguments)
 {
     eccstate_t subContext = {
         .ops = function->oplist->ops,
-        .this = this,
+        .thisvalue = thisval,
         .parent = context,
         .ecc = context->ecc,
         .argumentOffset = offset,
@@ -676,11 +677,11 @@ eccvalue_t callFunctionArguments(eccstate_t* context, enum io_libecc_context_Off
     }
 }
 
-eccvalue_t callFunctionVA(eccstate_t* context, enum io_libecc_context_Offset offset, eccobjscriptfunction_t* function, eccvalue_t this, int argumentCount, va_list ap)
+eccvalue_t opfn_callfunctionva(eccstate_t* context, enum io_libecc_context_Offset offset, eccobjscriptfunction_t* function, eccvalue_t thisval, int argumentCount, va_list ap)
 {
     eccstate_t subContext = {
         .ops = function->oplist->ops,
-        .this = this,
+        .thisvalue = thisval,
         .parent = context,
         .ecc = context->ecc,
         .argumentOffset = offset,
@@ -722,11 +723,11 @@ eccvalue_t callFunctionVA(eccstate_t* context, enum io_libecc_context_Offset off
     }
 }
 
-static inline eccvalue_t callFunction(eccstate_t* context, eccobjscriptfunction_t* const function, eccvalue_t this, int32_t argumentCount, int construct)
+static inline eccvalue_t callFunction(eccstate_t* context, eccobjscriptfunction_t* const function, eccvalue_t thisval, int32_t argumentCount, int construct)
 {
     eccstate_t subContext = {
         .ops = function->oplist->ops,
-        .this = this,
+        .thisvalue = thisval,
         .parent = context,
         .ecc = context->ecc,
         .construct = construct,
@@ -782,7 +783,7 @@ static inline eccvalue_t callFunction(eccstate_t* context, eccobjscriptfunction_
     }
 }
 
-static inline eccvalue_t callValue(eccstate_t* context, eccvalue_t value, eccvalue_t this, int32_t argumentCount, int construct, const ecctextstring_t* textCall)
+static inline eccvalue_t callValue(eccstate_t* context, eccvalue_t value, eccvalue_t thisval, int32_t argumentCount, int construct, const ecctextstring_t* textCall)
 {
     eccvalue_t result;
     const ecctextstring_t* parentTextCall = context->textCall;
@@ -795,7 +796,7 @@ static inline eccvalue_t callValue(eccstate_t* context, eccvalue_t value, eccval
     if(value.data.function->flags & io_libecc_function_useBoundThis)
         result = callFunction(context, value.data.function, value.data.function->boundThis, argumentCount, construct);
     else
-        result = callFunction(context, value.data.function, this, argumentCount, construct);
+        result = callFunction(context, value.data.function, thisval, argumentCount, construct);
 
     context->textCall = parentTextCall;
     return result;
@@ -803,10 +804,10 @@ static inline eccvalue_t callValue(eccstate_t* context, eccvalue_t value, eccval
 
 eccvalue_t construct(eccstate_t* context)
 {
-    const ecctextstring_t* textCall = opText(0);
-    const ecctextstring_t* text = opText(1);
-    int32_t argumentCount = opValue().data.integer;
-    eccvalue_t value, *prototype, object, function = nextOp();
+    const ecctextstring_t* textCall = opmac_text(0);
+    const ecctextstring_t* text = opmac_text(1);
+    int32_t argumentCount = opmac_value().data.integer;
+    eccvalue_t value, *prototype, object, function = opmac_next();
 
     if(function.type != ECC_VALTYPE_FUNCTION)
         goto error;
@@ -843,14 +844,14 @@ error:
 
 eccvalue_t call(eccstate_t* context)
 {
-    const ecctextstring_t* textCall = opText(0);
-    const ecctextstring_t* text = opText(1);
-    int32_t argumentCount = opValue().data.integer;
+    const ecctextstring_t* textCall = opmac_text(0);
+    const ecctextstring_t* text = opmac_text(1);
+    int32_t argumentCount = opmac_value().data.integer;
     eccvalue_t value;
-    eccvalue_t this;
+    eccvalue_t thisval;
 
     context->inEnvironmentObject = 0;
-    value = nextOp();
+    value = opmac_next();
 
     if(context->inEnvironmentObject)
     {
@@ -859,23 +860,23 @@ eccvalue_t call(eccstate_t* context)
             seek = seek->parent;
 
         ++seek->environment->referenceCount;
-        this = ECCNSValue.objectValue(seek->environment);
+        thisval = ECCNSValue.objectValue(seek->environment);
     }
     else
-        this = ECCValConstUndefined;
+        thisval = ECCValConstUndefined;
 
     ECCNSContext.setText(context, text);
-    return callValue(context, value, this, argumentCount, 0, textCall);
+    return callValue(context, value, thisval, argumentCount, 0, textCall);
 }
 
 eccvalue_t eval(eccstate_t* context)
 {
     eccvalue_t value;
     eccioinput_t* input;
-    int32_t argumentCount = opValue().data.integer;
+    int32_t argumentCount = opmac_value().data.integer;
     eccstate_t subContext = {
         .parent = context,
-        .this = context->this,
+        .thisvalue = context->thisvalue,
         .environment = context->environment,
         .ecc = context->ecc,
         .depth = context->depth + 1,
@@ -885,9 +886,9 @@ eccvalue_t eval(eccstate_t* context)
     if(!argumentCount)
         return ECCValConstUndefined;
 
-    value = nextOp();
+    value = opmac_next();
     while(--argumentCount)
-        nextOp();
+        opmac_next();
 
     if(!ECCNSValue.isString(value) || !ECCNSValue.isPrimitive(value))
         return value;
@@ -902,36 +903,37 @@ eccvalue_t eval(eccstate_t* context)
 
 // Expression
 
-eccvalue_t noop(eccstate_t* context)
+eccvalue_t opfn_noop(eccstate_t* context)
 {
+    (void)context;
     return ECCValConstUndefined;
 }
 
-eccvalue_t value(eccstate_t* context)
+eccvalue_t opfn_value(eccstate_t* context)
 {
-    return opValue();
+    return opmac_value();
 }
 
 eccvalue_t valueConstRef(eccstate_t* context)
 {
-    return ECCNSValue.reference((eccvalue_t*)&opValue());
+    return ECCNSValue.reference((eccvalue_t*)&opmac_value());
 }
 
 eccvalue_t text(eccstate_t* context)
 {
-    return ECCNSValue.text(opText(0));
+    return ECCNSValue.text(opmac_text(0));
 }
 
 eccvalue_t regexp(eccstate_t* context)
 {
-    const ecctextstring_t* text = opText(0);
+    const ecctextstring_t* text = opmac_text(0);
     eccobjerror_t* error = NULL;
     ecccharbuffer_t* chars = io_libecc_Chars.createWithBytes(text->length, text->bytes);
     eccobjregexp_t* regexp = io_libecc_RegExp.create(chars, &error, context->ecc->sloppyMode ? io_libecc_regexp_allowUnicodeFlags : 0);
     if(error)
     {
         error->text.bytes = text->bytes + (error->text.bytes - chars->bytes);
-        ECCNSContext.throw(context, ECCNSValue.error(error));
+        ECCNSContext.doThrow(context, ECCNSValue.error(error));
     }
     return ECCNSValue.regexp(regexp);
 }
@@ -939,7 +941,7 @@ eccvalue_t regexp(eccstate_t* context)
 eccvalue_t function(eccstate_t* context)
 {
     eccobject_t* prototype;
-    eccvalue_t value = opValue(), result;
+    eccvalue_t value = opmac_value(), result;
 
     eccobjscriptfunction_t* function = io_libecc_Function.copy(value.data.function);
     function->object.prototype = &value.data.function->object;
@@ -970,9 +972,9 @@ eccvalue_t object(eccstate_t* context)
 
     object->flags |= io_libecc_object_mark;
 
-    for(count = opValue().data.integer; count--;)
+    for(count = opmac_value().data.integer; count--;)
     {
-        property = nextOp();
+        property = opmac_next();
         value = retain(nextOpValue());
 
         if(property.type == ECC_VALTYPE_KEY)
@@ -985,7 +987,7 @@ eccvalue_t object(eccstate_t* context)
 
 eccvalue_t array(eccstate_t* context)
 {
-    uint32_t length = opValue().data.integer;
+    uint32_t length = opmac_value().data.integer;
     eccobject_t* object = io_libecc_Array.createSized(length);
     eccvalue_t value;
     uint32_t index;
@@ -1000,9 +1002,9 @@ eccvalue_t array(eccstate_t* context)
     return ECCNSValue.object(object);
 }
 
-eccvalue_t this(eccstate_t* context)
+eccvalue_t opfn_this(eccstate_t* context)
 {
-    return context->this;
+    return context->thisvalue;
 }
 
 static eccvalue_t* localRef(eccstate_t* context, eccindexkey_t key, const ecctextstring_t* text, int required)
@@ -1031,8 +1033,8 @@ static eccvalue_t* localRef(eccstate_t* context, eccindexkey_t key, const ecctex
 
 eccvalue_t createLocalRef(eccstate_t* context)
 {
-    eccindexkey_t key = opValue().data.key;
-    eccvalue_t* ref = localRef(context, key, opText(0), context->strictMode);
+    eccindexkey_t key = opmac_value().data.key;
+    eccvalue_t* ref = localRef(context, key, opmac_text(0), context->strictMode);
 
     if(!ref)
         ref = ECCNSObject.addMember(&context->ecc->global->environment, key, ECCValConstUndefined, 0);
@@ -1042,24 +1044,24 @@ eccvalue_t createLocalRef(eccstate_t* context)
 
 eccvalue_t getLocalRefOrNull(eccstate_t* context)
 {
-    return ECCNSValue.reference(localRef(context, opValue().data.key, opText(0), 0));
+    return ECCNSValue.reference(localRef(context, opmac_value().data.key, opmac_text(0), 0));
 }
 
 eccvalue_t getLocalRef(eccstate_t* context)
 {
-    return ECCNSValue.reference(localRef(context, opValue().data.key, opText(0), 1));
+    return ECCNSValue.reference(localRef(context, opmac_value().data.key, opmac_text(0), 1));
 }
 
 eccvalue_t getLocal(eccstate_t* context)
 {
-    return *localRef(context, opValue().data.key, opText(0), 1);
+    return *localRef(context, opmac_value().data.key, opmac_text(0), 1);
 }
 
 eccvalue_t setLocal(eccstate_t* context)
 {
-    const ecctextstring_t* text = opText(0);
-    eccindexkey_t key = opValue().data.key;
-    eccvalue_t value = nextOp();
+    const ecctextstring_t* text = opmac_text(0);
+    eccindexkey_t key = opmac_value().data.key;
+    eccvalue_t value = opmac_next();
 
     eccvalue_t* ref = localRef(context, key, text, context->strictMode);
 
@@ -1077,7 +1079,7 @@ eccvalue_t setLocal(eccstate_t* context)
 
 eccvalue_t deleteLocal(eccstate_t* context)
 {
-    eccvalue_t* ref = localRef(context, opValue().data.key, opText(0), 0);
+    eccvalue_t* ref = localRef(context, opmac_value().data.key, opmac_text(0), 0);
 
     if(!ref)
         return ECCValConstTrue;
@@ -1091,18 +1093,18 @@ eccvalue_t deleteLocal(eccstate_t* context)
 
 eccvalue_t getLocalSlotRef(eccstate_t* context)
 {
-    return ECCNSValue.reference(&context->environment->hashmap[opValue().data.integer].value);
+    return ECCNSValue.reference(&context->environment->hashmap[opmac_value().data.integer].value);
 }
 
 eccvalue_t getLocalSlot(eccstate_t* context)
 {
-    return context->environment->hashmap[opValue().data.integer].value;
+    return context->environment->hashmap[opmac_value().data.integer].value;
 }
 
 eccvalue_t setLocalSlot(eccstate_t* context)
 {
-    int32_t slot = opValue().data.integer;
-    eccvalue_t value = nextOp();
+    int32_t slot = opmac_value().data.integer;
+    eccvalue_t value = opmac_next();
     eccvalue_t* ref = &context->environment->hashmap[slot].value;
 
     if(ref->flags & ECC_VALFLAG_READONLY)
@@ -1116,13 +1118,14 @@ eccvalue_t setLocalSlot(eccstate_t* context)
 
 eccvalue_t deleteLocalSlot(eccstate_t* context)
 {
+    (void)context;
     return ECCValConstFalse;
 }
 
 eccvalue_t getParentSlotRef(eccstate_t* context)
 {
-    int32_t slot = opValue().data.integer & 0xffff;
-    int32_t count = opValue().data.integer >> 16;
+    int32_t slot = opmac_value().data.integer & 0xffff;
+    int32_t count = opmac_value().data.integer >> 16;
     eccobject_t* object = context->environment;
     while(count--)
         object = object->prototype;
@@ -1137,9 +1140,9 @@ eccvalue_t getParentSlot(eccstate_t* context)
 
 eccvalue_t setParentSlot(eccstate_t* context)
 {
-    const ecctextstring_t* text = opText(0);
+    const ecctextstring_t* text = opmac_text(0);
     eccvalue_t* ref = getParentSlotRef(context).data.reference;
-    eccvalue_t value = nextOp();
+    eccvalue_t value = opmac_next();
     if(ref->flags & ECC_VALFLAG_READONLY)
     {
         if(context->strictMode)
@@ -1160,13 +1163,14 @@ eccvalue_t setParentSlot(eccstate_t* context)
 
 eccvalue_t deleteParentSlot(eccstate_t* context)
 {
+    (void)context;
     return ECCValConstFalse;
 }
 
 static void prepareObject(eccstate_t* context, eccvalue_t* object)
 {
-    const ecctextstring_t* textObject = opText(1);
-    *object = nextOp();
+    const ecctextstring_t* textObject = opmac_text(1);
+    *object = opmac_next();
 
     if(ECCNSValue.isPrimitive(*object))
     {
@@ -1177,8 +1181,8 @@ static void prepareObject(eccstate_t* context, eccvalue_t* object)
 
 eccvalue_t getMemberRef(eccstate_t* context)
 {
-    const ecctextstring_t* text = opText(0);
-    eccindexkey_t key = opValue().data.key;
+    const ecctextstring_t* text = opmac_text(0);
+    eccindexkey_t key = opmac_value().data.key;
     eccvalue_t object, *ref;
 
     prepareObject(context, &object);
@@ -1201,7 +1205,7 @@ eccvalue_t getMemberRef(eccstate_t* context)
 
 eccvalue_t getMember(eccstate_t* context)
 {
-    eccindexkey_t key = opValue().data.key;
+    eccindexkey_t key = opmac_value().data.key;
     eccvalue_t object;
 
     prepareObject(context, &object);
@@ -1211,12 +1215,12 @@ eccvalue_t getMember(eccstate_t* context)
 
 eccvalue_t setMember(eccstate_t* context)
 {
-    const ecctextstring_t* text = opText(0);
-    eccindexkey_t key = opValue().data.key;
+    const ecctextstring_t* text = opmac_text(0);
+    eccindexkey_t key = opmac_value().data.key;
     eccvalue_t object, value;
 
     prepareObject(context, &object);
-    value = retain(nextOp());
+    value = retain(opmac_next());
 
     ECCNSContext.setText(context, text);
     ECCNSObject.putMember(context, object.data.object, key, value);
@@ -1226,10 +1230,10 @@ eccvalue_t setMember(eccstate_t* context)
 
 eccvalue_t callMember(eccstate_t* context)
 {
-    const ecctextstring_t* textCall = opText(0);
-    int32_t argumentCount = opValue().data.integer;
+    const ecctextstring_t* textCall = opmac_text(0);
+    int32_t argumentCount = opmac_value().data.integer;
     const ecctextstring_t* text = &(++context->ops)->text;
-    eccindexkey_t key = opValue().data.key;
+    eccindexkey_t key = opmac_value().data.key;
     eccvalue_t object;
 
     prepareObject(context, &object);
@@ -1240,8 +1244,8 @@ eccvalue_t callMember(eccstate_t* context)
 
 eccvalue_t deleteMember(eccstate_t* context)
 {
-    const ecctextstring_t* text = opText(0);
-    eccindexkey_t key = opValue().data.key;
+    const ecctextstring_t* text = opmac_text(0);
+    eccindexkey_t key = opmac_value().data.key;
     eccvalue_t object;
     int result;
 
@@ -1263,8 +1267,8 @@ static void prepareObjectProperty(eccstate_t* context, eccvalue_t* object, eccva
 
     prepareObject(context, object);
 
-    textProperty = opText(1);
-    *property = nextOp();
+    textProperty = opmac_text(1);
+    *property = opmac_next();
 
     if(ECCNSValue.isObject(*property))
     {
@@ -1275,7 +1279,7 @@ static void prepareObjectProperty(eccstate_t* context, eccvalue_t* object, eccva
 
 eccvalue_t getPropertyRef(eccstate_t* context)
 {
-    const ecctextstring_t* text = opText(1);
+    const ecctextstring_t* text = opmac_text(1);
     eccvalue_t object, property;
     eccvalue_t* ref;
 
@@ -1308,12 +1312,12 @@ eccvalue_t getProperty(eccstate_t* context)
 
 eccvalue_t setProperty(eccstate_t* context)
 {
-    const ecctextstring_t* text = opText(0);
+    const ecctextstring_t* text = opmac_text(0);
     eccvalue_t object, property, value;
 
     prepareObjectProperty(context, &object, &property);
 
-    value = retain(nextOp());
+    value = retain(opmac_next());
     value.flags = 0;
 
     ECCNSContext.setText(context, text);
@@ -1324,8 +1328,8 @@ eccvalue_t setProperty(eccstate_t* context)
 
 eccvalue_t callProperty(eccstate_t* context)
 {
-    const ecctextstring_t* textCall = opText(0);
-    int32_t argumentCount = opValue().data.integer;
+    const ecctextstring_t* textCall = opmac_text(0);
+    int32_t argumentCount = opmac_value().data.integer;
     const ecctextstring_t* text = &(++context->ops)->text;
     eccvalue_t object, property;
 
@@ -1337,7 +1341,7 @@ eccvalue_t callProperty(eccstate_t* context)
 
 eccvalue_t deleteProperty(eccstate_t* context)
 {
-    const ecctextstring_t* text = opText(0);
+    const ecctextstring_t* text = opmac_text(0);
     eccvalue_t object, property;
     int result;
 
@@ -1360,7 +1364,7 @@ eccvalue_t pushEnvironment(eccstate_t* context)
     else
         context->environment = ECCNSObject.create(context->environment);
 
-    return opValue();
+    return opmac_value();
 }
 
 eccvalue_t popEnvironment(eccstate_t* context)
@@ -1377,19 +1381,19 @@ eccvalue_t popEnvironment(eccstate_t* context)
         context->environment = context->environment->prototype;
         environment->prototype = NULL;
     }
-    return opValue();
+    return opmac_value();
 }
 
 eccvalue_t exchange(eccstate_t* context)
 {
-    eccvalue_t value = opValue();
-    nextOp();
+    eccvalue_t value = opmac_value();
+    opmac_next();
     return value;
 }
 
 eccvalue_t typeOf(eccstate_t* context)
 {
-    eccvalue_t value = nextOp();
+    eccvalue_t value = opmac_next();
     if(value.type == ECC_VALTYPE_REFERENCE)
     {
         eccvalue_t* ref = value.data.reference;
@@ -1402,10 +1406,10 @@ eccvalue_t typeOf(eccstate_t* context)
 }
 
 #define prepareAB                               \
-    const ecctextstring_t* text = opText(1);    \
-    eccvalue_t a = nextOp();                    \
-    const ecctextstring_t* textAlt = opText(1); \
-    eccvalue_t b = nextOp();
+    const ecctextstring_t* text = opmac_text(1);    \
+    eccvalue_t a = opmac_next();                    \
+    const ecctextstring_t* textAlt = opmac_text(1); \
+    eccvalue_t b = opmac_next();
 
 eccvalue_t equal(eccstate_t* context)
 {
@@ -1505,9 +1509,9 @@ eccvalue_t moreOrEqual(eccstate_t* context)
 
 eccvalue_t instanceOf(eccstate_t* context)
 {
-    eccvalue_t a = nextOp();
-    const ecctextstring_t* textAlt = opText(1);
-    eccvalue_t b = nextOp();
+    eccvalue_t a = opmac_next();
+    const ecctextstring_t* textAlt = opmac_text(1);
+    eccvalue_t b = opmac_next();
 
     if(b.type != ECC_VALTYPE_FUNCTION)
     {
@@ -1536,8 +1540,8 @@ eccvalue_t instanceOf(eccstate_t* context)
 
 eccvalue_t in(eccstate_t* context)
 {
-    eccvalue_t property = nextOp();
-    eccvalue_t object = nextOp();
+    eccvalue_t property = opmac_next();
+    eccvalue_t object = opmac_next();
     eccvalue_t* ref;
 
     if(!ECCNSValue.isObject(object))
@@ -1566,8 +1570,8 @@ eccvalue_t add(eccstate_t* context)
 
 eccvalue_t minus(eccstate_t* context)
 {
-    eccvalue_t a = nextOp();
-    eccvalue_t b = nextOp();
+    eccvalue_t a = opmac_next();
+    eccvalue_t b = opmac_next();
     if(a.type == ECC_VALTYPE_BINARY && b.type == ECC_VALTYPE_BINARY)
     {
         a.data.binary -= b.data.binary;
@@ -1579,8 +1583,8 @@ eccvalue_t minus(eccstate_t* context)
 
 eccvalue_t multiply(eccstate_t* context)
 {
-    eccvalue_t a = nextOp();
-    eccvalue_t b = nextOp();
+    eccvalue_t a = opmac_next();
+    eccvalue_t b = opmac_next();
     if(a.type == ECC_VALTYPE_BINARY && b.type == ECC_VALTYPE_BINARY)
     {
         a.data.binary *= b.data.binary;
@@ -1592,8 +1596,8 @@ eccvalue_t multiply(eccstate_t* context)
 
 eccvalue_t divide(eccstate_t* context)
 {
-    eccvalue_t a = nextOp();
-    eccvalue_t b = nextOp();
+    eccvalue_t a = opmac_next();
+    eccvalue_t b = opmac_next();
     if(a.type == ECC_VALTYPE_BINARY && b.type == ECC_VALTYPE_BINARY)
     {
         a.data.binary /= b.data.binary;
@@ -1605,8 +1609,8 @@ eccvalue_t divide(eccstate_t* context)
 
 eccvalue_t modulo(eccstate_t* context)
 {
-    eccvalue_t a = nextOp();
-    eccvalue_t b = nextOp();
+    eccvalue_t a = opmac_next();
+    eccvalue_t b = opmac_next();
     if(a.type == ECC_VALTYPE_BINARY && b.type == ECC_VALTYPE_BINARY)
     {
         a.data.binary = fmod(a.data.binary, b.data.binary);
@@ -1618,50 +1622,50 @@ eccvalue_t modulo(eccstate_t* context)
 
 eccvalue_t leftShift(eccstate_t* context)
 {
-    eccvalue_t a = nextOp();
-    eccvalue_t b = nextOp();
+    eccvalue_t a = opmac_next();
+    eccvalue_t b = opmac_next();
     return ECCNSValue.binary(ECCNSValue.toInteger(context, a).data.integer << (uint32_t)ECCNSValue.toInteger(context, b).data.integer);
 }
 
 eccvalue_t rightShift(eccstate_t* context)
 {
-    eccvalue_t a = nextOp();
-    eccvalue_t b = nextOp();
+    eccvalue_t a = opmac_next();
+    eccvalue_t b = opmac_next();
     return ECCNSValue.binary(ECCNSValue.toInteger(context, a).data.integer >> (uint32_t)ECCNSValue.toInteger(context, b).data.integer);
 }
 
 eccvalue_t unsignedRightShift(eccstate_t* context)
 {
-    eccvalue_t a = nextOp();
-    eccvalue_t b = nextOp();
+    eccvalue_t a = opmac_next();
+    eccvalue_t b = opmac_next();
     return ECCNSValue.binary((uint32_t)ECCNSValue.toInteger(context, a).data.integer >> (uint32_t)ECCNSValue.toInteger(context, b).data.integer);
 }
 
 eccvalue_t bitwiseAnd(eccstate_t* context)
 {
-    eccvalue_t a = nextOp();
-    eccvalue_t b = nextOp();
+    eccvalue_t a = opmac_next();
+    eccvalue_t b = opmac_next();
     return ECCNSValue.binary(ECCNSValue.toInteger(context, a).data.integer & ECCNSValue.toInteger(context, b).data.integer);
 }
 
 eccvalue_t bitwiseXor(eccstate_t* context)
 {
-    eccvalue_t a = nextOp();
-    eccvalue_t b = nextOp();
+    eccvalue_t a = opmac_next();
+    eccvalue_t b = opmac_next();
     return ECCNSValue.binary(ECCNSValue.toInteger(context, a).data.integer ^ ECCNSValue.toInteger(context, b).data.integer);
 }
 
 eccvalue_t bitwiseOr(eccstate_t* context)
 {
-    eccvalue_t a = nextOp();
-    eccvalue_t b = nextOp();
+    eccvalue_t a = opmac_next();
+    eccvalue_t b = opmac_next();
     return ECCNSValue.binary(ECCNSValue.toInteger(context, a).data.integer | ECCNSValue.toInteger(context, b).data.integer);
 }
 
 eccvalue_t logicalAnd(eccstate_t* context)
 {
-    const int32_t opCount = opValue().data.integer;
-    eccvalue_t value = nextOp();
+    const int32_t opCount = opmac_value().data.integer;
+    eccvalue_t value = opmac_next();
 
     if(!ECCNSValue.isTrue(value))
     {
@@ -1669,13 +1673,13 @@ eccvalue_t logicalAnd(eccstate_t* context)
         return value;
     }
     else
-        return nextOp();
+        return opmac_next();
 }
 
 eccvalue_t logicalOr(eccstate_t* context)
 {
-    const int32_t opCount = opValue().data.integer;
-    eccvalue_t value = nextOp();
+    const int32_t opCount = opmac_value().data.integer;
+    eccvalue_t value = opmac_next();
 
     if(ECCNSValue.isTrue(value))
     {
@@ -1683,12 +1687,12 @@ eccvalue_t logicalOr(eccstate_t* context)
         return value;
     }
     else
-        return nextOp();
+        return opmac_next();
 }
 
 eccvalue_t positive(eccstate_t* context)
 {
-    eccvalue_t a = nextOp();
+    eccvalue_t a = opmac_next();
     if(a.type == ECC_VALTYPE_BINARY)
         return a;
     else
@@ -1697,7 +1701,7 @@ eccvalue_t positive(eccstate_t* context)
 
 eccvalue_t negative(eccstate_t* context)
 {
-    eccvalue_t a = nextOp();
+    eccvalue_t a = opmac_next();
     if(a.type == ECC_VALTYPE_BINARY)
         return ECCNSValue.binary(-a.data.binary);
     else
@@ -1706,13 +1710,13 @@ eccvalue_t negative(eccstate_t* context)
 
 eccvalue_t invert(eccstate_t* context)
 {
-    eccvalue_t a = nextOp();
+    eccvalue_t a = opmac_next();
     return ECCNSValue.binary(~ECCNSValue.toInteger(context, a).data.integer);
 }
 
-eccvalue_t not(eccstate_t * context)
+eccvalue_t opfn_logicalnot(eccstate_t * context)
 {
-    eccvalue_t a = nextOp();
+    eccvalue_t a = opmac_next();
     return ECCNSValue.truth(!ECCNSValue.isTrue(a));
 }
 
@@ -1720,8 +1724,8 @@ eccvalue_t not(eccstate_t * context)
 
 #define unaryBinaryOpRef(OP)                                                                               \
     eccobject_t* refObject = context->refObject;                                                           \
-    const ecctextstring_t* text = opText(0);                                                               \
-    eccvalue_t* ref = nextOp().data.reference;                                                             \
+    const ecctextstring_t* text = opmac_text(0);                                                               \
+    eccvalue_t* ref = opmac_next().data.reference;                                                             \
     eccvalue_t a;                                                                                          \
     double result;                                                                                         \
                                                                                                            \
@@ -1752,9 +1756,9 @@ eccvalue_t postDecrementRef(eccstate_t* context){ unaryBinaryOpRef(a.data.binary
 
 #define assignOpRef(OP, TYPE, CONV)                                                \
     eccobject_t* refObject = context->refObject;                                   \
-    const ecctextstring_t* text = opText(0);                                       \
-    eccvalue_t* ref = nextOp().data.reference;                                     \
-    eccvalue_t a, b = nextOp();                                                    \
+    const ecctextstring_t* text = opmac_text(0);                                       \
+    eccvalue_t* ref = opmac_next().data.reference;                                     \
+    eccvalue_t a, b = opmac_next();                                                    \
                                                                                    \
     if(b.type != TYPE)                                                             \
         b = CONV(context, b);                                                      \
@@ -1781,10 +1785,10 @@ eccvalue_t postDecrementRef(eccstate_t* context){ unaryBinaryOpRef(a.data.binary
 eccvalue_t addAssignRef(eccstate_t* context)
 {
     eccobject_t* refObject = context->refObject;
-    const ecctextstring_t* text = opText(1);
-    eccvalue_t* ref = nextOp().data.reference;
-    const ecctextstring_t* textAlt = opText(1);
-    eccvalue_t a, b = nextOp();
+    const ecctextstring_t* text = opmac_text(1);
+    eccvalue_t* ref = opmac_next().data.reference;
+    const ecctextstring_t* textAlt = opmac_text(1);
+    eccvalue_t a, b = opmac_next();
 
     ECCNSContext.setTexts(context, text, textAlt);
 
@@ -1868,11 +1872,11 @@ eccvalue_t debugger(eccstate_t* context)
     return trapOp(context, 0);
 }
 
-io_libecc_ecc_useframe eccvalue_t try(eccstate_t* context)
+io_libecc_ecc_useframe eccvalue_t opfn_try(eccstate_t* context)
 {
     eccobject_t* environment = context->environment;
     eccobject_t* refObject = context->refObject;
-    const eccoperand_t* end = context->ops + opValue().data.integer;
+    const eccoperand_t* end = context->ops + opmac_value().data.integer;
     eccindexkey_t key;
 
     const eccoperand_t* volatile rethrowOps = NULL;
@@ -1884,7 +1888,7 @@ io_libecc_ecc_useframe eccvalue_t try(eccstate_t* context)
     io_libecc_Pool.getIndices(indices);
 
     if(!setjmp(*ECCNSScript.pushEnv(context->ecc)))// try
-        value = nextOp();
+        value = opmac_next();
     else
     {
         value = context->ecc->result;
@@ -1899,7 +1903,7 @@ io_libecc_ecc_useframe eccvalue_t try(eccstate_t* context)
             context->ops = end + 1;// bypass catch jump
             context->environment = environment;
             context->refObject = refObject;
-            key = nextOp().data.key;
+            key = opmac_next().data.key;
 
             if(!io_libecc_Key.isEqual(key, io_libecc_key_none))
             {
@@ -1909,7 +1913,7 @@ io_libecc_ecc_useframe eccvalue_t try(eccstate_t* context)
                     value.data.function->boundThis = ECCNSValue.object(context->environment);
                 }
                 ECCNSObject.addMember(context->environment, key, value, ECC_VALFLAG_SEALED);
-                value = nextOp();// execute until noop
+                value = opmac_next();// execute until noop
                 rethrow = 0;
                 if(context->breaker)
                     popEnvironment(context);
@@ -1924,14 +1928,14 @@ io_libecc_ecc_useframe eccvalue_t try(eccstate_t* context)
     breaker = context->breaker;
     context->breaker = 0;
     context->ops = end;// op[end] = io_libecc_Op.jump, to after catch
-    finallyValue = nextOp();// jump to after catch, and execute until noop
+    finallyValue = opmac_next();// jump to after catch, and execute until noop
 
     if(context->breaker) /* return breaker */
         return finallyValue;
     else if(rethrow)
     {
         context->ops = rethrowOps;
-        ECCNSContext.throw(context, retain(value));
+        ECCNSContext.doThrow(context, retain(value));
     }
     else if(breaker)
     {
@@ -1939,49 +1943,49 @@ io_libecc_ecc_useframe eccvalue_t try(eccstate_t* context)
         return value;
     }
     else
-        return nextOp();
+        return opmac_next();
 }
 
-io_libecc_ecc_noreturn eccvalue_t throw(eccstate_t * context)
+io_libecc_ecc_noreturn eccvalue_t opfn_throw(eccstate_t * context)
 {
-    context->ecc->text = *opText(1);
-    ECCNSContext.throw(context, retain(trapOp(context, 0)));
+    context->ecc->text = *opmac_text(1);
+    ECCNSContext.doThrow(context, retain(trapOp(context, 0)));
 }
 
 eccvalue_t with(eccstate_t* context)
 {
     eccobject_t* environment = context->environment;
     eccobject_t* refObject = context->refObject;
-    eccobject_t* object = ECCNSValue.toObject(context, nextOp()).data.object;
+    eccobject_t* object = ECCNSValue.toObject(context, opmac_next()).data.object;
     eccvalue_t value;
 
     if(!refObject)
         context->refObject = context->environment;
 
     context->environment = object;
-    value = nextOp();
+    value = opmac_next();
     context->environment = environment;
     context->refObject = refObject;
 
     if(context->breaker)
         return value;
     else
-        return nextOp();
+        return opmac_next();
 }
 
 eccvalue_t next(eccstate_t* context)
 {
-    return nextOp();
+    return opmac_next();
 }
 
 eccvalue_t nextIf(eccstate_t* context)
 {
-    eccvalue_t value = opValue();
+    eccvalue_t value = opmac_value();
 
     if(!ECCNSValue.isTrue(trapOp(context, 1)))
         return value;
 
-    return nextOp();
+    return opmac_next();
 }
 
 eccvalue_t autoreleaseExpression(eccstate_t* context)
@@ -1992,7 +1996,7 @@ eccvalue_t autoreleaseExpression(eccstate_t* context)
     release(context->ecc->result);
     context->ecc->result = retain(trapOp(context, 1));
     io_libecc_Pool.collectUnreferencedFromIndices(indices);
-    return nextOp();
+    return opmac_next();
 }
 
 eccvalue_t autoreleaseDiscard(eccstate_t* context)
@@ -2002,94 +2006,144 @@ eccvalue_t autoreleaseDiscard(eccstate_t* context)
     io_libecc_Pool.getIndices(indices);
     trapOp(context, 1);
     io_libecc_Pool.collectUnreferencedFromIndices(indices);
-    return nextOp();
+    return opmac_next();
 }
 
 eccvalue_t expression(eccstate_t* context)
 {
     release(context->ecc->result);
     context->ecc->result = retain(trapOp(context, 1));
-    return nextOp();
+    return opmac_next();
 }
 
 eccvalue_t discard(eccstate_t* context)
 {
     trapOp(context, 1);
-    return nextOp();
+    return opmac_next();
 }
 
 eccvalue_t discardN(eccstate_t* context)
 {
-    switch(opValue().data.integer)
+    switch(opmac_value().data.integer)
     {
         default:
-            ECCNSScript.fatal("Invalid discardN : %d", opValue().data.integer);
-
+            {
+                ECCNSScript.fatal("Invalid discardN : %d", opmac_value().data.integer);
+            }
+            /* fallthrough */
         case 16:
-            trapOp(context, 1);
+            {
+                trapOp(context, 1);
+            }
+            /* fallthrough */
         case 15:
-            trapOp(context, 1);
+            {
+                trapOp(context, 1);
+            }
+            /* fallthrough */
         case 14:
-            trapOp(context, 1);
+            {
+                trapOp(context, 1);
+            }
+            /* fallthrough */
         case 13:
-            trapOp(context, 1);
+            {
+                trapOp(context, 1);
+            }
+            /* fallthrough */
         case 12:
-            trapOp(context, 1);
+            {
+                trapOp(context, 1);
+            }
+            /* fallthrough */
         case 11:
-            trapOp(context, 1);
+            {
+                trapOp(context, 1);
+            }
+            /* fallthrough */
         case 10:
-            trapOp(context, 1);
+            {
+                trapOp(context, 1);
+            }
+            /* fallthrough */
         case 9:
-            trapOp(context, 1);
+            {
+                trapOp(context, 1);
+            }
+            /* fallthrough */
         case 8:
-            trapOp(context, 1);
+            {
+                trapOp(context, 1);
+            }
+            /* fallthrough */
         case 7:
-            trapOp(context, 1);
+            {
+                trapOp(context, 1);
+            }
+            /* fallthrough */
         case 6:
-            trapOp(context, 1);
+            {
+                trapOp(context, 1);
+            }
+            /* fallthrough */
         case 5:
-            trapOp(context, 1);
+            {
+                trapOp(context, 1);
+            }
+            /* fallthrough */
         case 4:
-            trapOp(context, 1);
+            {
+                trapOp(context, 1);
+            }
+            /* fallthrough */
         case 3:
-            trapOp(context, 1);
+            {
+                trapOp(context, 1);
+            }
+            /* fallthrough */
         case 2:
-            trapOp(context, 1);
+            {
+                trapOp(context, 1);
+            }
+            /* fallthrough */
         case 1:
-            trapOp(context, 1);
+            {
+                trapOp(context, 1);
+            }
+            /* fallthrough */
     }
-    return nextOp();
+    return opmac_next();
 }
 
 eccvalue_t jump(eccstate_t* context)
 {
-    int32_t offset = opValue().data.integer;
+    int32_t offset = opmac_value().data.integer;
     context->ops += offset;
-    return nextOp();
+    return opmac_next();
 }
 
 eccvalue_t jumpIf(eccstate_t* context)
 {
-    int32_t offset = opValue().data.integer;
+    int32_t offset = opmac_value().data.integer;
     eccvalue_t value;
 
     value = trapOp(context, 1);
     if(ECCNSValue.isTrue(value))
         context->ops += offset;
 
-    return nextOp();
+    return opmac_next();
 }
 
 eccvalue_t jumpIfNot(eccstate_t* context)
 {
-    int32_t offset = opValue().data.integer;
+    int32_t offset = opmac_value().data.integer;
     eccvalue_t value;
 
     value = trapOp(context, 1);
     if(!ECCNSValue.isTrue(value))
         context->ops += offset;
 
-    return nextOp();
+    return opmac_next();
 }
 
 eccvalue_t result(eccstate_t* context)
@@ -2101,8 +2155,8 @@ eccvalue_t result(eccstate_t* context)
 
 eccvalue_t repopulate(eccstate_t* context)
 {
-    uint32_t index, count, arguments = opValue().data.integer + 3;
-    int32_t offset = nextOp().data.integer;
+    uint32_t index, count, arguments = opmac_value().data.integer + 3;
+    int32_t offset = opmac_next().data.integer;
     const eccoperand_t* nextOps = context->ops + offset;
 
     {
@@ -2115,7 +2169,7 @@ eccvalue_t repopulate(eccstate_t* context)
         for(; index < count; ++index)
         {
             release(context->environment->hashmap[index].value);
-            hashmap[index].value = retain(nextOp());
+            hashmap[index].value = retain(opmac_next());
         }
 
         if(index < context->environment->hashmapCapacity)
@@ -2128,21 +2182,21 @@ eccvalue_t repopulate(eccstate_t* context)
         }
         else
             for(; index < arguments; ++index)
-                nextOp();
+                opmac_next();
 
         if(context->environment->hashmap[2].value.type == ECC_VALTYPE_OBJECT)
         {
-            eccobject_t* arguments = context->environment->hashmap[2].value.data.object;
+            eccobject_t* argvals = context->environment->hashmap[2].value.data.object;
 
             for(index = 3; index < context->environment->hashmapCapacity; ++index)
-                arguments->element[index - 3].value = hashmap[index].value;
+                argvals->element[index - 3].value = hashmap[index].value;
         }
 
         memcpy(context->environment->hashmap, hashmap, sizeof(hashmap));
     }
 
     context->ops = nextOps;
-    return nextOp();
+    return opmac_next();
 }
 
 eccvalue_t resultVoid(eccstate_t* context)
@@ -2154,22 +2208,22 @@ eccvalue_t resultVoid(eccstate_t* context)
 
 eccvalue_t switchOp(eccstate_t* context)
 {
-    int32_t offset = opValue().data.integer;
+    int32_t offset = opmac_value().data.integer;
     const eccoperand_t* nextOps = context->ops + offset;
     eccvalue_t value, caseValue;
-    const ecctextstring_t* text = opText(1);
+    const ecctextstring_t* text = opmac_text(1);
 
     value = trapOp(context, 1);
 
     while(context->ops < nextOps)
     {
-        const ecctextstring_t* textAlt = opText(1);
-        caseValue = nextOp();
+        const ecctextstring_t* textAlt = opmac_text(1);
+        caseValue = opmac_next();
 
         ECCNSContext.setTexts(context, text, textAlt);
         if(ECCNSValue.isTrue(ECCNSValue.same(context, value, caseValue)))
         {
-            offset = nextOp().data.integer;
+            offset = opmac_next().data.integer;
             context->ops = nextOps + offset;
             break;
         }
@@ -2177,13 +2231,13 @@ eccvalue_t switchOp(eccstate_t* context)
             ++context->ops;
     }
 
-    value = nextOp();
+    value = opmac_next();
     if(context->breaker && --context->breaker)
         return value;
     else
     {
         context->ops = nextOps + 2 + nextOps[2].value.data.integer;
-        return nextOp();
+        return opmac_next();
     }
 }
 
@@ -2193,7 +2247,7 @@ eccvalue_t switchOp(eccstate_t* context)
     {                                                               \
         uint32_t indices[3];                                        \
         io_libecc_Pool.getIndices(indices);                         \
-        value = nextOp();                                           \
+        value = opmac_next();                                           \
         if(context->breaker && --context->breaker)                  \
         {                                                           \
             if(--context->breaker)                                  \
@@ -2210,7 +2264,7 @@ eccvalue_t switchOp(eccstate_t* context)
 
 eccvalue_t breaker(eccstate_t* context)
 {
-    context->breaker = opValue().data.integer;
+    context->breaker = opmac_value().data.integer;
     return ECCValConstUndefined;
 }
 
@@ -2220,16 +2274,16 @@ eccvalue_t iterate(eccstate_t* context)
     const eccoperand_t* endOps = startOps;
     const eccoperand_t* nextOps = startOps + 1;
     eccvalue_t value;
-    int32_t skipOp = opValue().data.integer;
+    int32_t skipOp = opmac_value().data.integer;
 
     context->ops = nextOps + skipOp;
 
-    while(ECCNSValue.isTrue(nextOp()))
+    while(ECCNSValue.isTrue(opmac_next()))
         stepIteration(value, nextOps, break);
 
     context->ops = endOps;
 
-    return nextOp();
+    return opmac_next();
 }
 
 static eccvalue_t iterateIntegerRef(eccstate_t* context,
@@ -2239,10 +2293,10 @@ static eccvalue_t iterateIntegerRef(eccstate_t* context,
                                     eccvalue_t (*valueStep)(eccstate_t*, eccvalue_t, eccvalue_t))
 {
     eccobject_t* refObject = context->refObject;
-    const eccoperand_t* endOps = context->ops + opValue().data.integer;
-    eccvalue_t stepValue = nextOp();
-    eccvalue_t* indexRef = nextOp().data.reference;
-    eccvalue_t* countRef = nextOp().data.reference;
+    const eccoperand_t* endOps = context->ops + opmac_value().data.integer;
+    eccvalue_t stepValue = opmac_next();
+    eccvalue_t* indexRef = opmac_next().data.reference;
+    eccvalue_t* countRef = opmac_next().data.reference;
     const eccoperand_t* nextOps = context->ops;
     eccvalue_t value;
 
@@ -2277,7 +2331,7 @@ deoptimize:
 done:
     context->refObject = refObject;
     context->ops = endOps;
-    return nextOp();
+    return opmac_next();
 }
 
 eccvalue_t iterateLessRef(eccstate_t* context)
@@ -2303,9 +2357,9 @@ eccvalue_t iterateMoreOrEqualRef(eccstate_t* context)
 eccvalue_t iterateInRef(eccstate_t* context)
 {
     eccobject_t* refObject = context->refObject;
-    eccvalue_t* ref = nextOp().data.reference;
-    eccvalue_t target = nextOp();
-    eccvalue_t value = nextOp(), key;
+    eccvalue_t* ref = opmac_next().data.reference;
+    eccvalue_t target = opmac_next();
+    eccvalue_t value = opmac_next(), key;
     eccappendbuffer_t chars;
     eccobject_t* object;
     const eccoperand_t* startOps = context->ops;
@@ -2361,5 +2415,5 @@ eccvalue_t iterateInRef(eccstate_t* context)
 
     context->refObject = refObject;
     context->ops = endOps;
-    return nextOp();
+    return opmac_next();
 }

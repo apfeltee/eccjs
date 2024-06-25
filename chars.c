@@ -26,6 +26,7 @@ static uint8_t writeCodepoint(char*, uint32_t cp);
 const struct type_io_libecc_Chars io_libecc_Chars = {
     createVA,    create,       createSized,     createWithBytes, beginAppend, append,          appendCodepoint,
     appendValue, appendBinary, normalizeBinary, endAppend,       destroy,     codepointLength, writeCodepoint,
+    {}
 };
 
 static inline uint32_t nextPowerOfTwo(uint32_t v)

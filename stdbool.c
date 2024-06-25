@@ -25,6 +25,7 @@ const struct type_io_libecc_Boolean io_libecc_Boolean = {
     setup,
     teardown,
     create,
+    {}
 };
 
 static eccvalue_t toString(eccstate_t* context)
@@ -33,7 +34,7 @@ static eccvalue_t toString(eccstate_t* context)
 
     ECCNSContext.assertThisMask(context, ECC_VALMASK_BOOLEAN);
 
-    truth = ECCNSValue.isObject(context->this) ? context->this.data.boolean->truth : ECCNSValue.isTrue(context->this);
+    truth = ECCNSValue.isObject(context->thisvalue) ? context->thisvalue.data.boolean->truth : ECCNSValue.isTrue(context->thisvalue);
 
     return ECCNSValue.text(truth ? &ECC_ConstString_True : &ECC_ConstString_False);
 }
@@ -44,7 +45,7 @@ static eccvalue_t valueOf(eccstate_t* context)
 
     ECCNSContext.assertThisMask(context, ECC_VALMASK_BOOLEAN);
 
-    truth = ECCNSValue.isObject(context->this) ? context->this.data.boolean->truth : ECCNSValue.isTrue(context->this);
+    truth = ECCNSValue.isObject(context->thisvalue) ? context->thisvalue.data.boolean->truth : ECCNSValue.isTrue(context->thisvalue);
 
     return ECCNSValue.truth(truth);
 }

@@ -35,11 +35,12 @@ static void newline(void);
 static double currentTime(void);
 const struct type_io_libecc_Env ECCNSEnv = {
     setup, teardown, print, printColor, printError, printWarning, newline, currentTime,
+    {}
 };
 
 const int io_libecc_env_print_max = PRINT_MAX;
 
-struct
+static struct
 {
 #if __MSDOS__
     int attribute;
@@ -50,7 +51,7 @@ struct
 #else
     int terminal;
 #endif
-} static env;
+} env;
 
 void setup(void)
 {
@@ -123,7 +124,7 @@ static void vprintc(const char* format, va_list ap)
     char buffer[PRINT_MAX];
     size_t size = sizeof(buffer);
 
-    if(vsnprintf(buffer, size, format, ap) >= size)
+    if(vsnprintf(buffer, size, format, ap) >= (int)size)
     {
         buffer[size - 3] = '.';
         buffer[size - 2] = '.';

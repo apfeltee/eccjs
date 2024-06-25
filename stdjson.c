@@ -48,6 +48,7 @@ static void teardown(void);
 const struct type_io_libecc_JSON io_libecc_JSON = {
     setup,
     teardown,
+    {}
 };
 
 static eccvalue_t error(eccjsonparser_t* parse, int length, ecccharbuffer_t* chars)
@@ -95,9 +96,8 @@ static ecctextchar_t nextc(eccjsonparser_t* parse)
 
 static ecctextstring_t string(eccjsonparser_t* parse)
 {
-    ecctextstring_t text = { parse->text.bytes };
+    ecctextstring_t text = { parse->text.bytes, 0, 0 };
     ecctextchar_t c;
-
     do
     {
         c = ECCNSText.nextCharacter(&parse->text);
@@ -297,7 +297,7 @@ static eccvalue_t json(eccjsonparser_t* parse)
 
 // MARK: - Static Members
 
-static eccvalue_t revive(eccjsonparser_t* parse, eccvalue_t this, eccvalue_t property, eccvalue_t value)
+static eccvalue_t revive(eccjsonparser_t* parse, eccvalue_t thisval, eccvalue_t property, eccvalue_t value)
 {
     uint16_t hashmapCount;
 
@@ -305,11 +305,20 @@ static eccvalue_t revive(eccjsonparser_t* parse, eccvalue_t this, eccvalue_t pro
     switch(hashmapCount)
     {
         default:
-            memcpy(parse->context.environment->hashmap + 5, parse->function->environment.hashmap, sizeof(*parse->context.environment->hashmap) * (hashmapCount - 5));
+            {
+                memcpy(parse->context.environment->hashmap + 5, parse->function->environment.hashmap, sizeof(*parse->context.environment->hashmap) * (hashmapCount - 5));
+            }
+            /* fallthrough */
         case 5:
-            parse->context.environment->hashmap[3 + 1].value = value;
+            {
+                parse->context.environment->hashmap[3 + 1].value = value;
+            }
+            /* fallthrough */
         case 4:
-            parse->context.environment->hashmap[3 + 0].value = property;
+            {
+                parse->context.environment->hashmap[3 + 0].value = property;
+            }
+            /* fallthrough */
         case 3:
             break;
         case 2:
@@ -320,13 +329,13 @@ static eccvalue_t revive(eccjsonparser_t* parse, eccvalue_t this, eccvalue_t pro
     }
 
     parse->context.ops = parse->ops;
-    parse->context.this = this;
+    parse->context.thisvalue = thisval;
     parse->arguments->element[0].value = property;
     parse->arguments->element[1].value = value;
     return parse->context.ops->native(&parse->context);
 }
 
-static eccvalue_t walker(eccjsonparser_t* parse, eccvalue_t this, eccvalue_t property, eccvalue_t value)
+static eccvalue_t walker(eccjsonparser_t* parse, eccvalue_t thisval, eccvalue_t property, eccvalue_t value)
 {
     uint32_t index, count;
     eccappendbuffer_t chars;
@@ -341,17 +350,17 @@ static eccvalue_t walker(eccjsonparser_t* parse, eccvalue_t this, eccvalue_t pro
             {
                 io_libecc_Chars.beginAppend(&chars);
                 io_libecc_Chars.append(&chars, "%d", index);
-                object->element[index].value = walker(parse, this, io_libecc_Chars.endAppend(&chars), object->element[index].value);
+                object->element[index].value = walker(parse, thisval, io_libecc_Chars.endAppend(&chars), object->element[index].value);
             }
         }
 
         for(index = 2; index < object->hashmapCount; ++index)
         {
             if(object->hashmap[index].value.check == 1)
-                object->hashmap[index].value = walker(parse, this, ECCNSValue.key(object->hashmap[index].value.key), object->hashmap[index].value);
+                object->hashmap[index].value = walker(parse, thisval, ECCNSValue.key(object->hashmap[index].value.key), object->hashmap[index].value);
         }
     }
-    return revive(parse, this, property, value);
+    return revive(parse, thisval, property, value);
 }
 
 static eccvalue_t jsonParse(eccstate_t* context)
@@ -389,7 +398,7 @@ static eccvalue_t jsonParse(eccstate_t* context)
         context->ecc->ofLine = parse.line;
         context->ecc->ofText = errorOfLine(&parse);
         context->ecc->ofInput = "(parse)";
-        ECCNSContext.throw(context, result);
+        ECCNSContext.doThrow(context, result);
     }
 
     if(parse.function && parse.function->flags & io_libecc_function_needHeap)
@@ -425,7 +434,7 @@ static eccvalue_t jsonParse(eccstate_t* context)
     return result;
 }
 
-static eccvalue_t replace(eccjsonstringify_t* stringify, eccvalue_t this, eccvalue_t property, eccvalue_t value)
+static eccvalue_t replace(eccjsonstringify_t* stringify, eccvalue_t thisval, eccvalue_t property, eccvalue_t value)
 {
     uint16_t hashmapCount;
 
@@ -433,12 +442,21 @@ static eccvalue_t replace(eccjsonstringify_t* stringify, eccvalue_t this, eccval
     switch(hashmapCount)
     {
         default:
-            memcpy(stringify->context.environment->hashmap + 5, stringify->function->environment.hashmap,
+            {
+                memcpy(stringify->context.environment->hashmap + 5, stringify->function->environment.hashmap,
                    sizeof(*stringify->context.environment->hashmap) * (hashmapCount - 5));
+            }
+            /* fallthrough */
         case 5:
-            stringify->context.environment->hashmap[3 + 1].value = value;
+            {
+                stringify->context.environment->hashmap[3 + 1].value = value;
+            }
+            /* fallthrough */
         case 4:
-            stringify->context.environment->hashmap[3 + 0].value = property;
+            {
+                stringify->context.environment->hashmap[3 + 0].value = property;
+            }
+            /* fallthrough */
         case 3:
             break;
         case 2:
@@ -449,18 +467,18 @@ static eccvalue_t replace(eccjsonstringify_t* stringify, eccvalue_t this, eccval
     }
 
     stringify->context.ops = stringify->ops;
-    stringify->context.this = this;
+    stringify->context.thisvalue = thisval;
     stringify->arguments->element[0].value = property;
     stringify->arguments->element[1].value = value;
     return stringify->context.ops->native(&stringify->context);
 }
 
-static int stringifyValue(eccjsonstringify_t* stringify, eccvalue_t this, eccvalue_t property, eccvalue_t value, int isArray, int addComa)
+static int stringifyValue(eccjsonstringify_t* stringify, eccvalue_t thisval, eccvalue_t property, eccvalue_t value, int isArray, int addComa)
 {
     uint32_t index, count;
 
     if(stringify->function)
-        value = replace(stringify, this, property, value);
+        value = replace(stringify, thisval, property, value);
 
     if(!isArray)
     {
@@ -504,12 +522,12 @@ static int stringifyValue(eccjsonstringify_t* stringify, eccvalue_t this, eccval
     else if(ECCNSValue.isObject(value))
     {
         eccobject_t* object = value.data.object;
-        int isArray = ECCNSValue.objectIsArray(object);
+        int subisarr = ECCNSValue.objectIsArray(object);
         eccappendbuffer_t chars;
-        const ecctextstring_t* property;
+        const ecctextstring_t* strprop;
         int hasValue = 0;
 
-        io_libecc_Chars.append(&stringify->chars, "%s%s", isArray ? "[" : "{", strlen(stringify->spaces) ? "\n" : "");
+        io_libecc_Chars.append(&stringify->chars, "%s%s", subisarr ? "[" : "{", strlen(stringify->spaces) ? "\n" : "");
         ++stringify->level;
 
         for(index = 0, count = object->elementCount < io_libecc_object_ElementMax ? object->elementCount : io_libecc_object_ElementMax; index < count; ++index)
@@ -518,18 +536,18 @@ static int stringifyValue(eccjsonstringify_t* stringify, eccvalue_t this, eccval
             {
                 io_libecc_Chars.beginAppend(&chars);
                 io_libecc_Chars.append(&chars, "%d", index);
-                hasValue |= stringifyValue(stringify, value, io_libecc_Chars.endAppend(&chars), object->element[index].value, isArray, hasValue);
+                hasValue |= stringifyValue(stringify, value, io_libecc_Chars.endAppend(&chars), object->element[index].value, subisarr, hasValue);
             }
         }
 
-        if(!isArray)
+        if(!subisarr)
         {
             for(index = 0; index < object->hashmapCount; ++index)
             {
                 if(object->hashmap[index].value.check == 1)
                 {
-                    property = io_libecc_Key.textOf(object->hashmap[index].value.key);
-                    hasValue |= stringifyValue(stringify, value, ECCNSValue.text(property), object->hashmap[index].value, isArray, hasValue);
+                    strprop = io_libecc_Key.textOf(object->hashmap[index].value.key);
+                    hasValue |= stringifyValue(stringify, value, ECCNSValue.text(strprop), object->hashmap[index].value, subisarr, hasValue);
                 }
             }
         }
@@ -540,7 +558,7 @@ static int stringifyValue(eccjsonstringify_t* stringify, eccvalue_t this, eccval
         for(index = 0, count = stringify->level; index < count; ++index)
             io_libecc_Chars.append(&stringify->chars, "%s", stringify->spaces);
 
-        io_libecc_Chars.append(&stringify->chars, "%s", isArray ? "]" : "}");
+        io_libecc_Chars.append(&stringify->chars, "%s", subisarr ? "]" : "}");
     }
     else
         io_libecc_Chars.appendValue(&stringify->chars, &stringify->context, value);

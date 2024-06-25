@@ -12,7 +12,7 @@
 static eccscriptcontext_t* create(void);
 static void destroy(eccscriptcontext_t*);
 static void addValue(eccscriptcontext_t*, const char* name, eccvalue_t value, eccvalflag_t);
-static void addFunction(eccscriptcontext_t*, const char* name, const io_libecc_native_io_libecc_Function native, int argumentCount, eccvalflag_t);
+static void addFunction(eccscriptcontext_t*, const char* name, const eccnativefuncptr_t native, int argumentCount, eccvalflag_t);
 static int evalInput(eccscriptcontext_t*, eccioinput_t*, enum io_libecc_ecc_EvalFlags);
 static void evalInputWithContext(eccscriptcontext_t*, eccioinput_t*, eccstate_t* context);
 static jmp_buf* pushEnv(eccscriptcontext_t*);
@@ -24,6 +24,7 @@ static void printTextInput(eccscriptcontext_t*, ecctextstring_t text, int fullLi
 static void garbageCollect(eccscriptcontext_t*);
 const struct type_io_libecc_Ecc ECCNSScript = {
     create, destroy, addValue, addFunction, evalInput, evalInputWithContext, pushEnv, popEnv, jmpEnv, fatal, findInput, printTextInput, garbageCollect,
+    {}
 };
 
 static int instanceCount = 0;
@@ -81,7 +82,7 @@ void destroy(eccscriptcontext_t* self)
     }
 }
 
-void addFunction(eccscriptcontext_t* self, const char* name, const io_libecc_native_io_libecc_Function native, int argumentCount, eccvalflag_t flags)
+void addFunction(eccscriptcontext_t* self, const char* name, const eccnativefuncptr_t native, int argumentCount, eccvalflag_t flags)
 {
     assert(self);
 
@@ -100,7 +101,7 @@ io_libecc_ecc_useframe int evalInput(eccscriptcontext_t* self, eccioinput_t* inp
     volatile int result = EXIT_SUCCESS, trap = !self->envCount || flags & io_libecc_ecc_primitiveResult, catch = 0;
     eccstate_t context = {
         .environment = &self->global->environment,
-        .this = ECCNSValue.object(&self->global->environment),
+        .thisvalue = ECCNSValue.object(&self->global->environment),
         .ecc = self,
         .strictMode = !(flags & io_libecc_ecc_sloppyMode),
     };

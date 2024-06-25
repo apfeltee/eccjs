@@ -36,6 +36,7 @@ const struct type_io_libecc_Array io_libecc_Array = {
     teardown,
     create,
     createSized,
+    {}
 };
 
 static int valueIsArray(eccvalue_t value)
@@ -93,9 +94,9 @@ static eccvalue_t isArray(eccstate_t* context)
     return ECCNSValue.truth(value.type == ECC_VALTYPE_OBJECT && value.data.object->type == &io_libecc_array_type);
 }
 
-static eccvalue_t toChars(eccstate_t* context, eccvalue_t this, ecctextstring_t separator)
+static eccvalue_t toChars(eccstate_t* context, eccvalue_t thisval, ecctextstring_t separator)
 {
-    eccobject_t* object = this.data.object;
+    eccobject_t* object = thisval.data.object;
     eccvalue_t value, length = ECCNSObject.getMember(context, object, io_libecc_key_length);
     uint32_t index, count = ECCNSValue.toInteger(context, length).data.integer;
     eccappendbuffer_t chars;
@@ -103,7 +104,7 @@ static eccvalue_t toChars(eccstate_t* context, eccvalue_t this, ecctextstring_t 
     io_libecc_Chars.beginAppend(&chars);
     for(index = 0; index < count; ++index)
     {
-        value = ECCNSObject.getElement(context, this.data.object, index);
+        value = ECCNSObject.getElement(context, thisval.data.object, index);
 
         if(index)
             io_libecc_Chars.append(&chars, "%.*s", separator.length, separator.bytes);
@@ -119,11 +120,11 @@ static eccvalue_t toString(eccstate_t* context)
 {
     eccvalue_t function;
 
-    context->this = ECCNSValue.toObject(context, ECCNSContext.this(context));
-    function = ECCNSObject.getMember(context, context->this.data.object, io_libecc_key_join);
+    context->thisvalue = ECCNSValue.toObject(context, ECCNSContext.getThis(context));
+    function = ECCNSObject.getMember(context, context->thisvalue.data.object, io_libecc_key_join);
 
     if(function.type == ECC_VALTYPE_FUNCTION)
-        return ECCNSContext.callFunction(context, function.data.function, context->this, 0);
+        return ECCNSContext.callFunction(context, function.data.function, context->thisvalue, 0);
     else
         return ECCNSObject.toString(context);
 }
@@ -134,7 +135,7 @@ static eccvalue_t concat(eccstate_t* context)
     uint32_t element = 0, length = 0, index, count;
     eccobject_t* array = NULL;
 
-    value = ECCNSValue.toObject(context, ECCNSContext.this(context));
+    value = ECCNSValue.toObject(context, ECCNSContext.getThis(context));
     count = ECCNSContext.argumentCount(context);
 
     length += valueArrayLength(value);
@@ -165,7 +166,7 @@ static eccvalue_t join(eccstate_t* context)
         separator = ECCNSValue.textOf(&value);
     }
 
-    object = ECCNSValue.toObject(context, ECCNSContext.this(context));
+    object = ECCNSValue.toObject(context, ECCNSContext.getThis(context));
 
     return toChars(context, object, separator);
 }
@@ -173,57 +174,57 @@ static eccvalue_t join(eccstate_t* context)
 static eccvalue_t pop(eccstate_t* context)
 {
     eccvalue_t value = ECCValConstUndefined;
-    eccobject_t* this;
+    eccobject_t* thisobj;
     uint32_t length;
 
-    this = ECCNSValue.toObject(context, ECCNSContext.this(context)).data.object;
-    length = objectLength(context, this);
+    thisobj = ECCNSValue.toObject(context, ECCNSContext.getThis(context)).data.object;
+    length = objectLength(context, thisobj);
 
     if(length)
     {
         --length;
-        value = ECCNSObject.getElement(context, this, length);
+        value = ECCNSObject.getElement(context, thisobj, length);
 
-        if(!ECCNSObject.deleteElement(this, length) && context->parent->strictMode)
+        if(!ECCNSObject.deleteElement(thisobj, length) && context->parent->strictMode)
         {
             ECCNSContext.setTextIndex(context, io_libecc_context_callIndex);
             ECCNSContext.typeError(context, io_libecc_Chars.create("'%u' is non-configurable", length));
         }
     }
-    objectResize(context, this, length);
+    objectResize(context, thisobj, length);
 
     return value;
 }
 
 static eccvalue_t push(eccstate_t* context)
 {
-    eccobject_t* this;
+    eccobject_t* thisobj;
     uint32_t length = 0, index, count, base;
 
-    this = ECCNSValue.toObject(context, ECCNSContext.this(context)).data.object;
+    thisobj = ECCNSValue.toObject(context, ECCNSContext.getThis(context)).data.object;
     count = ECCNSContext.argumentCount(context);
 
-    base = objectLength(context, this);
+    base = objectLength(context, thisobj);
     length = UINT32_MAX - base < count ? UINT32_MAX : base + count;
-    objectResize(context, this, length);
+    objectResize(context, thisobj, length);
 
     for(index = base; index < length; ++index)
-        ECCNSObject.putElement(context, this, index, ECCNSContext.argument(context, index - base));
+        ECCNSObject.putElement(context, thisobj, index, ECCNSContext.argument(context, index - base));
 
     if(UINT32_MAX - base < count)
     {
-        ECCNSObject.putElement(context, this, index, ECCNSContext.argument(context, index - base));
+        ECCNSObject.putElement(context, thisobj, index, ECCNSContext.argument(context, index - base));
 
-        if(this->type == &io_libecc_array_type)
+        if(thisobj->type == &io_libecc_array_type)
             ECCNSContext.rangeError(context, io_libecc_Chars.create("max length exeeded"));
         else
         {
-            double index, length = (double)base + count;
-            for(index = (double)UINT32_MAX + 1; index < length; ++index)
-                ECCNSObject.putProperty(context, this, ECCNSValue.binary(index), ECCNSContext.argument(context, index - base));
+            double subidx, sublen = (double)base + count;
+            for(subidx = (double)UINT32_MAX + 1; subidx < sublen; ++subidx)
+                ECCNSObject.putProperty(context, thisobj, ECCNSValue.binary(subidx), ECCNSContext.argument(context, subidx - base));
 
-            ECCNSObject.putMember(context, this, io_libecc_key_length, ECCNSValue.binary(length));
-            return ECCNSValue.binary(length);
+            ECCNSObject.putMember(context, thisobj, io_libecc_key_length, ECCNSValue.binary(sublen));
+            return ECCNSValue.binary(sublen);
         }
     }
 
@@ -233,11 +234,11 @@ static eccvalue_t push(eccstate_t* context)
 static eccvalue_t reverse(eccstate_t* context)
 {
     eccvalue_t temp;
-    eccobject_t* this;
+    eccobject_t* thisobj;
     uint32_t index, half, last, length;
 
-    this = ECCNSValue.toObject(context, ECCNSContext.this(context)).data.object;
-    length = objectLength(context, this);
+    thisobj = ECCNSValue.toObject(context, ECCNSContext.getThis(context)).data.object;
+    length = objectLength(context, thisobj);
 
     last = length - 1;
     half = length / 2;
@@ -246,34 +247,34 @@ static eccvalue_t reverse(eccstate_t* context)
 
     for(index = 0; index < half; ++index)
     {
-        temp = ECCNSObject.getElement(context, this, index);
-        ECCNSObject.putElement(context, this, index, ECCNSObject.getElement(context, this, last - index));
-        ECCNSObject.putElement(context, this, last - index, temp);
+        temp = ECCNSObject.getElement(context, thisobj, index);
+        ECCNSObject.putElement(context, thisobj, index, ECCNSObject.getElement(context, thisobj, last - index));
+        ECCNSObject.putElement(context, thisobj, last - index, temp);
     }
 
-    return ECCNSValue.object(this);
+    return ECCNSValue.object(thisobj);
 }
 
 static eccvalue_t shift(eccstate_t* context)
 {
     eccvalue_t result;
-    eccobject_t* this;
+    eccobject_t* thisobj;
     uint32_t index, count, length;
 
-    this = ECCNSValue.toObject(context, ECCNSContext.this(context)).data.object;
-    length = objectLength(context, this);
+    thisobj = ECCNSValue.toObject(context, ECCNSContext.getThis(context)).data.object;
+    length = objectLength(context, thisobj);
 
     ECCNSContext.setTextIndex(context, io_libecc_context_callIndex);
 
     if(length)
     {
         length--;
-        result = ECCNSObject.getElement(context, this, 0);
+        result = ECCNSObject.getElement(context, thisobj, 0);
 
         for(index = 0, count = length; index < count; ++index)
-            ECCNSObject.putElement(context, this, index, ECCNSObject.getElement(context, this, index + 1));
+            ECCNSObject.putElement(context, thisobj, index, ECCNSObject.getElement(context, thisobj, index + 1));
 
-        if(!ECCNSObject.deleteElement(this, length) && context->parent->strictMode)
+        if(!ECCNSObject.deleteElement(thisobj, length) && context->parent->strictMode)
         {
             ECCNSContext.setTextIndex(context, io_libecc_context_callIndex);
             ECCNSContext.typeError(context, io_libecc_Chars.create("'%u' is non-configurable", length));
@@ -282,42 +283,42 @@ static eccvalue_t shift(eccstate_t* context)
     else
         result = ECCValConstUndefined;
 
-    objectResize(context, this, length);
+    objectResize(context, thisobj, length);
 
     return result;
 }
 
 static eccvalue_t unshift(eccstate_t* context)
 {
-    eccobject_t* this;
+    eccobject_t* thisobj;
     uint32_t length = 0, index, count;
 
-    this = ECCNSValue.toObject(context, ECCNSContext.this(context)).data.object;
+    thisobj = ECCNSValue.toObject(context, ECCNSContext.getThis(context)).data.object;
     count = ECCNSContext.argumentCount(context);
 
-    length = objectLength(context, this) + count;
-    objectResize(context, this, length);
+    length = objectLength(context, thisobj) + count;
+    objectResize(context, thisobj, length);
 
     ECCNSContext.setTextIndex(context, io_libecc_context_callIndex);
 
     for(index = count; index < length; ++index)
-        ECCNSObject.putElement(context, this, index, ECCNSObject.getElement(context, this, index - count));
+        ECCNSObject.putElement(context, thisobj, index, ECCNSObject.getElement(context, thisobj, index - count));
 
     for(index = 0; index < count; ++index)
-        ECCNSObject.putElement(context, this, index, ECCNSContext.argument(context, index));
+        ECCNSObject.putElement(context, thisobj, index, ECCNSContext.argument(context, index));
 
     return ECCNSValue.binary(length);
 }
 
 static eccvalue_t slice(eccstate_t* context)
 {
-    eccobject_t* this, *result;
+    eccobject_t* thisobj, *result;
     eccvalue_t start, end;
     uint32_t from, to, length;
     double binary;
 
-    this = ECCNSValue.toObject(context, ECCNSContext.this(context)).data.object;
-    length = objectLength(context, this);
+    thisobj = ECCNSValue.toObject(context, ECCNSContext.getThis(context)).data.object;
+    length = objectLength(context, thisobj);
 
     start = ECCNSContext.argument(context, 0);
     binary = ECCNSValue.toBinary(context, start).data.binary;
@@ -345,7 +346,7 @@ static eccvalue_t slice(eccstate_t* context)
         result = io_libecc_Array.createSized(length);
 
         for(to = 0; to < length; ++from, ++to)
-            ECCNSObject.putElement(context, result, to, ECCNSObject.getElement(context, this, from));
+            ECCNSObject.putElement(context, result, to, ECCNSObject.getElement(context, thisobj, from));
     }
     else
         result = io_libecc_Array.createSized(0);
@@ -422,11 +423,20 @@ static inline int compare(eccarraycomparestate_t* cmp, eccvalue_t left, eccvalue
     switch(hashmapCount)
     {
         default:
-            memcpy(cmp->context.environment->hashmap + 5, cmp->function->environment.hashmap, sizeof(*cmp->context.environment->hashmap) * (hashmapCount - 5));
+            {
+                memcpy(cmp->context.environment->hashmap + 5, cmp->function->environment.hashmap, sizeof(*cmp->context.environment->hashmap) * (hashmapCount - 5));
+            }
+            /* fallthrough */
         case 5:
-            cmp->context.environment->hashmap[3 + 1].value = right;
+            {
+                cmp->context.environment->hashmap[3 + 1].value = right;
+            }
+            /* fallthrough */
         case 4:
-            cmp->context.environment->hashmap[3 + 0].value = left;
+            {
+                cmp->context.environment->hashmap[3 + 0].value = left;
+            }
+            /* fallthrough */
         case 3:
             break;
         case 2:
@@ -469,13 +479,13 @@ static inline void merge(eccobject_t* object, eccarraycomparestate_t* cmp, uint3
 
     if(len1 + len2 == 2)
     {
-        eccvalue_t left, right;
-        left = ECCNSObject.getElement(&cmp->context, object, pivot);
-        right = ECCNSObject.getElement(&cmp->context, object, first);
-        if(compare(cmp, left, right))
+        eccvalue_t leftval, rightval;
+        leftval = ECCNSObject.getElement(&cmp->context, object, pivot);
+        rightval = ECCNSObject.getElement(&cmp->context, object, first);
+        if(compare(cmp, leftval, rightval))
         {
-            ECCNSObject.putElement(&cmp->context, object, pivot, right);
-            ECCNSObject.putElement(&cmp->context, object, first, left);
+            ECCNSObject.putElement(&cmp->context, object, pivot, rightval);
+            ECCNSObject.putElement(&cmp->context, object, first, leftval);
         }
         return;
     }
@@ -539,7 +549,7 @@ static void sortInPlace(eccstate_t* context, eccobject_t* object, eccobjscriptfu
 
     eccarraycomparestate_t cmp = {
         {
-        .this = ECCNSValue.object(object),
+        .thisvalue = ECCNSValue.object(object),
         .parent = context,
         .ecc = context->ecc,
         .depth = context->depth + 1,
@@ -589,32 +599,32 @@ static void sortInPlace(eccstate_t* context, eccobject_t* object, eccobjscriptfu
 
 static eccvalue_t sort(eccstate_t* context)
 {
-    eccobject_t* this;
+    eccobject_t* thisobj;
     eccvalue_t compare;
     uint32_t count;
 
-    this = ECCNSValue.toObject(context, ECCNSContext.this(context)).data.object;
-    count = ECCNSValue.toInteger(context, ECCNSObject.getMember(context, this, io_libecc_key_length)).data.integer;
+    thisobj = ECCNSValue.toObject(context, ECCNSContext.getThis(context)).data.object;
+    count = ECCNSValue.toInteger(context, ECCNSObject.getMember(context, thisobj, io_libecc_key_length)).data.integer;
     compare = ECCNSContext.argument(context, 0);
 
     if(compare.type == ECC_VALTYPE_FUNCTION)
-        sortInPlace(context, this, compare.data.function, 0, count);
+        sortInPlace(context, thisobj, compare.data.function, 0, count);
     else if(compare.type == ECC_VALTYPE_UNDEFINED)
-        sortInPlace(context, this, NULL, 0, count);
+        sortInPlace(context, thisobj, NULL, 0, count);
     else
         ECCNSContext.typeError(context, io_libecc_Chars.create("comparison function must be a function or undefined"));
 
-    return ECCNSValue.object(this);
+    return ECCNSValue.object(thisobj);
 }
 
 static eccvalue_t splice(eccstate_t* context)
 {
-    eccobject_t* this, *result;
+    eccobject_t* thisobj, *result;
     uint32_t length, from, to, count = 0, add = 0, start = 0, delete = 0;
 
     count = ECCNSContext.argumentCount(context);
-    this = ECCNSValue.toObject(context, ECCNSContext.this(context)).data.object;
-    length = objectLength(context, this);
+    thisobj = ECCNSValue.toObject(context, ECCNSContext.getThis(context)).data.object;
+    length = objectLength(context, thisobj);
 
     if(count >= 1)
     {
@@ -647,53 +657,54 @@ static eccvalue_t splice(eccstate_t* context)
         add = count - 2;
 
     if(length - delete +add > length)
-        objectResize(context, this, length - delete +add);
+        objectResize(context, thisobj, length - delete +add);
 
     result = io_libecc_Array.createSized(delete);
 
     for(from = start, to = 0; to < delete; ++from, ++to)
-        ECCNSObject.putElement(context, result, to, ECCNSObject.getElement(context, this, from));
+        ECCNSObject.putElement(context, result, to, ECCNSObject.getElement(context, thisobj, from));
 
     if(delete > add)
     {
         for(from = start + delete, to = start + add; from < length; ++from, ++to)
-            ECCNSObject.putElement(context, this, to, ECCNSObject.getElement(context, this, from));
+            ECCNSObject.putElement(context, thisobj, to, ECCNSObject.getElement(context, thisobj, from));
 
         for(; to < length; ++to)
-            ECCNSObject.putElement(context, this, to, ECCValConstNone);
+            ECCNSObject.putElement(context, thisobj, to, ECCValConstNone);
     }
     else if(delete < add)
         for(from = length, to = length + add - delete; from > start;)
-            ECCNSObject.putElement(context, this, --to, ECCNSObject.getElement(context, this, --from));
+            ECCNSObject.putElement(context, thisobj, --to, ECCNSObject.getElement(context, thisobj, --from));
 
     for(from = 2, to = start; from < count; ++from, ++to)
-        ECCNSObject.putElement(context, this, to, ECCNSContext.argument(context, from));
+        ECCNSObject.putElement(context, thisobj, to, ECCNSContext.argument(context, from));
 
     if(length - delete +add <= length)
-        objectResize(context, this, length - delete +add);
+        objectResize(context, thisobj, length - delete +add);
 
     return ECCNSValue.object(result);
 }
 
 static eccvalue_t indexOf(eccstate_t* context)
 {
-    eccobject_t* this;
+    eccobject_t* thisobj;
     eccvalue_t search, start;
     uint32_t length = 0;
     int32_t index;
 
-    this = ECCNSValue.toObject(context, ECCNSContext.this(context)).data.object;
-    length = objectLength(context, this);
+    thisobj = ECCNSValue.toObject(context, ECCNSContext.getThis(context)).data.object;
+    length = objectLength(context, thisobj);
 
     search = ECCNSContext.argument(context, 0);
     start = ECCNSValue.toInteger(context, ECCNSContext.argument(context, 1));
-    index = start.data.integer < 0 ? length + start.data.integer : start.data.integer;
+    index = ((start.data.integer < 0) ? ((int32_t)(length + start.data.integer)) : (int32_t)start.data.integer);
+    
 
     if(index < 0)
         index = 0;
 
-    for(; index < length; ++index)
-        if(ECCNSValue.isTrue(ECCNSValue.same(context, search, ECCNSObject.getElement(context, this, index))))
+    for(; index < (int32_t)length; ++index)
+        if(ECCNSValue.isTrue(ECCNSValue.same(context, search, ECCNSObject.getElement(context, thisobj, index))))
             return ECCNSValue.binary(index);
 
     return ECCNSValue.binary(-1);
@@ -701,25 +712,25 @@ static eccvalue_t indexOf(eccstate_t* context)
 
 static eccvalue_t lastIndexOf(eccstate_t* context)
 {
-    eccobject_t* this;
+    eccobject_t* thisobj;
     eccvalue_t search, start;
     uint32_t length = 0;
     int32_t index;
 
-    this = ECCNSValue.toObject(context, ECCNSContext.this(context)).data.object;
-    length = objectLength(context, this);
+    thisobj = ECCNSValue.toObject(context, ECCNSContext.getThis(context)).data.object;
+    length = objectLength(context, thisobj);
 
     search = ECCNSContext.argument(context, 0);
     start = ECCNSValue.toInteger(context, ECCNSContext.argument(context, 1));
-    index = start.data.integer <= 0 ? length + start.data.integer : start.data.integer + 1;
+    index = ((start.data.integer <= 0) ? ((uint32_t)(length + start.data.integer)) : ((uint32_t)(start.data.integer + 1)));
 
     if(index < 0)
         index = 0;
-    else if(index > length)
+    else if(index > (int32_t)length)
         index = length;
 
     for(; index--;)
-        if(ECCNSValue.isTrue(ECCNSValue.same(context, search, ECCNSObject.getElement(context, this, index))))
+        if(ECCNSValue.isTrue(ECCNSValue.same(context, search, ECCNSObject.getElement(context, thisobj, index))))
             return ECCNSValue.binary(index);
 
     return ECCNSValue.binary(-1);
@@ -727,7 +738,7 @@ static eccvalue_t lastIndexOf(eccstate_t* context)
 
 static eccvalue_t getLength(eccstate_t* context)
 {
-    return ECCNSValue.binary(context->this.data.object->elementCount);
+    return ECCNSValue.binary(context->thisvalue.data.object->elementCount);
 }
 
 static eccvalue_t setLength(eccstate_t* context)
@@ -738,8 +749,8 @@ static eccvalue_t setLength(eccstate_t* context)
     if(!isfinite(length) || length < 0 || length > UINT32_MAX || length != (uint32_t)length)
         ECCNSContext.rangeError(context, io_libecc_Chars.create("invalid array length"));
 
-    if(ECCNSObject.resizeElement(context->this.data.object, length) && context->parent->strictMode)
-        ECCNSContext.typeError(context, io_libecc_Chars.create("'%u' is non-configurable", context->this.data.object->elementCount));
+    if(ECCNSObject.resizeElement(context->thisvalue.data.object, length) && context->parent->strictMode)
+        ECCNSContext.typeError(context, io_libecc_Chars.create("'%u' is non-configurable", context->thisvalue.data.object->elementCount));
 
     return ECCValConstUndefined;
 }

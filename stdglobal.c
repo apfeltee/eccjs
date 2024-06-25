@@ -16,6 +16,7 @@ const struct type_io_libecc_Global io_libecc_Global = {
     setup,
     teardown,
     create,
+    {}
 };
 
 const eccobjinterntype_t io_libecc_global_type = {
@@ -30,7 +31,7 @@ static eccvalue_t eval(eccstate_t* context)
     eccioinput_t* input;
     eccstate_t subContext = {
         .parent = context,
-        .this = ECCNSValue.object(&context->ecc->global->environment),
+        .thisvalue = ECCNSValue.object(&context->ecc->global->environment),
         .ecc = context->ecc,
         .depth = context->depth + 1,
         .environment = ECCNSContext.environmentRoot(context->parent),

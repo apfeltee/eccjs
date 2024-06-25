@@ -10,7 +10,7 @@
 // MARK: - Private
 
 // MARK: - Static Members
-
+eccioinput_t* ecc_input_create(void);
 static eccioinput_t* createFromFile(const char* filename);
 static eccioinput_t* createFromBytes(const char* bytes, uint32_t length, const char* name, ...);
 static void destroy(eccioinput_t*);
@@ -19,21 +19,19 @@ static int32_t findLine(eccioinput_t*, ecctextstring_t text);
 static eccvalue_t attachValue(eccioinput_t*, eccvalue_t value);
 const struct type_io_libecc_Input io_libecc_Input = {
     createFromFile, createFromBytes, destroy, printText, findLine, attachValue,
+    {}
 };
 
-static eccioinput_t* create()
+eccioinput_t* ecc_input_create(void)
 {
     size_t linesBytes;
     eccioinput_t* self = malloc(sizeof(*self));
     *self = io_libecc_Input.identity;
-
     self->lineCapacity = 8;
     self->lineCount = 1;
-
     linesBytes = sizeof(*self->lines) * self->lineCapacity;
     self->lines = malloc(linesBytes);
     memset(self->lines, 0, linesBytes);
-
     return self;
 }
 
@@ -72,7 +70,7 @@ eccioinput_t* createFromFile(const char* filename)
         return NULL;
     }
 
-    self = create();
+    self = ecc_input_create();
 
     strncat(self->name, filename, sizeof(self->name) - 1);
     self->bytes = malloc(size + 1);
@@ -93,7 +91,7 @@ eccioinput_t* createFromBytes(const char* bytes, uint32_t length, const char* na
 
     assert(bytes);
 
-    self = create();
+    self = ecc_input_create();
 
     if(name)
     {

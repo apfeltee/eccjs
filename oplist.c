@@ -12,7 +12,7 @@
 // MARK: - Static Members
 
 // MARK: - Methods
-static eccoplist_t* create(const io_libecc_native_io_libecc_Function native, eccvalue_t value, ecctextstring_t text);
+static eccoplist_t* create(const eccnativefuncptr_t native, eccvalue_t value, ecctextstring_t text);
 static void destroy(eccoplist_t*);
 static eccoplist_t* join(eccoplist_t*, eccoplist_t*);
 static eccoplist_t* join3(eccoplist_t*, eccoplist_t*, eccoplist_t*);
@@ -30,9 +30,10 @@ static ecctextstring_t text(eccoplist_t* oplist);
 const struct type_io_libecc_OpList io_libecc_OpList = {
     create, destroy, join,       join3,      joinDiscarded,           unshift, unshiftJoin, unshiftJoin3,
     shift,  append,  appendNoop, createLoop, optimizeWithEnvironment, dumpTo,  text,
+    {}
 };
 
-eccoplist_t* create(const io_libecc_native_io_libecc_Function native, eccvalue_t value, ecctextstring_t text)
+eccoplist_t* create(const eccnativefuncptr_t native, eccvalue_t value, ecctextstring_t text)
 {
     eccoplist_t* self = malloc(sizeof(*self));
     self->ops = malloc(sizeof(*self->ops) * 1);
@@ -287,8 +288,8 @@ void optimizeWithEnvironment(eccoplist_t* self, eccobject_t* environment, uint32
 
         if(self->ops[index].native == io_libecc_Op.function)
         {
-            uint32_t selfIndex = index && self->ops[index - 1].native == io_libecc_Op.setLocalSlot ? self->ops[index - 1].value.data.integer : 0;
-            optimizeWithEnvironment(self->ops[index].value.data.function->oplist, &self->ops[index].value.data.function->environment, selfIndex);
+            uint32_t subselfidx = ((index && (self->ops[index - 1].native == io_libecc_Op.setLocalSlot)) ? self->ops[index - 1].value.data.integer : 0);
+            optimizeWithEnvironment(self->ops[index].value.data.function->oplist, &self->ops[index].value.data.function->environment, subselfidx);
         }
 
         if(self->ops[index].native == io_libecc_Op.pushEnvironment)

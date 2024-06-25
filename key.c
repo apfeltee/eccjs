@@ -56,6 +56,7 @@ static const ecctextstring_t* textOf(eccindexkey_t);
 static void dumpTo(eccindexkey_t, FILE*);
 const struct type_io_libecc_Key io_libecc_Key = {
     setup, teardown, makeWithCString, makeWithText, search, isEqual, textOf, dumpTo,
+    {}
 };
 
 static eccindexkey_t makeWithNumber(uint16_t number)

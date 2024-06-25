@@ -18,12 +18,12 @@ static void referenceError(eccstate_t*, ecccharbuffer_t*) __attribute__((noretur
 static void syntaxError(eccstate_t*, ecccharbuffer_t*) __attribute__((noreturn));
 static void typeError(eccstate_t*, ecccharbuffer_t*) __attribute__((noreturn));
 static void uriError(eccstate_t*, ecccharbuffer_t*) __attribute__((noreturn));
-static void throw(eccstate_t*, eccvalue_t) __attribute__((noreturn));
-static eccvalue_t callFunction(eccstate_t*, eccobjscriptfunction_t* function, eccvalue_t this, int argumentCount, ...);
+static void ctxfn_throw(eccstate_t*, eccvalue_t) __attribute__((noreturn));
+static eccvalue_t callFunction(eccstate_t*, eccobjscriptfunction_t* function, eccvalue_t thisval, int argumentCount, ...);
 static int argumentCount(eccstate_t*);
 static eccvalue_t argument(eccstate_t*, int argumentIndex);
 static void replaceArgument(eccstate_t*, int argumentIndex, eccvalue_t value);
-static eccvalue_t this(eccstate_t*);
+static eccvalue_t ctxfn_this(eccstate_t*);
 static void assertThisType(eccstate_t*, eccvaltype_t);
 static void assertThisMask(eccstate_t*, eccvalmask_t);
 static void assertThisCoerciblePrimitive(eccstate_t*);
@@ -38,43 +38,44 @@ static eccobject_t* environmentRoot(eccstate_t* context);
 const struct type_io_libecc_Context ECCNSContext = {
     rangeError,     referenceError,
     syntaxError,    typeError,
-    uriError,       throw,
+    uriError,       ctxfn_throw,
     callFunction,   argumentCount,
     argument,       replaceArgument,
-    this,           assertThisType,
+    ctxfn_this,           assertThisType,
     assertThisMask, assertThisCoerciblePrimitive,
     setText,        setTexts,
     setTextIndex,   setTextIndexArgument,
     textSeek,       rewindStatement,
     printBacktrace, environmentRoot,
+    {}
 };
 
 void rangeError(eccstate_t* self, ecccharbuffer_t* chars)
 {
-    throw(self, ECCNSValue.error(io_libecc_Error.rangeError(textSeek(self), chars)));
+    ctxfn_throw(self, ECCNSValue.error(io_libecc_Error.rangeError(textSeek(self), chars)));
 }
 
 void referenceError(eccstate_t* self, ecccharbuffer_t* chars)
 {
-    throw(self, ECCNSValue.error(io_libecc_Error.referenceError(textSeek(self), chars)));
+    ctxfn_throw(self, ECCNSValue.error(io_libecc_Error.referenceError(textSeek(self), chars)));
 }
 
 void syntaxError(eccstate_t* self, ecccharbuffer_t* chars)
 {
-    throw(self, ECCNSValue.error(io_libecc_Error.syntaxError(textSeek(self), chars)));
+    ctxfn_throw(self, ECCNSValue.error(io_libecc_Error.syntaxError(textSeek(self), chars)));
 }
 
 void typeError(eccstate_t* self, ecccharbuffer_t* chars)
 {
-    throw(self, ECCNSValue.error(io_libecc_Error.typeError(textSeek(self), chars)));
+    ctxfn_throw(self, ECCNSValue.error(io_libecc_Error.typeError(textSeek(self), chars)));
 }
 
 void uriError(eccstate_t* self, ecccharbuffer_t* chars)
 {
-    throw(self, ECCNSValue.error(io_libecc_Error.uriError(textSeek(self), chars)));
+    ctxfn_throw(self, ECCNSValue.error(io_libecc_Error.uriError(textSeek(self), chars)));
 }
 
-void throw(eccstate_t * self, eccvalue_t value)
+void ctxfn_throw(eccstate_t * self, eccvalue_t value)
 {
     if(value.type == ECC_VALTYPE_ERROR)
         self->ecc->text = value.data.error->text;
@@ -104,7 +105,7 @@ void throw(eccstate_t * self, eccvalue_t value)
     ECCNSScript.jmpEnv(self->ecc, value);
 }
 
-eccvalue_t callFunction(eccstate_t* self, eccobjscriptfunction_t* function, eccvalue_t this, int argumentCount, ...)
+eccvalue_t callFunction(eccstate_t* self, eccobjscriptfunction_t* function, eccvalue_t thisval, int argumentCount, ...)
 {
     eccvalue_t result;
     va_list ap;
@@ -116,7 +117,7 @@ eccvalue_t callFunction(eccstate_t* self, eccobjscriptfunction_t* function, eccv
     }
 
     va_start(ap, argumentCount);
-    result = io_libecc_Op.callFunctionVA(self, offset, function, this, argumentCount & io_libecc_context_countMask, ap);
+    result = io_libecc_Op.callFunctionVA(self, offset, function, thisval, argumentCount & io_libecc_context_countMask, ap);
     va_end(ap);
 
     return result;
@@ -136,10 +137,10 @@ eccvalue_t argument(eccstate_t* self, int argumentIndex)
 
     if(self->environment->hashmap[2].value.type == ECC_VALTYPE_OBJECT)
     {
-        if(argumentIndex < self->environment->hashmap[2].value.data.object->elementCount)
+        if(argumentIndex < (int)self->environment->hashmap[2].value.data.object->elementCount)
             return self->environment->hashmap[2].value.data.object->element[argumentIndex].value;
     }
-    else if(argumentIndex < self->environment->hashmapCount - 3)
+    else if(argumentIndex < (self->environment->hashmapCount - 3))
         return self->environment->hashmap[argumentIndex + 3].value;
 
     return ECCValConstNone;
@@ -149,22 +150,22 @@ void replaceArgument(eccstate_t* self, int argumentIndex, eccvalue_t value)
 {
     if(self->environment->hashmap[2].value.type == ECC_VALTYPE_OBJECT)
     {
-        if(argumentIndex < self->environment->hashmap[2].value.data.object->elementCount)
+        if(argumentIndex < (int)self->environment->hashmap[2].value.data.object->elementCount)
             self->environment->hashmap[2].value.data.object->element[argumentIndex].value = value;
     }
     else if(argumentIndex < self->environment->hashmapCount - 3)
         self->environment->hashmap[argumentIndex + 3].value = value;
 }
 
-eccvalue_t this(eccstate_t* self)
+eccvalue_t ctxfn_this(eccstate_t* self)
 {
     self->textIndex = io_libecc_context_thisIndex;
-    return self->this;
+    return self->thisvalue;
 }
 
 void assertThisType(eccstate_t* self, eccvaltype_t type)
 {
-    if(self->this.type != type)
+    if(self->thisvalue.type != type)
     {
         setTextIndex(self, io_libecc_context_thisIndex);
         typeError(self, io_libecc_Chars.create("'this' is not a %s", ECCNSValue.typeName(type)));
@@ -173,7 +174,7 @@ void assertThisType(eccstate_t* self, eccvaltype_t type)
 
 void assertThisMask(eccstate_t* self, eccvalmask_t mask)
 {
-    if(!(self->this.type & mask))
+    if(!(self->thisvalue.type & mask))
     {
         setTextIndex(self, io_libecc_context_thisIndex);
         typeError(self, io_libecc_Chars.create("'this' is not a %s", ECCNSValue.maskName(mask)));
@@ -182,7 +183,7 @@ void assertThisMask(eccstate_t* self, eccvalmask_t mask)
 
 void assertThisCoerciblePrimitive(eccstate_t* self)
 {
-    if(self->this.type == ECC_VALTYPE_UNDEFINED || self->this.type == ECC_VALTYPE_NULL)
+    if(self->thisvalue.type == ECC_VALTYPE_UNDEFINED || self->thisvalue.type == ECC_VALTYPE_NULL)
     {
         setTextIndex(self, io_libecc_context_thisIndex);
         typeError(self, io_libecc_Chars.create("'this' cannot be null or undefined"));

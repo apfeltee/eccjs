@@ -73,6 +73,7 @@ static uint8_t uint8Hex(char a, char b);
 static uint16_t uint16Hex(char a, char b, char c, char d);
 const struct type_io_libecc_Lexer io_libecc_Lexer = {
     createWithInput, destroy, nextToken, tokenChars, scanBinary, scanInteger, scanElement, uint8Hex, uint16Hex,
+    {}
 };
 
 static void addLine(eccastlexer_t* self, uint32_t offset)
@@ -184,7 +185,6 @@ retry:
             case '\f':
             case ' ':
                 goto retry;
-
             case '/':
             {
                 if(acceptChar(self, '*'))
@@ -207,11 +207,11 @@ retry:
                 {
                     while(!eof(self))
                     {
-                        int c = nextChar(self);
+                        int rxclit = nextChar(self);
 
-                        if(c == '\\')
-                            c = nextChar(self);
-                        else if(c == '/')
+                        if(rxclit == '\\')
+                            rxclit = nextChar(self);
+                        else if(rxclit == '/')
                         {
                             while(isalnum(previewChar(self)) || previewChar(self) == '\\')
                                 nextChar(self);
@@ -219,7 +219,7 @@ retry:
                             return ECC_TOK_REGEXP;
                         }
 
-                        if(c == '\n')
+                        if(rxclit == '\n')
                             break;
                     }
                     return syntaxError(self, io_libecc_Chars.create("unterminated regexp literal"));
@@ -229,114 +229,123 @@ retry:
                 else
                     return '/';
             }
-
             case '\'':
             case '"':
-            {
-                char end = c;
-                int haveEscape = 0;
-                int didLineBreak = self->didLineBreak;
-
-                while((c = nextChar(self)))
                 {
-                    if(c == '\\')
-                    {
-                        haveEscape = 1;
-                        nextChar(self);
-                        self->didLineBreak = didLineBreak;
-                    }
-                    else if(c == end)
-                    {
-                        const char* bytes = self->text.bytes++;
-                        uint32_t length = self->text.length -= 2;
+                    char end = c;
+                    int haveesc = 0;
+                    int didLineBreak = self->didLineBreak;
 
-                        if(haveEscape)
+                    while((c = nextChar(self)))
+                    {
+                        if(c == '\\')
                         {
-                            eccappendbuffer_t chars;
-                            uint32_t index;
-
-                            ++bytes;
-                            --length;
-
-                            io_libecc_Chars.beginAppend(&chars);
-
-                            for(index = 0; index <= length; ++index)
-                                if(bytes[index] == '\\' && bytes[++index] != '\\')
-                                {
-                                    switch(bytes[index])
-                                    {
-                                        case '0':
-                                            io_libecc_Chars.appendCodepoint(&chars, '\0');
-                                            break;
-                                        case 'b':
-                                            io_libecc_Chars.appendCodepoint(&chars, '\b');
-                                            break;
-                                        case 'f':
-                                            io_libecc_Chars.appendCodepoint(&chars, '\f');
-                                            break;
-                                        case 'n':
-                                            io_libecc_Chars.appendCodepoint(&chars, '\n');
-                                            break;
-                                        case 'r':
-                                            io_libecc_Chars.appendCodepoint(&chars, '\r');
-                                            break;
-                                        case 't':
-                                            io_libecc_Chars.appendCodepoint(&chars, '\t');
-                                            break;
-                                        case 'v':
-                                            io_libecc_Chars.appendCodepoint(&chars, '\v');
-                                            break;
-                                        case 'x':
-                                            if(isxdigit(bytes[index + 1]) && isxdigit(bytes[index + 2]))
-                                            {
-                                                io_libecc_Chars.appendCodepoint(&chars, uint8Hex(bytes[index + 1], bytes[index + 2]));
-                                                index += 2;
-                                                break;
-                                            }
-                                            self->text = ECCNSText.make(self->text.bytes + index - 1, 4);
-                                            return syntaxError(self, io_libecc_Chars.create("malformed hexadecimal character escape sequence"));
-
-                                        case 'u':
-                                            if(isxdigit(bytes[index + 1]) && isxdigit(bytes[index + 2]) && isxdigit(bytes[index + 3]) && isxdigit(bytes[index + 4]))
-                                            {
-                                                io_libecc_Chars.appendCodepoint(&chars, uint16Hex(bytes[index + 1], bytes[index + 2], bytes[index + 3], bytes[index + 4]));
-                                                index += 4;
-                                                break;
-                                            }
-                                            self->text = ECCNSText.make(self->text.bytes + index - 1, 6);
-                                            return syntaxError(self, io_libecc_Chars.create("malformed Unicode character escape sequence"));
-
-                                        case '\r':
-                                            if(bytes[index + 1] == '\n')
-                                                ++index;
-                                        case '\n':
-                                            continue;
-
-                                        default:
-                                            io_libecc_Chars.append(&chars, "%c", bytes[index]);
-                                    }
-                                }
-                                else
-                                    io_libecc_Chars.append(&chars, "%c", bytes[index]);
-
-                            self->value = io_libecc_Input.attachValue(self->input, io_libecc_Chars.endAppend(&chars));
-                            return ECC_TOK_ESCAPEDSTRING;
+                            haveesc = 1;
+                            nextChar(self);
+                            self->didLineBreak = didLineBreak;
                         }
+                        else if(c == (uint32_t)end)
+                        {
+                            const char* bytes = self->text.bytes++;
+                            uint32_t length = self->text.length -= 2;
 
-                        return ECC_TOK_STRING;
+                            if(haveesc)
+                            {
+                                eccappendbuffer_t chars;
+                                uint32_t index;
+
+                                ++bytes;
+                                --length;
+                                io_libecc_Chars.beginAppend(&chars);
+
+                                for(index = 0; index <= length; ++index)
+                                    if(bytes[index] == '\\' && bytes[++index] != '\\')
+                                    {
+                                        switch(bytes[index])
+                                        {
+                                            case '0':
+                                                io_libecc_Chars.appendCodepoint(&chars, '\0');
+                                                break;
+                                            case 'b':
+                                                io_libecc_Chars.appendCodepoint(&chars, '\b');
+                                                break;
+                                            case 'f':
+                                                io_libecc_Chars.appendCodepoint(&chars, '\f');
+                                                break;
+                                            case 'n':
+                                                io_libecc_Chars.appendCodepoint(&chars, '\n');
+                                                break;
+                                            case 'r':
+                                                io_libecc_Chars.appendCodepoint(&chars, '\r');
+                                                break;
+                                            case 't':
+                                                io_libecc_Chars.appendCodepoint(&chars, '\t');
+                                                break;
+                                            case 'v':
+                                                io_libecc_Chars.appendCodepoint(&chars, '\v');
+                                                break;
+                                            case 'x':
+                                                {
+                                                    if(isxdigit(bytes[index + 1]) && isxdigit(bytes[index + 2]))
+                                                    {
+                                                        io_libecc_Chars.appendCodepoint(&chars, uint8Hex(bytes[index + 1], bytes[index + 2]));
+                                                        index += 2;
+                                                        break;
+                                                    }
+                                                    self->text = ECCNSText.make(self->text.bytes + index - 1, 4);
+                                                    return syntaxError(self, io_libecc_Chars.create("malformed hexadecimal character escape sequence"));
+                                                }
+                                            case 'u':
+                                                {
+                                                    if(isxdigit(bytes[index + 1]) && isxdigit(bytes[index + 2]) && isxdigit(bytes[index + 3]) && isxdigit(bytes[index + 4]))
+                                                    {
+                                                        io_libecc_Chars.appendCodepoint(&chars, uint16Hex(bytes[index + 1], bytes[index + 2], bytes[index + 3], bytes[index + 4]));
+                                                        index += 4;
+                                                        break;
+                                                    }
+                                                    self->text = ECCNSText.make(self->text.bytes + index - 1, 6);
+                                                    return syntaxError(self, io_libecc_Chars.create("malformed Unicode character escape sequence"));
+                                                }
+                                            case '\r':
+                                                {
+                                                    if(bytes[index + 1] == '\n')
+                                                    {
+                                                        ++index;
+                                                    }
+                                                }
+                                            case '\n':
+                                                {
+                                                }
+                                                continue;
+                                            default:
+                                                {
+                                                    io_libecc_Chars.append(&chars, "%c", bytes[index]);
+                                                }
+                                        }
+                                    }
+                                    else
+                                        io_libecc_Chars.append(&chars, "%c", bytes[index]);
+
+                                self->value = io_libecc_Input.attachValue(self->input, io_libecc_Chars.endAppend(&chars));
+                                return ECC_TOK_ESCAPEDSTRING;
+                            }
+
+                            return ECC_TOK_STRING;
+                        }
+                        else if(c == '\r' || c == '\n')
+                            break;
                     }
-                    else if(c == '\r' || c == '\n')
-                        break;
+                    return syntaxError(self, io_libecc_Chars.create("unterminated string literal"));
                 }
 
-                return syntaxError(self, io_libecc_Chars.create("unterminated string literal"));
-            }
-
             case '.':
-                if(!isdigit(previewChar(self)))
-                    return c;
-
-                /*vvv*/
+                {
+                    if(!isdigit(previewChar(self)))
+                    {
+                        return c;
+                    }
+                }
+                /* fallthrough */
             case '0':
             case '1':
             case '2':
@@ -347,69 +356,81 @@ retry:
             case '7':
             case '8':
             case '9':
-            {
-                int binary = 0;
-
-                if(c == '0' && (acceptChar(self, 'x') || acceptChar(self, 'X')))
                 {
-                    while((c = previewChar(self)))
-                        if(isxdigit(c))
-                            nextChar(self);
-                        else
-                            break;
-
-                    if(self->text.length <= 2)
-                        return syntaxError(self, io_libecc_Chars.create("missing hexadecimal digits after '0x'"));
-                }
-                else
-                {
-                    while(isdigit(previewChar(self)))
-                        nextChar(self);
-
-                    if(c == '.' || acceptChar(self, '.'))
-                        binary = 1;
-
-                    while(isdigit(previewChar(self)))
-                        nextChar(self);
-
-                    if(acceptChar(self, 'e') || acceptChar(self, 'E'))
+                    int binary = 0;
+                    if(c == '0' && (acceptChar(self, 'x') || acceptChar(self, 'X')))
                     {
-                        binary = 1;
-
-                        if(!acceptChar(self, '+'))
-                            acceptChar(self, '-');
-
-                        if(!isdigit(previewChar(self)))
-                            return syntaxError(self, io_libecc_Chars.create("missing exponent"));
-
+                        while((c = previewChar(self)))
+                        {
+                            if(isxdigit(c))
+                            {
+                                nextChar(self);
+                            }
+                            else
+                            {
+                                break;
+                            }
+                        }
+                        if(self->text.length <= 2)
+                        {
+                            return syntaxError(self, io_libecc_Chars.create("missing hexadecimal digits after '0x'"));
+                        }
+                    }
+                    else
+                    {
                         while(isdigit(previewChar(self)))
+                        {
                             nextChar(self);
+                        }
+                        if(c == '.' || acceptChar(self, '.'))
+                        {
+                            binary = 1;
+                        }
+                        while(isdigit(previewChar(self)))
+                        {
+                            nextChar(self);
+                        }
+                        if(acceptChar(self, 'e') || acceptChar(self, 'E'))
+                        {
+                            binary = 1;
+                            if(!acceptChar(self, '+'))
+                            {
+                                acceptChar(self, '-');
+                            }
+                            if(!isdigit(previewChar(self)))
+                            {
+                                return syntaxError(self, io_libecc_Chars.create("missing exponent"));
+                            }
+                            while(isdigit(previewChar(self)))
+                            {
+                                nextChar(self);
+                            }
+                        }
+                    }
+                    if(isalpha(previewChar(self)))
+                    {
+                        self->text.bytes += self->text.length;
+                        self->text.length = 1;
+                        return syntaxError(self, io_libecc_Chars.create("identifier starts immediately after numeric literal"));
+                    }
+                    if(binary)
+                    {
+                        self->value = scanBinary(self->text, 0);
+                        return ECC_TOK_BINARY;
+                    }
+                    else
+                    {
+                        self->value = scanInteger(self->text, 0, 0);
+                        if(self->value.type == ECC_VALTYPE_INTEGER)
+                        {
+                            return ECC_TOK_INTEGER;
+                        }
+                        else
+                        {
+                            return ECC_TOK_BINARY;
+                        }
                     }
                 }
-
-                if(isalpha(previewChar(self)))
-                {
-                    self->text.bytes += self->text.length;
-                    self->text.length = 1;
-                    return syntaxError(self, io_libecc_Chars.create("identifier starts immediately after numeric literal"));
-                }
-
-                if(binary)
-                {
-                    self->value = scanBinary(self->text, 0);
-                    return ECC_TOK_BINARY;
-                }
-                else
-                {
-                    self->value = scanInteger(self->text, 0, 0);
-
-                    if(self->value.type == ECC_VALTYPE_INTEGER)
-                        return ECC_TOK_INTEGER;
-                    else
-                        return ECC_TOK_BINARY;
-                }
-            }
-
             case '}':
             case ')':
             case ']':
@@ -421,200 +442,241 @@ retry:
             case '~':
             case '?':
             case ':':
-                return c;
-
+                {
+                    return c;
+                }
             case '^':
-                if(acceptChar(self, '='))
-                    return ECC_TOK_XORASSIGN;
-                else
-                    return c;
-
+                {
+                    if(acceptChar(self, '='))
+                        return ECC_TOK_XORASSIGN;
+                    else
+                        return c;
+                }
             case '%':
-                if(acceptChar(self, '='))
-                    return ECC_TOK_MODULOASSIGN;
-                else
-                    return c;
-
+                {
+                    if(acceptChar(self, '='))
+                        return ECC_TOK_MODULOASSIGN;
+                    else
+                        return c;
+                }
             case '*':
-                if(acceptChar(self, '='))
-                    return ECC_TOK_MULTIPLYASSIGN;
-                else
-                    return c;
-
+                {
+                    if(acceptChar(self, '='))
+                        return ECC_TOK_MULTIPLYASSIGN;
+                    else
+                        return c;
+                }
             case '=':
-                if(acceptChar(self, '='))
                 {
                     if(acceptChar(self, '='))
-                        return ECC_TOK_IDENTICAL;
+                    {
+                        if(acceptChar(self, '='))
+                            return ECC_TOK_IDENTICAL;
+                        else
+                            return ECC_TOK_EQUAL;
+                    }
                     else
-                        return ECC_TOK_EQUAL;
+                        return c;
                 }
-                else
-                    return c;
-
             case '!':
-                if(acceptChar(self, '='))
                 {
                     if(acceptChar(self, '='))
-                        return ECC_TOK_NOTIDENTICAL;
+                    {
+                        if(acceptChar(self, '='))
+                            return ECC_TOK_NOTIDENTICAL;
+                        else
+                            return ECC_TOK_NOTEQUAL;
+                    }
                     else
-                        return ECC_TOK_NOTEQUAL;
+                        return c;
                 }
-                else
-                    return c;
-
             case '+':
-                if(acceptChar(self, '+'))
-                    return ECC_TOK_INCREMENT;
-                else if(acceptChar(self, '='))
-                    return ECC_TOK_ADDASSIGN;
-                else
-                    return c;
-
-            case '-':
-                if(acceptChar(self, '-'))
-                    return ECC_TOK_DECREMENT;
-                else if(acceptChar(self, '='))
-                    return ECC_TOK_MINUSASSIGN;
-                else
-                    return c;
-
-            case '&':
-                if(acceptChar(self, '&'))
-                    return ECC_TOK_LOGICALAND;
-                else if(acceptChar(self, '='))
-                    return ECC_TOK_ANDASSIGN;
-                else
-                    return c;
-
-            case '|':
-                if(acceptChar(self, '|'))
-                    return ECC_TOK_LOGICALOR;
-                else if(acceptChar(self, '='))
-                    return ECC_TOK_ORASSIGN;
-                else
-                    return c;
-
-            case '<':
-                if(acceptChar(self, '<'))
                 {
-                    if(acceptChar(self, '='))
-                        return ECC_TOK_LEFTSHIFTASSIGN;
+                    if(acceptChar(self, '+'))
+                        return ECC_TOK_INCREMENT;
+                    else if(acceptChar(self, '='))
+                        return ECC_TOK_ADDASSIGN;
                     else
-                        return ECC_TOK_LEFTSHIFT;
+                        return c;
                 }
-                else if(acceptChar(self, '='))
-                    return ECC_TOK_LESSOREQUAL;
-                else
-                    return c;
+            case '-':
+                {
+                    if(acceptChar(self, '-'))
+                        return ECC_TOK_DECREMENT;
+                    else if(acceptChar(self, '='))
+                        return ECC_TOK_MINUSASSIGN;
+                    else
+                        return c;
+                }
+            case '&':
+                {
+                    if(acceptChar(self, '&'))
+                        return ECC_TOK_LOGICALAND;
+                    else if(acceptChar(self, '='))
+                        return ECC_TOK_ANDASSIGN;
+                    else
+                        return c;
+                }
+            case '|':
+                {
+                    if(acceptChar(self, '|'))
+                        return ECC_TOK_LOGICALOR;
+                    else if(acceptChar(self, '='))
+                        return ECC_TOK_ORASSIGN;
+                    else
+                        return c;
+                }
+            case '<':
+                {            
+                    if(acceptChar(self, '<'))
+                    {
+                        if(acceptChar(self, '='))
+                            return ECC_TOK_LEFTSHIFTASSIGN;
+                        else
+                            return ECC_TOK_LEFTSHIFT;
+                    }
+                    else if(acceptChar(self, '='))
+                        return ECC_TOK_LESSOREQUAL;
+                    else
+                        return c;
+                }
 
             case '>':
-                if(acceptChar(self, '>'))
                 {
                     if(acceptChar(self, '>'))
                     {
-                        if(acceptChar(self, '='))
-                            return ECC_TOK_UNSIGNEDRIGHTSHIFTASSIGN;
-                        else
-                            return ECC_TOK_UNSIGNEDRIGHTSHIFT;
-                    }
-                    else if(acceptChar(self, '='))
-                        return ECC_TOK_RIGHTSHIFTASSIGN;
-                    else
-                        return ECC_TOK_RIGHTSHIFT;
-                }
-                else if(acceptChar(self, '='))
-                    return ECC_TOK_MOREOREQUAL;
-                else
-                    return c;
-
-            default:
-            {
-                if((c < 0x80 && isalpha(c)) || c == '$' || c == '_' || (self->allowUnicodeOutsideLiteral && (c == '\\' || c >= 0x80)))
-                {
-                    ecctextstring_t text = self->text;
-                    int k, haveEscape = 0;
-
-                    do
-                    {
-                        if(c == '\\')
+                        if(acceptChar(self, '>'))
                         {
-                            char uu = nextChar(self), u1 = nextChar(self), u2 = nextChar(self), u3 = nextChar(self), u4 = nextChar(self);
-
-                            if(uu == 'u' && isxdigit(u1) && isxdigit(u2) && isxdigit(u3) && isxdigit(u4))
+                            if(acceptChar(self, '='))
                             {
-                                c = uint16Hex(u1, u2, u3, u4);
-                                haveEscape = 1;
+                                return ECC_TOK_UNSIGNEDRIGHTSHIFTASSIGN;
                             }
                             else
-                                return syntaxError(self, io_libecc_Chars.create("incomplete unicode escape"));
+                            {
+                                return ECC_TOK_UNSIGNEDRIGHTSHIFT;
+                            }
                         }
-
-                        if(ECCNSText.isSpace((ecctextchar_t){ c }))
-                            break;
-
-                        text = self->text;
-                        c = nextChar(self);
-                    } while(isalnum(c) || c == '$' || c == '_' || (self->allowUnicodeOutsideLiteral && (c == '\\' || c >= 0x80)));
-
-                    self->text = text;
-                    self->offset = (uint32_t)(text.bytes + text.length - self->input->bytes);
-
-                    if(haveEscape)
+                        else if(acceptChar(self, '='))
+                        {
+                            return ECC_TOK_RIGHTSHIFTASSIGN;
+                        }
+                        else
+                        {
+                            return ECC_TOK_RIGHTSHIFT;
+                        }
+                    }
+                    else if(acceptChar(self, '='))
+                    {
+                        return ECC_TOK_MOREOREQUAL;
+                    }
+                    else
+                    {
+                        return c;
+                    }
+                }
+            default:
+                {
+                    int k;
+                    int haveesc;
+                    if((c < 0x80 && isalpha(c)) || c == '$' || c == '_' || (self->allowUnicodeOutsideLiteral && (c == '\\' || c >= 0x80)))
                     {
                         ecctextstring_t text = self->text;
-                        eccappendbuffer_t chars;
-                        eccvalue_t value;
-
-                        io_libecc_Chars.beginAppend(&chars);
-
-                        while(text.length)
+                        haveesc = 0;
+                        do
                         {
-                            c = ECCNSText.nextCharacter(&text).codepoint;
-
-                            if(c == '\\' && ECCNSText.nextCharacter(&text).codepoint == 'u')
+                            if(c == '\\')
                             {
-                                char u1 = ECCNSText.nextCharacter(&text).codepoint, u2 = ECCNSText.nextCharacter(&text).codepoint,
-                                     u3 = ECCNSText.nextCharacter(&text).codepoint, u4 = ECCNSText.nextCharacter(&text).codepoint;
-
-                                if(isxdigit(u1) && isxdigit(u2) && isxdigit(u3) && isxdigit(u4))
+                                char uu = nextChar(self), u1 = nextChar(self), u2 = nextChar(self), u3 = nextChar(self), u4 = nextChar(self);
+                                if(uu == 'u' && isxdigit(u1) && isxdigit(u2) && isxdigit(u3) && isxdigit(u4))
+                                {
                                     c = uint16Hex(u1, u2, u3, u4);
+                                    haveesc = 1;
+                                }
                                 else
-                                    ECCNSText.advance(&text, -5);
+                                {
+                                    return syntaxError(self, io_libecc_Chars.create("incomplete unicode escape"));
+                                }
                             }
 
-                            io_libecc_Chars.appendCodepoint(&chars, c);
+                            if(ECCNSText.isSpace((ecctextchar_t){ c, 0 }))
+                            {
+                                break;
+                            }
+                            text = self->text;
+                            c = nextChar(self);
+                        } while(isalnum(c) || c == '$' || c == '_' || (self->allowUnicodeOutsideLiteral && (c == '\\' || c >= 0x80)));
+                        self->text = text;
+                        self->offset = (uint32_t)(text.bytes + text.length - self->input->bytes);
+                        if(haveesc)
+                        {
+                            ecctextstring_t subtext = self->text;
+                            eccappendbuffer_t chars;
+                            eccvalue_t value;
+                            io_libecc_Chars.beginAppend(&chars);
+                            while(subtext.length)
+                            {
+                                c = ECCNSText.nextCharacter(&subtext).codepoint;
+                                if(c == '\\' && ECCNSText.nextCharacter(&subtext).codepoint == 'u')
+                                {
+                                    char u1;
+                                    char u2;
+                                    char u3;
+                                    char u4;
+                                    u1 = ECCNSText.nextCharacter(&subtext).codepoint;
+                                    u2 = ECCNSText.nextCharacter(&subtext).codepoint;
+                                    u3 = ECCNSText.nextCharacter(&subtext).codepoint;
+                                    u4 = ECCNSText.nextCharacter(&subtext).codepoint;
+                                    if(isxdigit(u1) && isxdigit(u2) && isxdigit(u3) && isxdigit(u4))
+                                    {
+                                        c = uint16Hex(u1, u2, u3, u4);
+                                    }
+                                    else
+                                    {
+                                        ECCNSText.advance(&subtext, -5);
+                                    }
+                                }
+                                io_libecc_Chars.appendCodepoint(&chars, c);
+                            }
+                            value = io_libecc_Input.attachValue(self->input, io_libecc_Chars.endAppend(&chars));
+                            self->value = ECCNSValue.key(io_libecc_Key.makeWithText(ECCNSValue.textOf(&value), value.type != ECC_VALTYPE_CHARS));
+                            return ECC_TOK_IDENTIFIER;
                         }
-
-                        value = io_libecc_Input.attachValue(self->input, io_libecc_Chars.endAppend(&chars));
-                        self->value = ECCNSValue.key(io_libecc_Key.makeWithText(ECCNSValue.textOf(&value), value.type != ECC_VALTYPE_CHARS));
+                        if(!self->disallowKeyword)
+                        {
+                            for(k = 0; k < (int)(sizeof(keywords) / sizeof(*keywords)); ++k)
+                            {
+                                if(self->text.length == (int)keywords[k].length && memcmp(self->text.bytes, keywords[k].name, keywords[k].length) == 0)
+                                {
+                                    return keywords[k].token;
+                                }
+                            }
+                            for(k = 0; k < (int)(sizeof(reservedKeywords) / sizeof(*reservedKeywords)); ++k)
+                            {
+                                if(self->text.length == (int)reservedKeywords[k].length && memcmp(self->text.bytes, reservedKeywords[k].name, reservedKeywords[k].length) == 0)
+                                {
+                                    return syntaxError(self, io_libecc_Chars.create("'%s' is a reserved identifier", reservedKeywords[k]));
+                                }
+                            }
+                        }
+                        self->value = ECCNSValue.key(io_libecc_Key.makeWithText(self->text, 0));
                         return ECC_TOK_IDENTIFIER;
                     }
-
-                    if(!self->disallowKeyword)
-                    {
-                        for(k = 0; k < sizeof(keywords) / sizeof(*keywords); ++k)
-                            if(self->text.length == keywords[k].length && memcmp(self->text.bytes, keywords[k].name, keywords[k].length) == 0)
-                                return keywords[k].token;
-
-                        for(k = 0; k < sizeof(reservedKeywords) / sizeof(*reservedKeywords); ++k)
-                            if(self->text.length == reservedKeywords[k].length && memcmp(self->text.bytes, reservedKeywords[k].name, reservedKeywords[k].length) == 0)
-                                return syntaxError(self, io_libecc_Chars.create("'%s' is a reserved identifier", reservedKeywords[k]));
-                    }
-
-                    self->value = ECCNSValue.key(io_libecc_Key.makeWithText(self->text, 0));
-                    return ECC_TOK_IDENTIFIER;
-                }
-                else
-                {
-                    if(c >= 0x80)
-                        return syntaxError(self, io_libecc_Chars.create("invalid character '%.*s'", self->text.length, self->text.bytes));
-                    else if(isprint(c))
-                        return syntaxError(self, io_libecc_Chars.create("invalid character '%c'", c));
                     else
-                        return syntaxError(self, io_libecc_Chars.create("invalid character '\\%d'", c & 0xff));
+                    {
+                        if(c >= 0x80)
+                        {
+                            return syntaxError(self, io_libecc_Chars.create("invalid character '%.*s'", self->text.length, self->text.bytes));
+                        }
+                        else if(isprint(c))
+                        {
+                            return syntaxError(self, io_libecc_Chars.create("invalid character '%c'", c));
+                        }
+                        else
+                        {
+                            return syntaxError(self, io_libecc_Chars.create("invalid character '\\%d'", c & 0xff));
+                        }
+                    }
                 }
-            }
         }
     }
 
@@ -625,12 +687,11 @@ retry:
 const char* tokenChars(eccasttoktype_t token, char buffer[4])
 {
     int index;
-
-    struct
+    static const struct
     {
         const char* name;
         const eccasttoktype_t token;
-    } static const tokenList[] = {
+    } tokenList[] = {
         { (sizeof("end of script") > sizeof("") ? "end of script" : "no"), ECC_TOK_NO },
         { (sizeof("") > sizeof("") ? "" : "error"), ECC_TOK_ERROR },
         { (sizeof("") > sizeof("") ? "" : "null"), ECC_TOK_NULL },
@@ -703,12 +764,15 @@ const char* tokenChars(eccasttoktype_t token, char buffer[4])
         return buffer;
     }
 
-    for(index = 0; index < sizeof(tokenList); ++index)
+    for(index = 0; index < (int)sizeof(tokenList); ++index)
+    {
         if(tokenList[index].token == token)
+        {
             return tokenList[index].name;
-
+        }
+    }
     assert(0);
-    return "unknow";
+    return "unknown";
 }
 
 eccvalue_t scanBinary(ecctextstring_t text, enum io_libecc_lexer_ScanFlags flags)

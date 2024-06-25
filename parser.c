@@ -27,6 +27,7 @@ const struct type_io_libecc_Parser io_libecc_Parser = {
     createWithLexer,
     destroy,
     parseWithEnvironment,
+    {}
 };
 
 static inline eccasttoktype_t previewToken(eccastparser_t* self)
@@ -351,7 +352,7 @@ static eccoplist_t* primary(eccastparser_t* self)
             oplist = io_libecc_OpList.create(io_libecc_Op.value, ECCNSValue.binary(self->lexer->value.data.integer), self->lexer->text);
     }
     else if(previewToken(self) == ECC_TOK_THIS)
-        oplist = io_libecc_OpList.create(io_libecc_Op.this, ECCValConstUndefined, self->lexer->text);
+        oplist = io_libecc_OpList.create(io_libecc_Op.getThis, ECCValConstUndefined, self->lexer->text);
     else if(previewToken(self) == ECC_TOK_NULL)
         oplist = io_libecc_OpList.create(io_libecc_Op.value, ECCValConstNull, self->lexer->text);
     else if(previewToken(self) == ECC_TOK_TRUE)
@@ -557,7 +558,7 @@ static eccoplist_t* unary(eccastparser_t* self)
 {
     eccoplist_t *oplist, *alt;
     ecctextstring_t text = self->lexer->text;
-    io_libecc_native_io_libecc_Function native;
+    eccnativefuncptr_t native;
 
     if(acceptToken(self, ECC_TOK_DELETE))
     {
@@ -602,7 +603,7 @@ static eccoplist_t* unary(eccastparser_t* self)
     else if(acceptToken(self, '~'))
         native = io_libecc_Op.invert, alt = useInteger(self, unary(self));
     else if(acceptToken(self, '!'))
-        native = io_libecc_Op.not, alt = unary(self);
+        native = io_libecc_Op.doLogicalNot, alt = unary(self);
     else
         return postfix(self);
 
@@ -623,7 +624,7 @@ static eccoplist_t* multiplicative(eccastparser_t* self)
 
     while(1)
     {
-        io_libecc_native_io_libecc_Function native;
+        eccnativefuncptr_t native;
 
         if(previewToken(self) == '*')
             native = io_libecc_Op.multiply;
@@ -658,7 +659,7 @@ static eccoplist_t* additive(eccastparser_t* self)
     eccoplist_t *oplist = multiplicative(self), *alt;
     while(1)
     {
-        io_libecc_native_io_libecc_Function native;
+        eccnativefuncptr_t native;
 
         if(previewToken(self) == '+')
             native = io_libecc_Op.add;
@@ -691,7 +692,7 @@ static eccoplist_t* shift(eccastparser_t* self)
     eccoplist_t *oplist = additive(self), *alt;
     while(1)
     {
-        io_libecc_native_io_libecc_Function native;
+        eccnativefuncptr_t native;
 
         if(previewToken(self) == ECC_TOK_LEFTSHIFT)
             native = io_libecc_Op.leftShift;
@@ -726,7 +727,7 @@ static eccoplist_t* relational(eccastparser_t* self, int noIn)
     eccoplist_t *oplist = shift(self), *alt;
     while(1)
     {
-        io_libecc_native_io_libecc_Function native;
+        eccnativefuncptr_t native;
 
         if(previewToken(self) == '<')
             native = io_libecc_Op.less;
@@ -764,7 +765,7 @@ static eccoplist_t* equality(eccastparser_t* self, int noIn)
     eccoplist_t *oplist = relational(self, noIn), *alt;
     while(1)
     {
-        io_libecc_native_io_libecc_Function native;
+        eccnativefuncptr_t native;
 
         if(previewToken(self) == ECC_TOK_EQUAL)
             native = io_libecc_Op.equal;
@@ -925,7 +926,7 @@ static eccoplist_t* assignment(eccastparser_t* self, int noIn)
 {
     eccoplist_t *oplist = conditional(self, noIn), *opassign = NULL;
     ecctextstring_t text = self->lexer->text;
-    io_libecc_native_io_libecc_Function native = NULL;
+    eccnativefuncptr_t native = NULL;
 
     if(acceptToken(self, '='))
     {
@@ -1435,12 +1436,12 @@ static eccoplist_t* allStatement(eccastparser_t* self)
             syntaxError(self, text, io_libecc_Chars.create("throw statement is missing an expression"));
 
         semicolon(self);
-        return io_libecc_OpList.unshift(io_libecc_Op.make(io_libecc_Op.throw, ECCValConstUndefined, ECCNSText.join(text, io_libecc_OpList.text(oplist))), oplist);
+        return io_libecc_OpList.unshift(io_libecc_Op.make(io_libecc_Op.doThrow, ECCValConstUndefined, ECCNSText.join(text, io_libecc_OpList.text(oplist))), oplist);
     }
     else if(acceptToken(self, ECC_TOK_TRY))
     {
         oplist = io_libecc_OpList.appendNoop(block(self));
-        oplist = io_libecc_OpList.unshift(io_libecc_Op.make(io_libecc_Op.try, ECCNSValue.integer(oplist->count), text), oplist);
+        oplist = io_libecc_OpList.unshift(io_libecc_Op.make(io_libecc_Op.doTry, ECCNSValue.integer(oplist->count), text), oplist);
 
         if(previewToken(self) != ECC_TOK_CATCH && previewToken(self) != ECC_TOK_FINALLY)
             tokenError(self, "catch or finally");
@@ -1552,7 +1553,7 @@ static eccoplist_t* function(eccastparser_t* self, int isDeclaration, int isGett
     eccoplist_t* oplist = NULL;
     int parameterCount = 0;
 
-    eccoperand_t identifierOp = { 0, ECCValConstUndefined };
+    eccoperand_t identifierOp = { 0, ECCValConstUndefined, {}};
     eccobjscriptfunction_t* parentFunction;
     eccobjscriptfunction_t* function;
     ecchashmap_t* arguments;
@@ -1726,8 +1727,8 @@ eccobjscriptfunction_t* parseWithEnvironment(eccastparser_t* const self, eccobje
     if(self->error)
     {
         eccoperand_t errorOps[] = {
-            { io_libecc_Op.throw, ECCValConstUndefined, self->error->text },
-            { io_libecc_Op.value, ECCNSValue.error(self->error) },
+            { io_libecc_Op.doThrow, ECCValConstUndefined, self->error->text },
+            { io_libecc_Op.value, ECCNSValue.error(self->error), {} },
         };
         errorOps->text.flags |= ECC_TEXTFLAG_BREAKFLAG;
 

@@ -26,11 +26,12 @@ const struct type_io_libecc_Arguments ECCNSArguments = {
     teardown,
     createSized,
     createWithCList,
+    {}
 };
 
 static eccvalue_t getLength(eccstate_t* context)
 {
-    return ECCNSValue.binary(context->this.data.object->elementCount);
+    return ECCNSValue.binary(context->thisvalue.data.object->elementCount);
 }
 
 static eccvalue_t setLength(eccstate_t* context)
@@ -41,9 +42,9 @@ static eccvalue_t setLength(eccstate_t* context)
     if(!isfinite(length) || length < 0 || length > UINT32_MAX || length != (uint32_t)length)
         ECCNSContext.rangeError(context, io_libecc_Chars.create("invalid array length"));
 
-    if(ECCNSObject.resizeElement(context->this.data.object, length) && context->strictMode)
+    if(ECCNSObject.resizeElement(context->thisvalue.data.object, length) && context->strictMode)
     {
-        ECCNSContext.typeError(context, io_libecc_Chars.create("'%u' is non-configurable", context->this.data.object->elementCount));
+        ECCNSContext.typeError(context, io_libecc_Chars.create("'%u' is non-configurable", context->thisvalue.data.object->elementCount));
     }
 
     return ECCValConstUndefined;

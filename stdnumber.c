@@ -25,6 +25,7 @@ const struct type_io_libecc_Number io_libecc_Number = {
     setup,
     teardown,
     create,
+    {}
 };
 
 static eccvalue_t toExponential(eccstate_t* context)
@@ -35,7 +36,7 @@ static eccvalue_t toExponential(eccstate_t* context)
 
     ECCNSContext.assertThisMask(context, ECC_VALMASK_NUMBER);
 
-    binary = ECCNSValue.toBinary(context, context->this).data.binary;
+    binary = ECCNSValue.toBinary(context, context->thisvalue).data.binary;
     value = ECCNSContext.argument(context, 0);
     if(value.type != ECC_VALTYPE_UNDEFINED)
     {
@@ -73,7 +74,7 @@ static eccvalue_t toFixed(eccstate_t* context)
 
     ECCNSContext.assertThisMask(context, ECC_VALMASK_NUMBER);
 
-    binary = ECCNSValue.toBinary(context, context->this).data.binary;
+    binary = ECCNSValue.toBinary(context, context->thisvalue).data.binary;
     value = ECCNSContext.argument(context, 0);
     if(value.type != ECC_VALTYPE_UNDEFINED)
     {
@@ -110,7 +111,7 @@ static eccvalue_t toPrecision(eccstate_t* context)
 
     ECCNSContext.assertThisMask(context, ECC_VALMASK_NUMBER);
 
-    binary = ECCNSValue.toBinary(context, context->this).data.binary;
+    binary = ECCNSValue.toBinary(context, context->thisvalue).data.binary;
     value = ECCNSContext.argument(context, 0);
     if(value.type != ECC_VALTYPE_UNDEFINED)
     {
@@ -150,7 +151,7 @@ static eccvalue_t toString(eccstate_t* context)
 
     ECCNSContext.assertThisMask(context, ECC_VALMASK_NUMBER);
 
-    binary = ECCNSValue.toBinary(context, context->this).data.binary;
+    binary = ECCNSValue.toBinary(context, context->thisvalue).data.binary;
     value = ECCNSContext.argument(context, 0);
     if(value.type != ECC_VALTYPE_UNDEFINED)
     {
@@ -169,7 +170,7 @@ static eccvalue_t valueOf(eccstate_t* context)
 {
     ECCNSContext.assertThisType(context, ECC_VALTYPE_NUMBER);
 
-    return ECCNSValue.binary(context->this.data.number->value);
+    return ECCNSValue.binary(context->thisvalue.data.number->value);
 }
 
 static eccvalue_t constructor(eccstate_t* context)

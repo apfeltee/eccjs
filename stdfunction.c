@@ -11,21 +11,22 @@ static void setup(void);
 static void teardown(void);
 static eccobjscriptfunction_t* create(eccobject_t* environment);
 static eccobjscriptfunction_t* createSized(eccobject_t* environment, uint32_t size);
-static eccobjscriptfunction_t* createWithNative(const io_libecc_native_io_libecc_Function native, int parameterCount);
+static eccobjscriptfunction_t* createWithNative(const eccnativefuncptr_t native, int parameterCount);
 static eccobjscriptfunction_t* copy(eccobjscriptfunction_t* original);
 static void destroy(eccobjscriptfunction_t*);
 static void addMember(eccobjscriptfunction_t*, const char* name, eccvalue_t value, eccvalflag_t);
 static void addValue(eccobjscriptfunction_t*, const char* name, eccvalue_t value, eccvalflag_t);
-static eccobjscriptfunction_t* addMethod(eccobjscriptfunction_t*, const char* name, const io_libecc_native_io_libecc_Function native, int argumentCount, eccvalflag_t);
-static eccobjscriptfunction_t* addFunction(eccobjscriptfunction_t*, const char* name, const io_libecc_native_io_libecc_Function native, int argumentCount, eccvalflag_t);
-static eccobjscriptfunction_t* addToObject(eccobject_t* object, const char* name, const io_libecc_native_io_libecc_Function native, int parameterCount, eccvalflag_t);
+static eccobjscriptfunction_t* addMethod(eccobjscriptfunction_t*, const char* name, const eccnativefuncptr_t native, int argumentCount, eccvalflag_t);
+static eccobjscriptfunction_t* addFunction(eccobjscriptfunction_t*, const char* name, const eccnativefuncptr_t native, int argumentCount, eccvalflag_t);
+static eccobjscriptfunction_t* addToObject(eccobject_t* object, const char* name, const eccnativefuncptr_t native, int parameterCount, eccvalflag_t);
 static void linkPrototype(eccobjscriptfunction_t*, eccvalue_t prototype, eccvalflag_t);
 static void
-setupBuiltinObject(eccobjscriptfunction_t**, const io_libecc_native_io_libecc_Function, int parameterCount, eccobject_t**, eccvalue_t prototype, const eccobjinterntype_t* type);
-static eccvalue_t accessor(const io_libecc_native_io_libecc_Function getter, const io_libecc_native_io_libecc_Function setter);
+setupBuiltinObject(eccobjscriptfunction_t**, const eccnativefuncptr_t, int parameterCount, eccobject_t**, eccvalue_t prototype, const eccobjinterntype_t* type);
+static eccvalue_t accessor(const eccnativefuncptr_t getter, const eccnativefuncptr_t setter);
 const struct type_io_libecc_Function io_libecc_Function = {
     setup,     teardown,    create,      createSized,   createWithNative,   copy,     destroy, addMember, addValue,
     addMethod, addFunction, addToObject, linkPrototype, setupBuiltinObject, accessor,
+    {}
 };
 
 // MARK: - Private
@@ -73,7 +74,7 @@ static eccvalue_t toChars(eccstate_t* context, eccvalue_t value)
 {
     eccobjscriptfunction_t* self;
     eccappendbuffer_t chars;
-
+    (void)context;
     assert(value.type == ECC_VALTYPE_FUNCTION);
     assert(value.data.function);
 
@@ -94,31 +95,31 @@ static eccvalue_t toString(eccstate_t* context)
 {
     ECCNSContext.assertThisType(context, ECC_VALTYPE_FUNCTION);
 
-    return toChars(context, context->this);
+    return toChars(context, context->thisvalue);
 }
 
 static eccvalue_t apply(eccstate_t* context)
 {
-    eccvalue_t this, arguments;
+    eccvalue_t thisval, arguments;
 
     ECCNSContext.assertThisType(context, ECC_VALTYPE_FUNCTION);
 
     context->strictMode = context->parent->strictMode;
 
-    this = ECCNSContext.argument(context, 0);
-    if(this.type != ECC_VALTYPE_UNDEFINED && this.type != ECC_VALTYPE_NULL)
-        this = ECCNSValue.toObject(context, this);
+    thisval = ECCNSContext.argument(context, 0);
+    if(thisval.type != ECC_VALTYPE_UNDEFINED && thisval.type != ECC_VALTYPE_NULL)
+        thisval = ECCNSValue.toObject(context, thisval);
 
     arguments = ECCNSContext.argument(context, 1);
 
     if(arguments.type == ECC_VALTYPE_UNDEFINED || arguments.type == ECC_VALTYPE_NULL)
-        return io_libecc_Op.callFunctionVA(context, io_libecc_context_applyOffset, context->this.data.function, this, 0, empty_ap);
+        return io_libecc_Op.callFunctionVA(context, io_libecc_context_applyOffset, context->thisvalue.data.function, thisval, 0, empty_ap);
     else
     {
         if(!ECCNSValue.isObject(arguments))
             ECCNSContext.typeError(context, io_libecc_Chars.create("arguments is not an object"));
 
-        return io_libecc_Op.callFunctionArguments(context, io_libecc_context_applyOffset, context->this.data.function, this, arguments.data.object);
+        return io_libecc_Op.callFunctionArguments(context, io_libecc_context_applyOffset, context->thisvalue.data.function, thisval, arguments.data.object);
     }
 }
 
@@ -134,9 +135,9 @@ static eccvalue_t call(eccstate_t* context)
 
     if(arguments.elementCount)
     {
-        eccvalue_t this = ECCNSContext.argument(context, 0);
-        if(this.type != ECC_VALTYPE_UNDEFINED && this.type != ECC_VALTYPE_NULL)
-            this = ECCNSValue.toObject(context, this);
+        eccvalue_t thisval = ECCNSContext.argument(context, 0);
+        if(thisval.type != ECC_VALTYPE_UNDEFINED && thisval.type != ECC_VALTYPE_NULL)
+            thisval = ECCNSValue.toObject(context, thisval);
 
         --arguments.elementCapacity;
         --arguments.elementCount;
@@ -147,10 +148,10 @@ static eccvalue_t call(eccstate_t* context)
             arguments.elementCapacity = 0;
         }
 
-        return io_libecc_Op.callFunctionArguments(context, io_libecc_context_callOffset, context->this.data.function, this, &arguments);
+        return io_libecc_Op.callFunctionArguments(context, io_libecc_context_callOffset, context->thisvalue.data.function, thisval, &arguments);
     }
     else
-        return io_libecc_Op.callFunctionVA(context, io_libecc_context_callOffset, context->this.data.function, ECCValConstUndefined, 0, empty_ap);
+        return io_libecc_Op.callFunctionVA(context, io_libecc_context_callOffset, context->thisvalue.data.function, ECCValConstUndefined, 0, empty_ap);
 }
 
 static eccvalue_t bindCall(eccstate_t* context)
@@ -163,7 +164,7 @@ static eccvalue_t bindCall(eccstate_t* context)
 
     context->strictMode = context->parent->strictMode;
 
-    function = context->this.data.function;
+    function = context->thisvalue.data.function;
 
     count = ECCNSContext.argumentCount(context);
     length = (function->environment.elementCount - 1) + count;
@@ -173,7 +174,7 @@ static eccvalue_t bindCall(eccstate_t* context)
     memcpy(arguments->element + (function->environment.elementCount - 1), context->environment->hashmap[2].value.data.object->element,
            sizeof(*arguments->element) * (context->environment->hashmap[2].value.data.object->elementCount));
 
-    return io_libecc_Op.callFunctionArguments(context, 0, context->this.data.function->pair, function->environment.element[0].value, arguments);
+    return io_libecc_Op.callFunctionArguments(context, 0, context->thisvalue.data.function->pair, function->environment.element[0].value, arguments);
 }
 
 static eccvalue_t bind(eccstate_t* context)
@@ -185,7 +186,7 @@ static eccvalue_t bind(eccstate_t* context)
     ECCNSContext.assertThisType(context, ECC_VALTYPE_FUNCTION);
 
     count = ECCNSContext.argumentCount(context);
-    parameterCount = context->this.data.function->parameterCount - (count > 1 ? count - 1 : 0);
+    parameterCount = context->thisvalue.data.function->parameterCount - (count > 1 ? count - 1 : 0);
     function = createWithNative(bindCall, parameterCount > 0 ? parameterCount : 0);
 
     ECCNSObject.resizeElement(&function->environment, count ? count : 1);
@@ -195,7 +196,7 @@ static eccvalue_t bind(eccstate_t* context)
     else
         function->environment.element[0].value = ECCValConstUndefined;
 
-    function->pair = context->this.data.function;
+    function->pair = context->thisvalue.data.function;
     function->boundThis = ECCNSValue.function(function);
     function->flags |= io_libecc_function_needArguments | io_libecc_function_useBoundThis;
 
@@ -204,6 +205,7 @@ static eccvalue_t bind(eccstate_t* context)
 
 static eccvalue_t prototypeConstructor(eccstate_t* context)
 {
+    (void)context;
     return ECCValConstUndefined;
 }
 
@@ -220,7 +222,7 @@ static eccvalue_t constructor(eccstate_t* context)
         eccioinput_t* input;
         eccstate_t subContext = {
             .parent = context,
-            .this = ECCNSValue.object(&context->ecc->global->environment),
+            .thisvalue = ECCNSValue.object(&context->ecc->global->environment),
             .ecc = context->ecc,
             .depth = context->depth + 1,
             .environment = ECCNSContext.environmentRoot(context->parent),
@@ -295,7 +297,7 @@ eccobjscriptfunction_t* createSized(eccobject_t* environment, uint32_t size)
     return self;
 }
 
-eccobjscriptfunction_t* createWithNative(const io_libecc_native_io_libecc_Function native, int parameterCount)
+eccobjscriptfunction_t* createWithNative(const eccnativefuncptr_t native, int parameterCount)
 {
     eccobjscriptfunction_t* self = NULL;
 
@@ -359,7 +361,7 @@ void addMember(eccobjscriptfunction_t* self, const char* name, eccvalue_t value,
     ECCNSObject.addMember(&self->object, io_libecc_Key.makeWithCString(name), value, flags);
 }
 
-eccobjscriptfunction_t* addMethod(eccobjscriptfunction_t* self, const char* name, const io_libecc_native_io_libecc_Function native, int parameterCount, eccvalflag_t flags)
+eccobjscriptfunction_t* addMethod(eccobjscriptfunction_t* self, const char* name, const eccnativefuncptr_t native, int parameterCount, eccvalflag_t flags)
 {
     assert(self);
 
@@ -376,14 +378,14 @@ void addValue(eccobjscriptfunction_t* self, const char* name, eccvalue_t value, 
     ECCNSObject.addMember(&self->environment, io_libecc_Key.makeWithCString(name), value, flags);
 }
 
-eccobjscriptfunction_t* addFunction(eccobjscriptfunction_t* self, const char* name, const io_libecc_native_io_libecc_Function native, int parameterCount, eccvalflag_t flags)
+eccobjscriptfunction_t* addFunction(eccobjscriptfunction_t* self, const char* name, const eccnativefuncptr_t native, int parameterCount, eccvalflag_t flags)
 {
     assert(self);
 
     return addToObject(&self->environment, name, native, parameterCount, flags);
 }
 
-eccobjscriptfunction_t* addToObject(eccobject_t* object, const char* name, const io_libecc_native_io_libecc_Function native, int parameterCount, eccvalflag_t flags)
+eccobjscriptfunction_t* addToObject(eccobject_t* object, const char* name, const eccnativefuncptr_t native, int parameterCount, eccvalflag_t flags)
 {
     eccobjscriptfunction_t* function;
 
@@ -406,7 +408,7 @@ void linkPrototype(eccobjscriptfunction_t* self, eccvalue_t prototype, eccvalfla
 }
 
 void setupBuiltinObject(eccobjscriptfunction_t** constructor,
-                        const io_libecc_native_io_libecc_Function native,
+                        const eccnativefuncptr_t native,
                         int parameterCount,
                         eccobject_t** prototype,
                         eccvalue_t prototypeValue,
@@ -429,7 +431,7 @@ void setupBuiltinObject(eccobjscriptfunction_t** constructor,
     *constructor = function;
 }
 
-eccvalue_t accessor(const io_libecc_native_io_libecc_Function getter, const io_libecc_native_io_libecc_Function setter)
+eccvalue_t accessor(const eccnativefuncptr_t getter, const eccnativefuncptr_t setter)
 {
     eccvalue_t value;
     eccobjscriptfunction_t *getterFunction = NULL, *setterFunction = NULL;

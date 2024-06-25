@@ -19,6 +19,7 @@ static void teardown(void);
 const struct type_io_libecc_Math io_libecc_Math = {
     setup,
     teardown,
+    {},
 };
 
 static eccvalue_t mathAbs(eccstate_t* context)
@@ -194,6 +195,7 @@ static eccvalue_t mathPow(eccstate_t* context)
 
 static eccvalue_t mathRandom(eccstate_t* context)
 {
+    (void)context;
     return ECCNSValue.binary((double)rand() / (double)RAND_MAX);
 }
 

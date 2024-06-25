@@ -42,6 +42,7 @@ static eccobjerror_t* uriError(ecctextstring_t, ecccharbuffer_t* message);
 static void destroy(eccobjerror_t*);
 const struct type_io_libecc_Error io_libecc_Error = {
     setup, teardown, error, rangeError, referenceError, syntaxError, typeError, uriError, destroy,
+    {}
 };
 
 static eccobjerror_t* evalError(ecctextstring_t text, ecccharbuffer_t* message);
@@ -117,7 +118,7 @@ static eccvalue_t toString(eccstate_t* context)
 {
     ECCNSContext.assertThisMask(context, ECC_VALMASK_OBJECT);
 
-    return toChars(context, context->this);
+    return toChars(context, context->thisvalue);
 }
 
 static eccvalue_t errorConstructor(eccstate_t* context)
@@ -184,8 +185,9 @@ static eccvalue_t evalErrorConstructor(eccstate_t* context)
 }
 
 static void
-setupBuiltinObject(eccobjscriptfunction_t** constructor, const io_libecc_native_io_libecc_Function native, int parameterCount, eccobject_t** prototype, const ecctextstring_t* name)
+setupBuiltinObject(eccobjscriptfunction_t** constructor, const eccnativefuncptr_t native, int parameterCount, eccobject_t** prototype, const ecctextstring_t* name)
 {
+    (void)parameterCount;
     io_libecc_Function.setupBuiltinObject(constructor, native, 1, prototype, ECCNSValue.error(error(*name, NULL)), &io_libecc_error_type);
 
     ECCNSObject.addMember(*prototype, io_libecc_key_name, ECCNSValue.text(name), ECC_VALFLAG_HIDDEN);

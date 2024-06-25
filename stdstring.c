@@ -61,14 +61,14 @@ static eccvalue_t toString(eccstate_t* context)
 {
     ECCNSContext.assertThisType(context, ECC_VALTYPE_STRING);
 
-    return ECCNSValue.chars(context->this.data.string->value);
+    return ECCNSValue.chars(context->thisvalue.data.string->value);
 }
 
 static eccvalue_t valueOf(eccstate_t* context)
 {
     ECCNSContext.assertThisType(context, ECC_VALTYPE_STRING);
 
-    return ECCNSValue.chars(context->this.data.string->value);
+    return ECCNSValue.chars(context->thisvalue.data.string->value);
 }
 
 static eccvalue_t charAt(eccstate_t* context)
@@ -79,9 +79,9 @@ static eccvalue_t charAt(eccstate_t* context)
 
     ECCNSContext.assertThisCoerciblePrimitive(context);
 
-    context->this = ECCNSValue.toString(context, context->this);
-    chars = ECCNSValue.stringBytes(&context->this);
-    length = ECCNSValue.stringLength(&context->this);
+    context->thisvalue = ECCNSValue.toString(context, context->thisvalue);
+    chars = ECCNSValue.stringBytes(&context->thisvalue);
+    length = ECCNSValue.stringLength(&context->thisvalue);
     index = ECCNSValue.toInteger(context, ECCNSContext.argument(context, 0)).data.integer;
 
     text = textAtIndex(chars, length, index, 0);
@@ -119,9 +119,9 @@ static eccvalue_t charCodeAt(eccstate_t* context)
 
     ECCNSContext.assertThisCoerciblePrimitive(context);
 
-    context->this = ECCNSValue.toString(context, context->this);
-    chars = ECCNSValue.stringBytes(&context->this);
-    length = ECCNSValue.stringLength(&context->this);
+    context->thisvalue = ECCNSValue.toString(context, context->thisvalue);
+    chars = ECCNSValue.stringBytes(&context->thisvalue);
+    length = ECCNSValue.stringLength(&context->thisvalue);
     index = ECCNSValue.toInteger(context, ECCNSContext.argument(context, 0)).data.integer;
 
     text = textAtIndex(chars, length, index, 0);
@@ -156,7 +156,7 @@ static eccvalue_t concat(eccstate_t* context)
     count = ECCNSContext.argumentCount(context);
 
     io_libecc_Chars.beginAppend(&chars);
-    io_libecc_Chars.appendValue(&chars, context, ECCNSContext.this(context));
+    io_libecc_Chars.appendValue(&chars, context, ECCNSContext.getThis(context));
     for(index = 0; index < count; ++index)
         io_libecc_Chars.appendValue(&chars, context, ECCNSContext.argument(context, index));
 
@@ -172,9 +172,9 @@ static eccvalue_t indexOf(eccstate_t* context)
 
     ECCNSContext.assertThisCoerciblePrimitive(context);
 
-    context->this = ECCNSValue.toString(context, ECCNSContext.this(context));
-    chars = ECCNSValue.stringBytes(&context->this);
-    length = ECCNSValue.stringLength(&context->this);
+    context->thisvalue = ECCNSValue.toString(context, ECCNSContext.getThis(context));
+    chars = ECCNSValue.stringBytes(&context->thisvalue);
+    length = ECCNSValue.stringLength(&context->thisvalue);
 
     search = ECCNSValue.toString(context, ECCNSContext.argument(context, 0));
     searchChars = ECCNSValue.stringBytes(&search);
@@ -213,9 +213,9 @@ static eccvalue_t lastIndexOf(eccstate_t* context)
 
     ECCNSContext.assertThisCoerciblePrimitive(context);
 
-    context->this = ECCNSValue.toString(context, ECCNSContext.this(context));
-    chars = ECCNSValue.stringBytes(&context->this);
-    length = ECCNSValue.stringLength(&context->this);
+    context->thisvalue = ECCNSValue.toString(context, ECCNSContext.getThis(context));
+    chars = ECCNSValue.stringBytes(&context->thisvalue);
+    length = ECCNSValue.stringLength(&context->thisvalue);
 
     search = ECCNSValue.toString(context, ECCNSContext.argument(context, 0));
     searchChars = ECCNSValue.stringBytes(&search);
@@ -255,8 +255,8 @@ static eccvalue_t localeCompare(eccstate_t* context)
 
     ECCNSContext.assertThisCoerciblePrimitive(context);
 
-    context->this = ECCNSValue.toString(context, ECCNSContext.this(context));
-    a = ECCNSValue.textOf(&context->this);
+    context->thisvalue = ECCNSValue.toString(context, ECCNSContext.getThis(context));
+    a = ECCNSValue.textOf(&context->thisvalue);
 
     that = ECCNSValue.toString(context, ECCNSContext.argument(context, 0));
     b = ECCNSValue.textOf(&that);
@@ -275,7 +275,7 @@ static eccvalue_t match(eccstate_t* context)
     eccobjregexp_t* regexp;
     eccvalue_t value, lastIndex;
 
-    context->this = ECCNSValue.toString(context, ECCNSContext.this(context));
+    context->thisvalue = ECCNSValue.toString(context, ECCNSContext.getThis(context));
 
     value = ECCNSContext.argument(context, 0);
     if(value.type == ECC_VALTYPE_REGEXP)
@@ -289,8 +289,8 @@ static eccvalue_t match(eccstate_t* context)
 
     if(lastIndex.data.integer >= 0)
     {
-        const char* bytes = ECCNSValue.stringBytes(&context->this);
-        int32_t length = ECCNSValue.stringLength(&context->this);
+        const char* bytes = ECCNSValue.stringBytes(&context->thisvalue);
+        int32_t length = ECCNSValue.stringLength(&context->thisvalue);
         ecctextstring_t text = textAtIndex(bytes, length, 0, 0);
         const char* capture[regexp->count * 2];
         const char* strindex[regexp->count * 2];
@@ -337,7 +337,7 @@ static eccvalue_t match(eccstate_t* context)
 
         if(size)
         {
-            ECCNSObject.addMember(array, io_libecc_key_input, context->this, 0);
+            ECCNSObject.addMember(array, io_libecc_key_input, context->thisvalue, 0);
             ECCNSObject.addMember(array, io_libecc_key_index, ECCNSValue.integer(io_libecc_String.unitIndex(bytes, length, (int32_t)(capture[0] - bytes))), 0);
 
             if(regexp->global)
@@ -443,9 +443,9 @@ static eccvalue_t replace(eccstate_t* context)
 
     ECCNSContext.assertThisCoerciblePrimitive(context);
 
-    context->this = ECCNSValue.toString(context, ECCNSContext.this(context));
-    bytes = ECCNSValue.stringBytes(&context->this);
-    length = ECCNSValue.stringLength(&context->this);
+    context->thisvalue = ECCNSValue.toString(context, ECCNSContext.getThis(context));
+    bytes = ECCNSValue.stringBytes(&context->thisvalue);
+    length = ECCNSValue.stringLength(&context->thisvalue);
     text = ECCNSText.make(bytes, length);
 
     value = ECCNSContext.argument(context, 0);
@@ -488,7 +488,7 @@ static eccvalue_t replace(eccstate_t* context)
                             arguments->element[numindex].value = ECCValConstUndefined;
                     }
                     arguments->element[regexp->count].value = ECCNSValue.integer(io_libecc_String.unitIndex(bytes, length, (int32_t)(capture[0] - bytes)));
-                    arguments->element[regexp->count + 1].value = context->this;
+                    arguments->element[regexp->count + 1].value = context->thisvalue;
 
                     result = ECCNSValue.toString(context, io_libecc_Op.callFunctionArguments(context, 0, replace.data.function, ECCValConstUndefined, arguments));
                     io_libecc_Chars.append(&chars, "%.*s", ECCNSValue.stringLength(&result), ECCNSValue.stringBytes(&result));
@@ -520,7 +520,7 @@ static eccvalue_t replace(eccstate_t* context)
         for(;;)
         {
             if(!text.length)
-                return context->this;
+                return context->thisvalue;
 
             if(!memcmp(text.bytes, searchBytes, searchLength))
             {
@@ -540,7 +540,7 @@ static eccvalue_t replace(eccstate_t* context)
 
             arguments->element[0].value = ECCNSValue.chars(io_libecc_Chars.createWithBytes(text.length, text.bytes));
             arguments->element[1].value = ECCNSValue.integer(io_libecc_String.unitIndex(bytes, length, (int32_t)(text.bytes - bytes)));
-            arguments->element[2].value = context->this;
+            arguments->element[2].value = context->thisvalue;
 
             result = ECCNSValue.toString(context, io_libecc_Op.callFunctionArguments(context, 0, replace.data.function, ECCValConstUndefined, arguments));
             io_libecc_Chars.append(&chars, "%.*s", ECCNSValue.stringLength(&result), ECCNSValue.stringBytes(&result));
@@ -563,7 +563,7 @@ static eccvalue_t search(eccstate_t* context)
 
     ECCNSContext.assertThisCoerciblePrimitive(context);
 
-    context->this = ECCNSValue.toString(context, ECCNSContext.this(context));
+    context->thisvalue = ECCNSValue.toString(context, ECCNSContext.getThis(context));
 
     value = ECCNSContext.argument(context, 0);
     if(value.type == ECC_VALTYPE_REGEXP)
@@ -572,8 +572,8 @@ static eccvalue_t search(eccstate_t* context)
         regexp = io_libecc_RegExp.createWith(context, value, ECCValConstUndefined);
 
     {
-        const char* bytes = ECCNSValue.stringBytes(&context->this);
-        int32_t length = ECCNSValue.stringLength(&context->this);
+        const char* bytes = ECCNSValue.stringBytes(&context->thisvalue);
+        int32_t length = ECCNSValue.stringLength(&context->thisvalue);
         ecctextstring_t text = textAtIndex(bytes, length, 0, 0);
         const char* capture[regexp->count * 2];
         const char* index[regexp->count * 2];
@@ -595,11 +595,11 @@ static eccvalue_t slice(eccstate_t* context)
     uint16_t head = 0, tail = 0;
     uint32_t headcp = 0;
 
-    if(!ECCNSValue.isString(context->this))
-        context->this = ECCNSValue.toString(context, ECCNSContext.this(context));
+    if(!ECCNSValue.isString(context->thisvalue))
+        context->thisvalue = ECCNSValue.toString(context, ECCNSContext.getThis(context));
 
-    chars = ECCNSValue.stringBytes(&context->this);
-    length = ECCNSValue.stringLength(&context->this);
+    chars = ECCNSValue.stringBytes(&context->thisvalue);
+    length = ECCNSValue.stringLength(&context->thisvalue);
 
     from = ECCNSContext.argument(context, 0);
     if(from.type == ECC_VALTYPE_UNDEFINED)
@@ -664,8 +664,8 @@ static eccvalue_t split(eccstate_t* context)
 
     ECCNSContext.assertThisCoerciblePrimitive(context);
 
-    context->this = ECCNSValue.toString(context, ECCNSContext.this(context));
-    text = ECCNSValue.textOf(&context->this);
+    context->thisvalue = ECCNSValue.toString(context, ECCNSContext.getThis(context));
+    text = ECCNSValue.textOf(&context->thisvalue);
 
     limitValue = ECCNSContext.argument(context, 1);
     if(limitValue.type != ECC_VALTYPE_UNDEFINED)
@@ -679,7 +679,7 @@ static eccvalue_t split(eccstate_t* context)
     if(separatorValue.type == ECC_VALTYPE_UNDEFINED)
     {
         eccobject_t* subarr = io_libecc_Array.createSized(1);
-        subarr->element[0].value = context->this;
+        subarr->element[0].value = context->thisvalue;
         return ECCNSValue.object(subarr);
     }
     else if(separatorValue.type == ECC_VALTYPE_REGEXP)
@@ -817,9 +817,9 @@ static eccvalue_t substring(eccstate_t* context)
     int32_t length, head = 0, tail = 0;
     uint32_t headcp = 0;
 
-    context->this = ECCNSValue.toString(context, ECCNSContext.this(context));
-    chars = ECCNSValue.stringBytes(&context->this);
-    length = ECCNSValue.stringLength(&context->this);
+    context->thisvalue = ECCNSValue.toString(context, ECCNSContext.getThis(context));
+    chars = ECCNSValue.stringBytes(&context->thisvalue);
+    length = ECCNSValue.stringLength(&context->thisvalue);
 
     from = ECCNSContext.argument(context, 0);
     if(from.type == ECC_VALTYPE_UNDEFINED || (from.type == ECC_VALTYPE_BINARY && (isnan(from.data.binary) || from.data.binary == -INFINITY)))
@@ -885,10 +885,10 @@ static eccvalue_t toLowerCase(eccstate_t* context)
     ecccharbuffer_t* chars;
     ecctextstring_t text;
 
-    if(!ECCNSValue.isString(context->this))
-        context->this = ECCNSValue.toString(context, ECCNSContext.this(context));
+    if(!ECCNSValue.isString(context->thisvalue))
+        context->thisvalue = ECCNSValue.toString(context, ECCNSContext.getThis(context));
 
-    text = ECCNSValue.textOf(&context->this);
+    text = ECCNSValue.textOf(&context->thisvalue);
     {
         char buffer[text.length * 2];
         char* end = ECCNSText.toLower(text, buffer);
@@ -903,8 +903,8 @@ static eccvalue_t toUpperCase(eccstate_t* context)
     ecccharbuffer_t* chars;
     ecctextstring_t text;
 
-    context->this = ECCNSValue.toString(context, ECCNSContext.this(context));
-    text = ECCNSValue.textOf(&context->this);
+    context->thisvalue = ECCNSValue.toString(context, ECCNSContext.getThis(context));
+    text = ECCNSValue.textOf(&context->thisvalue);
     {
         char buffer[text.length * 3];
         char* end = ECCNSText.toUpper(text, buffer);
@@ -920,10 +920,10 @@ static eccvalue_t trim(eccstate_t* context)
     ecctextstring_t text, last;
     ecctextchar_t c;
 
-    if(!ECCNSValue.isString(context->this))
-        context->this = ECCNSValue.toString(context, ECCNSContext.this(context));
+    if(!ECCNSValue.isString(context->thisvalue))
+        context->thisvalue = ECCNSValue.toString(context, ECCNSContext.getThis(context));
 
-    text = ECCNSValue.textOf(&context->this);
+    text = ECCNSValue.textOf(&context->thisvalue);
     while(text.length)
     {
         c = ECCNSText.character(text);

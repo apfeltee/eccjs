@@ -41,6 +41,7 @@ const struct type_io_libecc_Pool io_libecc_Pool = {
     collectUnreferencedFromIndices,
     unreferenceFromIndices,
     getIndices,
+    {}
 };
 
 void markObject(eccobject_t* object)

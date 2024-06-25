@@ -49,6 +49,7 @@ const struct type_io_libecc_Object ECCNSObject = {
     putElement,     element,  addElement, deleteElement, getProperty, putProperty,  property,        addProperty,
     deleteProperty, putValue, getValue,   packValue,     stripMap,    reserveSlots, resizeElement,   populateElementWithCList,
     toString,       dumpTo,
+    {},
 };
 
 const uint32_t io_libecc_object_ElementMax = 0xffffff;
@@ -129,7 +130,7 @@ static inline uint32_t elementCount(eccobject_t* self)
         return io_libecc_object_ElementMax;
 }
 
-static void readonlyError(eccstate_t* context, eccvalue_t* ref, eccobject_t* this)
+static void readonlyError(eccstate_t* context, eccvalue_t* ref, eccobject_t* thisobj)
 {
     ecctextstring_t text;
 
@@ -138,15 +139,15 @@ static void readonlyError(eccstate_t* context, eccvalue_t* ref, eccobject_t* thi
         ecchashmap_t* hashmap = (ecchashmap_t*)ref;
         eccobjelement_t* element = (eccobjelement_t*)ref;
 
-        if(hashmap >= this->hashmap && hashmap < this->hashmap + this->hashmapCount)
+        if(hashmap >= thisobj->hashmap && hashmap < thisobj->hashmap + thisobj->hashmapCount)
         {
             const ecctextstring_t* keyText = io_libecc_Key.textOf(hashmap->value.key);
             ECCNSContext.typeError(context, io_libecc_Chars.create("'%.*s' is read-only", keyText->length, keyText->bytes));
         }
-        else if(element >= this->element && element < this->element + this->elementCount)
-            ECCNSContext.typeError(context, io_libecc_Chars.create("'%u' is read-only", element - this->element));
+        else if(element >= thisobj->element && element < thisobj->element + thisobj->elementCount)
+            ECCNSContext.typeError(context, io_libecc_Chars.create("'%u' is read-only", element - thisobj->element));
 
-    } while((this = this->prototype));
+    } while((thisobj = thisobj->prototype));
 
     text = ECCNSContext.textSeek(context);
     ECCNSContext.typeError(context, io_libecc_Chars.create("'%.*s' is read-only", text.length, text.bytes));
@@ -165,7 +166,7 @@ static eccobject_t* checkObject(eccstate_t* context, int argument)
 
 static eccvalue_t valueOf(eccstate_t* context)
 {
-    return ECCNSValue.toObject(context, ECCNSContext.this(context));
+    return ECCNSValue.toObject(context, ECCNSContext.getThis(context));
 }
 
 static eccvalue_t hasOwnProperty(eccstate_t* context)
@@ -175,7 +176,7 @@ static eccvalue_t hasOwnProperty(eccstate_t* context)
     eccindexkey_t key;
     uint32_t index;
 
-    self = ECCNSValue.toObject(context, ECCNSContext.this(context)).data.object;
+    self = ECCNSValue.toObject(context, ECCNSContext.getThis(context)).data.object;
     value = ECCNSValue.toPrimitive(context, ECCNSContext.argument(context, 0), ECC_VALHINT_STRING);
     index = getIndexOrKey(value, &key);
 
@@ -194,7 +195,7 @@ static eccvalue_t isPrototypeOf(eccstate_t* context)
     if(ECCNSValue.isObject(arg0))
     {
         eccobject_t* v = arg0.data.object;
-        eccobject_t* o = ECCNSValue.toObject(context, ECCNSContext.this(context)).data.object;
+        eccobject_t* o = ECCNSValue.toObject(context, ECCNSContext.getThis(context)).data.object;
 
         do
             if(v == o)
@@ -212,7 +213,7 @@ static eccvalue_t propertyIsEnumerable(eccstate_t* context)
     eccvalue_t* ref;
 
     value = ECCNSValue.toPrimitive(context, ECCNSContext.argument(context, 0), ECC_VALHINT_STRING);
-    object = ECCNSValue.toObject(context, ECCNSContext.this(context)).data.object;
+    object = ECCNSValue.toObject(context, ECCNSContext.getThis(context)).data.object;
     ref = property(object, value, ECC_VALFLAG_ASOWN);
 
     if(ref)
@@ -809,9 +810,9 @@ eccvalue_t* element(eccobject_t* self, uint32_t index, eccvalflag_t flags)
 
     if(self->type == &io_libecc_string_type)
     {
-        eccvalue_t* ref = ECCNSObject.addMember(self, io_libecc_key_none, io_libecc_String.valueAtIndex((eccobjstring_t*)self, index), 0);
-        ref->check = 0;
-        return ref;
+        eccvalue_t* subref = ECCNSObject.addMember(self, io_libecc_key_none, io_libecc_String.valueAtIndex((eccobjstring_t*)self, index), 0);
+        subref->check = 0;
+        return subref;
     }
     else if(index > io_libecc_object_ElementMax)
     {
@@ -1129,6 +1130,7 @@ void packValue(eccobject_t* self)
     assert(self);
 
     for(; index < self->hashmapCount; ++index)
+    {
         if(self->hashmap[index].value.check == 1)
         {
             data = self->hashmap[index];
@@ -1136,26 +1138,37 @@ void packValue(eccobject_t* self)
             {
                 self->hashmap[copyIndex] = self->hashmap[copyIndex - 1];
                 if(!(self->hashmap[copyIndex].value.check == 1))
+                {
                     for(slot = 0; slot < 16; ++slot)
                     {
                         if(self->hashmap[copyIndex].slot[slot] == index)
+                        {
                             self->hashmap[copyIndex].slot[slot] = valueIndex;
+                        }
                         else if(self->hashmap[copyIndex].slot[slot] >= valueIndex && self->hashmap[copyIndex].slot[slot] < index)
+                        {
                             self->hashmap[copyIndex].slot[slot]++;
+                        }
                     }
+                }
             }
             for(slot = 0; slot < 16; ++slot)
+            {
                 if(self->hashmap[1].slot[slot] >= valueIndex && self->hashmap[1].slot[slot] < index)
+                {
                     self->hashmap[1].slot[slot]++;
-
+                }
+            }
             self->hashmap[valueIndex++] = data;
         }
-
+    }
     self->hashmap = realloc(self->hashmap, sizeof(*self->hashmap) * (self->hashmapCount));
     self->hashmapCapacity = self->hashmapCount;
 
     if(self->elementCount)
+    {
         self->elementCapacity = self->elementCount;
+    }
 }
 
 void stripMap(eccobject_t* self)
@@ -1299,7 +1312,7 @@ void populateElementWithCList(eccobject_t* self, uint32_t count, const char* lis
     if(count > self->elementCount)
         resizeElement(self, count);
 
-    for(index = 0; index < count; ++index)
+    for(index = 0; index < (int)count; ++index)
     {
         uint16_t length = (uint16_t)strlen(list[index]);
         binary = strtod(list[index], &end);
@@ -1318,18 +1331,18 @@ void populateElementWithCList(eccobject_t* self, uint32_t count, const char* lis
 
 eccvalue_t toString(eccstate_t* context)
 {
-    if(context->this.type == ECC_VALTYPE_NULL)
+    if(context->thisvalue.type == ECC_VALTYPE_NULL)
         return ECCNSValue.text(&ECC_ConstString_NullType);
-    else if(context->this.type == ECC_VALTYPE_UNDEFINED)
+    else if(context->thisvalue.type == ECC_VALTYPE_UNDEFINED)
         return ECCNSValue.text(&ECC_ConstString_UndefinedType);
-    else if(ECCNSValue.isString(context->this))
+    else if(ECCNSValue.isString(context->thisvalue))
         return ECCNSValue.text(&ECC_ConstString_StringType);
-    else if(ECCNSValue.isNumber(context->this))
+    else if(ECCNSValue.isNumber(context->thisvalue))
         return ECCNSValue.text(&ECC_ConstString_NumberType);
-    else if(ECCNSValue.isBoolean(context->this))
+    else if(ECCNSValue.isBoolean(context->thisvalue))
         return ECCNSValue.text(&ECC_ConstString_BooleanType);
-    else if(ECCNSValue.isObject(context->this))
-        return ECCNSValue.text(context->this.data.object->type->text);
+    else if(ECCNSValue.isObject(context->thisvalue))
+        return ECCNSValue.text(context->thisvalue.data.object->type->text);
     else
         assert(0);
 
