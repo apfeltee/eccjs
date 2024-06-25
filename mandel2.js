@@ -1,3 +1,5 @@
+// this file also conveniently tests recursive calls
+import * as std from "std";
 
 function do_add(x, y) {
     return x + y;
@@ -48,12 +50,12 @@ function run() {
         for (var j = 0; j < 2 * steps; j++) {
             var x = do_add(xmin, do_mul(of_int(j), deltax));
             if (inside(x, y)) {
-                print("#");
+                std.out.printf("#");
             } else {
-                print("-");
+                std.out.printf("-");
             }
         }
-        print("\n");
+        std.out.printf("\n");
     }
 }
 

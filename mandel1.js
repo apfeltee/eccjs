@@ -1,4 +1,7 @@
-
+import * as std from "std";
+/*
+ * This is an integer ascii Mandelbrot generator
+ */
 var left_edge = -420;
 var right_edge = 300;
 var top_edge = 300;
@@ -37,9 +40,9 @@ while (y0 > bottom_edge)
             x = x_x - y_y + x0;
             i = i + 1;
         }
-        print(String.fromCharCode(the_char));
+        std.out.printf(String.fromCharCode(the_char));
         x0 = x0 + x_step;
     }
     y0 = y0 - y_step;
-    print("\n");
+    std.out.printf("\n");
 }

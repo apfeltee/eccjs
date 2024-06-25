@@ -9,280 +9,277 @@
 
 // MARK: - Private
 
-static struct ECCNSScript* create(void);
-static void destroy(struct ECCNSScript*);
-static void addValue(struct ECCNSScript*, const char* name, eccvalue_t value, enum io_libecc_value_Flags);
-static void addFunction(struct ECCNSScript*, const char* name, const io_libecc_native_io_libecc_Function native, int argumentCount, enum io_libecc_value_Flags);
-static int evalInput(struct ECCNSScript*, eccioinput_t*, enum io_libecc_ecc_EvalFlags);
-static void evalInputWithContext(struct ECCNSScript*, eccioinput_t*, eccstate_t* context);
-static jmp_buf* pushEnv(struct ECCNSScript*);
-static void popEnv(struct ECCNSScript*);
-static void jmpEnv(struct ECCNSScript*, eccvalue_t value) __attribute__((noreturn));
+static eccscriptcontext_t* create(void);
+static void destroy(eccscriptcontext_t*);
+static void addValue(eccscriptcontext_t*, const char* name, eccvalue_t value, eccvalflag_t);
+static void addFunction(eccscriptcontext_t*, const char* name, const io_libecc_native_io_libecc_Function native, int argumentCount, eccvalflag_t);
+static int evalInput(eccscriptcontext_t*, eccioinput_t*, enum io_libecc_ecc_EvalFlags);
+static void evalInputWithContext(eccscriptcontext_t*, eccioinput_t*, eccstate_t* context);
+static jmp_buf* pushEnv(eccscriptcontext_t*);
+static void popEnv(eccscriptcontext_t*);
+static void jmpEnv(eccscriptcontext_t*, eccvalue_t value) __attribute__((noreturn));
 static void fatal(const char* format, ...) __attribute__((noreturn));
-static eccioinput_t* findInput(struct ECCNSScript* self, ecctextstring_t text);
-static void printTextInput(struct ECCNSScript*, ecctextstring_t text, int fullLine);
-static void garbageCollect(struct ECCNSScript*);
+static eccioinput_t* findInput(eccscriptcontext_t* self, ecctextstring_t text);
+static void printTextInput(eccscriptcontext_t*, ecctextstring_t text, int fullLine);
+static void garbageCollect(eccscriptcontext_t*);
 const struct type_io_libecc_Ecc ECCNSScript = {
     create, destroy, addValue, addFunction, evalInput, evalInputWithContext, pushEnv, popEnv, jmpEnv, fatal, findInput, printTextInput, garbageCollect,
 };
-
 
 static int instanceCount = 0;
 
 // MARK: - Static Members
 
-static
-void addInput(struct ECCNSScript *self, eccioinput_t *input)
+static void addInput(eccscriptcontext_t* self, eccioinput_t* input)
 {
-	self->inputs = realloc(self->inputs, sizeof(*self->inputs) * (self->inputCount + 1));
-	self->inputs[self->inputCount++] = input;
+    self->inputs = realloc(self->inputs, sizeof(*self->inputs) * (self->inputCount + 1));
+    self->inputs[self->inputCount++] = input;
 }
 
 // MARK: - Methods
 
 uint32_t io_libecc_ecc_version = (0 << 24) | (1 << 16) | (0 << 0);
 
-struct ECCNSScript *create (void)
+eccscriptcontext_t* create(void)
 {
-	struct ECCNSScript *self;
-	
-	if (!instanceCount++)
-	{
-		ECCNSEnv.setup();
-		io_libecc_Pool.setup();
-		io_libecc_Key.setup();
-		io_libecc_Global.setup();
-	}
-	
-	self = malloc(sizeof(*self));
-	*self = ECCNSScript.identity;
-	
-	self->global = io_libecc_Global.create();
-	self->maximumCallDepth = 512;
-	
-	return self;
+    eccscriptcontext_t* self;
+
+    if(!instanceCount++)
+    {
+        ECCNSEnv.setup();
+        io_libecc_Pool.setup();
+        io_libecc_Key.setup();
+        io_libecc_Global.setup();
+    }
+
+    self = malloc(sizeof(*self));
+    *self = ECCNSScript.identity;
+
+    self->global = io_libecc_Global.create();
+    self->maximumCallDepth = 512;
+
+    return self;
 }
 
-void destroy (struct ECCNSScript *self)
+void destroy(eccscriptcontext_t* self)
 {
-	assert(self);
-	
-	while (self->inputCount--)
-		io_libecc_Input.destroy(self->inputs[self->inputCount]), self->inputs[self->inputCount] = NULL;
-	
-	free(self->inputs), self->inputs = NULL;
-	free(self->envList), self->envList = NULL;
-	free(self), self = NULL;
-	
-	if (!--instanceCount)
-	{
-		io_libecc_Global.teardown();
-		io_libecc_Key.teardown();
-		io_libecc_Pool.teardown();
-		ECCNSEnv.teardown();
-	}
+    assert(self);
+
+    while(self->inputCount--)
+        io_libecc_Input.destroy(self->inputs[self->inputCount]), self->inputs[self->inputCount] = NULL;
+
+    free(self->inputs), self->inputs = NULL;
+    free(self->envList), self->envList = NULL;
+    free(self), self = NULL;
+
+    if(!--instanceCount)
+    {
+        io_libecc_Global.teardown();
+        io_libecc_Key.teardown();
+        io_libecc_Pool.teardown();
+        ECCNSEnv.teardown();
+    }
 }
 
-void addFunction (struct ECCNSScript *self, const char *name, const io_libecc_native_io_libecc_Function native, int argumentCount, enum io_libecc_value_Flags flags)
+void addFunction(eccscriptcontext_t* self, const char* name, const io_libecc_native_io_libecc_Function native, int argumentCount, eccvalflag_t flags)
 {
-	assert(self);
-	
-	io_libecc_Function.addFunction(self->global, name, native, argumentCount, flags);
+    assert(self);
+
+    io_libecc_Function.addFunction(self->global, name, native, argumentCount, flags);
 }
 
-void addValue (struct ECCNSScript *self, const char *name, eccvalue_t value, enum io_libecc_value_Flags flags)
+void addValue(eccscriptcontext_t* self, const char* name, eccvalue_t value, eccvalflag_t flags)
 {
-	assert(self);
-	
-	io_libecc_Function.addValue(self->global, name, value, flags);
+    assert(self);
+
+    io_libecc_Function.addValue(self->global, name, value, flags);
 }
 
-io_libecc_ecc_useframe
-int evalInput (struct ECCNSScript *self, eccioinput_t *input, enum io_libecc_ecc_EvalFlags flags)
+io_libecc_ecc_useframe int evalInput(eccscriptcontext_t* self, eccioinput_t* input, enum io_libecc_ecc_EvalFlags flags)
 {
-	volatile int result = EXIT_SUCCESS, trap = !self->envCount || flags & io_libecc_ecc_primitiveResult, catch = 0;
-	eccstate_t context = {
-		.environment = &self->global->environment,
-		.this = ECCNSValue.object(&self->global->environment),
-		.ecc = self,
-		.strictMode = !(flags & io_libecc_ecc_sloppyMode),
-	};
-	
-	if (!input)
-		return EXIT_FAILURE;
-	
-	self->sloppyMode = flags & io_libecc_ecc_sloppyMode;
-	
-	if (trap)
-	{
-		self->printLastThrow = 1;
-		catch = setjmp(*pushEnv(self));
-	}
-	
-	if (catch)
-		result = EXIT_FAILURE;
-	else
-		evalInputWithContext(self, input, &context);
-	
-	if (flags & io_libecc_ecc_primitiveResult)
-	{
-		ECCNSContext.rewindStatement(&context);
-		context.text = &context.ops->text;
-		
-		if ((flags & io_libecc_ecc_stringResult) == io_libecc_ecc_stringResult)
-			self->result = ECCNSValue.toString(&context, self->result);
-		else
-			self->result = ECCNSValue.toPrimitive(&context, self->result, io_libecc_value_hintAuto);
-	}
-	
-	if (trap)
-	{
-		popEnv(self);
-		self->printLastThrow = 0;
-	}
-	
-	return result;
+    volatile int result = EXIT_SUCCESS, trap = !self->envCount || flags & io_libecc_ecc_primitiveResult, catch = 0;
+    eccstate_t context = {
+        .environment = &self->global->environment,
+        .this = ECCNSValue.object(&self->global->environment),
+        .ecc = self,
+        .strictMode = !(flags & io_libecc_ecc_sloppyMode),
+    };
+
+    if(!input)
+        return EXIT_FAILURE;
+
+    self->sloppyMode = flags & io_libecc_ecc_sloppyMode;
+
+    if(trap)
+    {
+        self->printLastThrow = 1;
+        catch = setjmp(*pushEnv(self));
+    }
+
+    if(catch)
+        result = EXIT_FAILURE;
+    else
+        evalInputWithContext(self, input, &context);
+
+    if(flags & io_libecc_ecc_primitiveResult)
+    {
+        ECCNSContext.rewindStatement(&context);
+        context.text = &context.ops->text;
+
+        if((flags & io_libecc_ecc_stringResult) == io_libecc_ecc_stringResult)
+            self->result = ECCNSValue.toString(&context, self->result);
+        else
+            self->result = ECCNSValue.toPrimitive(&context, self->result, ECC_VALHINT_AUTO);
+    }
+
+    if(trap)
+    {
+        popEnv(self);
+        self->printLastThrow = 0;
+    }
+
+    return result;
 }
 
-void evalInputWithContext (struct ECCNSScript *self, eccioinput_t *input, eccstate_t *context)
+void evalInputWithContext(eccscriptcontext_t* self, eccioinput_t* input, eccstate_t* context)
 {
-	eccastlexer_t *lexer;
-	eccastparser_t *parser;
-	struct io_libecc_Function *function;
-	
-	assert(self);
-	assert(self->envCount);
-	
-	addInput(self, input);
-	
-	lexer = io_libecc_Lexer.createWithInput(input);
-	parser = io_libecc_Parser.createWithLexer(lexer);
-	
-	if (context->strictMode)
-		parser->strictMode = 1;
-	
-	if (self->sloppyMode)
-		lexer->allowUnicodeOutsideLiteral = 1;
-	
-	function = io_libecc_Parser.parseWithEnvironment(parser, context->environment, &self->global->environment);
-	context->ops = function->oplist->ops;
-	context->environment = &function->environment;
-	
-	io_libecc_Parser.destroy(parser), parser = NULL;
-	
-//	fprintf(stderr, "--- source:\n%.*s\n", input->length, input->bytes);
-//	io_libecc_OpList.dumpTo(function->oplist, stderr);
-	
-	self->result = ECCValConstUndefined;
-	
-	context->ops->native(context);
+    eccastlexer_t* lexer;
+    eccastparser_t* parser;
+    eccobjscriptfunction_t* function;
+
+    assert(self);
+    assert(self->envCount);
+
+    addInput(self, input);
+
+    lexer = io_libecc_Lexer.createWithInput(input);
+    parser = io_libecc_Parser.createWithLexer(lexer);
+
+    if(context->strictMode)
+        parser->strictMode = 1;
+
+    if(self->sloppyMode)
+        lexer->allowUnicodeOutsideLiteral = 1;
+
+    function = io_libecc_Parser.parseWithEnvironment(parser, context->environment, &self->global->environment);
+    context->ops = function->oplist->ops;
+    context->environment = &function->environment;
+
+    io_libecc_Parser.destroy(parser), parser = NULL;
+
+    //	fprintf(stderr, "--- source:\n%.*s\n", input->length, input->bytes);
+    //	io_libecc_OpList.dumpTo(function->oplist, stderr);
+
+    self->result = ECCValConstUndefined;
+
+    context->ops->native(context);
 }
 
-jmp_buf * pushEnv(struct ECCNSScript *self)
+jmp_buf* pushEnv(eccscriptcontext_t* self)
 {
-	if (self->envCount >= self->envCapacity)
-	{
-		uint16_t capacity = self->envCapacity? self->envCapacity * 2: 8;
-		self->envList = realloc(self->envList, sizeof(*self->envList) * capacity);
-		memset(self->envList + self->envCapacity, 0, sizeof(*self->envList) * (capacity - self->envCapacity));
-		self->envCapacity = capacity;
-	}
-	return &self->envList[self->envCount++];
+    if(self->envCount >= self->envCapacity)
+    {
+        uint16_t capacity = self->envCapacity ? self->envCapacity * 2 : 8;
+        self->envList = realloc(self->envList, sizeof(*self->envList) * capacity);
+        memset(self->envList + self->envCapacity, 0, sizeof(*self->envList) * (capacity - self->envCapacity));
+        self->envCapacity = capacity;
+    }
+    return &self->envList[self->envCount++];
 }
 
-void popEnv(struct ECCNSScript *self)
+void popEnv(eccscriptcontext_t* self)
 {
-	assert(self->envCount);
-	
-	--self->envCount;
+    assert(self->envCount);
+
+    --self->envCount;
 }
 
-void jmpEnv (struct ECCNSScript *self, eccvalue_t value)
+void jmpEnv(eccscriptcontext_t* self, eccvalue_t value)
 {
-	assert(self);
-	assert(self->envCount);
-	
-	self->result = value;
-	
-	if (value.type == ECC_VALTYPE_ERROR)
-		self->text = value.data.error->text;
-	
-	longjmp(self->envList[self->envCount - 1], 1);
+    assert(self);
+    assert(self->envCount);
+
+    self->result = value;
+
+    if(value.type == ECC_VALTYPE_ERROR)
+        self->text = value.data.error->text;
+
+    longjmp(self->envList[self->envCount - 1], 1);
 }
 
-void fatal (const char *format, ...)
+void fatal(const char* format, ...)
 {
-	int16_t length;
-	va_list ap;
-	
-	va_start(ap, format);
-	length = vsnprintf(NULL, 0, format, ap);
-	va_end(ap);
-	{
-		const char type[] = "Fatal";
-		char buffer[length + 1];
-		
-		va_start(ap, format);
-		vsprintf(buffer, format, ap);
-		va_end(ap);
-		
-		ECCNSEnv.printError(sizeof(type)-1, type, "%s", buffer);
-	}
-	
-	exit(EXIT_FAILURE);
+    int16_t length;
+    va_list ap;
+
+    va_start(ap, format);
+    length = vsnprintf(NULL, 0, format, ap);
+    va_end(ap);
+    {
+        const char type[] = "Fatal";
+        char buffer[length + 1];
+
+        va_start(ap, format);
+        vsprintf(buffer, format, ap);
+        va_end(ap);
+
+        ECCNSEnv.printError(sizeof(type) - 1, type, "%s", buffer);
+    }
+
+    exit(EXIT_FAILURE);
 }
 
-eccioinput_t * findInput (struct ECCNSScript *self, ecctextstring_t text)
+eccioinput_t* findInput(eccscriptcontext_t* self, ecctextstring_t text)
 {
-	uint16_t i;
-	
-	for (i = 0; i < self->inputCount; ++i)
-		if (text.bytes >= self->inputs[i]->bytes && text.bytes <= self->inputs[i]->bytes + self->inputs[i]->length)
-			return self->inputs[i];
-	
-	return NULL;
+    uint16_t i;
+
+    for(i = 0; i < self->inputCount; ++i)
+        if(text.bytes >= self->inputs[i]->bytes && text.bytes <= self->inputs[i]->bytes + self->inputs[i]->length)
+            return self->inputs[i];
+
+    return NULL;
 }
 
-void printTextInput (struct ECCNSScript *self, ecctextstring_t text, int fullLine)
+void printTextInput(eccscriptcontext_t* self, ecctextstring_t text, int fullLine)
 {
-	int32_t ofLine;
-	ecctextstring_t ofText;
-	const char *ofInput;
-	
-	assert(self);
-	
-	if (text.bytes >= self->ofText.bytes && text.bytes < self->ofText.bytes + self->ofText.length)
-	{
-		ofLine = self->ofLine;
-		ofText = self->ofText;
-		ofInput = self->ofInput;
-	}
-	else
-	{
-		ofLine = 0;
-		ofText = ECC_ConstString_Empty;
-		ofInput = NULL;
-	}
-	
-	io_libecc_Input.printText(findInput(self, text), text, ofLine, ofText, ofInput, fullLine);
+    int32_t ofLine;
+    ecctextstring_t ofText;
+    const char* ofInput;
+
+    assert(self);
+
+    if(text.bytes >= self->ofText.bytes && text.bytes < self->ofText.bytes + self->ofText.length)
+    {
+        ofLine = self->ofLine;
+        ofText = self->ofText;
+        ofInput = self->ofInput;
+    }
+    else
+    {
+        ofLine = 0;
+        ofText = ECC_ConstString_Empty;
+        ofInput = NULL;
+    }
+
+    io_libecc_Input.printText(findInput(self, text), text, ofLine, ofText, ofInput, fullLine);
 }
 
-void garbageCollect(struct ECCNSScript *self)
+void garbageCollect(eccscriptcontext_t* self)
 {
-	uint16_t index, count;
-	
-	io_libecc_Pool.unmarkAll();
-	io_libecc_Pool.markValue(ECCNSValue.object(io_libecc_arguments_prototype));
-	io_libecc_Pool.markValue(ECCNSValue.function(self->global));
-	
-	for (index = 0, count = self->inputCount; index < count; ++index)
-	{
-		eccioinput_t *input = self->inputs[index];
-		uint16_t a = input->attachedCount;
-		
-		while (a--)
-			io_libecc_Pool.markValue(input->attached[a]);
-	}
-	
-	io_libecc_Pool.collectUnmarked();
+    uint16_t index, count;
+
+    io_libecc_Pool.unmarkAll();
+    io_libecc_Pool.markValue(ECCNSValue.object(io_libecc_arguments_prototype));
+    io_libecc_Pool.markValue(ECCNSValue.function(self->global));
+
+    for(index = 0, count = self->inputCount; index < count; ++index)
+    {
+        eccioinput_t* input = self->inputs[index];
+        uint16_t a = input->attachedCount;
+
+        while(a--)
+            io_libecc_Pool.markValue(input->attached[a]);
+    }
+
+    io_libecc_Pool.collectUnmarked();
 }

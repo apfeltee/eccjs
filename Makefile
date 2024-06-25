@@ -69,6 +69,10 @@ $(target): $(objfiles_all)
 %.o: %.c
 	$(CC) $(CFLAGS) -c $(DBGFLAGS) -o $@ $<
 
+.PHONY: listsource
+listsource:
+	@printf "%s\n" $(srcfiles_all)
+
 .PHONY: clean
 clean:
 	rm -f $(objfiles_all) $(target)

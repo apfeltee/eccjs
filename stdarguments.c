@@ -9,10 +9,10 @@
 
 // MARK: - Private
 
-eccobject_t * io_libecc_arguments_prototype;
+eccobject_t* io_libecc_arguments_prototype;
 
-const struct io_libecc_object_Type io_libecc_arguments_type = {
-	.text = &ECC_ConstString_ArgumentsType,
+const eccobjinterntype_t io_libecc_arguments_type = {
+    .text = &ECC_ConstString_ArgumentsType,
 };
 
 // MARK: - Static Members
@@ -28,79 +28,75 @@ const struct type_io_libecc_Arguments ECCNSArguments = {
     createWithCList,
 };
 
-static
-eccvalue_t getLength (eccstate_t * const context)
+static eccvalue_t getLength(eccstate_t* context)
 {
-	return ECCNSValue.binary(context->this.data.object->elementCount);
+    return ECCNSValue.binary(context->this.data.object->elementCount);
 }
 
-static
-eccvalue_t setLength (eccstate_t * const context)
+static eccvalue_t setLength(eccstate_t* context)
 {
-	double length;
-	
-	length = ECCNSValue.toBinary(context, ECCNSContext.argument(context, 0)).data.binary;
-	if (!isfinite(length) || length < 0 || length > UINT32_MAX || length != (uint32_t)length)
-		ECCNSContext.rangeError(context, io_libecc_Chars.create("invalid array length"));
-	
-	if (ECCNSObject.resizeElement(context->this.data.object, length) && context->strictMode)
-	{
-		ECCNSContext.typeError(context, io_libecc_Chars.create("'%u' is non-configurable", context->this.data.object->elementCount));
-	}
-	
-	return ECCValConstUndefined;
+    double length;
+
+    length = ECCNSValue.toBinary(context, ECCNSContext.argument(context, 0)).data.binary;
+    if(!isfinite(length) || length < 0 || length > UINT32_MAX || length != (uint32_t)length)
+        ECCNSContext.rangeError(context, io_libecc_Chars.create("invalid array length"));
+
+    if(ECCNSObject.resizeElement(context->this.data.object, length) && context->strictMode)
+    {
+        ECCNSContext.typeError(context, io_libecc_Chars.create("'%u' is non-configurable", context->this.data.object->elementCount));
+    }
+
+    return ECCValConstUndefined;
 }
 
-static
-eccvalue_t getCallee (eccstate_t * const context)
+static eccvalue_t getCallee(eccstate_t* context)
 {
-	ECCNSContext.rewindStatement(context->parent);
-	ECCNSContext.typeError(context, io_libecc_Chars.create("'callee' cannot be accessed in this context"));
-	
-	return ECCValConstUndefined;
+    ECCNSContext.rewindStatement(context->parent);
+    ECCNSContext.typeError(context, io_libecc_Chars.create("'callee' cannot be accessed in this context"));
+
+    return ECCValConstUndefined;
 }
 
-static
-eccvalue_t setCallee (eccstate_t * const context)
+static eccvalue_t setCallee(eccstate_t* context)
 {
-	ECCNSContext.rewindStatement(context->parent);
-	ECCNSContext.typeError(context, io_libecc_Chars.create("'callee' cannot be accessed in this context"));
-	
-	return ECCValConstUndefined;
+    ECCNSContext.rewindStatement(context->parent);
+    ECCNSContext.typeError(context, io_libecc_Chars.create("'callee' cannot be accessed in this context"));
+
+    return ECCValConstUndefined;
 }
 
 // MARK: - Methods
 
-void setup (void)
+void setup(void)
 {
-	const enum io_libecc_value_Flags h = io_libecc_value_hidden;
-	const enum io_libecc_value_Flags s = io_libecc_value_sealed;
-	
-	io_libecc_arguments_prototype = ECCNSObject.createTyped(&io_libecc_arguments_type);
-	
-	ECCNSObject.addMember(io_libecc_arguments_prototype, io_libecc_key_length, io_libecc_Function.accessor(getLength, setLength), h|s | io_libecc_value_asOwn | io_libecc_value_asData);
-	ECCNSObject.addMember(io_libecc_arguments_prototype, io_libecc_key_callee, io_libecc_Function.accessor(getCallee, setCallee), h|s | io_libecc_value_asOwn);
+    const eccvalflag_t h = ECC_VALFLAG_HIDDEN;
+    const eccvalflag_t s = ECC_VALFLAG_SEALED;
+
+    io_libecc_arguments_prototype = ECCNSObject.createTyped(&io_libecc_arguments_type);
+
+    ECCNSObject.addMember(io_libecc_arguments_prototype, io_libecc_key_length, io_libecc_Function.accessor(getLength, setLength), h | s | ECC_VALFLAG_ASOWN | ECC_VALFLAG_ASDATA);
+    ECCNSObject.addMember(io_libecc_arguments_prototype, io_libecc_key_callee, io_libecc_Function.accessor(getCallee, setCallee), h | s | ECC_VALFLAG_ASOWN);
 }
 
-void teardown (void)
+void teardown(void)
 {
-	io_libecc_arguments_prototype = NULL;
+    io_libecc_arguments_prototype = NULL;
 }
 
-eccobject_t *createSized (uint32_t size)
+eccobject_t* createSized(uint32_t size)
 {
-	eccobject_t *self = ECCNSObject.create(io_libecc_arguments_prototype);
-	
-	ECCNSObject.resizeElement(self, size);
-	
-	return self;
+    eccobject_t* self = ECCNSObject.create(io_libecc_arguments_prototype);
+
+    ECCNSObject.resizeElement(self, size);
+
+    return self;
 }
 
-eccobject_t *createWithCList (int count, const char * list[])
+eccobject_t* createWithCList(int count, const char* list[])
 {
-	eccobject_t *self = createSized(count);
-	
-	ECCNSObject.populateElementWithCList(self, count, list);
-	
-	return self;
+    eccobject_t* self = createSized(count);
+
+    ECCNSObject.populateElementWithCList(self, count, list);
+
+    return self;
 }

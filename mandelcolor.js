@@ -66,7 +66,7 @@ function doit()
         lines = lines - 1
     }
     var cols = (2.2 * lines)
-    print("lines=", lines, ", cols=", cols, "\n")
+    println("lines=", lines, ", cols=", cols)
     mandelbrot(-2, -2, 2, 2, cols, lines, 100)
 }
 

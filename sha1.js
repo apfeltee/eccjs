@@ -6,7 +6,7 @@ function unshiftright(a, b)
     var nb = b;
     if(((nb > 32) || (nb == 32)) || (nb < (0-32)))
     {
-        var m = (nb / 32);
+        m = (nb / 32);
         nb = nb - (m * 32);
     }
     if(nb < 0)
@@ -120,15 +120,14 @@ function core_sha1(x, l)
     var d =  271733878;
     var e = -1009589776;
     var i = 0;
-    while(i < x.length)
+    for(i = 0; i < x.length; i = i + 16)
     {
         var olda = a;
         var oldb = b;
         var oldc = c;
         var oldd = d;
         var olde = e;
-        var j = 0;
-        while(j < 80)
+        for(var j = 0; j < 80; j++)
         {
             if(j < 16)
             {
@@ -172,14 +171,12 @@ function core_sha1(x, l)
             c = rol(b, 30);
             b = a;
             a = t;
-            j = j + 1;
         }
         a = safe_add(a, olda);
         b = safe_add(b, oldb);
         c = safe_add(c, oldc);
         d = safe_add(d, oldd);
         e = safe_add(e, olde);
-        i = i + 16;
     }
     var rt = [a, b, c, d, e];
     
@@ -195,8 +192,7 @@ function str2binb(str)
     var mask = (1 << K_CHARSIZE) - 1;
     var len = str.length;
     
-    var i = 0;
-    while(i < len * K_CHARSIZE)
+    for(var i = 0; i < len * K_CHARSIZE; i += K_CHARSIZE)
     {
         aidx = (i >> 5);
         if(aidx >= bin.length)
@@ -204,7 +200,7 @@ function str2binb(str)
             bin.push(0);
         }
         bin[aidx] = bin[aidx] | (str.charCodeAt(i / K_CHARSIZE) & mask) << (24 - i%32); 
-        i += K_CHARSIZE;
+
     }
     return bin;
 }
@@ -218,12 +214,10 @@ function core_hmac_sha1(key, data)
     }
     var ipad = [];
     var opad = [];
-    var i = 0;
-    while(i < 16)
+    for(var i = 0; i < 16; i++)
     {
         ipad[i] = bkey[i] ^ 0x36363636;
         opad[i] = bkey[i] ^ 0x5C5C5C5C;
-        i = i + 1;
     }
     var hash = core_sha1(ipad + str2binb(data), 512 + data.length * K_CHARSIZE);
     return core_sha1(opad + hash, 512 + 160);
@@ -234,17 +228,17 @@ function binb2hex(binarray)
 {
     var hex_tab = "0123456789abcdef";
     var str = "";
-    var i = 0;
-    while(i < binarray.length * 4)
+    for(var i = 0; i < binarray.length * 4; i++)
     {
         var c1 = hex_tab[(binarray[i>>2] >> ((3 - i%4)*8+4)) & 0xF];
         var c2 = hex_tab[(binarray[i>>2] >> ((3 - i%4)*8  )) & 0xF];
         str += c1;
         str += c2;
-        i = i + 1;
     }
     return str;
 }
+
+
 
 function hex_sha1(s)
 {
@@ -259,25 +253,18 @@ var demo = [
     ["long text, some spaces, blah blah", "fc0aa2379ecce86eac0dc50d921ab2cef7030d12"]
 ];
 
-function main()
+for(var idx=0; idx<demo.length; idx++)
 {
-    var idx=0
-    while(idx<demo.length)
+    var itm = demo[idx];
+    var k = itm[0];
+    var v = itm[1];
+    var ma = hex_sha1(k);
+    var m = ma;
+    var okstr = "FAIL";
+    if(m == v)
     {
-        var itm = demo[idx];
-        idx = idx + 1;
-        var k = itm[0];
-        var v = itm[1];
-        var ma = hex_sha1(k);
-        var m = ma;
-        var okstr = "FAIL";
-        if(m == v)
-        {
-            okstr = "OK  ";
-        }
-        print(okstr, ": \"",k, "\" => ", m, "\n");
-
+        okstr = "OK  ";
     }
-}
+    print(okstr, ": \"",k, "\" => ", m, "\n");
 
-main();
+}
