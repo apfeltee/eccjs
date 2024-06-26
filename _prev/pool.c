@@ -28,7 +28,7 @@ static void collectUnmarked(void);
 static void collectUnreferencedFromIndices(uint32_t indices[3]);
 static void unreferenceFromIndices(uint32_t indices[3]);
 static void getIndices(uint32_t indices[3]);
-const struct eccpseudonspool_t ECCNSMemoryPool = {
+const struct eccpseudonspool_t io_libecc_Pool = {
     setup,
     teardown,
     addFunction,
@@ -57,8 +57,8 @@ void markObject(eccobject_t* object)
         markObject(object->prototype);
 
     for(index = 0, count = object->elementCount; index < count; ++index)
-        if(object->element[index].value.check == 1)
-            markValue(object->element[index].value);
+        if(object->element[index].elemvalue.check == 1)
+            markValue(object->element[index].elemvalue);
 
     for(index = 2, count = object->hashmapCount; index < count; ++index)
         if(object->hashmap[index].value.check == 1)
@@ -83,7 +83,7 @@ void setup(void)
     assert(!self);
 
     self = malloc(sizeof(*self));
-    *self = ECCNSMemoryPool.identity;
+    *self = io_libecc_Pool.identity;
 }
 
 void teardown(void)
@@ -167,7 +167,7 @@ void markValue(eccvalue_t value)
     if(value.type >= ECC_VALTYPE_OBJECT)
         markObject(value.data.object);
     else if(value.type == ECC_VALTYPE_CHARS)
-        markChars(value.data.chars);
+        markChars(value.data.charbufdata);
 }
 
 static void releaseObject(eccobject_t* object)
@@ -179,7 +179,7 @@ static void releaseObject(eccobject_t* object)
 static eccvalue_t releaseValue(eccvalue_t value)
 {
     if(value.type == ECC_VALTYPE_CHARS)
-        --value.data.chars->referenceCount;
+        --value.data.charbufdata->referenceCount;
     if(value.type >= ECC_VALTYPE_OBJECT)
         releaseObject(value.data.object);
 
@@ -191,7 +191,7 @@ static void captureObject(eccobject_t* object);
 static eccvalue_t retainValue(eccvalue_t value)
 {
     if(value.type == ECC_VALTYPE_CHARS)
-        ++value.data.chars->referenceCount;
+        ++value.data.charbufdata->referenceCount;
     if(value.type >= ECC_VALTYPE_OBJECT)
     {
         ++value.data.object->referenceCount;
@@ -213,7 +213,7 @@ static void cleanupObject(eccobject_t* object)
 
     if(object->elementCount)
         while(object->elementCount--)
-            if((value = object->element[object->elementCount].value).check == 1)
+            if((value = object->element[object->elementCount].elemvalue).check == 1)
                 releaseValue(value);
 
     if(object->hashmapCount)
@@ -242,8 +242,8 @@ static void captureObject(eccobject_t* object)
     for(index = 0; index < count; ++index)
     {
         element = object->element + index;
-        if(element->value.check == 1)
-            retainValue(element->value);
+        if(element->elemvalue.check == 1)
+            retainValue(element->elemvalue);
     }
 
     count = object->hashmapCount;
@@ -268,7 +268,7 @@ void collectUnmarked(void)
     while(index--)
         if(!(self->functionList[index]->object.flags & ECC_OBJFLAG_MARK) && !(self->functionList[index]->environment.flags & ECC_OBJFLAG_MARK))
         {
-            ECCNSFunction.destroy(self->functionList[index]);
+            io_libecc_Function.destroy(self->functionList[index]);
             self->functionList[index] = self->functionList[--self->functionCount];
         }
 
@@ -285,7 +285,7 @@ void collectUnmarked(void)
     while(index--)
         if(!(self->charsList[index]->flags & ECC_CHARBUFFLAG_MARK))
         {
-            ECCNSChars.destroy(self->charsList[index]);
+            io_libecc_Chars.destroy(self->charsList[index]);
             self->charsList[index] = self->charsList[--self->charsCount];
         }
 }
@@ -315,7 +315,7 @@ void collectUnreferencedFromIndices(uint32_t indices[3])
     while(index-- > indices[0])
         if(!self->functionList[index]->object.referenceCount && !self->functionList[index]->environment.referenceCount)
         {
-            ECCNSFunction.destroy(self->functionList[index]);
+            io_libecc_Function.destroy(self->functionList[index]);
             self->functionList[index] = self->functionList[--self->functionCount];
         }
 
@@ -332,7 +332,7 @@ void collectUnreferencedFromIndices(uint32_t indices[3])
     while(index-- > indices[2])
         if(self->charsList[index]->referenceCount <= 0)
         {
-            ECCNSChars.destroy(self->charsList[index]);
+            io_libecc_Chars.destroy(self->charsList[index]);
             self->charsList[index] = self->charsList[--self->charsCount];
         }
 }

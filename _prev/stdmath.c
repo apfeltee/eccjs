@@ -7,39 +7,22 @@
 //
 #include "ecc.h"
 
-static eccvalue_t mathobjfn_mathAbs(eccstate_t *context);
-static eccvalue_t mathobjfn_mathACos(eccstate_t *context);
-static eccvalue_t mathobjfn_mathASin(eccstate_t *context);
-static eccvalue_t mathobjfn_mathATan(eccstate_t *context);
-static eccvalue_t mathobjfn_mathATan2(eccstate_t *context);
-static eccvalue_t mathobjfn_mathCeil(eccstate_t *context);
-static eccvalue_t mathobjfn_mathCos(eccstate_t *context);
-static eccvalue_t mathobjfn_mathExp(eccstate_t *context);
-static eccvalue_t mathobjfn_mathFloor(eccstate_t *context);
-static eccvalue_t mathobjfn_mathLog(eccstate_t *context);
-static eccvalue_t mathobjfn_mathMax(eccstate_t *context);
-static eccvalue_t mathobjfn_mathMin(eccstate_t *context);
-static eccvalue_t mathobjfn_mathPow(eccstate_t *context);
-static eccvalue_t mathobjfn_mathRandom(eccstate_t *context);
-static eccvalue_t mathobjfn_mathRound(eccstate_t *context);
-static eccvalue_t mathobjfn_mathSin(eccstate_t *context);
-static eccvalue_t mathobjfn_mathSqrt(eccstate_t *context);
-static eccvalue_t mathobjfn_mathTan(eccstate_t *context);
-static void setup(void);
-static void teardown(void);
+// MARK: - Private
 
-
-const eccobjinterntype_t ECC_Type_Math = {
+const eccobjinterntype_t ECCObjTypeMath = {
     .text = &ECC_ConstString_MathType,
 };
 
+// MARK: - Static Members
+static void setup(void);
+static void teardown(void);
 const struct eccpseudonsmath_t io_libecc_Math = {
     setup,
     teardown,
     {},
 };
 
-static eccvalue_t mathobjfn_mathAbs(eccstate_t* context)
+static eccvalue_t mathAbs(eccstate_t* context)
 {
     eccvalue_t value;
 
@@ -50,7 +33,7 @@ static eccvalue_t mathobjfn_mathAbs(eccstate_t* context)
     return ECCNSValue.binary(fabs(value.data.binary));
 }
 
-static eccvalue_t mathobjfn_mathACos(eccstate_t* context)
+static eccvalue_t mathACos(eccstate_t* context)
 {
     eccvalue_t value;
 
@@ -61,7 +44,7 @@ static eccvalue_t mathobjfn_mathACos(eccstate_t* context)
     return ECCNSValue.binary(acos(value.data.binary));
 }
 
-static eccvalue_t mathobjfn_mathASin(eccstate_t* context)
+static eccvalue_t mathASin(eccstate_t* context)
 {
     eccvalue_t value;
 
@@ -72,7 +55,7 @@ static eccvalue_t mathobjfn_mathASin(eccstate_t* context)
     return ECCNSValue.binary(asin(value.data.binary));
 }
 
-static eccvalue_t mathobjfn_mathATan(eccstate_t* context)
+static eccvalue_t mathATan(eccstate_t* context)
 {
     eccvalue_t value;
 
@@ -83,7 +66,7 @@ static eccvalue_t mathobjfn_mathATan(eccstate_t* context)
     return ECCNSValue.binary(atan(value.data.binary));
 }
 
-static eccvalue_t mathobjfn_mathATan2(eccstate_t* context)
+static eccvalue_t mathATan2(eccstate_t* context)
 {
     eccvalue_t x, y;
 
@@ -98,7 +81,7 @@ static eccvalue_t mathobjfn_mathATan2(eccstate_t* context)
     return ECCNSValue.binary(atan2(x.data.binary, y.data.binary));
 }
 
-static eccvalue_t mathobjfn_mathCeil(eccstate_t* context)
+static eccvalue_t mathCeil(eccstate_t* context)
 {
     eccvalue_t value;
 
@@ -109,7 +92,7 @@ static eccvalue_t mathobjfn_mathCeil(eccstate_t* context)
     return ECCNSValue.binary(ceil(value.data.binary));
 }
 
-static eccvalue_t mathobjfn_mathCos(eccstate_t* context)
+static eccvalue_t mathCos(eccstate_t* context)
 {
     eccvalue_t value;
 
@@ -120,7 +103,7 @@ static eccvalue_t mathobjfn_mathCos(eccstate_t* context)
     return ECCNSValue.binary(cos(value.data.binary));
 }
 
-static eccvalue_t mathobjfn_mathExp(eccstate_t* context)
+static eccvalue_t mathExp(eccstate_t* context)
 {
     eccvalue_t value;
 
@@ -131,7 +114,7 @@ static eccvalue_t mathobjfn_mathExp(eccstate_t* context)
     return ECCNSValue.binary(exp(value.data.binary));
 }
 
-static eccvalue_t mathobjfn_mathFloor(eccstate_t* context)
+static eccvalue_t mathFloor(eccstate_t* context)
 {
     eccvalue_t value;
 
@@ -142,7 +125,7 @@ static eccvalue_t mathobjfn_mathFloor(eccstate_t* context)
     return ECCNSValue.binary(floor(value.data.binary));
 }
 
-static eccvalue_t mathobjfn_mathLog(eccstate_t* context)
+static eccvalue_t mathLog(eccstate_t* context)
 {
     eccvalue_t value;
 
@@ -153,7 +136,7 @@ static eccvalue_t mathobjfn_mathLog(eccstate_t* context)
     return ECCNSValue.binary(log(value.data.binary));
 }
 
-static eccvalue_t mathobjfn_mathMax(eccstate_t* context)
+static eccvalue_t mathMax(eccstate_t* context)
 {
     double result = -INFINITY, value;
     int index, count;
@@ -175,7 +158,7 @@ static eccvalue_t mathobjfn_mathMax(eccstate_t* context)
     return ECCNSValue.binary(result);
 }
 
-static eccvalue_t mathobjfn_mathMin(eccstate_t* context)
+static eccvalue_t mathMin(eccstate_t* context)
 {
     double result = INFINITY, value;
     int index, count;
@@ -197,7 +180,7 @@ static eccvalue_t mathobjfn_mathMin(eccstate_t* context)
     return ECCNSValue.binary(result);
 }
 
-static eccvalue_t mathobjfn_mathPow(eccstate_t* context)
+static eccvalue_t mathPow(eccstate_t* context)
 {
     eccvalue_t x, y;
 
@@ -210,13 +193,13 @@ static eccvalue_t mathobjfn_mathPow(eccstate_t* context)
     return ECCNSValue.binary(pow(x.data.binary, y.data.binary));
 }
 
-static eccvalue_t mathobjfn_mathRandom(eccstate_t* context)
+static eccvalue_t mathRandom(eccstate_t* context)
 {
     (void)context;
     return ECCNSValue.binary((double)rand() / (double)RAND_MAX);
 }
 
-static eccvalue_t mathobjfn_mathRound(eccstate_t* context)
+static eccvalue_t mathRound(eccstate_t* context)
 {
     eccvalue_t value;
 
@@ -230,7 +213,7 @@ static eccvalue_t mathobjfn_mathRound(eccstate_t* context)
         return ECCNSValue.binary(floor(0.5 + value.data.binary));
 }
 
-static eccvalue_t mathobjfn_mathSin(eccstate_t* context)
+static eccvalue_t mathSin(eccstate_t* context)
 {
     eccvalue_t value;
 
@@ -241,7 +224,7 @@ static eccvalue_t mathobjfn_mathSin(eccstate_t* context)
     return ECCNSValue.binary(sin(value.data.binary));
 }
 
-static eccvalue_t mathobjfn_mathSqrt(eccstate_t* context)
+static eccvalue_t mathSqrt(eccstate_t* context)
 {
     eccvalue_t value;
 
@@ -252,7 +235,7 @@ static eccvalue_t mathobjfn_mathSqrt(eccstate_t* context)
     return ECCNSValue.binary(sqrt(value.data.binary));
 }
 
-static eccvalue_t mathobjfn_mathTan(eccstate_t* context)
+static eccvalue_t mathTan(eccstate_t* context)
 {
     eccvalue_t value;
 
@@ -265,46 +248,46 @@ static eccvalue_t mathobjfn_mathTan(eccstate_t* context)
 
 // MARK: - Public
 
-eccobject_t* ECC_Prototype_MathObject = NULL;
+eccobject_t* io_libecc_math_object = NULL;
 
-static void setup()
+void setup()
 {
     const eccvalflag_t r = ECC_VALFLAG_READONLY;
     const eccvalflag_t h = ECC_VALFLAG_HIDDEN;
     const eccvalflag_t s = ECC_VALFLAG_SEALED;
 
-    ECC_Prototype_MathObject = ECCNSObject.createTyped(&ECC_Type_Math);
+    io_libecc_math_object = ECCNSObject.createTyped(&ECCObjTypeMath);
 
-    ECCNSObject.addMember(ECC_Prototype_MathObject, ECCNSKey.makeWithCString("E"), ECCNSValue.binary(2.71828182845904523536), r | h | s);
-    ECCNSObject.addMember(ECC_Prototype_MathObject, ECCNSKey.makeWithCString("LN10"), ECCNSValue.binary(2.30258509299404568402), r | h | s);
-    ECCNSObject.addMember(ECC_Prototype_MathObject, ECCNSKey.makeWithCString("LN2"), ECCNSValue.binary(0.693147180559945309417), r | h | s);
-    ECCNSObject.addMember(ECC_Prototype_MathObject, ECCNSKey.makeWithCString("LOG2E"), ECCNSValue.binary(1.44269504088896340736), r | h | s);
-    ECCNSObject.addMember(ECC_Prototype_MathObject, ECCNSKey.makeWithCString("LOG10E"), ECCNSValue.binary(0.434294481903251827651), r | h | s);
-    ECCNSObject.addMember(ECC_Prototype_MathObject, ECCNSKey.makeWithCString("PI"), ECCNSValue.binary(3.14159265358979323846), r | h | s);
-    ECCNSObject.addMember(ECC_Prototype_MathObject, ECCNSKey.makeWithCString("SQRT1_2"), ECCNSValue.binary(0.707106781186547524401), r | h | s);
-    ECCNSObject.addMember(ECC_Prototype_MathObject, ECCNSKey.makeWithCString("SQRT2"), ECCNSValue.binary(1.41421356237309504880), r | h | s);
+    ECCNSObject.addMember(io_libecc_math_object, io_libecc_Key.makeWithCString("E"), ECCNSValue.binary(2.71828182845904523536), r | h | s);
+    ECCNSObject.addMember(io_libecc_math_object, io_libecc_Key.makeWithCString("LN10"), ECCNSValue.binary(2.30258509299404568402), r | h | s);
+    ECCNSObject.addMember(io_libecc_math_object, io_libecc_Key.makeWithCString("LN2"), ECCNSValue.binary(0.693147180559945309417), r | h | s);
+    ECCNSObject.addMember(io_libecc_math_object, io_libecc_Key.makeWithCString("LOG2E"), ECCNSValue.binary(1.44269504088896340736), r | h | s);
+    ECCNSObject.addMember(io_libecc_math_object, io_libecc_Key.makeWithCString("LOG10E"), ECCNSValue.binary(0.434294481903251827651), r | h | s);
+    ECCNSObject.addMember(io_libecc_math_object, io_libecc_Key.makeWithCString("PI"), ECCNSValue.binary(3.14159265358979323846), r | h | s);
+    ECCNSObject.addMember(io_libecc_math_object, io_libecc_Key.makeWithCString("SQRT1_2"), ECCNSValue.binary(0.707106781186547524401), r | h | s);
+    ECCNSObject.addMember(io_libecc_math_object, io_libecc_Key.makeWithCString("SQRT2"), ECCNSValue.binary(1.41421356237309504880), r | h | s);
 
-    ECCNSFunction.addToObject(ECC_Prototype_MathObject, "abs", mathobjfn_mathAbs, 1, h);
-    ECCNSFunction.addToObject(ECC_Prototype_MathObject, "acos", mathobjfn_mathACos, 1, h);
-    ECCNSFunction.addToObject(ECC_Prototype_MathObject, "asin", mathobjfn_mathASin, 1, h);
-    ECCNSFunction.addToObject(ECC_Prototype_MathObject, "atan", mathobjfn_mathATan, 1, h);
-    ECCNSFunction.addToObject(ECC_Prototype_MathObject, "atan2", mathobjfn_mathATan2, 2, h);
-    ECCNSFunction.addToObject(ECC_Prototype_MathObject, "ceil", mathobjfn_mathCeil, 1, h);
-    ECCNSFunction.addToObject(ECC_Prototype_MathObject, "cos", mathobjfn_mathCos, 1, h);
-    ECCNSFunction.addToObject(ECC_Prototype_MathObject, "exp", mathobjfn_mathExp, 1, h);
-    ECCNSFunction.addToObject(ECC_Prototype_MathObject, "floor", mathobjfn_mathFloor, 1, h);
-    ECCNSFunction.addToObject(ECC_Prototype_MathObject, "log", mathobjfn_mathLog, 1, h);
-    ECCNSFunction.addToObject(ECC_Prototype_MathObject, "max", mathobjfn_mathMax, -2, h);
-    ECCNSFunction.addToObject(ECC_Prototype_MathObject, "min", mathobjfn_mathMin, -2, h);
-    ECCNSFunction.addToObject(ECC_Prototype_MathObject, "pow", mathobjfn_mathPow, 2, h);
-    ECCNSFunction.addToObject(ECC_Prototype_MathObject, "random", mathobjfn_mathRandom, 0, h);
-    ECCNSFunction.addToObject(ECC_Prototype_MathObject, "round", mathobjfn_mathRound, 1, h);
-    ECCNSFunction.addToObject(ECC_Prototype_MathObject, "sin", mathobjfn_mathSin, 1, h);
-    ECCNSFunction.addToObject(ECC_Prototype_MathObject, "sqrt", mathobjfn_mathSqrt, 1, h);
-    ECCNSFunction.addToObject(ECC_Prototype_MathObject, "tan", mathobjfn_mathTan, 1, h);
+    io_libecc_Function.addToObject(io_libecc_math_object, "abs", mathAbs, 1, h);
+    io_libecc_Function.addToObject(io_libecc_math_object, "acos", mathACos, 1, h);
+    io_libecc_Function.addToObject(io_libecc_math_object, "asin", mathASin, 1, h);
+    io_libecc_Function.addToObject(io_libecc_math_object, "atan", mathATan, 1, h);
+    io_libecc_Function.addToObject(io_libecc_math_object, "atan2", mathATan2, 2, h);
+    io_libecc_Function.addToObject(io_libecc_math_object, "ceil", mathCeil, 1, h);
+    io_libecc_Function.addToObject(io_libecc_math_object, "cos", mathCos, 1, h);
+    io_libecc_Function.addToObject(io_libecc_math_object, "exp", mathExp, 1, h);
+    io_libecc_Function.addToObject(io_libecc_math_object, "floor", mathFloor, 1, h);
+    io_libecc_Function.addToObject(io_libecc_math_object, "log", mathLog, 1, h);
+    io_libecc_Function.addToObject(io_libecc_math_object, "max", mathMax, -2, h);
+    io_libecc_Function.addToObject(io_libecc_math_object, "min", mathMin, -2, h);
+    io_libecc_Function.addToObject(io_libecc_math_object, "pow", mathPow, 2, h);
+    io_libecc_Function.addToObject(io_libecc_math_object, "random", mathRandom, 0, h);
+    io_libecc_Function.addToObject(io_libecc_math_object, "round", mathRound, 1, h);
+    io_libecc_Function.addToObject(io_libecc_math_object, "sin", mathSin, 1, h);
+    io_libecc_Function.addToObject(io_libecc_math_object, "sqrt", mathSqrt, 1, h);
+    io_libecc_Function.addToObject(io_libecc_math_object, "tan", mathTan, 1, h);
 }
 
-static void teardown(void)
+void teardown(void)
 {
-    ECC_Prototype_MathObject = NULL;
+    io_libecc_math_object = NULL;
 }

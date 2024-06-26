@@ -15,7 +15,7 @@ static int testCount = 0;
 static double testTime = 0;
 
 
-io_libecc_ecc_useframe static void actuallyruntest(const char* func, int line, const char* test, const char* expect, const char* text)
+static void actuallyruntest(const char* func, int line, const char* test, const char* expect, const char* text)
 {
     uint16_t length;
     clock_t start;
@@ -26,7 +26,7 @@ io_libecc_ecc_useframe static void actuallyruntest(const char* func, int line, c
     start = clock();
     if(testVerbosity > 0 || !setjmp(*ECCNSScript.pushEnv(ecc)))
     {
-        ECCNSScript.evalInput(ecc, ECCNSInput.createFromBytes(test, (uint32_t)strlen(test), "%s:%d", func, line), ECC_SCRIPTEVAL_STRINGRESULT);
+        ECCNSScript.evalInput(ecc, io_libecc_Input.createFromBytes(test, (uint32_t)strlen(test), "%s:%d", func, line), ECC_SCRIPTEVAL_STRINGRESULT);
     }
     if(testVerbosity <= 0)
     {
@@ -206,7 +206,7 @@ int main(int argc, const char* argv[])
     {
         eccobject_t* arguments = ECCNSArguments.createWithCList(argc - 2, &argv[2]);
         ECCNSScript.addValue(ecc, "arguments", ECCNSValue.object(arguments), 0);
-        result = ECCNSScript.evalInput(ecc, ECCNSInput.createFromFile(argv[1]), ECC_SCRIPTEVAL_SLOPPYMODE);
+        result = ECCNSScript.evalInput(ecc, io_libecc_Input.createFromFile(argv[1]), ECC_SCRIPTEVAL_SLOPPYMODE);
     }
     ECCNSScript.destroy(ecc), ecc = NULL;
     return result;

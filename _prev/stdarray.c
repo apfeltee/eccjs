@@ -18,53 +18,54 @@ struct eccarraycomparestate_t
     const eccoperand_t* ops;
 };
 
-eccobject_t* ECC_Prototype_Array = NULL;
-eccobjscriptfunction_t* ECC_CtorFunc_Array = NULL;
+eccobject_t* io_libecc_array_prototype = NULL;
+eccobjscriptfunction_t* io_libecc_array_constructor = NULL;
 
-const eccobjinterntype_t ECC_Type_Array = {
+const eccobjinterntype_t ECCObjTypeArray = {
     .text = &ECC_ConstString_ArrayType,
 };
 
 
+/* stdarray.c */
 
-static int eccarray_valueIsArray(eccvalue_t value);
-static uint32_t eccarray_valueArrayLength(eccvalue_t value);
-static uint32_t eccarray_objectLength(eccstate_t *context, eccobject_t *object);
-static void eccarray_objectResize(eccstate_t *context, eccobject_t *object, uint32_t length);
-static void eccarray_valueAppendFromElement(eccstate_t *context, eccvalue_t value, eccobject_t *object, uint32_t *element);
-static eccvalue_t objarrayfn_isArray(eccstate_t *context);
-static eccvalue_t eccarray_toChars(eccstate_t *context, eccvalue_t thisval, ecctextstring_t separator);
-static eccvalue_t objarrayfn_toString(eccstate_t *context);
-static eccvalue_t objarrayfn_concat(eccstate_t *context);
-static eccvalue_t objarrayfn_join(eccstate_t *context);
-static eccvalue_t objarrayfn_pop(eccstate_t *context);
-static eccvalue_t objarrayfn_push(eccstate_t *context);
-static eccvalue_t objarrayfn_reverse(eccstate_t *context);
-static eccvalue_t objarrayfn_shift(eccstate_t *context);
-static eccvalue_t objarrayfn_unshift(eccstate_t *context);
-static eccvalue_t objarrayfn_slice(eccstate_t *context);
-static eccvalue_t objarrayfn_defaultComparison(eccstate_t *context);
-static inline int eccarray_gcd(int m, int n);
-static inline void eccarray_rotate(eccobject_t *object, eccstate_t *context, uint32_t first, uint32_t half, uint32_t last);
-static inline int eccarray_compare(eccarraycomparestate_t *cmp, eccvalue_t left, eccvalue_t right);
-static inline uint32_t eccarray_search(eccobject_t *object, eccarraycomparestate_t *cmp, uint32_t first, uint32_t last, eccvalue_t right);
-static inline void eccarray_merge(eccobject_t *object, eccarraycomparestate_t *cmp, uint32_t first, uint32_t pivot, uint32_t last, uint32_t len1, uint32_t len2);
-static void eccarray_sortAndMerge(eccobject_t *object, eccarraycomparestate_t *cmp, uint32_t first, uint32_t last);
-static void eccarray_sortInPlace(eccstate_t *context, eccobject_t *object, eccobjscriptfunction_t *function, int first, int last);
-static eccvalue_t objarrayfn_sort(eccstate_t *context);
-static eccvalue_t objarrayfn_splice(eccstate_t *context);
-static eccvalue_t objarrayfn_indexOf(eccstate_t *context);
-static eccvalue_t objarrayfn_lastIndexOf(eccstate_t *context);
-static eccvalue_t objarrayfn_getLength(eccstate_t *context);
-static eccvalue_t objarrayfn_setLength(eccstate_t *context);
-static eccvalue_t objarrayfn_constructor(eccstate_t *context);
-static void nsarrayfn_setup(void);
-static void nsarrayfn_teardown(void);
-static eccobject_t *nsarrayfn_create(void);
-static eccobject_t *nsarrayfn_createSized(uint32_t size);
+static int libarray_valueIsArray(eccvalue_t value);
+static uint32_t libarray_valueArrayLength(eccvalue_t value);
+static uint32_t libarray_objectLength(eccstate_t *context, eccobject_t *object);
+static void libarray_objectResize(eccstate_t *context, eccobject_t *object, uint32_t length);
+static void libarray_valueAppendFromElement(eccstate_t *context, eccvalue_t value, eccobject_t *object, uint32_t *element);
+static eccvalue_t libarray_isArray(eccstate_t *context);
+static eccvalue_t libarray_toChars(eccstate_t *context, eccvalue_t thisval, ecctextstring_t separator);
+static eccvalue_t libarray_toString(eccstate_t *context);
+static eccvalue_t libarray_concat(eccstate_t *context);
+static eccvalue_t libarray_join(eccstate_t *context);
+static eccvalue_t libarray_pop(eccstate_t *context);
+static eccvalue_t libarray_push(eccstate_t *context);
+static eccvalue_t libarray_reverse(eccstate_t *context);
+static eccvalue_t libarray_shift(eccstate_t *context);
+static eccvalue_t libarray_unshift(eccstate_t *context);
+static eccvalue_t libarray_slice(eccstate_t *context);
+static eccvalue_t libarray_defaultComparison(eccstate_t *context);
+static inline int libarray_gcd(int m, int n);
+static inline void libarray_rotate(eccobject_t *object, eccstate_t *context, uint32_t first, uint32_t half, uint32_t last);
+static inline int libarray_compare(eccarraycomparestate_t *cmp, eccvalue_t left, eccvalue_t right);
+static inline uint32_t libarray_search(eccobject_t *object, eccarraycomparestate_t *cmp, uint32_t first, uint32_t last, eccvalue_t right);
+static inline void libarray_merge(eccobject_t *object, eccarraycomparestate_t *cmp, uint32_t first, uint32_t pivot, uint32_t last, uint32_t len1, uint32_t len2);
+static void libarray_sortAndMerge(eccobject_t *object, eccarraycomparestate_t *cmp, uint32_t first, uint32_t last);
+static void libarray_sortInPlace(eccstate_t *context, eccobject_t *object, eccobjscriptfunction_t *function, int first, int last);
+static eccvalue_t libarray_sort(eccstate_t *context);
+static eccvalue_t libarray_splice(eccstate_t *context);
+static eccvalue_t libarray_indexOf(eccstate_t *context);
+static eccvalue_t libarray_lastIndexOf(eccstate_t *context);
+static eccvalue_t libarray_getLength(eccstate_t *context);
+static eccvalue_t libarray_setLength(eccstate_t *context);
+static eccvalue_t libarray_constructor(eccstate_t *context);
+void nsarrayfn_setup(void);
+void nsarrayfn_teardown(void);
+eccobject_t *nsarrayfn_create(void);
+eccobject_t *nsarrayfn_createSized(uint32_t size);
 
 
-const struct eccpseudonsarray_t ECCNSArray = {
+const struct eccpseudonsarray_t io_libecc_Array = {
     nsarrayfn_setup,
     nsarrayfn_teardown,
     nsarrayfn_create,
@@ -72,89 +73,89 @@ const struct eccpseudonsarray_t ECCNSArray = {
     {}
 };
 
-static int eccarray_valueIsArray(eccvalue_t value)
+static int libarray_valueIsArray(eccvalue_t value)
 {
     return ECCNSValue.isObject(value) && ECCNSValue.objectIsArray(value.data.object);
 }
 
-static uint32_t eccarray_valueArrayLength(eccvalue_t value)
+static uint32_t libarray_valueArrayLength(eccvalue_t value)
 {
-    if(eccarray_valueIsArray(value))
+    if(libarray_valueIsArray(value))
         return value.data.object->elementCount;
 
     return 1;
 }
 
-static uint32_t eccarray_objectLength(eccstate_t* context, eccobject_t* object)
+static uint32_t libarray_objectLength(eccstate_t* context, eccobject_t* object)
 {
-    if(object->type == &ECC_Type_Array)
+    if(object->type == &ECCObjTypeArray)
         return object->elementCount;
     else
-        return ECCNSValue.toInteger(context, ECCNSObject.getMember(context, object, ECC_ConstKey_length)).data.integer;
+        return ECCNSValue.toInteger(context, ECCNSObject.getMember(context, object, io_libecc_key_length)).data.integer;
 }
 
-static void eccarray_objectResize(eccstate_t* context, eccobject_t* object, uint32_t length)
+static void libarray_objectResize(eccstate_t* context, eccobject_t* object, uint32_t length)
 {
-    if(object->type == &ECC_Type_Array)
+    if(object->type == &ECCObjTypeArray)
     {
         if(ECCNSObject.resizeElement(object, length) && context->parent->strictMode)
         {
             ECCNSContext.setTextIndex(context, ECC_CTXINDEXTYPE_CALL);
-            ECCNSContext.typeError(context, ECCNSChars.create("'%u' is non-configurable", length));
+            ECCNSContext.typeError(context, io_libecc_Chars.create("'%u' is non-configurable", length));
         }
     }
     else
-        ECCNSObject.putMember(context, object, ECC_ConstKey_length, ECCNSValue.binary(length));
+        ECCNSObject.putMember(context, object, io_libecc_key_length, ECCNSValue.binary(length));
 }
 
-static void eccarray_valueAppendFromElement(eccstate_t* context, eccvalue_t value, eccobject_t* object, uint32_t* element)
+static void libarray_valueAppendFromElement(eccstate_t* context, eccvalue_t value, eccobject_t* object, uint32_t* element)
 {
     uint32_t index;
 
-    if(eccarray_valueIsArray(value))
+    if(libarray_valueIsArray(value))
         for(index = 0; index < value.data.object->elementCount; ++index)
             ECCNSObject.putElement(context, object, (*element)++, ECCNSObject.getElement(context, value.data.object, index));
     else
         ECCNSObject.putElement(context, object, (*element)++, value);
 }
 
-static eccvalue_t objarrayfn_isArray(eccstate_t* context)
+static eccvalue_t libarray_isArray(eccstate_t* context)
 {
     eccvalue_t value;
 
     value = ECCNSContext.argument(context, 0);
 
-    return ECCNSValue.truth(value.type == ECC_VALTYPE_OBJECT && value.data.object->type == &ECC_Type_Array);
+    return ECCNSValue.truth(value.type == ECC_VALTYPE_OBJECT && value.data.object->type == &ECCObjTypeArray);
 }
 
-static eccvalue_t eccarray_toChars(eccstate_t* context, eccvalue_t thisval, ecctextstring_t separator)
+static eccvalue_t libarray_toChars(eccstate_t* context, eccvalue_t thisval, ecctextstring_t separator)
 {
     eccobject_t* object = thisval.data.object;
-    eccvalue_t value, length = ECCNSObject.getMember(context, object, ECC_ConstKey_length);
+    eccvalue_t value, length = ECCNSObject.getMember(context, object, io_libecc_key_length);
     uint32_t index, count = ECCNSValue.toInteger(context, length).data.integer;
     eccappendbuffer_t chars;
 
-    ECCNSChars.beginAppend(&chars);
+    io_libecc_Chars.beginAppend(&chars);
     for(index = 0; index < count; ++index)
     {
         value = ECCNSObject.getElement(context, thisval.data.object, index);
 
         if(index)
-            ECCNSChars.append(&chars, "%.*s", separator.length, separator.bytes);
+            io_libecc_Chars.append(&chars, "%.*s", separator.length, separator.bytes);
 
         if(value.type != ECC_VALTYPE_UNDEFINED && value.type != ECC_VALTYPE_NULL)
-            ECCNSChars.appendValue(&chars, context, value);
+            io_libecc_Chars.appendValue(&chars, context, value);
     }
 
-    return ECCNSChars.endAppend(&chars);
+    return io_libecc_Chars.endAppend(&chars);
 }
 
-static eccvalue_t objarrayfn_toString(eccstate_t* context)
+static eccvalue_t libarray_toString(eccstate_t* context)
 {
     eccvalue_t function;
 
     context->thisvalue = ECCNSValue.toObject(context, ECCNSContext.getThis(context));
-    function = ECCNSObject.getMember(context, context->thisvalue.data.object, ECC_ConstKey_join);
+    function = ECCNSObject.getMember(context, context->thisvalue.data.object, io_libecc_key_join);
 
     if(function.type == ECC_VALTYPE_FUNCTION)
         return ECCNSContext.callFunction(context, function.data.function, context->thisvalue, 0);
@@ -162,7 +163,7 @@ static eccvalue_t objarrayfn_toString(eccstate_t* context)
         return ECCNSObject.toString(context);
 }
 
-static eccvalue_t objarrayfn_concat(eccstate_t* context)
+static eccvalue_t libarray_concat(eccstate_t* context)
 {
     eccvalue_t value;
     uint32_t element = 0, length = 0, index, count;
@@ -171,20 +172,20 @@ static eccvalue_t objarrayfn_concat(eccstate_t* context)
     value = ECCNSValue.toObject(context, ECCNSContext.getThis(context));
     count = ECCNSContext.argumentCount(context);
 
-    length += eccarray_valueArrayLength(value);
+    length += libarray_valueArrayLength(value);
     for(index = 0; index < count; ++index)
-        length += eccarray_valueArrayLength(ECCNSContext.argument(context, index));
+        length += libarray_valueArrayLength(ECCNSContext.argument(context, index));
 
-    array = ECCNSArray.createSized(length);
+    array = io_libecc_Array.createSized(length);
 
-    eccarray_valueAppendFromElement(context, value, array, &element);
+    libarray_valueAppendFromElement(context, value, array, &element);
     for(index = 0; index < count; ++index)
-        eccarray_valueAppendFromElement(context, ECCNSContext.argument(context, index), array, &element);
+        libarray_valueAppendFromElement(context, ECCNSContext.argument(context, index), array, &element);
 
     return ECCNSValue.object(array);
 }
 
-static eccvalue_t objarrayfn_join(eccstate_t* context)
+static eccvalue_t libarray_join(eccstate_t* context)
 {
     eccvalue_t object;
     eccvalue_t value;
@@ -201,17 +202,17 @@ static eccvalue_t objarrayfn_join(eccstate_t* context)
 
     object = ECCNSValue.toObject(context, ECCNSContext.getThis(context));
 
-    return eccarray_toChars(context, object, separator);
+    return libarray_toChars(context, object, separator);
 }
 
-static eccvalue_t objarrayfn_pop(eccstate_t* context)
+static eccvalue_t libarray_pop(eccstate_t* context)
 {
     eccvalue_t value = ECCValConstUndefined;
     eccobject_t* thisobj;
     uint32_t length;
 
     thisobj = ECCNSValue.toObject(context, ECCNSContext.getThis(context)).data.object;
-    length = eccarray_objectLength(context, thisobj);
+    length = libarray_objectLength(context, thisobj);
 
     if(length)
     {
@@ -221,15 +222,15 @@ static eccvalue_t objarrayfn_pop(eccstate_t* context)
         if(!ECCNSObject.deleteElement(thisobj, length) && context->parent->strictMode)
         {
             ECCNSContext.setTextIndex(context, ECC_CTXINDEXTYPE_CALL);
-            ECCNSContext.typeError(context, ECCNSChars.create("'%u' is non-configurable", length));
+            ECCNSContext.typeError(context, io_libecc_Chars.create("'%u' is non-configurable", length));
         }
     }
-    eccarray_objectResize(context, thisobj, length);
+    libarray_objectResize(context, thisobj, length);
 
     return value;
 }
 
-static eccvalue_t objarrayfn_push(eccstate_t* context)
+static eccvalue_t libarray_push(eccstate_t* context)
 {
     eccobject_t* thisobj;
     uint32_t length = 0, index, count, base;
@@ -237,9 +238,9 @@ static eccvalue_t objarrayfn_push(eccstate_t* context)
     thisobj = ECCNSValue.toObject(context, ECCNSContext.getThis(context)).data.object;
     count = ECCNSContext.argumentCount(context);
 
-    base = eccarray_objectLength(context, thisobj);
+    base = libarray_objectLength(context, thisobj);
     length = UINT32_MAX - base < count ? UINT32_MAX : base + count;
-    eccarray_objectResize(context, thisobj, length);
+    libarray_objectResize(context, thisobj, length);
 
     for(index = base; index < length; ++index)
         ECCNSObject.putElement(context, thisobj, index, ECCNSContext.argument(context, index - base));
@@ -248,15 +249,15 @@ static eccvalue_t objarrayfn_push(eccstate_t* context)
     {
         ECCNSObject.putElement(context, thisobj, index, ECCNSContext.argument(context, index - base));
 
-        if(thisobj->type == &ECC_Type_Array)
-            ECCNSContext.rangeError(context, ECCNSChars.create("max length exeeded"));
+        if(thisobj->type == &ECCObjTypeArray)
+            ECCNSContext.rangeError(context, io_libecc_Chars.create("max length exeeded"));
         else
         {
             double subidx, sublen = (double)base + count;
             for(subidx = (double)UINT32_MAX + 1; subidx < sublen; ++subidx)
                 ECCNSObject.putProperty(context, thisobj, ECCNSValue.binary(subidx), ECCNSContext.argument(context, subidx - base));
 
-            ECCNSObject.putMember(context, thisobj, ECC_ConstKey_length, ECCNSValue.binary(sublen));
+            ECCNSObject.putMember(context, thisobj, io_libecc_key_length, ECCNSValue.binary(sublen));
             return ECCNSValue.binary(sublen);
         }
     }
@@ -264,14 +265,14 @@ static eccvalue_t objarrayfn_push(eccstate_t* context)
     return ECCNSValue.binary(length);
 }
 
-static eccvalue_t objarrayfn_reverse(eccstate_t* context)
+static eccvalue_t libarray_reverse(eccstate_t* context)
 {
     eccvalue_t temp;
     eccobject_t* thisobj;
     uint32_t index, half, last, length;
 
     thisobj = ECCNSValue.toObject(context, ECCNSContext.getThis(context)).data.object;
-    length = eccarray_objectLength(context, thisobj);
+    length = libarray_objectLength(context, thisobj);
 
     last = length - 1;
     half = length / 2;
@@ -288,14 +289,14 @@ static eccvalue_t objarrayfn_reverse(eccstate_t* context)
     return ECCNSValue.object(thisobj);
 }
 
-static eccvalue_t objarrayfn_shift(eccstate_t* context)
+static eccvalue_t libarray_shift(eccstate_t* context)
 {
     eccvalue_t result;
     eccobject_t* thisobj;
     uint32_t index, count, length;
 
     thisobj = ECCNSValue.toObject(context, ECCNSContext.getThis(context)).data.object;
-    length = eccarray_objectLength(context, thisobj);
+    length = libarray_objectLength(context, thisobj);
 
     ECCNSContext.setTextIndex(context, ECC_CTXINDEXTYPE_CALL);
 
@@ -310,18 +311,18 @@ static eccvalue_t objarrayfn_shift(eccstate_t* context)
         if(!ECCNSObject.deleteElement(thisobj, length) && context->parent->strictMode)
         {
             ECCNSContext.setTextIndex(context, ECC_CTXINDEXTYPE_CALL);
-            ECCNSContext.typeError(context, ECCNSChars.create("'%u' is non-configurable", length));
+            ECCNSContext.typeError(context, io_libecc_Chars.create("'%u' is non-configurable", length));
         }
     }
     else
         result = ECCValConstUndefined;
 
-    eccarray_objectResize(context, thisobj, length);
+    libarray_objectResize(context, thisobj, length);
 
     return result;
 }
 
-static eccvalue_t objarrayfn_unshift(eccstate_t* context)
+static eccvalue_t libarray_unshift(eccstate_t* context)
 {
     eccobject_t* thisobj;
     uint32_t length = 0, index, count;
@@ -329,8 +330,8 @@ static eccvalue_t objarrayfn_unshift(eccstate_t* context)
     thisobj = ECCNSValue.toObject(context, ECCNSContext.getThis(context)).data.object;
     count = ECCNSContext.argumentCount(context);
 
-    length = eccarray_objectLength(context, thisobj) + count;
-    eccarray_objectResize(context, thisobj, length);
+    length = libarray_objectLength(context, thisobj) + count;
+    libarray_objectResize(context, thisobj, length);
 
     ECCNSContext.setTextIndex(context, ECC_CTXINDEXTYPE_CALL);
 
@@ -343,7 +344,7 @@ static eccvalue_t objarrayfn_unshift(eccstate_t* context)
     return ECCNSValue.binary(length);
 }
 
-static eccvalue_t objarrayfn_slice(eccstate_t* context)
+static eccvalue_t libarray_slice(eccstate_t* context)
 {
     eccobject_t* thisobj, *result;
     eccvalue_t start, end;
@@ -351,7 +352,7 @@ static eccvalue_t objarrayfn_slice(eccstate_t* context)
     double binary;
 
     thisobj = ECCNSValue.toObject(context, ECCNSContext.getThis(context)).data.object;
-    length = eccarray_objectLength(context, thisobj);
+    length = libarray_objectLength(context, thisobj);
 
     start = ECCNSContext.argument(context, 0);
     binary = ECCNSValue.toBinary(context, start).data.binary;
@@ -376,18 +377,18 @@ static eccvalue_t objarrayfn_slice(eccstate_t* context)
     if(to > from)
     {
         length = to - from;
-        result = ECCNSArray.createSized(length);
+        result = io_libecc_Array.createSized(length);
 
         for(to = 0; to < length; ++from, ++to)
             ECCNSObject.putElement(context, result, to, ECCNSObject.getElement(context, thisobj, from));
     }
     else
-        result = ECCNSArray.createSized(0);
+        result = io_libecc_Array.createSized(0);
 
     return ECCNSValue.object(result);
 }
 
-static eccvalue_t objarrayfn_defaultComparison(eccstate_t* context)
+static eccvalue_t libarray_defaultComparison(eccstate_t* context)
 {
     eccvalue_t left, right, result;
 
@@ -398,7 +399,7 @@ static eccvalue_t objarrayfn_defaultComparison(eccstate_t* context)
     return ECCNSValue.integer(ECCNSValue.isTrue(result) ? -1 : 0);
 }
 
-static inline int eccarray_gcd(int m, int n)
+static inline int libarray_gcd(int m, int n)
 {
     while(n)
     {
@@ -409,7 +410,7 @@ static inline int eccarray_gcd(int m, int n)
     return m;
 }
 
-static inline void eccarray_rotate(eccobject_t* object, eccstate_t* context, uint32_t first, uint32_t half, uint32_t last)
+static inline void libarray_rotate(eccobject_t* object, eccstate_t* context, uint32_t first, uint32_t half, uint32_t last)
 {
     eccvalue_t value, leftValue;
     uint32_t n, shift, a, b;
@@ -417,7 +418,7 @@ static inline void eccarray_rotate(eccobject_t* object, eccstate_t* context, uin
     if(first == half || half == last)
         return;
 
-    n = eccarray_gcd(last - first, half - first);
+    n = libarray_gcd(last - first, half - first);
     while(n--)
     {
         shift = half - first;
@@ -438,7 +439,7 @@ static inline void eccarray_rotate(eccobject_t* object, eccstate_t* context, uin
     }
 }
 
-static inline int eccarray_compare(eccarraycomparestate_t* cmp, eccvalue_t left, eccvalue_t right)
+static inline int libarray_compare(eccarraycomparestate_t* cmp, eccvalue_t left, eccvalue_t right)
 {
     uint16_t hashmapCount;
 
@@ -480,13 +481,13 @@ static inline int eccarray_compare(eccarraycomparestate_t* cmp, eccvalue_t left,
     }
 
     cmp->context.ops = cmp->ops;
-    cmp->arguments->element[0].value = left;
-    cmp->arguments->element[1].value = right;
+    cmp->arguments->element[0].elemvalue = left;
+    cmp->arguments->element[1].elemvalue = right;
 
     return ECCNSValue.toInteger(&cmp->context, cmp->context.ops->native(&cmp->context)).data.integer < 0;
 }
 
-static inline uint32_t eccarray_search(eccobject_t* object, eccarraycomparestate_t* cmp, uint32_t first, uint32_t last, eccvalue_t right)
+static inline uint32_t libarray_search(eccobject_t* object, eccarraycomparestate_t* cmp, uint32_t first, uint32_t last, eccvalue_t right)
 {
     eccvalue_t left;
     uint32_t half;
@@ -495,7 +496,7 @@ static inline uint32_t eccarray_search(eccobject_t* object, eccarraycomparestate
     {
         half = (first + last) >> 1;
         left = ECCNSObject.getElement(&cmp->context, object, half);
-        if(eccarray_compare(cmp, left, right))
+        if(libarray_compare(cmp, left, right))
             first = half + 1;
         else
             last = half;
@@ -503,7 +504,7 @@ static inline uint32_t eccarray_search(eccobject_t* object, eccarraycomparestate
     return first;
 }
 
-static inline void eccarray_merge(eccobject_t* object, eccarraycomparestate_t* cmp, uint32_t first, uint32_t pivot, uint32_t last, uint32_t len1, uint32_t len2)
+static inline void libarray_merge(eccobject_t* object, eccarraycomparestate_t* cmp, uint32_t first, uint32_t pivot, uint32_t last, uint32_t len1, uint32_t len2)
 {
     uint32_t left, right, half1, half2;
 
@@ -515,7 +516,7 @@ static inline void eccarray_merge(eccobject_t* object, eccarraycomparestate_t* c
         eccvalue_t leftval, rightval;
         leftval = ECCNSObject.getElement(&cmp->context, object, pivot);
         rightval = ECCNSObject.getElement(&cmp->context, object, first);
-        if(eccarray_compare(cmp, leftval, rightval))
+        if(libarray_compare(cmp, leftval, rightval))
         {
             ECCNSObject.putElement(&cmp->context, object, pivot, rightval);
             ECCNSObject.putElement(&cmp->context, object, first, leftval);
@@ -527,24 +528,24 @@ static inline void eccarray_merge(eccobject_t* object, eccarraycomparestate_t* c
     {
         half1 = len1 >> 1;
         left = first + half1;
-        right = eccarray_search(object, cmp, pivot, last, ECCNSObject.getElement(&cmp->context, object, first + half1));
+        right = libarray_search(object, cmp, pivot, last, ECCNSObject.getElement(&cmp->context, object, first + half1));
         half2 = right - pivot;
     }
     else
     {
         half2 = len2 >> 1;
-        left = eccarray_search(object, cmp, first, pivot, ECCNSObject.getElement(&cmp->context, object, pivot + half2));
+        left = libarray_search(object, cmp, first, pivot, ECCNSObject.getElement(&cmp->context, object, pivot + half2));
         right = pivot + half2;
         half1 = left - first;
     }
-    eccarray_rotate(object, &cmp->context, left, pivot, right);
+    libarray_rotate(object, &cmp->context, left, pivot, right);
 
     pivot = left + half2;
-    eccarray_merge(object, cmp, first, left, pivot, half1, half2);
-    eccarray_merge(object, cmp, pivot, right, last, len1 - half1, len2 - half2);
+    libarray_merge(object, cmp, first, left, pivot, half1, half2);
+    libarray_merge(object, cmp, pivot, right, last, len1 - half1, len2 - half2);
 }
 
-static void eccarray_sortAndMerge(eccobject_t* object, eccarraycomparestate_t* cmp, uint32_t first, uint32_t last)
+static void libarray_sortAndMerge(eccobject_t* object, eccarraycomparestate_t* cmp, uint32_t first, uint32_t last)
 {
     uint32_t half;
 
@@ -559,7 +560,7 @@ static void eccarray_sortAndMerge(eccobject_t* object, eccarraycomparestate_t* c
             for(j = i; j > first; --j)
             {
                 left = ECCNSObject.getElement(&cmp->context, object, j - 1);
-                if(eccarray_compare(cmp, left, right))
+                if(libarray_compare(cmp, left, right))
                     break;
                 else
                     ECCNSObject.putElement(&cmp->context, object, j, left);
@@ -570,14 +571,14 @@ static void eccarray_sortAndMerge(eccobject_t* object, eccarraycomparestate_t* c
     }
 
     half = (first + last) >> 1;
-    eccarray_sortAndMerge(object, cmp, first, half);
-    eccarray_sortAndMerge(object, cmp, half, last);
-    eccarray_merge(object, cmp, first, half, last, half - first, last - half);
+    libarray_sortAndMerge(object, cmp, first, half);
+    libarray_sortAndMerge(object, cmp, half, last);
+    libarray_merge(object, cmp, first, half, last, half - first, last - half);
 }
 
-static void eccarray_sortInPlace(eccstate_t* context, eccobject_t* object, eccobjscriptfunction_t* function, int first, int last)
+static void libarray_sortInPlace(eccstate_t* context, eccobject_t* object, eccobjscriptfunction_t* function, int first, int last)
 {
-    eccoperand_t defaultOps = { objarrayfn_defaultComparison, ECCValConstUndefined, ECC_ConstString_NativeCode };
+    eccoperand_t defaultOps = { libarray_defaultComparison, ECCValConstUndefined, ECC_ConstString_NativeCode };
     const eccoperand_t* ops = function ? function->oplist->ops : &defaultOps;
 
     eccarraycomparestate_t cmp = {
@@ -604,7 +605,7 @@ static void eccarray_sortInPlace(eccstate_t* context, eccobject_t* object, eccob
 
         environment->hashmap[2].value = ECCNSValue.object(cmp.arguments);
 
-        eccarray_sortAndMerge(object, &cmp, first, last);
+        libarray_sortAndMerge(object, &cmp, first, last);
     }
     else
     {
@@ -626,38 +627,38 @@ static void eccarray_sortInPlace(eccstate_t* context, eccobject_t* object, eccob
         environment.hashmap = hashmap;
         environment.hashmap[2].value = ECCNSValue.object(&arguments);
 
-        eccarray_sortAndMerge(object, &cmp, first, last);
+        libarray_sortAndMerge(object, &cmp, first, last);
     }
 }
 
-static eccvalue_t objarrayfn_sort(eccstate_t* context)
+static eccvalue_t libarray_sort(eccstate_t* context)
 {
     eccobject_t* thisobj;
     eccvalue_t compare;
     uint32_t count;
 
     thisobj = ECCNSValue.toObject(context, ECCNSContext.getThis(context)).data.object;
-    count = ECCNSValue.toInteger(context, ECCNSObject.getMember(context, thisobj, ECC_ConstKey_length)).data.integer;
+    count = ECCNSValue.toInteger(context, ECCNSObject.getMember(context, thisobj, io_libecc_key_length)).data.integer;
     compare = ECCNSContext.argument(context, 0);
 
     if(compare.type == ECC_VALTYPE_FUNCTION)
-        eccarray_sortInPlace(context, thisobj, compare.data.function, 0, count);
+        libarray_sortInPlace(context, thisobj, compare.data.function, 0, count);
     else if(compare.type == ECC_VALTYPE_UNDEFINED)
-        eccarray_sortInPlace(context, thisobj, NULL, 0, count);
+        libarray_sortInPlace(context, thisobj, NULL, 0, count);
     else
-        ECCNSContext.typeError(context, ECCNSChars.create("comparison function must be a function or undefined"));
+        ECCNSContext.typeError(context, io_libecc_Chars.create("comparison function must be a function or undefined"));
 
     return ECCNSValue.object(thisobj);
 }
 
-static eccvalue_t objarrayfn_splice(eccstate_t* context)
+static eccvalue_t libarray_splice(eccstate_t* context)
 {
     eccobject_t* thisobj, *result;
     uint32_t length, from, to, count = 0, add = 0, start = 0, delete = 0;
 
     count = ECCNSContext.argumentCount(context);
     thisobj = ECCNSValue.toObject(context, ECCNSContext.getThis(context)).data.object;
-    length = eccarray_objectLength(context, thisobj);
+    length = libarray_objectLength(context, thisobj);
 
     if(count >= 1)
     {
@@ -690,9 +691,9 @@ static eccvalue_t objarrayfn_splice(eccstate_t* context)
         add = count - 2;
 
     if(length - delete +add > length)
-        eccarray_objectResize(context, thisobj, length - delete +add);
+        libarray_objectResize(context, thisobj, length - delete +add);
 
-    result = ECCNSArray.createSized(delete);
+    result = io_libecc_Array.createSized(delete);
 
     for(from = start, to = 0; to < delete; ++from, ++to)
         ECCNSObject.putElement(context, result, to, ECCNSObject.getElement(context, thisobj, from));
@@ -713,12 +714,12 @@ static eccvalue_t objarrayfn_splice(eccstate_t* context)
         ECCNSObject.putElement(context, thisobj, to, ECCNSContext.argument(context, from));
 
     if(length - delete +add <= length)
-        eccarray_objectResize(context, thisobj, length - delete +add);
+        libarray_objectResize(context, thisobj, length - delete +add);
 
     return ECCNSValue.object(result);
 }
 
-static eccvalue_t objarrayfn_indexOf(eccstate_t* context)
+static eccvalue_t libarray_indexOf(eccstate_t* context)
 {
     eccobject_t* thisobj;
     eccvalue_t search, start;
@@ -726,7 +727,7 @@ static eccvalue_t objarrayfn_indexOf(eccstate_t* context)
     int32_t index;
 
     thisobj = ECCNSValue.toObject(context, ECCNSContext.getThis(context)).data.object;
-    length = eccarray_objectLength(context, thisobj);
+    length = libarray_objectLength(context, thisobj);
 
     search = ECCNSContext.argument(context, 0);
     start = ECCNSValue.toInteger(context, ECCNSContext.argument(context, 1));
@@ -743,7 +744,7 @@ static eccvalue_t objarrayfn_indexOf(eccstate_t* context)
     return ECCNSValue.binary(-1);
 }
 
-static eccvalue_t objarrayfn_lastIndexOf(eccstate_t* context)
+static eccvalue_t libarray_lastIndexOf(eccstate_t* context)
 {
     eccobject_t* thisobj;
     eccvalue_t search, start;
@@ -751,7 +752,7 @@ static eccvalue_t objarrayfn_lastIndexOf(eccstate_t* context)
     int32_t index;
 
     thisobj = ECCNSValue.toObject(context, ECCNSContext.getThis(context)).data.object;
-    length = eccarray_objectLength(context, thisobj);
+    length = libarray_objectLength(context, thisobj);
 
     search = ECCNSContext.argument(context, 0);
     start = ECCNSValue.toInteger(context, ECCNSContext.argument(context, 1));
@@ -769,26 +770,26 @@ static eccvalue_t objarrayfn_lastIndexOf(eccstate_t* context)
     return ECCNSValue.binary(-1);
 }
 
-static eccvalue_t objarrayfn_getLength(eccstate_t* context)
+static eccvalue_t libarray_getLength(eccstate_t* context)
 {
     return ECCNSValue.binary(context->thisvalue.data.object->elementCount);
 }
 
-static eccvalue_t objarrayfn_setLength(eccstate_t* context)
+static eccvalue_t libarray_setLength(eccstate_t* context)
 {
     double length;
 
     length = ECCNSValue.toBinary(context, ECCNSContext.argument(context, 0)).data.binary;
     if(!isfinite(length) || length < 0 || length > UINT32_MAX || length != (uint32_t)length)
-        ECCNSContext.rangeError(context, ECCNSChars.create("invalid array length"));
+        ECCNSContext.rangeError(context, io_libecc_Chars.create("invalid array length"));
 
     if(ECCNSObject.resizeElement(context->thisvalue.data.object, length) && context->parent->strictMode)
-        ECCNSContext.typeError(context, ECCNSChars.create("'%u' is non-configurable", context->thisvalue.data.object->elementCount));
+        ECCNSContext.typeError(context, io_libecc_Chars.create("'%u' is non-configurable", context->thisvalue.data.object->elementCount));
 
     return ECCValConstUndefined;
 }
 
-static eccvalue_t objarrayfn_constructor(eccstate_t* context)
+static eccvalue_t libarray_constructor(eccstate_t* context)
 {
     eccvalue_t value;
     uint32_t index, count, length;
@@ -805,61 +806,63 @@ static eccvalue_t objarrayfn_constructor(eccstate_t* context)
             count = 0;
         }
         else
-            ECCNSContext.rangeError(context, ECCNSChars.create("invalid array length"));
+            ECCNSContext.rangeError(context, io_libecc_Chars.create("invalid array length"));
     }
 
-    array = ECCNSArray.createSized(length);
+    array = io_libecc_Array.createSized(length);
 
     for(index = 0; index < count; ++index)
     {
-        array->element[index].value = ECCNSContext.argument(context, index);
-        array->element[index].value.flags &= ~(ECC_VALFLAG_READONLY | ECC_VALFLAG_HIDDEN | ECC_VALFLAG_SEALED);
+        array->element[index].elemvalue = ECCNSContext.argument(context, index);
+        array->element[index].elemvalue.flags &= ~(ECC_VALFLAG_READONLY | ECC_VALFLAG_HIDDEN | ECC_VALFLAG_SEALED);
     }
 
     return ECCNSValue.object(array);
 }
 
-static void nsarrayfn_setup(void)
+// MARK: - Methods
+
+void nsarrayfn_setup(void)
 {
     const eccvalflag_t h = ECC_VALFLAG_HIDDEN;
     const eccvalflag_t s = ECC_VALFLAG_SEALED;
 
-    ECCNSFunction.setupBuiltinObject(&ECC_CtorFunc_Array, objarrayfn_constructor, -1, &ECC_Prototype_Array, ECCNSValue.object(nsarrayfn_createSized(0)), &ECC_Type_Array);
+    io_libecc_Function.setupBuiltinObject(&io_libecc_array_constructor, libarray_constructor, -1, &io_libecc_array_prototype, ECCNSValue.object(nsarrayfn_createSized(0)), &ECCObjTypeArray);
 
-    ECCNSFunction.addMethod(ECC_CtorFunc_Array, "isArray", objarrayfn_isArray, 1, h);
+    io_libecc_Function.addMethod(io_libecc_array_constructor, "isArray", libarray_isArray, 1, h);
 
-    ECCNSFunction.addToObject(ECC_Prototype_Array, "toString", objarrayfn_toString, 0, h);
-    ECCNSFunction.addToObject(ECC_Prototype_Array, "toLocaleString", objarrayfn_toString, 0, h);
-    ECCNSFunction.addToObject(ECC_Prototype_Array, "concat", objarrayfn_concat, -1, h);
-    ECCNSFunction.addToObject(ECC_Prototype_Array, "join", objarrayfn_join, 1, h);
-    ECCNSFunction.addToObject(ECC_Prototype_Array, "pop", objarrayfn_pop, 0, h);
-    ECCNSFunction.addToObject(ECC_Prototype_Array, "push", objarrayfn_push, -1, h);
-    ECCNSFunction.addToObject(ECC_Prototype_Array, "reverse", objarrayfn_reverse, 0, h);
-    ECCNSFunction.addToObject(ECC_Prototype_Array, "shift", objarrayfn_shift, 0, h);
-    ECCNSFunction.addToObject(ECC_Prototype_Array, "slice", objarrayfn_slice, 2, h);
-    ECCNSFunction.addToObject(ECC_Prototype_Array, "sort", objarrayfn_sort, 1, h);
-    ECCNSFunction.addToObject(ECC_Prototype_Array, "splice", objarrayfn_splice, -2, h);
-    ECCNSFunction.addToObject(ECC_Prototype_Array, "unshift", objarrayfn_unshift, -1, h);
-    ECCNSFunction.addToObject(ECC_Prototype_Array, "indexOf", objarrayfn_indexOf, -1, h);
-    ECCNSFunction.addToObject(ECC_Prototype_Array, "lastIndexOf", objarrayfn_lastIndexOf, -1, h);
+    io_libecc_Function.addToObject(io_libecc_array_prototype, "toString", libarray_toString, 0, h);
+    io_libecc_Function.addToObject(io_libecc_array_prototype, "toLocaleString", libarray_toString, 0, h);
+    io_libecc_Function.addToObject(io_libecc_array_prototype, "concat", libarray_concat, -1, h);
+    io_libecc_Function.addToObject(io_libecc_array_prototype, "join", libarray_join, 1, h);
+    io_libecc_Function.addToObject(io_libecc_array_prototype, "pop", libarray_pop, 0, h);
+    io_libecc_Function.addToObject(io_libecc_array_prototype, "push", libarray_push, -1, h);
+    io_libecc_Function.addToObject(io_libecc_array_prototype, "reverse", libarray_reverse, 0, h);
+    io_libecc_Function.addToObject(io_libecc_array_prototype, "shift", libarray_shift, 0, h);
+    io_libecc_Function.addToObject(io_libecc_array_prototype, "slice", libarray_slice, 2, h);
+    io_libecc_Function.addToObject(io_libecc_array_prototype, "sort", libarray_sort, 1, h);
+    io_libecc_Function.addToObject(io_libecc_array_prototype, "splice", libarray_splice, -2, h);
+    io_libecc_Function.addToObject(io_libecc_array_prototype, "unshift", libarray_unshift, -1, h);
+    io_libecc_Function.addToObject(io_libecc_array_prototype, "indexOf", libarray_indexOf, -1, h);
+    io_libecc_Function.addToObject(io_libecc_array_prototype, "lastIndexOf", libarray_lastIndexOf, -1, h);
 
-    ECCNSObject.addMember(ECC_Prototype_Array, ECC_ConstKey_length, ECCNSFunction.accessor(objarrayfn_getLength, objarrayfn_setLength), h | s | ECC_VALFLAG_ASOWN | ECC_VALFLAG_ASDATA);
+    ECCNSObject.addMember(io_libecc_array_prototype, io_libecc_key_length, io_libecc_Function.accessor(libarray_getLength, libarray_setLength), h | s | ECC_VALFLAG_ASOWN | ECC_VALFLAG_ASDATA);
 }
 
-static void nsarrayfn_teardown(void)
+void nsarrayfn_teardown(void)
 {
-    ECC_Prototype_Array = NULL;
-    ECC_CtorFunc_Array = NULL;
+    io_libecc_array_prototype = NULL;
+    io_libecc_array_constructor = NULL;
 }
 
-static eccobject_t* nsarrayfn_create(void)
+eccobject_t* nsarrayfn_create(void)
 {
     return nsarrayfn_createSized(0);
 }
 
-static eccobject_t* nsarrayfn_createSized(uint32_t size)
+eccobject_t* nsarrayfn_createSized(uint32_t size)
 {
-    eccobject_t* self = ECCNSObject.create(ECC_Prototype_Array);
+    eccobject_t* self = ECCNSObject.create(io_libecc_array_prototype);
 
     ECCNSObject.resizeElement(self, size);
 

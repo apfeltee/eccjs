@@ -7,28 +7,30 @@
 //
 #include "ecc.h"
 
-// MARK: - Private
+/* stdbool.c */
+static eccvalue_t objboolfn_toString(eccstate_t *context);
+static eccvalue_t objboolfn_valueOf(eccstate_t *context);
+static eccvalue_t objboolfn_constructor(eccstate_t *context);
+static void nsboolfn_setup(void);
+static void nsboolfn_teardown(void);
+static eccobjbool_t *nsboolfn_create(int truth);
 
-eccobject_t* io_libecc_boolean_prototype = NULL;
-eccobjscriptfunction_t* io_libecc_boolean_constructor = NULL;
 
-const eccobjinterntype_t io_libecc_boolean_type = {
+eccobject_t* ECC_Prototype_Boolean = NULL;
+eccobjscriptfunction_t* ECC_CtorFunc_Boolean = NULL;
+
+const eccobjinterntype_t ECC_Type_Boolean = {
     .text = &ECC_ConstString_BooleanType,
 };
 
-// MARK: - Static Members
-
-static void nsboolfn_setup(void);
-static void nsboolfn_teardown(void);
-static eccobjbool_t* nsboolfn_create(int);
-const struct eccpseudonsboolean_t io_libecc_Boolean = {
+const struct eccpseudonsboolean_t ECCNSBool = {
     nsboolfn_setup,
     nsboolfn_teardown,
     nsboolfn_create,
     {}
 };
 
-static eccvalue_t toString(eccstate_t* context)
+static eccvalue_t objboolfn_toString(eccstate_t* context)
 {
     int truth;
 
@@ -39,7 +41,7 @@ static eccvalue_t toString(eccstate_t* context)
     return ECCNSValue.text(truth ? &ECC_ConstString_True : &ECC_ConstString_False);
 }
 
-static eccvalue_t valueOf(eccstate_t* context)
+static eccvalue_t objboolfn_valueOf(eccstate_t* context)
 {
     int truth;
 
@@ -50,41 +52,40 @@ static eccvalue_t valueOf(eccstate_t* context)
     return ECCNSValue.truth(truth);
 }
 
-static eccvalue_t constructor(eccstate_t* context)
+static eccvalue_t objboolfn_constructor(eccstate_t* context)
 {
     char truth;
 
     truth = ECCNSValue.isTrue(ECCNSContext.argument(context, 0));
     if(context->construct)
-        return ECCNSValue.boolean(io_libecc_Boolean.create(truth));
+        return ECCNSValue.boolean(ECCNSBool.create(truth));
     else
         return ECCNSValue.truth(truth);
 }
 
-// MARK: - Methods
 
-void nsboolfn_setup()
+static void nsboolfn_setup()
 {
     const eccvalflag_t h = ECC_VALFLAG_HIDDEN;
 
-    io_libecc_Function.setupBuiltinObject(&io_libecc_boolean_constructor, constructor, 1, &io_libecc_boolean_prototype, ECCNSValue.boolean(nsboolfn_create(0)), &io_libecc_boolean_type);
+    ECCNSFunction.setupBuiltinObject(&ECC_CtorFunc_Boolean, objboolfn_constructor, 1, &ECC_Prototype_Boolean, ECCNSValue.boolean(nsboolfn_create(0)), &ECC_Type_Boolean);
 
-    io_libecc_Function.addToObject(io_libecc_boolean_prototype, "toString", toString, 0, h);
-    io_libecc_Function.addToObject(io_libecc_boolean_prototype, "valueOf", valueOf, 0, h);
+    ECCNSFunction.addToObject(ECC_Prototype_Boolean, "toString", objboolfn_toString, 0, h);
+    ECCNSFunction.addToObject(ECC_Prototype_Boolean, "valueOf", objboolfn_valueOf, 0, h);
 }
 
-void nsboolfn_teardown(void)
+static void nsboolfn_teardown(void)
 {
-    io_libecc_boolean_prototype = NULL;
-    io_libecc_boolean_constructor = NULL;
+    ECC_Prototype_Boolean = NULL;
+    ECC_CtorFunc_Boolean = NULL;
 }
 
-eccobjbool_t* nsboolfn_create(int truth)
+static eccobjbool_t* nsboolfn_create(int truth)
 {
     eccobjbool_t* self = malloc(sizeof(*self));
-    *self = io_libecc_Boolean.identity;
-    io_libecc_Pool.addObject(&self->object);
-    ECCNSObject.initialize(&self->object, io_libecc_boolean_prototype);
+    *self = ECCNSBool.identity;
+    ECCNSMemoryPool.addObject(&self->object);
+    ECCNSObject.initialize(&self->object, ECC_Prototype_Boolean);
 
     self->truth = truth;
 

@@ -23,7 +23,7 @@ static eccvalue_t endAppend(eccappendbuffer_t*);
 static void destroy(ecccharbuffer_t*);
 static uint8_t codepointLength(uint32_t cp);
 static uint8_t writeCodepoint(char*, uint32_t cp);
-const struct eccpseudonschars_t ECCNSChars = {
+const struct eccpseudonschars_t io_libecc_Chars = {
     createVA,    create,       createSized,     createWithBytes, beginAppend, append,          appendCodepoint,
     appendValue, appendBinary, normalizeBinary, endAppend,       destroy,     codepointLength, writeCodepoint,
     {}
@@ -53,12 +53,12 @@ static inline uint32_t sizeForLength(uint32_t length)
 
 static ecccharbuffer_t* reuseOrCreate(eccappendbuffer_t* chars, uint32_t length)
 {
-    ecccharbuffer_t *self = NULL, *reuse = chars ? chars->value : NULL;
+    ecccharbuffer_t *self = NULL, *reuse = chars ? chars->charbufvalue : NULL;
 
     if(reuse && sizeForLength(reuse->length) >= sizeForLength(length))
         return reuse;
     //	else
-    //		chars = ECCNSMemoryPool.reusableChars(length);
+    //		chars = io_libecc_Pool.reusableChars(length);
 
     if(!self)
     {
@@ -66,19 +66,19 @@ static ecccharbuffer_t* reuseOrCreate(eccappendbuffer_t* chars, uint32_t length)
             return NULL;
 
         self = malloc(sizeForLength(length));
-        ECCNSMemoryPool.addChars(self);
+        io_libecc_Pool.addChars(self);
     }
 
     if(reuse)
         memcpy(self, reuse, sizeof(*self) + reuse->length);
     else
     {
-        *self = ECCNSChars.identity;
+        *self = io_libecc_Chars.identity;
         self->length = chars->units;
         memcpy(self->bytes, chars->buffer, chars->units);
     }
 
-    chars->value = self;
+    chars->charbufvalue = self;
     return self;
 }
 
@@ -116,8 +116,8 @@ ecccharbuffer_t* create(const char* format, ...)
 ecccharbuffer_t* createSized(int32_t length)
 {
     ecccharbuffer_t* self = malloc(sizeForLength(length));
-    ECCNSMemoryPool.addChars(self);
-    *self = ECCNSChars.identity;
+    io_libecc_Pool.addChars(self);
+    *self = io_libecc_Chars.identity;
 
     self->length = length;
     self->bytes[length] = '\0';
@@ -128,8 +128,8 @@ ecccharbuffer_t* createSized(int32_t length)
 ecccharbuffer_t* createWithBytes(int32_t length, const char* bytes)
 {
     ecccharbuffer_t* self = malloc(sizeForLength(length));
-    ECCNSMemoryPool.addChars(self);
-    *self = ECCNSChars.identity;
+    io_libecc_Pool.addChars(self);
+    *self = io_libecc_Chars.identity;
 
     self->length = length;
     memcpy(self->bytes, bytes, length);
@@ -140,7 +140,7 @@ ecccharbuffer_t* createWithBytes(int32_t length, const char* bytes)
 
 void beginAppend(eccappendbuffer_t* chars)
 {
-    chars->value = NULL;
+    chars->charbufvalue = NULL;
     chars->units = 0;
 }
 
@@ -148,7 +148,7 @@ void append(eccappendbuffer_t* chars, const char* format, ...)
 {
     uint32_t length;
     va_list ap;
-    ecccharbuffer_t* self = chars->value;
+    ecccharbuffer_t* self = chars->charbufvalue;
 
     va_start(ap, format);
     length = vsnprintf(NULL, 0, format, ap);
@@ -168,7 +168,7 @@ void append(eccappendbuffer_t* chars, const char* format, ...)
 
 static void appendText(eccappendbuffer_t* chars, ecctextstring_t text)
 {
-    ecccharbuffer_t* self = chars->value;
+    ecccharbuffer_t* self = chars->charbufvalue;
     ecctextchar_t lo = ECCNSText.character(text), hi = { 0 };
     ecctextstring_t prev;
     int surrogates = 0;
@@ -333,8 +333,8 @@ void appendBinary(eccappendbuffer_t* chars, double binary, int base)
         else if((binary < 1 && binary >= 0.000001) || (binary > -1 && binary <= -0.000001))
         {
             append(chars, "%.10f", binary);
-            if(chars->value)
-                chars->value->length = stripBinaryOfBytes(chars->value->bytes, chars->value->length);
+            if(chars->charbufvalue)
+                chars->charbufvalue->length = stripBinaryOfBytes(chars->charbufvalue->bytes, chars->charbufvalue->length);
             else
                 chars->units = stripBinaryOfBytes(chars->buffer, chars->units);
 
@@ -385,17 +385,17 @@ void appendBinary(eccappendbuffer_t* chars, double binary, int base)
 
 void normalizeBinary(eccappendbuffer_t* chars)
 {
-    if(chars->value)
-        chars->value->length = normalizeBinaryOfBytes(chars->value->bytes, chars->value->length);
+    if(chars->charbufvalue)
+        chars->charbufvalue->length = normalizeBinaryOfBytes(chars->charbufvalue->bytes, chars->charbufvalue->length);
     else
         chars->units = normalizeBinaryOfBytes(chars->buffer, chars->units);
 }
 
 eccvalue_t endAppend(eccappendbuffer_t* chars)
 {
-    ecccharbuffer_t* self = chars->value;
+    ecccharbuffer_t* self = chars->charbufvalue;
 
-    if(chars->value)
+    if(chars->charbufvalue)
     {
         self->bytes[self->length] = '\0';
         return ECCNSValue.chars(self);

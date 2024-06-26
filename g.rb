@@ -1,11 +1,13 @@
 #!/usr/bin/ruby
 
+require 'optparse'
+
 source = <<__eos__
 
-    truth,       integer,  binary,    buffer,         key,       text,         chars,       object,      error,    string,      regexp,        number,
-    boolean,     date,     function,  host,           reference, isPrimitive,  isBoolean,   isNumber,    isString, isObject,    isDynamic,     isTrue,
-    toPrimitive, toBinary, toInteger, binaryToString, toString,  stringLength, stringBytes, textOf,      toObject, objectValue, objectIsArray, toType,
-    equals,      same,     add,       subtract,       less,      more,         lessOrEqual, moreOrEqual, typeName, maskName,    dumpTo,
+    setup,
+    teardown,
+    createSized,
+    createWithCList,
 
 
 __eos__
@@ -25,16 +27,27 @@ end
 
 begin
   names = []
+  dumpnames = false
+  OptionParser.new{|prs|
+    prs.on('-d'){
+      dumpnames = true
+    }
+  }.parse!
   syms = source.split(/,/).map(&:strip).reject(&:empty?)
   if ARGV.length > 0 then
     syms = readsymsfrom(ARGV[0])
   end
   syms.each do |n|
-    next if n.match(/\b\w+fn_\w+\b/)
+    next if (n.match(/\b\w+fn_\w+\b/) || n.match(/ecc/))
     names.push(n)
   end
-  
-  print('\b(' + names.join('|') + ')\b')
+  if dumpnames then
+    names.each do |n|
+      printf("  %s\n", n)
+    end
+  else
+    print('\b(' + names.join('|') + ')\b')
+  end
 end
 
 

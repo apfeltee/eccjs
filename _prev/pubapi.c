@@ -17,8 +17,8 @@ static int evalInput(eccscriptcontext_t*, eccioinput_t*, eccscriptevalflags_t);
 static void evalInputWithContext(eccscriptcontext_t*, eccioinput_t*, eccstate_t* context);
 static jmp_buf* pushEnv(eccscriptcontext_t*);
 static void popEnv(eccscriptcontext_t*);
-static void jmpEnv(eccscriptcontext_t*, eccvalue_t value) __attribute__((noreturn));
-static void fatal(const char* format, ...) __attribute__((noreturn));
+static void jmpEnv(eccscriptcontext_t*, eccvalue_t value);
+static void fatal(const char* format, ...);
 static eccioinput_t* findInput(eccscriptcontext_t* self, ecctextstring_t text);
 static void printTextInput(eccscriptcontext_t*, ecctextstring_t text, int fullLine);
 static void garbageCollect(eccscriptcontext_t*);
@@ -48,14 +48,15 @@ eccscriptcontext_t* create(void)
     if(!instanceCount++)
     {
         ECCNSEnv.setup();
-        ECCNSMemoryPool.setup();
-        ECCNSKey.setup();
-        ECCNSGlobal.setup();
+        io_libecc_Pool.setup();
+        io_libecc_Key.setup();
+        io_libecc_Global.setup();
     }
+
     self = malloc(sizeof(*self));
     *self = ECCNSScript.identity;
 
-    self->global = ECCNSGlobal.create();
+    self->global = io_libecc_Global.create();
     self->maximumCallDepth = 512;
 
     return self;
@@ -66,7 +67,7 @@ void destroy(eccscriptcontext_t* self)
     assert(self);
 
     while(self->inputCount--)
-        ECCNSInput.destroy(self->inputs[self->inputCount]), self->inputs[self->inputCount] = NULL;
+        io_libecc_Input.destroy(self->inputs[self->inputCount]), self->inputs[self->inputCount] = NULL;
 
     free(self->inputs), self->inputs = NULL;
     free(self->envList), self->envList = NULL;
@@ -74,9 +75,9 @@ void destroy(eccscriptcontext_t* self)
 
     if(!--instanceCount)
     {
-        ECCNSGlobal.teardown();
-        ECCNSKey.teardown();
-        ECCNSMemoryPool.teardown();
+        io_libecc_Global.teardown();
+        io_libecc_Key.teardown();
+        io_libecc_Pool.teardown();
         ECCNSEnv.teardown();
     }
 }
@@ -85,17 +86,17 @@ void addFunction(eccscriptcontext_t* self, const char* name, const eccnativefunc
 {
     assert(self);
 
-    ECCNSFunction.addFunction(self->global, name, native, argumentCount, flags);
+    io_libecc_Function.addFunction(self->global, name, native, argumentCount, flags);
 }
 
 void addValue(eccscriptcontext_t* self, const char* name, eccvalue_t value, eccvalflag_t flags)
 {
     assert(self);
 
-    ECCNSFunction.addValue(self->global, name, value, flags);
+    io_libecc_Function.addValue(self->global, name, value, flags);
 }
 
-io_libecc_ecc_useframe int evalInput(eccscriptcontext_t* self, eccioinput_t* input, eccscriptevalflags_t flags)
+int evalInput(eccscriptcontext_t* self, eccioinput_t* input, eccscriptevalflags_t flags)
 {
     volatile int result = EXIT_SUCCESS, trap = !self->envCount || flags & ECC_SCRIPTEVAL_PRIMITIVERESULT, catch = 0;
     eccstate_t context = {
@@ -152,8 +153,8 @@ void evalInputWithContext(eccscriptcontext_t* self, eccioinput_t* input, eccstat
 
     addInput(self, input);
 
-    lexer = ECCNSLexer.createWithInput(input);
-    parser = ECCNSParser.createWithLexer(lexer);
+    lexer = io_libecc_Lexer.createWithInput(input);
+    parser = io_libecc_Parser.createWithLexer(lexer);
 
     if(context->strictMode)
         parser->strictMode = 1;
@@ -161,14 +162,14 @@ void evalInputWithContext(eccscriptcontext_t* self, eccioinput_t* input, eccstat
     if(self->sloppyMode)
         lexer->allowUnicodeOutsideLiteral = 1;
 
-    function = ECCNSParser.parseWithEnvironment(parser, context->environment, &self->global->environment);
+    function = io_libecc_Parser.parseWithEnvironment(parser, context->environment, &self->global->environment);
     context->ops = function->oplist->ops;
     context->environment = &function->environment;
 
-    ECCNSParser.destroy(parser), parser = NULL;
+    io_libecc_Parser.destroy(parser), parser = NULL;
 
     //	fprintf(stderr, "--- source:\n%.*s\n", input->length, input->bytes);
-    //	ECCNSOpList.dumpTo(function->oplist, stderr);
+    //	io_libecc_OpList.dumpTo(function->oplist, stderr);
 
     self->result = ECCValConstUndefined;
 
@@ -261,16 +262,16 @@ void printTextInput(eccscriptcontext_t* self, ecctextstring_t text, int fullLine
         ofInput = NULL;
     }
 
-    ECCNSInput.printText(findInput(self, text), text, ofLine, ofText, ofInput, fullLine);
+    io_libecc_Input.printText(findInput(self, text), text, ofLine, ofText, ofInput, fullLine);
 }
 
 void garbageCollect(eccscriptcontext_t* self)
 {
     uint16_t index, count;
 
-    ECCNSMemoryPool.unmarkAll();
-    ECCNSMemoryPool.markValue(ECCNSValue.object(ECC_Prototype_Arguments));
-    ECCNSMemoryPool.markValue(ECCNSValue.function(self->global));
+    io_libecc_Pool.unmarkAll();
+    io_libecc_Pool.markValue(ECCNSValue.object(io_libecc_arguments_prototype));
+    io_libecc_Pool.markValue(ECCNSValue.function(self->global));
 
     for(index = 0, count = self->inputCount; index < count; ++index)
     {
@@ -278,8 +279,8 @@ void garbageCollect(eccscriptcontext_t* self)
         uint16_t a = input->attachedCount;
 
         while(a--)
-            ECCNSMemoryPool.markValue(input->attached[a]);
+            io_libecc_Pool.markValue(input->attached[a]);
     }
 
-    ECCNSMemoryPool.collectUnmarked();
+    io_libecc_Pool.collectUnmarked();
 }

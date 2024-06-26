@@ -60,56 +60,37 @@ struct eccrxparser_t
     int disallowQuantifier;
 };
 
-static void mark(eccobject_t *object);
-static void capture(eccobject_t *object);
-static void finalize(eccobject_t *object);
-static eccregexnode_t *node(eccrxopcode_t opcode, long offset, const char *bytes);
-static void toss(eccregexnode_t *node);
-static uint16_t nlen(eccregexnode_t *n);
-static eccregexnode_t *join(eccregexnode_t *a, eccregexnode_t *b);
-static int accept(eccrxparser_t *p, char c);
-static eccrxopcode_t escape(eccrxparser_t *p, int16_t *offset, char buffer[5]);
-static eccrxopcode_t character(ecctextstring_t text, int16_t *offset, char buffer[12], int ignoreCase);
-static eccregexnode_t *characterNode(ecctextstring_t text, int ignoreCase);
-static eccregexnode_t *term(eccrxparser_t *p, eccobjerror_t **error);
-static eccregexnode_t *alternative(eccrxparser_t *p, eccobjerror_t **error);
-static eccregexnode_t *disjunction(eccrxparser_t *p, eccobjerror_t **error);
-static eccregexnode_t *pattern(eccrxparser_t *p, eccobjerror_t **error);
-static void clear(eccrxstate_t *const s, const char *c, uint8_t *bytes);
-static int forkMatch(eccrxstate_t *const s, eccregexnode_t *n, ecctextstring_t text, int16_t offset);
-static int match(eccrxstate_t *const s, eccregexnode_t *n, ecctextstring_t text);
-static eccvalue_t constructor(eccstate_t *context);
-static eccvalue_t toString(eccstate_t *context);
-static eccvalue_t exec(eccstate_t *context);
-static eccvalue_t test(eccstate_t *context);
+static void mark(eccobject_t* object);
+static void capture(eccobject_t* object);
+static void finalize(eccobject_t* object);
 static void setup(void);
 static void teardown(void);
-static eccobjregexp_t *create(ecccharbuffer_t *s, eccobjerror_t **error, eccrxoptions_t options);
-static eccobjregexp_t *createWith(eccstate_t *context, eccvalue_t pattern, eccvalue_t flags);
-static int matchWithState(eccobjregexp_t *self, eccrxstate_t *state);
-
-
-const struct eccpseudonsregexp_t ECCNSRegExp = {
+static eccobjregexp_t* create(ecccharbuffer_t* pattern, eccobjerror_t**, eccrxoptions_t);
+static eccobjregexp_t* createWith(eccstate_t* context, eccvalue_t pattern, eccvalue_t flags);
+static int matchWithState(eccobjregexp_t*, eccrxstate_t*);
+const struct eccpseudonsregexp_t io_libecc_RegExp = {
     setup, teardown, create, createWith, matchWithState,
     {}
 };
 
-eccobject_t* ECC_Prototype_Regexp = NULL;
-eccobjscriptfunction_t* ECC_CtorFunc_Regexp = NULL;
+eccobject_t* io_libecc_regexp_prototype = NULL;
+eccobjscriptfunction_t* io_libecc_regexp_constructor = NULL;
 
-const eccobjinterntype_t ECC_Type_Regexp = {
+const eccobjinterntype_t ECCObjTypeRegexp = {
     .text = &ECC_ConstString_RegexpType,
     .mark = mark,
     .capture = capture,
     .finalize = finalize,
 };
 
+static eccregexnode_t* disjunction(eccrxparser_t* p, eccobjerror_t** error);
+
 static void mark(eccobject_t* object)
 {
     eccobjregexp_t* self = (eccobjregexp_t*)object;
 
-    ECCNSMemoryPool.markValue(ECCNSValue.chars(self->pattern));
-    ECCNSMemoryPool.markValue(ECCNSValue.chars(self->source));
+    io_libecc_Pool.markValue(ECCNSValue.chars(self->pattern));
+    io_libecc_Pool.markValue(ECCNSValue.chars(self->source));
 }
 
 static void capture(eccobject_t* object)
@@ -406,7 +387,7 @@ static eccrxopcode_t escape(eccrxparser_t* p, int16_t* offset, char buffer[5])
                     }
 
                     if(buffer[0])
-                        *offset = ECCNSChars.writeCodepoint(buffer, ((uint8_t*)buffer)[0]);
+                        *offset = io_libecc_Chars.writeCodepoint(buffer, ((uint8_t*)buffer)[0]);
                 }
             }
             break;
@@ -415,7 +396,7 @@ static eccrxopcode_t escape(eccrxparser_t* p, int16_t* offset, char buffer[5])
             {
                 if(isxdigit(p->c[0]) && isxdigit(p->c[1]))
                 {
-                    *offset = ECCNSChars.writeCodepoint(buffer, ECCNSLexer.uint8Hex(p->c[0], p->c[1]));
+                    *offset = io_libecc_Chars.writeCodepoint(buffer, io_libecc_Lexer.uint8Hex(p->c[0], p->c[1]));
                     p->c += 2;
                 }
             }
@@ -425,7 +406,7 @@ static eccrxopcode_t escape(eccrxparser_t* p, int16_t* offset, char buffer[5])
             {
                 if(isxdigit(p->c[0]) && isxdigit(p->c[1]) && isxdigit(p->c[2]) && isxdigit(p->c[3]))
                 {
-                    *offset = ECCNSChars.writeCodepoint(buffer, ECCNSLexer.uint16Hex(p->c[0], p->c[1], p->c[2], p->c[3]));
+                    *offset = io_libecc_Chars.writeCodepoint(buffer, io_libecc_Lexer.uint16Hex(p->c[0], p->c[1], p->c[2], p->c[3]));
                     p->c += 4;
                 }
             }
@@ -554,7 +535,7 @@ static eccregexnode_t* term(eccrxparser_t* p, eccobjerror_t** error)
             count = ++p->count;
             if((int)count * 2 + 1 > 0xff)
             {
-                *error = ECCNSError.syntaxError(ECCNSText.make(p->c, 1), ECCNSChars.create("too many captures"));
+                *error = io_libecc_Error.syntaxError(ECCNSText.make(p->c, 1), io_libecc_Chars.create("too many captures"));
                 return NULL;
             }
         }
@@ -563,7 +544,7 @@ static eccregexnode_t* term(eccrxparser_t* p, eccobjerror_t** error)
         if(!accept(p, ')'))
         {
             if(!*error)
-                *error = ECCNSError.syntaxError(ECCNSText.make(p->c, 1), ECCNSChars.create("expect ')'"));
+                *error = io_libecc_Error.syntaxError(ECCNSText.make(p->c, 1), io_libecc_Chars.create("expect ')'"));
 
             return NULL;
         }
@@ -642,8 +623,8 @@ static eccregexnode_t* term(eccrxparser_t* p, eccobjerror_t** error)
                     if(from.codepoint > to.codepoint)
                     {
                         toss(n);
-                        *error = ECCNSError.syntaxError(ECCNSText.make(p->c - length - range, length - range),
-                                                             ECCNSChars.create("range out of order in character class"));
+                        *error = io_libecc_Error.syntaxError(ECCNSText.make(p->c - length - range, length - range),
+                                                             io_libecc_Chars.create("range out of order in character class"));
                         return NULL;
                     }
 
@@ -665,7 +646,7 @@ static eccregexnode_t* term(eccrxparser_t* p, eccobjerror_t** error)
             }
             if((p->c >= p->end) || (length >= (int)sizeof(buffer)))
             {
-                *error = ECCNSError.syntaxError(ECCNSText.make(p->c - 1, 1), ECCNSChars.create("expect ']'"));
+                *error = io_libecc_Error.syntaxError(ECCNSText.make(p->c - 1, 1), io_libecc_Chars.create("expect ']'"));
                 return NULL;
             }
         }
@@ -750,7 +731,7 @@ static eccregexnode_t* alternative(eccrxparser_t* p, eccobjerror_t** error)
                     }
                     else
                     {
-                        *error = ECCNSError.syntaxError(ECCNSText.make(p->c, 1), ECCNSChars.create("expect number"));
+                        *error = io_libecc_Error.syntaxError(ECCNSText.make(p->c, 1), io_libecc_Chars.create("expect number"));
                         goto error;
                     }
 
@@ -775,7 +756,7 @@ static eccregexnode_t* alternative(eccrxparser_t* p, eccobjerror_t** error)
 
                     if(!accept(p, '}'))
                     {
-                        *error = ECCNSError.syntaxError(ECCNSText.make(p->c, 1), ECCNSChars.create("expect '}'"));
+                        *error = io_libecc_Error.syntaxError(ECCNSText.make(p->c, 1), io_libecc_Chars.create("expect '}'"));
                         goto error;
                     }
                     break;
@@ -852,6 +833,10 @@ static eccregexnode_t* pattern(eccrxparser_t* p, eccobjerror_t** error)
     return join(disjunction(p, error), node(opMatch, 0, NULL));
 }
 
+//MARK: matching
+
+static int match(eccrxstate_t* const s, eccregexnode_t* n, ecctextstring_t text);
+
 static void clear(eccrxstate_t* const s, const char* c, uint8_t* bytes)
 {
     uint8_t index;
@@ -880,7 +865,7 @@ static int forkMatch(eccrxstate_t* const s, eccregexnode_t* n, ecctextstring_t t
     return result;
 }
 
-static int match(eccrxstate_t* const s, eccregexnode_t* n, ecctextstring_t text)
+int match(eccrxstate_t* const s, eccregexnode_t* n, ecctextstring_t text)
 {
     goto start;
 next:
@@ -1158,6 +1143,8 @@ jump:
     goto start;
 }
 
+// MARK: - Static Members
+
 static eccvalue_t constructor(eccstate_t* context)
 {
     eccvalue_t pattern, flags;
@@ -1185,9 +1172,9 @@ static eccvalue_t exec(eccstate_t* context)
     ECCNSContext.assertThisType(context, ECC_VALTYPE_REGEXP);
 
     value = ECCNSValue.toString(context, ECCNSContext.argument(context, 0));
-    lastIndex = self->global ? ECCNSValue.toInteger(context, ECCNSObject.getMember(context, &self->object, ECC_ConstKey_lastIndex)) : ECCNSValue.integer(0);
+    lastIndex = self->global ? ECCNSValue.toInteger(context, ECCNSObject.getMember(context, &self->object, io_libecc_key_lastIndex)) : ECCNSValue.integer(0);
 
-    ECCNSObject.putMember(context, &self->object, ECC_ConstKey_lastIndex, ECCNSValue.integer(0));
+    ECCNSObject.putMember(context, &self->object, io_libecc_key_lastIndex, ECCNSValue.integer(0));
 
     if(lastIndex.data.integer >= 0)
     {
@@ -1197,30 +1184,30 @@ static eccvalue_t exec(eccstate_t* context)
         const char* strindex[self->count * 2];
         ecccharbuffer_t* element;
 
-        eccrxstate_t state = { ECCNSString.textAtIndex(bytes, length, lastIndex.data.integer, 0).bytes, bytes + length, capture, strindex, 0};
+        eccrxstate_t state = { io_libecc_String.textAtIndex(bytes, length, lastIndex.data.integer, 0).bytes, bytes + length, capture, strindex, 0};
 
         if(state.start >= bytes && state.start <= state.end && matchWithState(self, &state))
         {
-            eccobject_t* array = ECCNSArray.createSized(self->count);
+            eccobject_t* array = io_libecc_Array.createSized(self->count);
             int32_t numindex, count;
 
             for(numindex = 0, count = self->count; numindex < count; ++numindex)
             {
                 if(capture[numindex * 2])
                 {
-                    element = ECCNSChars.createWithBytes((int32_t)(capture[numindex * 2 + 1] - capture[numindex * 2]), capture[numindex * 2]);
-                    array->element[numindex].value = ECCNSValue.chars(element);
+                    element = io_libecc_Chars.createWithBytes((int32_t)(capture[numindex * 2 + 1] - capture[numindex * 2]), capture[numindex * 2]);
+                    array->element[numindex].elemvalue = ECCNSValue.chars(element);
                 }
                 else
-                    array->element[numindex].value = ECCValConstUndefined;
+                    array->element[numindex].elemvalue = ECCValConstUndefined;
             }
 
             if(self->global)
-                ECCNSObject.putMember(context, &self->object, ECC_ConstKey_lastIndex,
-                                      ECCNSValue.integer(ECCNSString.unitIndex(bytes, length, (int32_t)(capture[1] - bytes))));
+                ECCNSObject.putMember(context, &self->object, io_libecc_key_lastIndex,
+                                      ECCNSValue.integer(io_libecc_String.unitIndex(bytes, length, (int32_t)(capture[1] - bytes))));
 
-            ECCNSObject.addMember(array, ECC_ConstKey_index, ECCNSValue.integer(ECCNSString.unitIndex(bytes, length, (int32_t)(capture[0] - bytes))), 0);
-            ECCNSObject.addMember(array, ECC_ConstKey_input, value, 0);
+            ECCNSObject.addMember(array, io_libecc_key_index, ECCNSValue.integer(io_libecc_String.unitIndex(bytes, length, (int32_t)(capture[0] - bytes))), 0);
+            ECCNSObject.addMember(array, io_libecc_key_input, value, 0);
 
             return ECCNSValue.object(array);
         }
@@ -1236,9 +1223,9 @@ static eccvalue_t test(eccstate_t* context)
     ECCNSContext.assertThisType(context, ECC_VALTYPE_REGEXP);
 
     value = ECCNSValue.toString(context, ECCNSContext.argument(context, 0));
-    lastIndex = ECCNSValue.toInteger(context, ECCNSObject.getMember(context, &self->object, ECC_ConstKey_lastIndex));
+    lastIndex = ECCNSValue.toInteger(context, ECCNSObject.getMember(context, &self->object, io_libecc_key_lastIndex));
 
-    ECCNSObject.putMember(context, &self->object, ECC_ConstKey_lastIndex, ECCNSValue.integer(0));
+    ECCNSObject.putMember(context, &self->object, io_libecc_key_lastIndex, ECCNSValue.integer(0));
 
     if(lastIndex.data.integer >= 0)
     {
@@ -1247,13 +1234,13 @@ static eccvalue_t test(eccstate_t* context)
         const char* capture[self->count * 2];
         const char* index[self->count * 2];
 
-        eccrxstate_t state = { ECCNSString.textAtIndex(bytes, length, lastIndex.data.integer, 0).bytes, bytes + length, capture, index, 0};
+        eccrxstate_t state = { io_libecc_String.textAtIndex(bytes, length, lastIndex.data.integer, 0).bytes, bytes + length, capture, index, 0};
 
         if(state.start >= bytes && state.start <= state.end && matchWithState(self, &state))
         {
             if(self->global)
-                ECCNSObject.putMember(context, &self->object, ECC_ConstKey_lastIndex,
-                                      ECCNSValue.integer(ECCNSString.unitIndex(bytes, length, (int32_t)(capture[1] - bytes))));
+                ECCNSObject.putMember(context, &self->object, io_libecc_key_lastIndex,
+                                      ECCNSValue.integer(io_libecc_String.unitIndex(bytes, length, (int32_t)(capture[1] - bytes))));
 
             return ECCValConstTrue;
         }
@@ -1263,36 +1250,36 @@ static eccvalue_t test(eccstate_t* context)
 
 // MARK: - Methods
 
-static void setup()
+void setup()
 {
     eccobjerror_t* error = NULL;
     const eccvalflag_t h = ECC_VALFLAG_HIDDEN;
 
-    ECCNSFunction.setupBuiltinObject(&ECC_CtorFunc_Regexp, constructor, 2, &ECC_Prototype_Regexp,
-                                          ECCNSValue.regexp(create(ECCNSChars.create("/(?:)/"), &error, 0)), &ECC_Type_Regexp);
+    io_libecc_Function.setupBuiltinObject(&io_libecc_regexp_constructor, constructor, 2, &io_libecc_regexp_prototype,
+                                          ECCNSValue.regexp(create(io_libecc_Chars.create("/(?:)/"), &error, 0)), &ECCObjTypeRegexp);
 
     assert(error == NULL);
 
-    ECCNSFunction.addToObject(ECC_Prototype_Regexp, "toString", toString, 0, h);
-    ECCNSFunction.addToObject(ECC_Prototype_Regexp, "exec", exec, 1, h);
-    ECCNSFunction.addToObject(ECC_Prototype_Regexp, "test", test, 1, h);
+    io_libecc_Function.addToObject(io_libecc_regexp_prototype, "toString", toString, 0, h);
+    io_libecc_Function.addToObject(io_libecc_regexp_prototype, "exec", exec, 1, h);
+    io_libecc_Function.addToObject(io_libecc_regexp_prototype, "test", test, 1, h);
 }
 
-static void teardown(void)
+void teardown(void)
 {
-    ECC_Prototype_Regexp = NULL;
-    ECC_CtorFunc_Regexp = NULL;
+    io_libecc_regexp_prototype = NULL;
+    io_libecc_regexp_constructor = NULL;
 }
 
-static eccobjregexp_t* create(ecccharbuffer_t* s, eccobjerror_t** error, eccrxoptions_t options)
+eccobjregexp_t* create(ecccharbuffer_t* s, eccobjerror_t** error, eccrxoptions_t options)
 {
     eccrxparser_t p = { 0 };
 
     eccobjregexp_t* self = malloc(sizeof(*self));
-    *self = ECCNSRegExp.identity;
-    ECCNSMemoryPool.addObject(&self->object);
+    *self = io_libecc_RegExp.identity;
+    io_libecc_Pool.addObject(&self->object);
 
-    ECCNSObject.initialize(&self->object, ECC_Prototype_Regexp);
+    ECCNSObject.initialize(&self->object, io_libecc_regexp_prototype);
 
     p.c = s->bytes;
     p.end = s->bytes + s->length;
@@ -1317,7 +1304,7 @@ static eccobjregexp_t* create(ecccharbuffer_t* s, eccobjerror_t** error, eccrxop
     self->pattern = s;
     self->program = pattern(&p, error);
     self->count = p.count + 1;
-    self->source = ECCNSChars.createWithBytes((int32_t)(p.c - self->pattern->bytes - 1), self->pattern->bytes + 1);
+    self->source = io_libecc_Chars.createWithBytes((int32_t)(p.c - self->pattern->bytes - 1), self->pattern->bytes + 1);
 
     //	++self->pattern->referenceCount;
     //	++self->source->referenceCount;
@@ -1333,7 +1320,7 @@ static eccobjregexp_t* create(ecccharbuffer_t* s, eccobjerror_t** error, eccrxop
                     g:
                         if(self->global == 1)
                         {
-                            *error = ECCNSError.syntaxError(ECCNSText.make(p.c, 1), ECCNSChars.create("invalid flag"));
+                            *error = io_libecc_Error.syntaxError(ECCNSText.make(p.c, 1), io_libecc_Chars.create("invalid flag"));
                         }
                         self->global = 1;
                     }
@@ -1344,7 +1331,7 @@ static eccobjregexp_t* create(ecccharbuffer_t* s, eccobjerror_t** error, eccrxop
                     i:
                         if(self->ignoreCase == 1)
                         {
-                            *error = ECCNSError.syntaxError(ECCNSText.make(p.c, 1), ECCNSChars.create("invalid flag"));
+                            *error = io_libecc_Error.syntaxError(ECCNSText.make(p.c, 1), io_libecc_Chars.create("invalid flag"));
                         }
                         self->ignoreCase = 1;
                     }
@@ -1355,7 +1342,7 @@ static eccobjregexp_t* create(ecccharbuffer_t* s, eccobjerror_t** error, eccrxop
                     m:
                         if(self->multiline == 1)
                         {
-                            *error = ECCNSError.syntaxError(ECCNSText.make(p.c, 1), ECCNSChars.create("invalid flag"));
+                            *error = io_libecc_Error.syntaxError(ECCNSText.make(p.c, 1), io_libecc_Chars.create("invalid flag"));
                         }
                         self->multiline = 1;
                     }
@@ -1389,7 +1376,7 @@ static eccobjregexp_t* create(ecccharbuffer_t* s, eccobjerror_t** error, eccrxop
 
                 default:
                     {
-                        *error = ECCNSError.syntaxError(ECCNSText.make(p.c, 1), ECCNSChars.create("invalid flag"));
+                        *error = io_libecc_Error.syntaxError(ECCNSText.make(p.c, 1), io_libecc_Chars.create("invalid flag"));
                     }
             }
             break;
@@ -1397,18 +1384,18 @@ static eccobjregexp_t* create(ecccharbuffer_t* s, eccobjerror_t** error, eccrxop
     }
     else if(error && !*error)
     {
-        *error = ECCNSError.syntaxError(ECCNSText.make(p.c, 1), ECCNSChars.create("invalid character '%c'", isgraph(*p.c) ? *p.c : '?'));
+        *error = io_libecc_Error.syntaxError(ECCNSText.make(p.c, 1), io_libecc_Chars.create("invalid character '%c'", isgraph(*p.c) ? *p.c : '?'));
     }
-    ECCNSObject.addMember(&self->object, ECC_ConstKey_source, ECCNSValue.chars(self->source), ECC_VALFLAG_READONLY | ECC_VALFLAG_HIDDEN | ECC_VALFLAG_SEALED);
-    ECCNSObject.addMember(&self->object, ECC_ConstKey_global, ECCNSValue.truth(self->global), ECC_VALFLAG_READONLY | ECC_VALFLAG_HIDDEN | ECC_VALFLAG_SEALED);
-    ECCNSObject.addMember(&self->object, ECC_ConstKey_ignoreCase, ECCNSValue.truth(self->ignoreCase), ECC_VALFLAG_READONLY | ECC_VALFLAG_HIDDEN | ECC_VALFLAG_SEALED);
-    ECCNSObject.addMember(&self->object, ECC_ConstKey_multiline, ECCNSValue.truth(self->multiline), ECC_VALFLAG_READONLY | ECC_VALFLAG_HIDDEN | ECC_VALFLAG_SEALED);
-    ECCNSObject.addMember(&self->object, ECC_ConstKey_lastIndex, ECCNSValue.integer(0), ECC_VALFLAG_HIDDEN | ECC_VALFLAG_SEALED);
+    ECCNSObject.addMember(&self->object, io_libecc_key_source, ECCNSValue.chars(self->source), ECC_VALFLAG_READONLY | ECC_VALFLAG_HIDDEN | ECC_VALFLAG_SEALED);
+    ECCNSObject.addMember(&self->object, io_libecc_key_global, ECCNSValue.truth(self->global), ECC_VALFLAG_READONLY | ECC_VALFLAG_HIDDEN | ECC_VALFLAG_SEALED);
+    ECCNSObject.addMember(&self->object, io_libecc_key_ignoreCase, ECCNSValue.truth(self->ignoreCase), ECC_VALFLAG_READONLY | ECC_VALFLAG_HIDDEN | ECC_VALFLAG_SEALED);
+    ECCNSObject.addMember(&self->object, io_libecc_key_multiline, ECCNSValue.truth(self->multiline), ECC_VALFLAG_READONLY | ECC_VALFLAG_HIDDEN | ECC_VALFLAG_SEALED);
+    ECCNSObject.addMember(&self->object, io_libecc_key_lastIndex, ECCNSValue.integer(0), ECC_VALFLAG_HIDDEN | ECC_VALFLAG_SEALED);
 
     return self;
 }
 
-static eccobjregexp_t* createWith(eccstate_t* context, eccvalue_t pattern, eccvalue_t flags)
+eccobjregexp_t* createWith(eccstate_t* context, eccvalue_t pattern, eccvalue_t flags)
 {
     eccobjerror_t* error = NULL;
     eccappendbuffer_t chars;
@@ -1424,47 +1411,47 @@ static eccobjregexp_t* createWith(eccstate_t* context, eccvalue_t pattern, eccva
     }
     else
     {
-        ECCNSChars.beginAppend(&chars);
+        io_libecc_Chars.beginAppend(&chars);
 
-        ECCNSChars.append(&chars, "/");
+        io_libecc_Chars.append(&chars, "/");
 
         if(pattern.type == ECC_VALTYPE_REGEXP)
-            ECCNSChars.appendValue(&chars, context, ECCNSValue.chars(pattern.data.regexp->source));
+            io_libecc_Chars.appendValue(&chars, context, ECCNSValue.chars(pattern.data.regexp->source));
         else
         {
             if(pattern.type == ECC_VALTYPE_UNDEFINED || (ECCNSValue.isString(pattern) && !ECCNSValue.stringLength(&pattern)))
             {
                 if(!context->ecc->sloppyMode)
-                    ECCNSChars.append(&chars, "(?:)");
+                    io_libecc_Chars.append(&chars, "(?:)");
             }
             else
-                ECCNSChars.appendValue(&chars, context, pattern);
+                io_libecc_Chars.appendValue(&chars, context, pattern);
         }
 
-        ECCNSChars.append(&chars, "/");
+        io_libecc_Chars.append(&chars, "/");
 
         if(flags.type != ECC_VALTYPE_UNDEFINED)
-            ECCNSChars.appendValue(&chars, context, flags);
+            io_libecc_Chars.appendValue(&chars, context, flags);
 
-        value = ECCNSChars.endAppend(&chars);
+        value = io_libecc_Chars.endAppend(&chars);
         if(value.type != ECC_VALTYPE_CHARS)
-            value = ECCNSValue.chars(ECCNSChars.createWithBytes(ECCNSValue.stringLength(&value), ECCNSValue.stringBytes(&value)));
+            value = ECCNSValue.chars(io_libecc_Chars.createWithBytes(ECCNSValue.stringLength(&value), ECCNSValue.stringBytes(&value)));
     }
 
     assert(value.type == ECC_VALTYPE_CHARS);
-    regexp = create(value.data.chars, &error, context->ecc->sloppyMode ? ECC_REGEXOPT_ALLOWUNICODEFLAGS : 0);
+    regexp = create(value.data.charbufdata, &error, context->ecc->sloppyMode ? ECC_REGEXOPT_ALLOWUNICODEFLAGS : 0);
     if(error)
     {
         ECCNSContext.setTextIndex(context, ECC_CTXINDEXTYPE_NO);
         context->ecc->ofLine = 1;
         context->ecc->ofText = ECCNSValue.textOf(&value);
-        context->ecc->ofInput = "(ECCNSRegExp)";
+        context->ecc->ofInput = "(io_libecc_RegExp)";
         ECCNSContext.doThrow(context, ECCNSValue.error(error));
     }
     return regexp;
 }
 
-static int matchWithState(eccobjregexp_t* self, eccrxstate_t* state)
+int matchWithState(eccobjregexp_t* self, eccrxstate_t* state)
 {
     int result = 0;
     uint16_t index, count;

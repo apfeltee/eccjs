@@ -24,10 +24,8 @@
  */
 
 
-import * as std from "std";
-import * as os from "os";
-
-(function(g) {
+(function(g)
+{
     /* add 'os' and 'std' bindings */
     g.os = os;
     g.std = std;

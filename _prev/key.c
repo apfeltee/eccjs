@@ -16,33 +16,33 @@ static uint16_t keyCapacity = 0;
 static char** charsList = NULL;
 static uint16_t charsCount = 0;
 
-eccindexkey_t ECC_ConstKey_none = { { { 0 } } };
+eccindexkey_t io_libecc_key_none = { { { 0 } } };
 
-eccindexkey_t ECC_ConstKey_prototype;
-eccindexkey_t ECC_ConstKey_constructor;
-eccindexkey_t ECC_ConstKey_length;
-eccindexkey_t ECC_ConstKey_arguments;
-eccindexkey_t ECC_ConstKey_callee;
-eccindexkey_t ECC_ConstKey_name;
-eccindexkey_t ECC_ConstKey_message;
-eccindexkey_t ECC_ConstKey_toString;
-eccindexkey_t ECC_ConstKey_valueOf;
-eccindexkey_t ECC_ConstKey_eval;
-eccindexkey_t ECC_ConstKey_value;
-eccindexkey_t ECC_ConstKey_writable;
-eccindexkey_t ECC_ConstKey_enumerable;
-eccindexkey_t ECC_ConstKey_configurable;
-eccindexkey_t ECC_ConstKey_get;
-eccindexkey_t ECC_ConstKey_set;
-eccindexkey_t ECC_ConstKey_join;
-eccindexkey_t ECC_ConstKey_toISOString;
-eccindexkey_t ECC_ConstKey_input;
-eccindexkey_t ECC_ConstKey_index;
-eccindexkey_t ECC_ConstKey_lastIndex;
-eccindexkey_t ECC_ConstKey_global;
-eccindexkey_t ECC_ConstKey_ignoreCase;
-eccindexkey_t ECC_ConstKey_multiline;
-eccindexkey_t ECC_ConstKey_source;
+eccindexkey_t io_libecc_key_prototype;
+eccindexkey_t io_libecc_key_constructor;
+eccindexkey_t io_libecc_key_length;
+eccindexkey_t io_libecc_key_arguments;
+eccindexkey_t io_libecc_key_callee;
+eccindexkey_t io_libecc_key_name;
+eccindexkey_t io_libecc_key_message;
+eccindexkey_t io_libecc_key_toString;
+eccindexkey_t io_libecc_key_valueOf;
+eccindexkey_t io_libecc_key_eval;
+eccindexkey_t io_libecc_key_value;
+eccindexkey_t io_libecc_key_writable;
+eccindexkey_t io_libecc_key_enumerable;
+eccindexkey_t io_libecc_key_configurable;
+eccindexkey_t io_libecc_key_get;
+eccindexkey_t io_libecc_key_set;
+eccindexkey_t io_libecc_key_join;
+eccindexkey_t io_libecc_key_toISOString;
+eccindexkey_t io_libecc_key_input;
+eccindexkey_t io_libecc_key_index;
+eccindexkey_t io_libecc_key_lastIndex;
+eccindexkey_t io_libecc_key_global;
+eccindexkey_t io_libecc_key_ignoreCase;
+eccindexkey_t io_libecc_key_multiline;
+eccindexkey_t io_libecc_key_source;
 
 // MARK: - Static Members
 
@@ -54,7 +54,7 @@ static eccindexkey_t search(const ecctextstring_t text);
 static int isEqual(eccindexkey_t, eccindexkey_t);
 static const ecctextstring_t* textOf(eccindexkey_t);
 static void dumpTo(eccindexkey_t, FILE*);
-const struct eccpseudonskey_t ECCNSKey = {
+const struct eccpseudonskey_t io_libecc_Key = {
     setup, teardown, makeWithCString, makeWithText, search, isEqual, textOf, dumpTo,
     {}
 };
@@ -81,13 +81,11 @@ static eccindexkey_t addWithText(const ecctextstring_t text, eccindexflags_t fla
         keyCapacity += 0xff;
         keyPool = realloc(keyPool, keyCapacity * sizeof(*keyPool));
     }
-    /*
-    if((isdigit(text.bytes[0]) || text.bytes[0] == '-') && !isnan(ECCNSLexer.scanBinary(text, 0).data.binary))
-    {
+
+    if((isdigit(text.bytes[0]) || text.bytes[0] == '-') && !isnan(io_libecc_Lexer.scanBinary(text, 0).data.binary))
         ECCNSEnv.printWarning("Creating identifier '%.*s'; %u identifier(s) left. Using array of length > 0x%x, or negative-integer/floating-point as property name is discouraged",
                               text.length, text.bytes, UINT16_MAX - keyCount, io_libecc_object_ElementMax);
-    }
-    */
+
     if(flags & ECC_INDEXFLAG_COPYONCREATE)
     {
         char* chars = malloc(text.length + 1);
@@ -112,103 +110,103 @@ void setup(void)
     {
         {
             cstr = "prototype";
-            ECC_ConstKey_prototype = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_prototype = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "constructor";
-            ECC_ConstKey_constructor = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_constructor = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "length";
-            ECC_ConstKey_length = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_length = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "arguments";
-            ECC_ConstKey_arguments = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_arguments = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "callee";
-            ECC_ConstKey_callee = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_callee = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "name";
-            ECC_ConstKey_name = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_name = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "message";
-            ECC_ConstKey_message = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_message = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "toString";
-            ECC_ConstKey_toString = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_toString = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "valueOf";
-            ECC_ConstKey_valueOf = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_valueOf = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "eval";
-            ECC_ConstKey_eval = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_eval = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "value";
-            ECC_ConstKey_value = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_value = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "writable";
-            ECC_ConstKey_writable = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_writable = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "enumerable";
-            ECC_ConstKey_enumerable = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_enumerable = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "configurable";
-            ECC_ConstKey_configurable = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_configurable = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "get";
-            ECC_ConstKey_get = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_get = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "set";
-            ECC_ConstKey_set = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_set = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "join";
-            ECC_ConstKey_join = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_join = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "toISOString";
-            ECC_ConstKey_toISOString = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_toISOString = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "input";
-            ECC_ConstKey_input = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_input = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "index";
-            ECC_ConstKey_index = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_index = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "lastIndex";
-            ECC_ConstKey_lastIndex = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_lastIndex = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "global";
-            ECC_ConstKey_global = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_global = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "ignoreCase";
-            ECC_ConstKey_ignoreCase = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_ignoreCase = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "multiline";
-            ECC_ConstKey_multiline = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_multiline = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
         {
             cstr = "source";
-            ECC_ConstKey_source = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
+            io_libecc_key_source = addWithText(ECCNSText.make(cstr, strlen(cstr)), 0);
         }
     }
 }

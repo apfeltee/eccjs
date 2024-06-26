@@ -14,8 +14,8 @@ static void teardown(void);
 static eccobject_t* create(eccobject_t* prototype);
 static eccobject_t* createSized(eccobject_t* prototype, uint16_t size);
 static eccobject_t* createTyped(const eccobjinterntype_t* type);
-static eccobject_t* initialize(eccobject_t* restrict, eccobject_t* restrict prototype);
-static eccobject_t* initializeSized(eccobject_t* restrict, eccobject_t* restrict prototype, uint16_t size);
+static eccobject_t* initialize(eccobject_t*, eccobject_t* prototype);
+static eccobject_t* initializeSized(eccobject_t*, eccobject_t* prototype, uint16_t size);
 static eccobject_t* finalize(eccobject_t*);
 static eccobject_t* copy(const eccobject_t* original);
 static void destroy(eccobject_t*);
@@ -56,10 +56,10 @@ const uint32_t io_libecc_object_ElementMax = 0xffffff;
 
 static const int defaultSize = 8;
 
-eccobject_t* ECC_Prototype_Object = NULL;
-eccobjscriptfunction_t* ECC_CtorFunc_Object = NULL;
+eccobject_t* io_libecc_object_prototype = NULL;
+eccobjscriptfunction_t* io_libecc_object_constructor = NULL;
 
-const eccobjinterntype_t ECC_Type_Object = {
+const eccobjinterntype_t ECCObjTypeObject = {
     .text = &ECC_ConstString_ObjectType,
 };
 
@@ -88,8 +88,8 @@ static inline uint32_t getIndexOrKey(eccvalue_t property, eccindexkey_t* key)
         else if(ECCNSValue.isString(property))
         {
             ecctextstring_t text = ECCNSValue.textOf(&property);
-            if((index = ECCNSLexer.scanElement(text)) == UINT32_MAX)
-                *key = ECCNSKey.makeWithText(text, ECC_INDEXFLAG_COPYONCREATE);
+            if((index = io_libecc_Lexer.scanElement(text)) == UINT32_MAX)
+                *key = io_libecc_Key.makeWithText(text, ECC_INDEXFLAG_COPYONCREATE);
         }
         else
             return getIndexOrKey(ECCNSValue.toString(NULL, property), key);
@@ -105,9 +105,9 @@ static inline eccindexkey_t keyOfIndex(uint32_t index, int create)
 
     length = snprintf(buffer, sizeof(buffer), "%u", (unsigned)index);
     if(create)
-        return ECCNSKey.makeWithText(ECCNSText.make(buffer, length), ECC_INDEXFLAG_COPYONCREATE);
+        return io_libecc_Key.makeWithText(ECCNSText.make(buffer, length), ECC_INDEXFLAG_COPYONCREATE);
     else
-        return ECCNSKey.search(ECCNSText.make(buffer, length));
+        return io_libecc_Key.search(ECCNSText.make(buffer, length));
 }
 
 static inline uint32_t nextPowerOfTwo(uint32_t v)
@@ -141,16 +141,16 @@ static void readonlyError(eccstate_t* context, eccvalue_t* ref, eccobject_t* thi
 
         if(hashmap >= thisobj->hashmap && hashmap < thisobj->hashmap + thisobj->hashmapCount)
         {
-            const ecctextstring_t* keyText = ECCNSKey.textOf(hashmap->value.key);
-            ECCNSContext.typeError(context, ECCNSChars.create("'%.*s' is read-only", keyText->length, keyText->bytes));
+            const ecctextstring_t* keyText = io_libecc_Key.textOf(hashmap->value.key);
+            ECCNSContext.typeError(context, io_libecc_Chars.create("'%.*s' is read-only", keyText->length, keyText->bytes));
         }
         else if(element >= thisobj->element && element < thisobj->element + thisobj->elementCount)
-            ECCNSContext.typeError(context, ECCNSChars.create("'%u' is read-only", element - thisobj->element));
+            ECCNSContext.typeError(context, io_libecc_Chars.create("'%u' is read-only", element - thisobj->element));
 
     } while((thisobj = thisobj->prototype));
 
     text = ECCNSContext.textSeek(context);
-    ECCNSContext.typeError(context, ECCNSChars.create("'%.*s' is read-only", text.length, text.bytes));
+    ECCNSContext.typeError(context, io_libecc_Chars.create("'%.*s' is read-only", text.length, text.bytes));
 }
 
 //
@@ -159,7 +159,7 @@ static eccobject_t* checkObject(eccstate_t* context, int argument)
 {
     eccvalue_t value = ECCNSContext.argument(context, argument);
     if(!ECCNSValue.isObject(value))
-        ECCNSContext.typeError(context, ECCNSChars.create("not an object"));
+        ECCNSContext.typeError(context, io_libecc_Chars.create("not an object"));
 
     return value.data.object;
 }
@@ -229,7 +229,7 @@ static eccvalue_t constructor(eccstate_t* context)
     value = ECCNSContext.argument(context, 0);
 
     if(value.type == ECC_VALTYPE_NULL || value.type == ECC_VALTYPE_UNDEFINED)
-        return ECCNSValue.object(create(ECC_Prototype_Object));
+        return ECCNSValue.object(create(io_libecc_object_prototype));
     else if(context->construct && ECCNSValue.isObject(value))
         return value;
     else
@@ -257,30 +257,30 @@ static eccvalue_t getOwnPropertyDescriptor(eccstate_t* context)
 
     if(ref)
     {
-        eccobject_t* result = create(ECC_Prototype_Object);
+        eccobject_t* result = create(io_libecc_object_prototype);
 
         if(ref->flags & ECC_VALFLAG_ACCESSOR)
         {
             if(ref->flags & ECC_VALFLAG_ASDATA)
             {
-                addMember(result, ECC_ConstKey_value, ECCNSObject.getValue(context, object, ref), 0);
-                addMember(result, ECC_ConstKey_writable, ECCNSValue.truth(!(ref->flags & ECC_VALFLAG_READONLY)), 0);
+                addMember(result, io_libecc_key_value, ECCNSObject.getValue(context, object, ref), 0);
+                addMember(result, io_libecc_key_writable, ECCNSValue.truth(!(ref->flags & ECC_VALFLAG_READONLY)), 0);
             }
             else
             {
-                addMember(result, ref->flags & ECC_VALFLAG_GETTER ? ECC_ConstKey_get : ECC_ConstKey_set, ECCNSValue.function(ref->data.function), 0);
+                addMember(result, ref->flags & ECC_VALFLAG_GETTER ? io_libecc_key_get : io_libecc_key_set, ECCNSValue.function(ref->data.function), 0);
                 if(ref->data.function->pair)
-                    addMember(result, ref->flags & ECC_VALFLAG_GETTER ? ECC_ConstKey_set : ECC_ConstKey_get, ECCNSValue.function(ref->data.function->pair), 0);
+                    addMember(result, ref->flags & ECC_VALFLAG_GETTER ? io_libecc_key_set : io_libecc_key_get, ECCNSValue.function(ref->data.function->pair), 0);
             }
         }
         else
         {
-            addMember(result, ECC_ConstKey_value, *ref, 0);
-            addMember(result, ECC_ConstKey_writable, ECCNSValue.truth(!(ref->flags & ECC_VALFLAG_READONLY)), 0);
+            addMember(result, io_libecc_key_value, *ref, 0);
+            addMember(result, io_libecc_key_writable, ECCNSValue.truth(!(ref->flags & ECC_VALFLAG_READONLY)), 0);
         }
 
-        addMember(result, ECC_ConstKey_enumerable, ECCNSValue.truth(!(ref->flags & ECC_VALFLAG_HIDDEN)), 0);
-        addMember(result, ECC_ConstKey_configurable, ECCNSValue.truth(!(ref->flags & ECC_VALFLAG_SEALED)), 0);
+        addMember(result, io_libecc_key_enumerable, ECCNSValue.truth(!(ref->flags & ECC_VALFLAG_HIDDEN)), 0);
+        addMember(result, io_libecc_key_configurable, ECCNSValue.truth(!(ref->flags & ECC_VALFLAG_SEALED)), 0);
 
         return ECCNSValue.object(result);
     }
@@ -295,12 +295,12 @@ static eccvalue_t getOwnPropertyNames(eccstate_t* context)
     uint32_t index, count, length;
 
     object = checkObject(context, 0);
-    result = ECCNSArray.create();
+    result = io_libecc_Array.create();
     length = 0;
 
     for(index = 0, count = elementCount(object); index < count; ++index)
-        if(object->element[index].value.check == 1)
-            addElement(result, length++, ECCNSValue.chars(ECCNSChars.create("%d", index)), 0);
+        if(object->element[index].elemvalue.check == 1)
+            addElement(result, length++, ECCNSValue.chars(io_libecc_Chars.create("%d", index)), 0);
 
     parent = object;
     while((parent = parent->prototype))
@@ -309,13 +309,13 @@ static eccvalue_t getOwnPropertyNames(eccstate_t* context)
         {
             eccvalue_t value = parent->hashmap[index].value;
             if(value.check == 1 && value.flags & ECC_VALFLAG_ASOWN)
-                addElement(result, length++, ECCNSValue.text(ECCNSKey.textOf(value.key)), 0);
+                addElement(result, length++, ECCNSValue.text(io_libecc_Key.textOf(value.key)), 0);
         }
     }
 
     for(index = 2; index < object->hashmapCount; ++index)
         if(object->hashmap[index].value.check == 1)
-            addElement(result, length++, ECCNSValue.text(ECCNSKey.textOf(object->hashmap[index].value.key)), 0);
+            addElement(result, length++, ECCNSValue.text(io_libecc_Key.textOf(object->hashmap[index].value.key)), 0);
 
     return ECCNSValue.object(result);
 }
@@ -331,8 +331,8 @@ static eccvalue_t defineProperty(eccstate_t* context)
     property = ECCNSValue.toPrimitive(context, ECCNSContext.argument(context, 1), ECC_VALHINT_STRING);
     descriptor = checkObject(context, 2);
 
-    getter = member(descriptor, ECC_ConstKey_get, 0);
-    setter = member(descriptor, ECC_ConstKey_set, 0);
+    getter = member(descriptor, io_libecc_key_get, 0);
+    setter = member(descriptor, io_libecc_key_set, 0);
 
     current = ECCNSObject.property(object, property, ECC_VALFLAG_ASOWN);
 
@@ -345,13 +345,13 @@ static eccvalue_t defineProperty(eccstate_t* context)
             setter = NULL;
 
         if(getter && getter->type != ECC_VALTYPE_FUNCTION)
-            ECCNSContext.typeError(context, ECCNSChars.create("getter is not a function"));
+            ECCNSContext.typeError(context, io_libecc_Chars.create("getter is not a function"));
 
         if(setter && setter->type != ECC_VALTYPE_FUNCTION)
-            ECCNSContext.typeError(context, ECCNSChars.create("setter is not a function"));
+            ECCNSContext.typeError(context, io_libecc_Chars.create("setter is not a function"));
 
-        if(member(descriptor, ECC_ConstKey_value, 0) || member(descriptor, ECC_ConstKey_writable, 0))
-            ECCNSContext.typeError(context, ECCNSChars.create("value & writable forbidden when a getter or setter are set"));
+        if(member(descriptor, io_libecc_key_value, 0) || member(descriptor, io_libecc_key_writable, 0))
+            ECCNSContext.typeError(context, io_libecc_Chars.create("value & writable forbidden when a getter or setter are set"));
 
         if(getter)
         {
@@ -368,24 +368,24 @@ static eccvalue_t defineProperty(eccstate_t* context)
         }
         else
         {
-            value = ECCNSValue.function(ECCNSFunction.createWithNative(ECCNSOperand.noop, 0));
+            value = ECCNSValue.function(io_libecc_Function.createWithNative(io_libecc_Op.noop, 0));
             value.flags |= ECC_VALFLAG_GETTER;
         }
     }
     else
     {
-        value = getMember(context, descriptor, ECC_ConstKey_value);
+        value = getMember(context, descriptor, io_libecc_key_value);
 
-        flag = member(descriptor, ECC_ConstKey_writable, 0);
+        flag = member(descriptor, io_libecc_key_writable, 0);
         if((flag && !ECCNSValue.isTrue(getValue(context, descriptor, flag))) || (!flag && (!current || current->flags & ECC_VALFLAG_READONLY)))
             value.flags |= ECC_VALFLAG_READONLY;
     }
 
-    flag = member(descriptor, ECC_ConstKey_enumerable, 0);
+    flag = member(descriptor, io_libecc_key_enumerable, 0);
     if((flag && !ECCNSValue.isTrue(getValue(context, descriptor, flag))) || (!flag && (!current || current->flags & ECC_VALFLAG_HIDDEN)))
         value.flags |= ECC_VALFLAG_HIDDEN;
 
-    flag = member(descriptor, ECC_ConstKey_configurable, 0);
+    flag = member(descriptor, io_libecc_key_configurable, 0);
     if((flag && !ECCNSValue.isTrue(getValue(context, descriptor, flag))) || (!flag && (!current || current->flags & ECC_VALFLAG_SEALED)))
         value.flags |= ECC_VALFLAG_SEALED;
 
@@ -446,11 +446,14 @@ sealedError:
     index = getIndexOrKey(property, &key);
     if(index == UINT32_MAX)
     {
-        const ecctextstring_t* text = ECCNSKey.textOf(key);
-        ECCNSContext.typeError(context, ECCNSChars.create("'%.*s' is non-configurable", text->length, text->bytes));
+        const ecctextstring_t* text = io_libecc_Key.textOf(key);
+        ECCNSContext.typeError(context, io_libecc_Chars.create("'%.*s' is non-configurable", text->length, text->bytes));
     }
     else
-        ECCNSContext.typeError(context, ECCNSChars.create("'%u' is non-configurable", index));
+    {
+        ECCNSContext.typeError(context, io_libecc_Chars.create("'%u' is non-configurable", index));
+    }
+    return ECCValConstNull;
 }
 
 static eccvalue_t defineProperties(eccstate_t* context)
@@ -474,11 +477,11 @@ static eccvalue_t defineProperties(eccstate_t* context)
 
     for(index = 0, count = elementCount(properties); index < count; ++index)
     {
-        if(!properties->element[index].value.check)
+        if(!properties->element[index].elemvalue.check)
             continue;
 
         ECCNSContext.replaceArgument(context, 1, ECCNSValue.binary(index));
-        ECCNSContext.replaceArgument(context, 2, properties->element[index].value);
+        ECCNSContext.replaceArgument(context, 2, properties->element[index].elemvalue);
         defineProperty(context);
     }
 
@@ -525,8 +528,8 @@ static eccvalue_t seal(eccstate_t* context)
     object->flags |= ECC_OBJFLAG_SEALED;
 
     for(index = 0, count = elementCount(object); index < count; ++index)
-        if(object->element[index].value.check == 1)
-            object->element[index].value.flags |= ECC_VALFLAG_SEALED;
+        if(object->element[index].elemvalue.check == 1)
+            object->element[index].elemvalue.flags |= ECC_VALFLAG_SEALED;
 
     for(index = 2; index < object->hashmapCount; ++index)
         if(object->hashmap[index].value.check == 1)
@@ -544,8 +547,8 @@ static eccvalue_t freeze(eccstate_t* context)
     object->flags |= ECC_OBJFLAG_SEALED;
 
     for(index = 0, count = elementCount(object); index < count; ++index)
-        if(object->element[index].value.check == 1)
-            object->element[index].value.flags |= ECC_VALFLAG_FROZEN;
+        if(object->element[index].elemvalue.check == 1)
+            object->element[index].elemvalue.flags |= ECC_VALFLAG_FROZEN;
 
     for(index = 2; index < object->hashmapCount; ++index)
         if(object->hashmap[index].value.check == 1)
@@ -574,7 +577,7 @@ static eccvalue_t isSealed(eccstate_t* context)
         return ECCValConstFalse;
 
     for(index = 0, count = elementCount(object); index < count; ++index)
-        if(object->element[index].value.check == 1 && !(object->element[index].value.flags & ECC_VALFLAG_SEALED))
+        if(object->element[index].elemvalue.check == 1 && !(object->element[index].elemvalue.flags & ECC_VALFLAG_SEALED))
             return ECCValConstFalse;
 
     for(index = 2; index < object->hashmapCount; ++index)
@@ -594,7 +597,7 @@ static eccvalue_t isFrozen(eccstate_t* context)
         return ECCValConstFalse;
 
     for(index = 0, count = elementCount(object); index < count; ++index)
-        if(object->element[index].value.check == 1 && !(object->element[index].value.flags & ECC_VALFLAG_FROZEN))
+        if(object->element[index].elemvalue.check == 1 && !(object->element[index].elemvalue.flags & ECC_VALFLAG_FROZEN))
             return ECCValConstFalse;
 
     for(index = 2; index < object->hashmapCount; ++index)
@@ -619,12 +622,12 @@ static eccvalue_t keys(eccstate_t* context)
     uint32_t index, count, length;
 
     object = checkObject(context, 0);
-    result = ECCNSArray.create();
+    result = io_libecc_Array.create();
     length = 0;
 
     for(index = 0, count = elementCount(object); index < count; ++index)
-        if(object->element[index].value.check == 1 && !(object->element[index].value.flags & ECC_VALFLAG_HIDDEN))
-            addElement(result, length++, ECCNSValue.chars(ECCNSChars.create("%d", index)), 0);
+        if(object->element[index].elemvalue.check == 1 && !(object->element[index].elemvalue.flags & ECC_VALFLAG_HIDDEN))
+            addElement(result, length++, ECCNSValue.chars(io_libecc_Chars.create("%d", index)), 0);
 
     parent = object;
     while((parent = parent->prototype))
@@ -633,80 +636,80 @@ static eccvalue_t keys(eccstate_t* context)
         {
             eccvalue_t value = parent->hashmap[index].value;
             if(value.check == 1 && value.flags & ECC_VALFLAG_ASOWN & !(value.flags & ECC_VALFLAG_HIDDEN))
-                addElement(result, length++, ECCNSValue.text(ECCNSKey.textOf(value.key)), 0);
+                addElement(result, length++, ECCNSValue.text(io_libecc_Key.textOf(value.key)), 0);
         }
     }
 
     for(index = 2; index < object->hashmapCount; ++index)
         if(object->hashmap[index].value.check == 1 && !(object->hashmap[index].value.flags & ECC_VALFLAG_HIDDEN))
-            addElement(result, length++, ECCNSValue.text(ECCNSKey.textOf(object->hashmap[index].value.key)), 0);
+            addElement(result, length++, ECCNSValue.text(io_libecc_Key.textOf(object->hashmap[index].value.key)), 0);
 
     return ECCNSValue.object(result);
 }
 
 // MARK: - Methods
 
-static void setup()
+void setup()
 {
     const eccvalflag_t h = ECC_VALFLAG_HIDDEN;
 
-    assert(sizeof(*ECC_Prototype_Object->hashmap) == 32);
+    assert(sizeof(*io_libecc_object_prototype->hashmap) == 32);
 
-    ECCNSFunction.setupBuiltinObject(&ECC_CtorFunc_Object, constructor, 1, NULL, ECCNSValue.object(ECC_Prototype_Object), NULL);
+    io_libecc_Function.setupBuiltinObject(&io_libecc_object_constructor, constructor, 1, NULL, ECCNSValue.object(io_libecc_object_prototype), NULL);
 
-    ECCNSFunction.addMethod(ECC_CtorFunc_Object, "getPrototypeOf", getPrototypeOf, 1, h);
-    ECCNSFunction.addMethod(ECC_CtorFunc_Object, "getOwnPropertyDescriptor", getOwnPropertyDescriptor, 2, h);
-    ECCNSFunction.addMethod(ECC_CtorFunc_Object, "getOwnPropertyNames", getOwnPropertyNames, 1, h);
-    ECCNSFunction.addMethod(ECC_CtorFunc_Object, "create", objectCreate, 2, h);
-    ECCNSFunction.addMethod(ECC_CtorFunc_Object, "defineProperty", defineProperty, 3, h);
-    ECCNSFunction.addMethod(ECC_CtorFunc_Object, "defineProperties", defineProperties, 2, h);
-    ECCNSFunction.addMethod(ECC_CtorFunc_Object, "seal", seal, 1, h);
-    ECCNSFunction.addMethod(ECC_CtorFunc_Object, "freeze", freeze, 1, h);
-    ECCNSFunction.addMethod(ECC_CtorFunc_Object, "preventExtensions", preventExtensions, 1, h);
-    ECCNSFunction.addMethod(ECC_CtorFunc_Object, "isSealed", isSealed, 1, h);
-    ECCNSFunction.addMethod(ECC_CtorFunc_Object, "isFrozen", isFrozen, 1, h);
-    ECCNSFunction.addMethod(ECC_CtorFunc_Object, "isExtensible", isExtensible, 1, h);
-    ECCNSFunction.addMethod(ECC_CtorFunc_Object, "keys", keys, 1, h);
+    io_libecc_Function.addMethod(io_libecc_object_constructor, "getPrototypeOf", getPrototypeOf, 1, h);
+    io_libecc_Function.addMethod(io_libecc_object_constructor, "getOwnPropertyDescriptor", getOwnPropertyDescriptor, 2, h);
+    io_libecc_Function.addMethod(io_libecc_object_constructor, "getOwnPropertyNames", getOwnPropertyNames, 1, h);
+    io_libecc_Function.addMethod(io_libecc_object_constructor, "create", objectCreate, 2, h);
+    io_libecc_Function.addMethod(io_libecc_object_constructor, "defineProperty", defineProperty, 3, h);
+    io_libecc_Function.addMethod(io_libecc_object_constructor, "defineProperties", defineProperties, 2, h);
+    io_libecc_Function.addMethod(io_libecc_object_constructor, "seal", seal, 1, h);
+    io_libecc_Function.addMethod(io_libecc_object_constructor, "freeze", freeze, 1, h);
+    io_libecc_Function.addMethod(io_libecc_object_constructor, "preventExtensions", preventExtensions, 1, h);
+    io_libecc_Function.addMethod(io_libecc_object_constructor, "isSealed", isSealed, 1, h);
+    io_libecc_Function.addMethod(io_libecc_object_constructor, "isFrozen", isFrozen, 1, h);
+    io_libecc_Function.addMethod(io_libecc_object_constructor, "isExtensible", isExtensible, 1, h);
+    io_libecc_Function.addMethod(io_libecc_object_constructor, "keys", keys, 1, h);
 
-    ECCNSFunction.addToObject(ECC_Prototype_Object, "toString", toString, 0, h);
-    ECCNSFunction.addToObject(ECC_Prototype_Object, "toLocaleString", toString, 0, h);
-    ECCNSFunction.addToObject(ECC_Prototype_Object, "valueOf", valueOf, 0, h);
-    ECCNSFunction.addToObject(ECC_Prototype_Object, "hasOwnProperty", hasOwnProperty, 1, h);
-    ECCNSFunction.addToObject(ECC_Prototype_Object, "isPrototypeOf", isPrototypeOf, 1, h);
-    ECCNSFunction.addToObject(ECC_Prototype_Object, "propertyIsEnumerable", propertyIsEnumerable, 1, h);
+    io_libecc_Function.addToObject(io_libecc_object_prototype, "toString", toString, 0, h);
+    io_libecc_Function.addToObject(io_libecc_object_prototype, "toLocaleString", toString, 0, h);
+    io_libecc_Function.addToObject(io_libecc_object_prototype, "valueOf", valueOf, 0, h);
+    io_libecc_Function.addToObject(io_libecc_object_prototype, "hasOwnProperty", hasOwnProperty, 1, h);
+    io_libecc_Function.addToObject(io_libecc_object_prototype, "isPrototypeOf", isPrototypeOf, 1, h);
+    io_libecc_Function.addToObject(io_libecc_object_prototype, "propertyIsEnumerable", propertyIsEnumerable, 1, h);
 }
 
-static void teardown(void)
+void teardown(void)
 {
-    ECC_Prototype_Object = NULL;
-    ECC_CtorFunc_Object = NULL;
+    io_libecc_object_prototype = NULL;
+    io_libecc_object_constructor = NULL;
 }
 
-static eccobject_t* create(eccobject_t* prototype)
+eccobject_t* create(eccobject_t* prototype)
 {
     return createSized(prototype, defaultSize);
 }
 
-static eccobject_t* createSized(eccobject_t* prototype, uint16_t size)
+eccobject_t* createSized(eccobject_t* prototype, uint16_t size)
 {
     eccobject_t* self = calloc(sizeof(*self), 1);
-    ECCNSMemoryPool.addObject(self);
+    io_libecc_Pool.addObject(self);
     return initializeSized(self, prototype, size);
 }
 
-static eccobject_t* createTyped(const eccobjinterntype_t* type)
+eccobject_t* createTyped(const eccobjinterntype_t* type)
 {
-    eccobject_t* self = createSized(ECC_Prototype_Object, defaultSize);
+    eccobject_t* self = createSized(io_libecc_object_prototype, defaultSize);
     self->type = type;
     return self;
 }
 
-static eccobject_t* initialize(eccobject_t* restrict self, eccobject_t* restrict prototype)
+eccobject_t* initialize(eccobject_t* self, eccobject_t* prototype)
 {
     return initializeSized(self, prototype, defaultSize);
 }
 
-static eccobject_t* initializeSized(eccobject_t* restrict self, eccobject_t* restrict prototype, uint16_t size)
+eccobject_t* initializeSized(eccobject_t* self, eccobject_t* prototype, uint16_t size)
 {
     size_t byteSize;
 
@@ -714,7 +717,7 @@ static eccobject_t* initializeSized(eccobject_t* restrict self, eccobject_t* res
 
     *self = ECCNSObject.identity;
 
-    self->type = prototype ? prototype->type : &ECC_Type_Object;
+    self->type = prototype ? prototype->type : &ECCObjTypeObject;
 
     self->prototype = prototype;
     self->hashmapCount = 2;
@@ -738,7 +741,7 @@ static eccobject_t* initializeSized(eccobject_t* restrict self, eccobject_t* res
     return self;
 }
 
-static eccobject_t* finalize(eccobject_t* self)
+eccobject_t* finalize(eccobject_t* self)
 {
     assert(self);
 
@@ -751,12 +754,12 @@ static eccobject_t* finalize(eccobject_t* self)
     return self;
 }
 
-static eccobject_t* copy(const eccobject_t* original)
+eccobject_t* copy(const eccobject_t* original)
 {
     size_t byteSize;
 
     eccobject_t* self = malloc(sizeof(*self));
-    ECCNSMemoryPool.addObject(self);
+    io_libecc_Pool.addObject(self);
 
     *self = *original;
 
@@ -771,14 +774,14 @@ static eccobject_t* copy(const eccobject_t* original)
     return self;
 }
 
-static void destroy(eccobject_t* self)
+void destroy(eccobject_t* self)
 {
     assert(self);
 
     free(self), self = NULL;
 }
 
-static eccvalue_t* member(eccobject_t* self, eccindexkey_t member, eccvalflag_t flags)
+eccvalue_t* member(eccobject_t* self, eccindexkey_t member, eccvalflag_t flags)
 {
     int lookupChain = !(flags & ECC_VALFLAG_ASOWN);
     eccobject_t* object = self;
@@ -800,7 +803,7 @@ static eccvalue_t* member(eccobject_t* self, eccindexkey_t member, eccvalflag_t 
     return NULL;
 }
 
-static eccvalue_t* element(eccobject_t* self, uint32_t index, eccvalflag_t flags)
+eccvalue_t* element(eccobject_t* self, uint32_t index, eccvalflag_t flags)
 {
     int lookupChain = !(flags & ECC_VALFLAG_ASOWN);
     eccobject_t* object = self;
@@ -808,9 +811,9 @@ static eccvalue_t* element(eccobject_t* self, uint32_t index, eccvalflag_t flags
 
     assert(self);
 
-    if(self->type == &ECC_Type_String)
+    if(self->type == &ECCObjTypeString)
     {
-        eccvalue_t* subref = ECCNSObject.addMember(self, ECC_ConstKey_none, ECCNSString.valueAtIndex((eccobjstring_t*)self, index), 0);
+        eccvalue_t* subref = ECCNSObject.addMember(self, io_libecc_key_none, io_libecc_String.valueAtIndex((eccobjstring_t*)self, index), 0);
         subref->check = 0;
         return subref;
     }
@@ -825,7 +828,7 @@ static eccvalue_t* element(eccobject_t* self, uint32_t index, eccvalflag_t flags
         {
             if(index < object->elementCount)
             {
-                ref = &object->element[index].value;
+                ref = &object->element[index].elemvalue;
                 if(ref->check == 1)
                     return lookupChain || object == self || (ref->flags & flags) ? ref : NULL;
             }
@@ -834,7 +837,7 @@ static eccvalue_t* element(eccobject_t* self, uint32_t index, eccvalflag_t flags
     return NULL;
 }
 
-static eccvalue_t* property(eccobject_t* self, eccvalue_t property, eccvalflag_t flags)
+eccvalue_t* property(eccobject_t* self, eccvalue_t property, eccvalflag_t flags)
 {
     eccindexkey_t key;
     uint32_t index = getIndexOrKey(property, &key);
@@ -845,7 +848,7 @@ static eccvalue_t* property(eccobject_t* self, eccvalue_t property, eccvalflag_t
         return member(self, key, flags);
 }
 
-static eccvalue_t getValue(eccstate_t* context, eccobject_t* self, eccvalue_t* ref)
+eccvalue_t getValue(eccstate_t* context, eccobject_t* self, eccvalue_t* ref)
 {
     if(!ref)
         return ECCValConstUndefined;
@@ -866,20 +869,20 @@ static eccvalue_t getValue(eccstate_t* context, eccobject_t* self, eccvalue_t* r
     return *ref;
 }
 
-static eccvalue_t getMember(eccstate_t* context, eccobject_t* self, eccindexkey_t key)
+eccvalue_t getMember(eccstate_t* context, eccobject_t* self, eccindexkey_t key)
 {
     return getValue(context, self, member(self, key, 0));
 }
 
-static eccvalue_t getElement(eccstate_t* context, eccobject_t* self, uint32_t index)
+eccvalue_t getElement(eccstate_t* context, eccobject_t* self, uint32_t index)
 {
-    if(self->type == &ECC_Type_String)
-        return ECCNSString.valueAtIndex((eccobjstring_t*)self, index);
+    if(self->type == &ECCObjTypeString)
+        return io_libecc_String.valueAtIndex((eccobjstring_t*)self, index);
     else
         return getValue(context, self, element(self, index, 0));
 }
 
-static eccvalue_t getProperty(eccstate_t* context, eccobject_t* self, eccvalue_t property)
+eccvalue_t getProperty(eccstate_t* context, eccobject_t* self, eccvalue_t property)
 {
     eccindexkey_t key;
     uint32_t index = getIndexOrKey(property, &key);
@@ -890,7 +893,7 @@ static eccvalue_t getProperty(eccstate_t* context, eccobject_t* self, eccvalue_t
         return getMember(context, self, key);
 }
 
-static eccvalue_t putValue(eccstate_t* context, eccobject_t* self, eccvalue_t* ref, eccvalue_t value)
+eccvalue_t putValue(eccstate_t* context, eccobject_t* self, eccvalue_t* ref, eccvalue_t value)
 {
     if(ref->flags & ECC_VALFLAG_ACCESSOR)
     {
@@ -922,7 +925,7 @@ static eccvalue_t putValue(eccstate_t* context, eccobject_t* self, eccvalue_t* r
     return *ref = value;
 }
 
-static eccvalue_t putMember(eccstate_t* context, eccobject_t* self, eccindexkey_t key, eccvalue_t value)
+eccvalue_t putMember(eccstate_t* context, eccobject_t* self, eccindexkey_t key, eccvalue_t value)
 {
     eccvalue_t* ref;
 
@@ -933,16 +936,16 @@ static eccvalue_t putMember(eccstate_t* context, eccobject_t* self, eccindexkey_
     else if(self->prototype && (ref = member(self->prototype, key, 0)))
     {
         if(ref->flags & ECC_VALFLAG_READONLY)
-            ECCNSContext.typeError(context, ECCNSChars.create("'%.*s' is readonly", ECCNSKey.textOf(key)->length, ECCNSKey.textOf(key)->bytes));
+            ECCNSContext.typeError(context, io_libecc_Chars.create("'%.*s' is readonly", io_libecc_Key.textOf(key)->length, io_libecc_Key.textOf(key)->bytes));
     }
 
     if(self->flags & ECC_OBJFLAG_SEALED)
-        ECCNSContext.typeError(context, ECCNSChars.create("object is not extensible"));
+        ECCNSContext.typeError(context, io_libecc_Chars.create("object is not extensible"));
 
     return *addMember(self, key, value, 0);
 }
 
-static eccvalue_t putElement(eccstate_t* context, eccobject_t* self, uint32_t index, eccvalue_t value)
+eccvalue_t putElement(eccstate_t* context, eccobject_t* self, uint32_t index, eccvalue_t value)
 {
     eccvalue_t* ref;
 
@@ -963,16 +966,16 @@ static eccvalue_t putElement(eccstate_t* context, eccobject_t* self, uint32_t in
     else if(self->prototype && (ref = element(self, index, 0)))
     {
         if(ref->flags & ECC_VALFLAG_READONLY)
-            ECCNSContext.typeError(context, ECCNSChars.create("'%u' is readonly", index, index));
+            ECCNSContext.typeError(context, io_libecc_Chars.create("'%u' is readonly", index, index));
     }
 
     if(self->flags & ECC_OBJFLAG_SEALED)
-        ECCNSContext.typeError(context, ECCNSChars.create("object is not extensible"));
+        ECCNSContext.typeError(context, io_libecc_Chars.create("object is not extensible"));
 
     return *addElement(self, index, value, 0);
 }
 
-static eccvalue_t putProperty(eccstate_t* context, eccobject_t* self, eccvalue_t primitive, eccvalue_t value)
+eccvalue_t putProperty(eccstate_t* context, eccobject_t* self, eccvalue_t primitive, eccvalue_t value)
 {
     eccindexkey_t key;
     uint32_t index = getIndexOrKey(primitive, &key);
@@ -983,7 +986,7 @@ static eccvalue_t putProperty(eccstate_t* context, eccobject_t* self, eccvalue_t
         return putMember(context, self, key, value);
 }
 
-static eccvalue_t* addMember(eccobject_t* self, eccindexkey_t key, eccvalue_t value, eccvalflag_t flags)
+eccvalue_t* addMember(eccobject_t* self, eccindexkey_t key, eccvalue_t value, eccvalflag_t flags)
 {
     uint32_t slot = 1;
     int depth = 0;
@@ -1031,7 +1034,7 @@ static eccvalue_t* addMember(eccobject_t* self, eccindexkey_t key, eccvalue_t va
     return &self->hashmap[slot].value;
 }
 
-static eccvalue_t* addElement(eccobject_t* self, uint32_t index, eccvalue_t value, eccvalflag_t flags)
+eccvalue_t* addElement(eccobject_t* self, uint32_t index, eccvalue_t value, eccvalflag_t flags)
 {
     eccvalue_t* ref;
 
@@ -1045,7 +1048,7 @@ static eccvalue_t* addElement(eccobject_t* self, uint32_t index, eccvalue_t valu
     if(index > io_libecc_object_ElementMax)
         return addMember(self, keyOfIndex(index, 1), value, flags);
 
-    ref = &self->element[index].value;
+    ref = &self->element[index].elemvalue;
 
     value.flags |= flags;
     *ref = value;
@@ -1053,7 +1056,7 @@ static eccvalue_t* addElement(eccobject_t* self, uint32_t index, eccvalue_t valu
     return ref;
 }
 
-static eccvalue_t* addProperty(eccobject_t* self, eccvalue_t primitive, eccvalue_t value, eccvalflag_t flags)
+eccvalue_t* addProperty(eccobject_t* self, eccvalue_t primitive, eccvalue_t value, eccvalflag_t flags)
 {
     eccindexkey_t key;
     uint32_t index = getIndexOrKey(primitive, &key);
@@ -1064,7 +1067,7 @@ static eccvalue_t* addProperty(eccobject_t* self, eccvalue_t primitive, eccvalue
         return addMember(self, key, value, flags);
 }
 
-static int deleteMember(eccobject_t* self, eccindexkey_t member)
+int deleteMember(eccobject_t* self, eccindexkey_t member)
 {
     eccobject_t* object = self;
     uint32_t slot, refSlot;
@@ -1087,7 +1090,7 @@ static int deleteMember(eccobject_t* self, eccindexkey_t member)
     return 1;
 }
 
-static int deleteElement(eccobject_t* self, uint32_t index)
+int deleteElement(eccobject_t* self, uint32_t index)
 {
     assert(self);
 
@@ -1102,7 +1105,7 @@ static int deleteElement(eccobject_t* self, uint32_t index)
 
     if(index < self->elementCount)
     {
-        if(self->element[index].value.flags & ECC_VALFLAG_SEALED)
+        if(self->element[index].elemvalue.flags & ECC_VALFLAG_SEALED)
             return 0;
 
         memset(&self->element[index], 0, sizeof(*self->element));
@@ -1111,7 +1114,7 @@ static int deleteElement(eccobject_t* self, uint32_t index)
     return 1;
 }
 
-static int deleteProperty(eccobject_t* self, eccvalue_t primitive)
+int deleteProperty(eccobject_t* self, eccvalue_t primitive)
 {
     eccindexkey_t key;
     uint32_t index = getIndexOrKey(primitive, &key);
@@ -1122,7 +1125,7 @@ static int deleteProperty(eccobject_t* self, eccvalue_t primitive)
         return deleteMember(self, key);
 }
 
-static void packValue(eccobject_t* self)
+void packValue(eccobject_t* self)
 {
     ecchashmap_t data;
     uint32_t index = 2, valueIndex = 2, copyIndex, slot;
@@ -1171,7 +1174,7 @@ static void packValue(eccobject_t* self)
     }
 }
 
-static void stripMap(eccobject_t* self)
+void stripMap(eccobject_t* self)
 {
     uint32_t index = 2;
 
@@ -1186,7 +1189,7 @@ static void stripMap(eccobject_t* self)
     memset(self->hashmap + 1, 0, sizeof(*self->hashmap));
 }
 
-static void reserveSlots(eccobject_t* self, uint16_t slots)
+void reserveSlots(eccobject_t* self, uint16_t slots)
 {
     int need = (slots * 4) - (self->hashmapCapacity - self->hashmapCount);
 
@@ -1201,7 +1204,7 @@ static void reserveSlots(eccobject_t* self, uint16_t slots)
     }
 }
 
-static int resizeElement(eccobject_t* self, uint32_t size)
+int resizeElement(eccobject_t* self, uint32_t size)
 {
     uint32_t capacity;
 
@@ -1258,7 +1261,7 @@ static int resizeElement(eccobject_t* self, uint32_t size)
                 hashmap = &self->hashmap[h];
                 if(hashmap->value.check == 1)
                 {
-                    index = ECCNSLexer.scanElement(*ECCNSKey.textOf(hashmap->value.key));
+                    index = io_libecc_Lexer.scanElement(*io_libecc_Key.textOf(hashmap->value.key));
                     if(hashmap->value.check == 1 && (hashmap->value.flags & ECC_VALFLAG_SEALED) && index >= until)
                         until = index + 1;
                 }
@@ -1268,7 +1271,7 @@ static int resizeElement(eccobject_t* self, uint32_t size)
             {
                 hashmap = &self->hashmap[h];
                 if(hashmap->value.check == 1)
-                    if(ECCNSLexer.scanElement(*ECCNSKey.textOf(hashmap->value.key)) >= until)
+                    if(io_libecc_Lexer.scanElement(*io_libecc_Key.textOf(hashmap->value.key)) >= until)
                         self->hashmap[h].value.check = 0;
             }
 
@@ -1283,7 +1286,7 @@ static int resizeElement(eccobject_t* self, uint32_t size)
         for(e = size; e < self->elementCount; ++e)
         {
             element = &self->element[e];
-            if(element->value.check == 1 && (element->value.flags & ECC_VALFLAG_SEALED) && e >= until)
+            if(element->elemvalue.check == 1 && (element->elemvalue.flags & ECC_VALFLAG_SEALED) && e >= until)
                 until = e + 1;
         }
 
@@ -1300,7 +1303,7 @@ static int resizeElement(eccobject_t* self, uint32_t size)
     return 0;
 }
 
-static void populateElementWithCList(eccobject_t* self, uint32_t count, const char* list[])
+void populateElementWithCList(eccobject_t* self, uint32_t count, const char* list[])
 {
     double binary;
     char* end;
@@ -1318,18 +1321,18 @@ static void populateElementWithCList(eccobject_t* self, uint32_t count, const ch
         binary = strtod(list[index], &end);
 
         if(end == list[index] + length)
-            self->element[index].value = ECCNSValue.binary(binary);
+            self->element[index].elemvalue = ECCNSValue.binary(binary);
         else
         {
-            ecccharbuffer_t* chars = ECCNSChars.createSized(length);
+            ecccharbuffer_t* chars = io_libecc_Chars.createSized(length);
             memcpy(chars->bytes, list[index], length);
 
-            self->element[index].value = ECCNSValue.chars(chars);
+            self->element[index].elemvalue = ECCNSValue.chars(chars);
         }
     }
 }
 
-static eccvalue_t toString(eccstate_t* context)
+eccvalue_t toString(eccstate_t* context)
 {
     if(context->thisvalue.type == ECC_VALTYPE_NULL)
         return ECCNSValue.text(&ECC_ConstString_NullType);
@@ -1349,7 +1352,7 @@ static eccvalue_t toString(eccstate_t* context)
     return ECCValConstUndefined;
 }
 
-static void dumpTo(eccobject_t* self, FILE* file)
+void dumpTo(eccobject_t* self, FILE* file)
 {
     uint32_t index, count;
     int isArray;
@@ -1362,15 +1365,15 @@ static void dumpTo(eccobject_t* self, FILE* file)
 
     for(index = 0, count = elementCount(self); index < count; ++index)
     {
-        if(self->element[index].value.check == 1)
+        if(self->element[index].elemvalue.check == 1)
         {
             if(!isArray)
                 fprintf(file, "%d: ", (int)index);
 
-            if(self->element[index].value.type == ECC_VALTYPE_OBJECT && self->element[index].value.data.object == self)
+            if(self->element[index].elemvalue.type == ECC_VALTYPE_OBJECT && self->element[index].elemvalue.data.object == self)
                 fprintf(file, "this");
             else
-                ECCNSValue.dumpTo(self->element[index].value, file);
+                ECCNSValue.dumpTo(self->element[index].elemvalue, file);
 
             fprintf(file, ", ");
         }
@@ -1383,7 +1386,7 @@ static void dumpTo(eccobject_t* self, FILE* file)
             if(self->hashmap[index].value.check == 1)
             {
                 fprintf(stderr, "'");
-                ECCNSKey.dumpTo(self->hashmap[index].value.key, file);
+                io_libecc_Key.dumpTo(self->hashmap[index].value.key, file);
                 fprintf(file, "': ");
 
                 if(self->hashmap[index].value.type == ECC_VALTYPE_OBJECT && self->hashmap[index].value.data.object == self)

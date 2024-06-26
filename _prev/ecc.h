@@ -24,26 +24,11 @@
 #include <string.h>
 #include <time.h>
 
-#if __GNUC__
-    #define io_libecc_ecc_noreturn __attribute__((noreturn))
-#else
-    #define io_libecc_ecc_noreturn
-#endif
-
-#if __GNUC__ && _WIN32 && !_MSC_VER
-    /* use ebp frame */
-    #define io_libecc_ecc_useframe __attribute__((optimize("no-omit-frame-pointer")))
-#else
-    #define io_libecc_ecc_useframe
-#endif
-
 #if(__STDC_VERSION__ < 199901L)
     #ifdef __GNUC__
         #define inline __inline__
-        #define restrict __restrict__
     #else
         #define inline static
-        #define restrict
     #endif
 #endif
 
@@ -62,9 +47,8 @@
 #endif
 
 
-struct ECCNSJSON;
+struct io_libecc_JSON;
 struct io_libecc_Math;
-struct io_libecc_env_Internal;
 
 struct eccpseudonschars_t;
 struct eccpseudonscontext_t;
@@ -448,7 +432,7 @@ struct eccvalue_t
         char buffer[8];
         eccindexkey_t key;
         const ecctextstring_t* text;
-        ecccharbuffer_t* chars;
+        ecccharbuffer_t* charbufdata;
         eccobject_t* object;
         eccobjerror_t* error;
         eccobjstring_t* string;
@@ -541,12 +525,12 @@ struct eccstate_t
 
 struct eccpseudonscontext_t
 {
-    void (*rangeError)(eccstate_t*, ecccharbuffer_t*) __attribute__((noreturn));
-    void (*referenceError)(eccstate_t*, ecccharbuffer_t*) __attribute__((noreturn));
-    void (*syntaxError)(eccstate_t*, ecccharbuffer_t*) __attribute__((noreturn));
-    void (*typeError)(eccstate_t*, ecccharbuffer_t*) __attribute__((noreturn));
-    void (*uriError)(eccstate_t*, ecccharbuffer_t*) __attribute__((noreturn));
-    void (*doThrow)(eccstate_t*, eccvalue_t) __attribute__((noreturn));
+    void (*rangeError)(eccstate_t*, ecccharbuffer_t*);
+    void (*referenceError)(eccstate_t*, ecccharbuffer_t*);
+    void (*syntaxError)(eccstate_t*, ecccharbuffer_t*);
+    void (*typeError)(eccstate_t*, ecccharbuffer_t*);
+    void (*uriError)(eccstate_t*, ecccharbuffer_t*);
+    void (*doThrow)(eccstate_t*, eccvalue_t);
     eccvalue_t (*callFunction)(eccstate_t*, eccobjscriptfunction_t* function, eccvalue_t thisval, int argumentCount, ...);
     int (*argumentCount)(eccstate_t*);
     eccvalue_t (*argument)(eccstate_t*, int argumentIndex);
@@ -569,7 +553,7 @@ struct eccpseudonscontext_t
 
 struct eccappendbuffer_t
 {
-    ecccharbuffer_t* value;
+    ecccharbuffer_t* charbufvalue;
     char buffer[9];
     uint8_t units;
 };
@@ -612,7 +596,7 @@ struct eccobjinterntype_t
 
 union eccobjelement_t
 {
-    eccvalue_t value;
+    eccvalue_t elemvalue;
 };
 
 union ecchashmap_t
@@ -642,8 +626,8 @@ struct eccpseudonsobject_t
     eccobject_t* (*create)(eccobject_t* prototype);
     eccobject_t* (*createSized)(eccobject_t* prototype, uint16_t size);
     eccobject_t* (*createTyped)(const eccobjinterntype_t* type);
-    eccobject_t* (*initialize)(eccobject_t* restrict, eccobject_t* restrict prototype);
-    eccobject_t* (*initializeSized)(eccobject_t* restrict, eccobject_t* restrict prototype, uint16_t size);
+    eccobject_t* (*initialize)(eccobject_t*, eccobject_t* prototype);
+    eccobject_t* (*initializeSized)(eccobject_t*, eccobject_t* prototype, uint16_t size);
     eccobject_t* (*finalize)(eccobject_t*);
     eccobject_t* (*copy)(const eccobject_t* original);
     void (*destroy)(eccobject_t*);
@@ -817,7 +801,7 @@ struct eccpseudonsfunction_t
     const eccobjscriptfunction_t identity;
 };
 
-struct ECCNSJSON
+struct io_libecc_JSON
 {
     char empty;
 };
@@ -826,7 +810,7 @@ struct eccpseudonsjson_t
 {
     void (*setup)(void);
     void (*teardown)(void);
-    const struct ECCNSJSON identity;
+    const struct io_libecc_JSON identity;
 };
 
 struct io_libecc_Math
@@ -887,7 +871,6 @@ struct eccpseudonsglobal_t
 
 struct eccenvidentity_t
 {
-    struct io_libecc_env_Internal* internal;
 };
 
 struct eccpseudonsenv_t
@@ -908,11 +891,11 @@ struct eccioinput_t
     char name[4096];
     uint32_t length;
     char* bytes;
-    uint16_t lineCount;
-    uint16_t lineCapacity;
+    uint64_t lineCount;
+    uint64_t lineCapacity;
     uint32_t* lines;
     eccvalue_t* attached;
-    uint16_t attachedCount;
+    uint64_t attachedCount;
 };
 
 struct eccpseudonsinput_t
@@ -955,8 +938,8 @@ struct eccpseudonsecc_t
     void (*evalInputWithContext)(eccscriptcontext_t*, eccioinput_t*, eccstate_t* context);
     jmp_buf* (*pushEnv)(eccscriptcontext_t*);
     void (*popEnv)(eccscriptcontext_t*);
-    void (*jmpEnv)(eccscriptcontext_t*, eccvalue_t value) __attribute__((noreturn));
-    void (*fatal)(const char* format, ...) __attribute__((noreturn));
+    void (*jmpEnv)(eccscriptcontext_t*, eccvalue_t value);
+    void (*fatal)(const char* format, ...);
     eccioinput_t* (*findInput)(eccscriptcontext_t* self, ecctextstring_t text);
     void (*printTextInput)(eccscriptcontext_t*, ecctextstring_t text, int fullLine);
     void (*garbageCollect)(eccscriptcontext_t*);
@@ -968,7 +951,7 @@ struct eccastlexer_t
 {
     eccioinput_t* input;
     uint32_t offset;
-    eccvalue_t value;
+    eccvalue_t parsedvalue;
     ecctextstring_t text;
     int didLineBreak;
     int allowRegex;
@@ -1199,9 +1182,8 @@ struct eccpseudonspool_t
 };
 
 extern const int io_libecc_env_print_max;
-extern const uint32_t io_libecc_object_ElementMax;
 extern uint32_t io_libecc_ecc_version;
-
+extern const uint32_t io_libecc_object_ElementMax;
 
 extern const ecctextstring_t ECC_ConstString_Undefined;
 extern const ecctextstring_t ECC_ConstString_Null;
@@ -1244,32 +1226,32 @@ extern const ecctextstring_t ECC_ConstString_UriErrorName;
 extern const ecctextstring_t ECC_ConstString_InputErrorName;
 extern const ecctextstring_t ECC_ConstString_EvalErrorName;
 
-extern eccindexkey_t ECC_ConstKey_none;
-extern eccindexkey_t ECC_ConstKey_prototype;
-extern eccindexkey_t ECC_ConstKey_constructor;
-extern eccindexkey_t ECC_ConstKey_length;
-extern eccindexkey_t ECC_ConstKey_arguments;
-extern eccindexkey_t ECC_ConstKey_callee;
-extern eccindexkey_t ECC_ConstKey_name;
-extern eccindexkey_t ECC_ConstKey_message;
-extern eccindexkey_t ECC_ConstKey_toString;
-extern eccindexkey_t ECC_ConstKey_valueOf;
-extern eccindexkey_t ECC_ConstKey_eval;
-extern eccindexkey_t ECC_ConstKey_value;
-extern eccindexkey_t ECC_ConstKey_writable;
-extern eccindexkey_t ECC_ConstKey_enumerable;
-extern eccindexkey_t ECC_ConstKey_configurable;
-extern eccindexkey_t ECC_ConstKey_get;
-extern eccindexkey_t ECC_ConstKey_set;
-extern eccindexkey_t ECC_ConstKey_join;
-extern eccindexkey_t ECC_ConstKey_toISOString;
-extern eccindexkey_t ECC_ConstKey_input;
-extern eccindexkey_t ECC_ConstKey_index;
-extern eccindexkey_t ECC_ConstKey_lastIndex;
-extern eccindexkey_t ECC_ConstKey_global;
-extern eccindexkey_t ECC_ConstKey_ignoreCase;
-extern eccindexkey_t ECC_ConstKey_multiline;
-extern eccindexkey_t ECC_ConstKey_source;
+extern eccindexkey_t io_libecc_key_none;
+extern eccindexkey_t io_libecc_key_prototype;
+extern eccindexkey_t io_libecc_key_constructor;
+extern eccindexkey_t io_libecc_key_length;
+extern eccindexkey_t io_libecc_key_arguments;
+extern eccindexkey_t io_libecc_key_callee;
+extern eccindexkey_t io_libecc_key_name;
+extern eccindexkey_t io_libecc_key_message;
+extern eccindexkey_t io_libecc_key_toString;
+extern eccindexkey_t io_libecc_key_valueOf;
+extern eccindexkey_t io_libecc_key_eval;
+extern eccindexkey_t io_libecc_key_value;
+extern eccindexkey_t io_libecc_key_writable;
+extern eccindexkey_t io_libecc_key_enumerable;
+extern eccindexkey_t io_libecc_key_configurable;
+extern eccindexkey_t io_libecc_key_get;
+extern eccindexkey_t io_libecc_key_set;
+extern eccindexkey_t io_libecc_key_join;
+extern eccindexkey_t io_libecc_key_toISOString;
+extern eccindexkey_t io_libecc_key_input;
+extern eccindexkey_t io_libecc_key_index;
+extern eccindexkey_t io_libecc_key_lastIndex;
+extern eccindexkey_t io_libecc_key_global;
+extern eccindexkey_t io_libecc_key_ignoreCase;
+extern eccindexkey_t io_libecc_key_multiline;
+extern eccindexkey_t io_libecc_key_source;
 
 extern const eccvalue_t ECCValConstNone;
 extern const eccvalue_t ECCValConstUndefined;
@@ -1277,54 +1259,54 @@ extern const eccvalue_t ECCValConstTrue;
 extern const eccvalue_t ECCValConstFalse;
 extern const eccvalue_t ECCValConstNull;
 
-extern eccobject_t* ECC_Prototype_Object;
-extern eccobject_t* ECC_Prototype_Regexp;
-extern eccobject_t* ECC_Prototype_Arguments;
-extern eccobject_t* ECC_Prototype_Array;
-extern eccobject_t* ECC_Prototype_Boolean;
-extern eccobject_t* ECC_Prototype_Date;
-extern eccobject_t* ECC_Prototype_Error;
-extern eccobject_t* ECC_Prototype_Function;
-extern eccobject_t* ECC_Prototype_JSONObject;
-extern eccobject_t* ECC_Prototype_MathObject;
-extern eccobject_t* ECC_Prototype_Number;
-extern eccobject_t* ECC_Prototype_String;
-extern eccobject_t* ECC_Prototype_ErrorRangeError;
-extern eccobject_t* ECC_Prototype_ErrorReferenceError;
-extern eccobject_t* ECC_Prototype_ErrorSyntaxError;
-extern eccobject_t* ECC_Prototype_ErrorTypeError;
-extern eccobject_t* ECC_Prototype_ErrorUriError;
-extern eccobject_t* ECC_Prototype_ErrorEvalError;
+extern eccobject_t* io_libecc_object_prototype;
+extern eccobject_t* io_libecc_regexp_prototype;
+extern eccobject_t* io_libecc_arguments_prototype;
+extern eccobject_t* io_libecc_array_prototype;
+extern eccobject_t* io_libecc_boolean_prototype;
+extern eccobject_t* io_libecc_date_prototype;
+extern eccobject_t* io_libecc_error_prototype;
+extern eccobject_t* io_libecc_error_rangePrototype;
+extern eccobject_t* io_libecc_error_referencePrototype;
+extern eccobject_t* io_libecc_error_syntaxPrototype;
+extern eccobject_t* io_libecc_error_typePrototype;
+extern eccobject_t* io_libecc_error_uriPrototype;
+extern eccobject_t* io_libecc_error_evalPrototype;
+extern eccobject_t* io_libecc_string_prototype;
+extern eccobject_t* io_libecc_function_prototype;
+extern eccobject_t* io_libecc_json_object;
+extern eccobject_t* io_libecc_math_object;
+extern eccobject_t* io_libecc_number_prototype;
 
-extern eccobjscriptfunction_t* ECC_CtorFunc_String;
-extern eccobjscriptfunction_t* ECC_CtorFunc_Number;
-extern eccobjscriptfunction_t* ECC_CtorFunc_Function;
-extern eccobjscriptfunction_t* ECC_CtorFunc_Object;
-extern eccobjscriptfunction_t* ECC_CtorFunc_Regexp;
-extern eccobjscriptfunction_t* ECC_CtorFunc_Array;
-extern eccobjscriptfunction_t* ECC_CtorFunc_Boolean;
-extern eccobjscriptfunction_t* ECC_CtorFunc_Date;
-extern eccobjscriptfunction_t* ECC_CtorFunc_Error;
-extern eccobjscriptfunction_t* ECC_CtorFunc_ErrorRangeError;
-extern eccobjscriptfunction_t* ECC_CtorFunc_ErrorReferenceError;
-extern eccobjscriptfunction_t* ECC_CtorFunc_ErrorSyntaxError;
-extern eccobjscriptfunction_t* ECC_CtorFunc_ErrorTypeError;
-extern eccobjscriptfunction_t* ECC_CtorFunc_ErrorUriError;
-extern eccobjscriptfunction_t* ECC_CtorFunc_ErrorEvalError;
+extern eccobjscriptfunction_t* io_libecc_date_constructor;
+extern eccobjscriptfunction_t* io_libecc_error_constructor;
+extern eccobjscriptfunction_t* io_libecc_error_rangeConstructor;
+extern eccobjscriptfunction_t* io_libecc_error_referenceConstructor;
+extern eccobjscriptfunction_t* io_libecc_error_syntaxConstructor;
+extern eccobjscriptfunction_t* io_libecc_error_typeConstructor;
+extern eccobjscriptfunction_t* io_libecc_error_uriConstructor;
+extern eccobjscriptfunction_t* io_libecc_error_evalConstructor;
+extern eccobjscriptfunction_t* io_libecc_function_constructor;
+extern eccobjscriptfunction_t* io_libecc_number_constructor;
+extern eccobjscriptfunction_t* io_libecc_string_constructor;
+extern eccobjscriptfunction_t* io_libecc_object_constructor;
+extern eccobjscriptfunction_t* io_libecc_regexp_constructor;
+extern eccobjscriptfunction_t* io_libecc_array_constructor;
+extern eccobjscriptfunction_t* io_libecc_boolean_constructor;
 
-extern const eccobjinterntype_t ECC_Type_Regexp;
-extern const eccobjinterntype_t ECC_Type_Arguments;
-extern const eccobjinterntype_t ECC_Type_Array;
-extern const eccobjinterntype_t ECC_Type_Boolean;
-extern const eccobjinterntype_t ECC_Type_Date;
-extern const eccobjinterntype_t ECC_Type_Error;
-extern const eccobjinterntype_t ECC_Type_Function;
-extern const eccobjinterntype_t ECC_Type_Json;
-extern const eccobjinterntype_t ECC_Type_Math;
-extern const eccobjinterntype_t ECC_Type_Number;
-extern const eccobjinterntype_t ECC_Type_String;
-extern const eccobjinterntype_t ECC_Type_Global;
-extern const eccobjinterntype_t ECC_Type_Object;
+extern const eccobjinterntype_t ECCObjTypeRegexp;
+extern const eccobjinterntype_t ECCObjTypeArguments;
+extern const eccobjinterntype_t ECCObjTypeArray;
+extern const eccobjinterntype_t ECCObjTypeBoolean;
+extern const eccobjinterntype_t ECCObjTypeDate;
+extern const eccobjinterntype_t ECCObjTypeError;
+extern const eccobjinterntype_t ECCObjTypeFunction;
+extern const eccobjinterntype_t ECCObjTypeObject;
+extern const eccobjinterntype_t ECCObjTypeJson;
+extern const eccobjinterntype_t ECCObjTypeMath;
+extern const eccobjinterntype_t ECCObjTypeNumber;
+extern const eccobjinterntype_t ECCObjTypeString;
+extern const eccobjinterntype_t ECCObjTypeGlobal;
 
 /* 'namespaces' */
 extern const struct eccpseudonsvalue_t ECCNSValue;
@@ -1334,23 +1316,23 @@ extern const struct eccpseudonstext_t ECCNSText;
 extern const struct eccpseudonscontext_t ECCNSContext;
 extern const struct eccpseudonsarguments_t ECCNSArguments;
 extern const struct eccpseudonsobject_t ECCNSObject;
-extern const struct eccpseudonsfunction_t ECCNSFunction;
 
-extern const struct eccpseudonskey_t ECCNSKey;
-extern const struct eccpseudonschars_t ECCNSChars;
-extern const struct eccpseudonsregexp_t ECCNSRegExp;
-extern const struct eccpseudonsarray_t ECCNSArray;
-extern const struct eccpseudonsboolean_t ECCNSBool;
-extern const struct eccpseudonsdate_t ECCNSDate;
-extern const struct eccpseudonserror_t ECCNSError;
-extern const struct eccpseudonsjson_t ECCNSJSON;
+extern const struct eccpseudonskey_t io_libecc_Key;
+extern const struct eccpseudonschars_t io_libecc_Chars;
+extern const struct eccpseudonsregexp_t io_libecc_RegExp;
+extern const struct eccpseudonsarray_t io_libecc_Array;
+extern const struct eccpseudonsboolean_t io_libecc_Boolean;
+extern const struct eccpseudonsdate_t io_libecc_Date;
+extern const struct eccpseudonserror_t io_libecc_Error;
+extern const struct eccpseudonsfunction_t io_libecc_Function;
+extern const struct eccpseudonsjson_t io_libecc_JSON;
 extern const struct eccpseudonsmath_t io_libecc_Math;
-extern const struct eccpseudonsnumber_t ECCNSNumber;
-extern const struct eccpseudonsstring_t ECCNSString;
-extern const struct eccpseudonsglobal_t ECCNSGlobal;
-extern const struct eccpseudonsinput_t ECCNSInput;
-extern const struct eccpseudonslexer_t ECCNSLexer;
-extern const struct eccpseudonsop_t ECCNSOperand;
-extern const struct eccpseudonsoplist_t ECCNSOpList;
-extern const struct eccpseudonsparser_t ECCNSParser;
-extern const struct eccpseudonspool_t ECCNSMemoryPool;
+extern const struct eccpseudonsnumber_t io_libecc_Number;
+extern const struct eccpseudonsstring_t io_libecc_String;
+extern const struct eccpseudonsglobal_t io_libecc_Global;
+extern const struct eccpseudonsinput_t io_libecc_Input;
+extern const struct eccpseudonslexer_t io_libecc_Lexer;
+extern const struct eccpseudonsop_t io_libecc_Op;
+extern const struct eccpseudonsoplist_t io_libecc_OpList;
+extern const struct eccpseudonsparser_t io_libecc_Parser;
+extern const struct eccpseudonspool_t io_libecc_Pool;

@@ -26,7 +26,7 @@ struct eccjsonparser_t
 
 struct eccjsonstringify_t
 {
-    eccappendbuffer_t chars;
+    eccappendbuffer_t targetchars;
     char spaces[11];
     int level;
     eccobject_t* filter;
@@ -39,29 +39,13 @@ struct eccjsonstringify_t
     const eccoperand_t* ops;
 };
 
-static eccvalue_t error(eccjsonparser_t *parse, int length, ecccharbuffer_t *chars);
-static ecctextstring_t errorOfLine(eccjsonparser_t *parse);
-static ecctextchar_t nextc(eccjsonparser_t *parse);
-static ecctextstring_t string(eccjsonparser_t *parse);
-static eccvalue_t literal(eccjsonparser_t *parse);
-static eccvalue_t object(eccjsonparser_t *parse);
-static eccvalue_t array(eccjsonparser_t *parse);
-static eccvalue_t json(eccjsonparser_t *parse);
-static eccvalue_t revive(eccjsonparser_t *parse, eccvalue_t thisval, eccvalue_t property, eccvalue_t value);
-static eccvalue_t walker(eccjsonparser_t *parse, eccvalue_t thisval, eccvalue_t property, eccvalue_t value);
-static eccvalue_t jsonParse(eccstate_t *context);
-static eccvalue_t replace(eccjsonstringify_t *stringify, eccvalue_t thisval, eccvalue_t property, eccvalue_t value);
-static int stringifyValue(eccjsonstringify_t *stringify, eccvalue_t thisval, eccvalue_t property, eccvalue_t value, int isArray, int addComa);
-static eccvalue_t jsonStringify(eccstate_t *context);
-static void setup(void);
-static void teardown(void);
-
-
-const eccobjinterntype_t ECC_Type_Json = {
+const eccobjinterntype_t ECCObjTypeJson = {
     .text = &ECC_ConstString_JsonType,
 };
 
-const struct eccpseudonsjson_t ECCNSJSON = {
+static void setup(void);
+static void teardown(void);
+const struct eccpseudonsjson_t io_libecc_JSON = {
     setup,
     teardown,
     {}
@@ -69,7 +53,7 @@ const struct eccpseudonsjson_t ECCNSJSON = {
 
 static eccvalue_t error(eccjsonparser_t* parse, int length, ecccharbuffer_t* chars)
 {
-    return ECCNSValue.error(ECCNSError.syntaxError(ECCNSText.make(parse->text.bytes + (length < 0 ? length : 0), abs(length)), chars));
+    return ECCNSValue.error(io_libecc_Error.syntaxError(ECCNSText.make(parse->text.bytes + (length < 0 ? length : 0), abs(length)), chars));
 }
 
 static ecctextstring_t errorOfLine(eccjsonparser_t* parse)
@@ -124,6 +108,9 @@ static ecctextstring_t string(eccjsonparser_t* parse)
     text.length = (int32_t)(parse->text.bytes - text.bytes - 1);
     return text;
 }
+
+static eccvalue_t object(eccjsonparser_t* parse);
+static eccvalue_t array(eccjsonparser_t* parse);
 
 static eccvalue_t literal(eccjsonparser_t* parse)
 {
@@ -209,13 +196,13 @@ static eccvalue_t literal(eccjsonparser_t* parse)
             ECCNSText.advance(&parse->text, -c.units);
             text.length = (int32_t)(parse->text.bytes - text.bytes);
 
-            return ECCNSLexer.scanBinary(text, 0);
+            return io_libecc_Lexer.scanBinary(text, 0);
         }
 
         case '"':
         {
             ecctextstring_t text = string(parse);
-            return ECCNSValue.chars(ECCNSChars.createWithBytes(text.length, text.bytes));
+            return ECCNSValue.chars(io_libecc_Chars.createWithBytes(text.length, text.bytes));
             break;
         }
 
@@ -227,12 +214,12 @@ static eccvalue_t literal(eccjsonparser_t* parse)
             return array(parse);
             break;
     }
-    return error(parse, -c.units, ECCNSChars.create("unexpected '%.*s'", c.units, parse->text.bytes - c.units));
+    return error(parse, -c.units, io_libecc_Chars.create("unexpected '%.*s'", c.units, parse->text.bytes - c.units));
 }
 
 static eccvalue_t object(eccjsonparser_t* parse)
 {
-    eccobject_t* object = ECCNSObject.create(ECC_Prototype_Object);
+    eccobject_t* object = ECCNSObject.create(io_libecc_object_prototype);
     ecctextchar_t c;
     eccvalue_t value;
     eccindexkey_t key;
@@ -242,13 +229,13 @@ static eccvalue_t object(eccjsonparser_t* parse)
         for(;;)
         {
             if(c.codepoint != '"')
-                return error(parse, -c.units, ECCNSChars.create("expect property name"));
+                return error(parse, -c.units, io_libecc_Chars.create("expect property name"));
 
-            key = ECCNSKey.makeWithText(string(parse), ECC_INDEXFLAG_COPYONCREATE);
+            key = io_libecc_Key.makeWithText(string(parse), ECC_INDEXFLAG_COPYONCREATE);
 
             c = nextc(parse);
             if(c.codepoint != ':')
-                return error(parse, -c.units, ECCNSChars.create("expect colon"));
+                return error(parse, -c.units, io_libecc_Chars.create("expect colon"));
 
             value = literal(parse);
             if(value.type == ECC_VALTYPE_ERROR)
@@ -263,7 +250,7 @@ static eccvalue_t object(eccjsonparser_t* parse)
             else if(c.codepoint == ',')
                 c = nextc(parse);
             else
-                return error(parse, -c.units, ECCNSChars.create("unexpected '%.*s'", c.units, parse->text.bytes - c.units));
+                return error(parse, -c.units, io_libecc_Chars.create("unexpected '%.*s'", c.units, parse->text.bytes - c.units));
         }
 
     return ECCNSValue.object(object);
@@ -271,7 +258,7 @@ static eccvalue_t object(eccjsonparser_t* parse)
 
 static eccvalue_t array(eccjsonparser_t* parse)
 {
-    eccobject_t* object = ECCNSArray.create();
+    eccobject_t* object = io_libecc_Array.create();
     ecctextchar_t c;
     eccvalue_t value;
 
@@ -291,7 +278,7 @@ static eccvalue_t array(eccjsonparser_t* parse)
         if(c.codepoint == ']')
             break;
 
-        return error(parse, -c.units, ECCNSChars.create("unexpected '%.*s'", c.units, parse->text.bytes - c.units));
+        return error(parse, -c.units, io_libecc_Chars.create("unexpected '%.*s'", c.units, parse->text.bytes - c.units));
     }
     return ECCNSValue.object(object);
 }
@@ -305,7 +292,7 @@ static eccvalue_t json(eccjsonparser_t* parse)
     else if(c.codepoint == '[')
         return array(parse);
 
-    return error(parse, -c.units, ECCNSChars.create("expect { or ["));
+    return error(parse, -c.units, io_libecc_Chars.create("expect { or ["));
 }
 
 // MARK: - Static Members
@@ -343,8 +330,8 @@ static eccvalue_t revive(eccjsonparser_t* parse, eccvalue_t thisval, eccvalue_t 
 
     parse->context.ops = parse->ops;
     parse->context.thisvalue = thisval;
-    parse->arguments->element[0].value = property;
-    parse->arguments->element[1].value = value;
+    parse->arguments->element[0].elemvalue = property;
+    parse->arguments->element[1].elemvalue = value;
     return parse->context.ops->native(&parse->context);
 }
 
@@ -359,11 +346,11 @@ static eccvalue_t walker(eccjsonparser_t* parse, eccvalue_t thisval, eccvalue_t 
 
         for(index = 0, count = object->elementCount < io_libecc_object_ElementMax ? object->elementCount : io_libecc_object_ElementMax; index < count; ++index)
         {
-            if(object->element[index].value.check == 1)
+            if(object->element[index].elemvalue.check == 1)
             {
-                ECCNSChars.beginAppend(&chars);
-                ECCNSChars.append(&chars, "%d", index);
-                object->element[index].value = walker(parse, thisval, ECCNSChars.endAppend(&chars), object->element[index].value);
+                io_libecc_Chars.beginAppend(&chars);
+                io_libecc_Chars.append(&chars, "%d", index);
+                object->element[index].elemvalue = walker(parse, thisval, io_libecc_Chars.endAppend(&chars), object->element[index].elemvalue);
             }
         }
 
@@ -402,7 +389,7 @@ static eccvalue_t jsonParse(eccstate_t* context)
     if(result.type != ECC_VALTYPE_ERROR && parse.text.length)
     {
         ecctextchar_t c = ECCNSText.character(parse.text);
-        result = error(&parse, c.units, ECCNSChars.create("unexpected '%.*s'", c.units, parse.text.bytes));
+        result = error(&parse, c.units, io_libecc_Chars.create("unexpected '%.*s'", c.units, parse.text.bytes));
     }
 
     if(result.type == ECC_VALTYPE_ERROR)
@@ -481,8 +468,8 @@ static eccvalue_t replace(eccjsonstringify_t* stringify, eccvalue_t thisval, ecc
 
     stringify->context.ops = stringify->ops;
     stringify->context.thisvalue = thisval;
-    stringify->arguments->element[0].value = property;
-    stringify->arguments->element[1].value = value;
+    stringify->arguments->element[0].elemvalue = property;
+    stringify->arguments->element[1].elemvalue = value;
     return stringify->context.ops->native(&stringify->context);
 }
 
@@ -505,9 +492,9 @@ static int stringifyValue(eccjsonstringify_t* stringify, eccvalue_t thisval, ecc
 
             for(index = 0, count = object->elementCount < io_libecc_object_ElementMax ? object->elementCount : io_libecc_object_ElementMax; index < count; ++index)
             {
-                if(object->element[index].value.check == 1)
+                if(object->element[index].elemvalue.check == 1)
                 {
-                    if(ECCNSValue.isTrue(ECCNSValue.equals(&stringify->context, property, object->element[index].value)))
+                    if(ECCNSValue.isTrue(ECCNSValue.equals(&stringify->context, property, object->element[index].elemvalue)))
                     {
                         found = 1;
                         break;
@@ -521,17 +508,17 @@ static int stringifyValue(eccjsonstringify_t* stringify, eccvalue_t thisval, ecc
     }
 
     if(addComa)
-        ECCNSChars.append(&stringify->chars, ",%s", strlen(stringify->spaces) ? "\n" : "");
+        io_libecc_Chars.append(&stringify->targetchars, ",%s", strlen(stringify->spaces) ? "\n" : "");
 
     for(index = 0, count = stringify->level; index < count; ++index)
-        ECCNSChars.append(&stringify->chars, "%s", stringify->spaces);
+        io_libecc_Chars.append(&stringify->targetchars, "%s", stringify->spaces);
 
     if(!isArray)
-        ECCNSChars.append(&stringify->chars, "\"%.*s\":%s", ECCNSValue.stringLength(&property), ECCNSValue.stringBytes(&property),
+        io_libecc_Chars.append(&stringify->targetchars, "\"%.*s\":%s", ECCNSValue.stringLength(&property), ECCNSValue.stringBytes(&property),
                                strlen(stringify->spaces) ? " " : "");
 
     if(value.type == ECC_VALTYPE_FUNCTION || value.type == ECC_VALTYPE_UNDEFINED)
-        ECCNSChars.append(&stringify->chars, "null");
+        io_libecc_Chars.append(&stringify->targetchars, "null");
     else if(ECCNSValue.isObject(value))
     {
         eccobject_t* object = value.data.object;
@@ -540,16 +527,16 @@ static int stringifyValue(eccjsonstringify_t* stringify, eccvalue_t thisval, ecc
         const ecctextstring_t* strprop;
         int hasValue = 0;
 
-        ECCNSChars.append(&stringify->chars, "%s%s", subisarr ? "[" : "{", strlen(stringify->spaces) ? "\n" : "");
+        io_libecc_Chars.append(&stringify->targetchars, "%s%s", subisarr ? "[" : "{", strlen(stringify->spaces) ? "\n" : "");
         ++stringify->level;
 
         for(index = 0, count = object->elementCount < io_libecc_object_ElementMax ? object->elementCount : io_libecc_object_ElementMax; index < count; ++index)
         {
-            if(object->element[index].value.check == 1)
+            if(object->element[index].elemvalue.check == 1)
             {
-                ECCNSChars.beginAppend(&chars);
-                ECCNSChars.append(&chars, "%d", index);
-                hasValue |= stringifyValue(stringify, value, ECCNSChars.endAppend(&chars), object->element[index].value, subisarr, hasValue);
+                io_libecc_Chars.beginAppend(&chars);
+                io_libecc_Chars.append(&chars, "%d", index);
+                hasValue |= stringifyValue(stringify, value, io_libecc_Chars.endAppend(&chars), object->element[index].elemvalue, subisarr, hasValue);
             }
         }
 
@@ -559,22 +546,22 @@ static int stringifyValue(eccjsonstringify_t* stringify, eccvalue_t thisval, ecc
             {
                 if(object->hashmap[index].value.check == 1)
                 {
-                    strprop = ECCNSKey.textOf(object->hashmap[index].value.key);
+                    strprop = io_libecc_Key.textOf(object->hashmap[index].value.key);
                     hasValue |= stringifyValue(stringify, value, ECCNSValue.text(strprop), object->hashmap[index].value, subisarr, hasValue);
                 }
             }
         }
 
-        ECCNSChars.append(&stringify->chars, "%s", strlen(stringify->spaces) ? "\n" : "");
+        io_libecc_Chars.append(&stringify->targetchars, "%s", strlen(stringify->spaces) ? "\n" : "");
 
         --stringify->level;
         for(index = 0, count = stringify->level; index < count; ++index)
-            ECCNSChars.append(&stringify->chars, "%s", stringify->spaces);
+            io_libecc_Chars.append(&stringify->targetchars, "%s", stringify->spaces);
 
-        ECCNSChars.append(&stringify->chars, "%s", subisarr ? "]" : "}");
+        io_libecc_Chars.append(&stringify->targetchars, "%s", subisarr ? "]" : "}");
     }
     else
-        ECCNSChars.appendValue(&stringify->chars, &stringify->context, value);
+        io_libecc_Chars.appendValue(&stringify->targetchars, &stringify->context, value);
 
     return 1;
 }
@@ -596,7 +583,7 @@ static eccvalue_t jsonStringify(eccstate_t* context)
     replacer = ECCNSContext.argument(context, 1);
     space = ECCNSContext.argument(context, 2);
 
-    stringify.filter = replacer.type == ECC_VALTYPE_OBJECT && replacer.data.object->type == &ECC_Type_Array ? replacer.data.object : NULL;
+    stringify.filter = replacer.type == ECC_VALTYPE_OBJECT && replacer.data.object->type == &ECCObjTypeArray ? replacer.data.object : NULL;
     stringify.function = replacer.type == ECC_VALTYPE_FUNCTION ? replacer.data.function : NULL;
     stringify.ops = stringify.function ? stringify.function->oplist->ops : NULL;
 
@@ -616,7 +603,7 @@ static eccvalue_t jsonStringify(eccstate_t* context)
             strcat(stringify.spaces, " ");
     }
 
-    ECCNSChars.beginAppend(&stringify.chars);
+    io_libecc_Chars.beginAppend(&stringify.targetchars);
 
     if(stringify.function && stringify.function->flags & ECC_SCRIPTFUNCFLAG_NEEDHEAP)
     {
@@ -651,24 +638,24 @@ static eccvalue_t jsonStringify(eccstate_t* context)
     else
         stringifyValue(&stringify, value, ECCNSValue.text(&ECC_ConstString_Empty), value, 1, 0);
 
-    return ECCNSChars.endAppend(&stringify.chars);
+    return io_libecc_Chars.endAppend(&stringify.targetchars);
 }
 
 // MARK: - Public
 
-eccobject_t* ECC_Prototype_JSONObject = NULL;
+eccobject_t* io_libecc_json_object = NULL;
 
-static void setup()
+void setup()
 {
     const eccvalflag_t h = ECC_VALFLAG_HIDDEN;
 
-    ECC_Prototype_JSONObject = ECCNSObject.createTyped(&ECC_Type_Json);
+    io_libecc_json_object = ECCNSObject.createTyped(&ECCObjTypeJson);
 
-    ECCNSFunction.addToObject(ECC_Prototype_JSONObject, "parse", jsonParse, -1, h);
-    ECCNSFunction.addToObject(ECC_Prototype_JSONObject, "stringify", jsonStringify, -1, h);
+    io_libecc_Function.addToObject(io_libecc_json_object, "parse", jsonParse, -1, h);
+    io_libecc_Function.addToObject(io_libecc_json_object, "stringify", jsonStringify, -1, h);
 }
 
-static void teardown(void)
+void teardown(void)
 {
-    ECC_Prototype_JSONObject = NULL;
+    io_libecc_json_object = NULL;
 }

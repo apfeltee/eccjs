@@ -13,12 +13,12 @@
 
 // MARK: - Methods
 
-static void ctxfn_rangeError(eccstate_t*, ecccharbuffer_t*) __attribute__((noreturn));
-static void ctxfn_referenceError(eccstate_t*, ecccharbuffer_t*) __attribute__((noreturn));
-static void ctxfn_syntaxError(eccstate_t*, ecccharbuffer_t*) __attribute__((noreturn));
-static void ctxfn_typeError(eccstate_t*, ecccharbuffer_t*) __attribute__((noreturn));
-static void ctxfn_uriError(eccstate_t*, ecccharbuffer_t*) __attribute__((noreturn));
-static void ctxfn_throw(eccstate_t*, eccvalue_t) __attribute__((noreturn));
+static void ctxfn_rangeError(eccstate_t*, ecccharbuffer_t*);
+static void ctxfn_referenceError(eccstate_t*, ecccharbuffer_t*);
+static void ctxfn_syntaxError(eccstate_t*, ecccharbuffer_t*);
+static void ctxfn_typeError(eccstate_t*, ecccharbuffer_t*);
+static void ctxfn_uriError(eccstate_t*, ecccharbuffer_t*);
+static void ctxfn_throw(eccstate_t*, eccvalue_t);
 static eccvalue_t ctxfn_callFunction(eccstate_t*, eccobjscriptfunction_t* function, eccvalue_t thisval, int argumentCount, ...);
 static int ctxfn_argumentCount(eccstate_t*);
 static eccvalue_t ctxfn_argument(eccstate_t*, int argumentIndex);
@@ -52,27 +52,27 @@ const struct eccpseudonscontext_t ECCNSContext = {
 
 void ctxfn_rangeError(eccstate_t* self, ecccharbuffer_t* chars)
 {
-    ctxfn_throw(self, ECCNSValue.error(ECCNSError.rangeError(ctxfn_textSeek(self), chars)));
+    ctxfn_throw(self, ECCNSValue.error(io_libecc_Error.rangeError(ctxfn_textSeek(self), chars)));
 }
 
 void ctxfn_referenceError(eccstate_t* self, ecccharbuffer_t* chars)
 {
-    ctxfn_throw(self, ECCNSValue.error(ECCNSError.referenceError(ctxfn_textSeek(self), chars)));
+    ctxfn_throw(self, ECCNSValue.error(io_libecc_Error.referenceError(ctxfn_textSeek(self), chars)));
 }
 
 void ctxfn_syntaxError(eccstate_t* self, ecccharbuffer_t* chars)
 {
-    ctxfn_throw(self, ECCNSValue.error(ECCNSError.syntaxError(ctxfn_textSeek(self), chars)));
+    ctxfn_throw(self, ECCNSValue.error(io_libecc_Error.syntaxError(ctxfn_textSeek(self), chars)));
 }
 
 void ctxfn_typeError(eccstate_t* self, ecccharbuffer_t* chars)
 {
-    ctxfn_throw(self, ECCNSValue.error(ECCNSError.typeError(ctxfn_textSeek(self), chars)));
+    ctxfn_throw(self, ECCNSValue.error(io_libecc_Error.typeError(ctxfn_textSeek(self), chars)));
 }
 
 void ctxfn_uriError(eccstate_t* self, ecccharbuffer_t* chars)
 {
-    ctxfn_throw(self, ECCNSValue.error(ECCNSError.uriError(ctxfn_textSeek(self), chars)));
+    ctxfn_throw(self, ECCNSValue.error(io_libecc_Error.uriError(ctxfn_textSeek(self), chars)));
 }
 
 void ctxfn_throw(eccstate_t * self, eccvalue_t value)
@@ -87,8 +87,8 @@ void ctxfn_throw(eccstate_t * self, eccvalue_t value)
 
         if(value.type == ECC_VALTYPE_ERROR)
         {
-            name = ECCNSValue.toString(self, ECCNSObject.getMember(self, value.data.object, ECC_ConstKey_name));
-            message = ECCNSValue.toString(self, ECCNSObject.getMember(self, value.data.object, ECC_ConstKey_message));
+            name = ECCNSValue.toString(self, ECCNSObject.getMember(self, value.data.object, io_libecc_key_name));
+            message = ECCNSValue.toString(self, ECCNSObject.getMember(self, value.data.object, io_libecc_key_message));
         }
         else
             message = ECCNSValue.toString(self, value);
@@ -117,7 +117,7 @@ eccvalue_t ctxfn_callFunction(eccstate_t* self, eccobjscriptfunction_t* function
     }
 
     va_start(ap, argumentCount);
-    result = ECCNSOperand.callFunctionVA(self, offset, function, thisval, argumentCount & ECC_CTXSPECIALTYPE_COUNTMASK, ap);
+    result = io_libecc_Op.callFunctionVA(self, offset, function, thisval, argumentCount & ECC_CTXSPECIALTYPE_COUNTMASK, ap);
     va_end(ap);
 
     return result;
@@ -138,7 +138,7 @@ eccvalue_t ctxfn_argument(eccstate_t* self, int argumentIndex)
     if(self->environment->hashmap[2].value.type == ECC_VALTYPE_OBJECT)
     {
         if(argumentIndex < (int)self->environment->hashmap[2].value.data.object->elementCount)
-            return self->environment->hashmap[2].value.data.object->element[argumentIndex].value;
+            return self->environment->hashmap[2].value.data.object->element[argumentIndex].elemvalue;
     }
     else if(argumentIndex < (self->environment->hashmapCount - 3))
         return self->environment->hashmap[argumentIndex + 3].value;
@@ -151,7 +151,7 @@ void ctxfn_replaceArgument(eccstate_t* self, int argumentIndex, eccvalue_t value
     if(self->environment->hashmap[2].value.type == ECC_VALTYPE_OBJECT)
     {
         if(argumentIndex < (int)self->environment->hashmap[2].value.data.object->elementCount)
-            self->environment->hashmap[2].value.data.object->element[argumentIndex].value = value;
+            self->environment->hashmap[2].value.data.object->element[argumentIndex].elemvalue = value;
     }
     else if(argumentIndex < self->environment->hashmapCount - 3)
         self->environment->hashmap[argumentIndex + 3].value = value;
@@ -168,7 +168,7 @@ void ctxfn_assertThisType(eccstate_t* self, eccvaltype_t type)
     if(self->thisvalue.type != type)
     {
         ctxfn_setTextIndex(self, ECC_CTXINDEXTYPE_THIS);
-        ctxfn_typeError(self, ECCNSChars.create("'this' is not a %s", ECCNSValue.typeName(type)));
+        ctxfn_typeError(self, io_libecc_Chars.create("'this' is not a %s", ECCNSValue.typeName(type)));
     }
 }
 
@@ -177,7 +177,7 @@ void ctxfn_assertThisMask(eccstate_t* self, eccvalmask_t mask)
     if(!(self->thisvalue.type & mask))
     {
         ctxfn_setTextIndex(self, ECC_CTXINDEXTYPE_THIS);
-        ctxfn_typeError(self, ECCNSChars.create("'this' is not a %s", ECCNSValue.maskName(mask)));
+        ctxfn_typeError(self, io_libecc_Chars.create("'this' is not a %s", ECCNSValue.maskName(mask)));
     }
 }
 
@@ -186,7 +186,7 @@ void ctxfn_assertThisCoerciblePrimitive(eccstate_t* self)
     if(self->thisvalue.type == ECC_VALTYPE_UNDEFINED || self->thisvalue.type == ECC_VALTYPE_NULL)
     {
         ctxfn_setTextIndex(self, ECC_CTXINDEXTYPE_THIS);
-        ctxfn_typeError(self, ECCNSChars.create("'this' cannot be null or undefined"));
+        ctxfn_typeError(self, io_libecc_Chars.create("'this' cannot be null or undefined"));
     }
 }
 
@@ -252,7 +252,7 @@ ecctextstring_t ctxfn_textSeek(eccstate_t* self)
         seek = *seek.parent;
     }
 
-    if(seek.ops->native == ECCNSOperand.noop)
+    if(seek.ops->native == io_libecc_Op.noop)
         --seek.ops;
 
     if(isAccessor)
@@ -286,7 +286,7 @@ ecctextstring_t ctxfn_textSeek(eccstate_t* self)
             while(bytes > seek.ops->text.bytes && seek.ops->text.bytes)
                 ++seek.ops;
 
-            if(breakArray & 0x1 && seek.ops->native == ECCNSOperand.array)
+            if(breakArray & 0x1 && seek.ops->native == io_libecc_Op.array)
                 ++seek.ops;
 
             breakArray >>= 1;

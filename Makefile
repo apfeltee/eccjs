@@ -58,6 +58,7 @@ endif
 
 $(target): $(objfiles_all)
 	$(CC) -o $@ $^ $(LDFLAGS)
+	./run --test
 
 -include $(depfiles_all)
 

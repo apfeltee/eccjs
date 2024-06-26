@@ -17,7 +17,7 @@ static void destroy(eccioinput_t*);
 static void printText(eccioinput_t*, ecctextstring_t text, int32_t ofLine, ecctextstring_t ofText, const char* ofInput, int fullLine);
 static int32_t findLine(eccioinput_t*, ecctextstring_t text);
 static eccvalue_t attachValue(eccioinput_t*, eccvalue_t value);
-const struct eccpseudonsinput_t ECCNSInput = {
+const struct eccpseudonsinput_t io_libecc_Input = {
     createFromFile, createFromBytes, destroy, printText, findLine, attachValue,
     {}
 };
@@ -26,7 +26,7 @@ eccioinput_t* ecc_input_create(void)
 {
     size_t linesBytes;
     eccioinput_t* self = malloc(sizeof(*self));
-    *self = ECCNSInput.identity;
+    *self = io_libecc_Input.identity;
     self->lineCapacity = 8;
     self->lineCount = 1;
     linesBytes = sizeof(*self->lines) * self->lineCapacity;
@@ -228,7 +228,7 @@ int32_t findLine(eccioinput_t* self, ecctextstring_t text)
 eccvalue_t attachValue(eccioinput_t* self, eccvalue_t value)
 {
     if(value.type == ECC_VALTYPE_CHARS)
-        value.data.chars->referenceCount++;
+        value.data.charbufdata->referenceCount++;
 
     self->attached = realloc(self->attached, sizeof(*self->attached) * (self->attachedCount + 1));
     self->attached[self->attachedCount] = value;

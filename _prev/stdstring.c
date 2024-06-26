@@ -13,10 +13,10 @@ static void mark(eccobject_t* object);
 static void capture(eccobject_t* object);
 static void finalize(eccobject_t* object);
 
-eccobject_t* ECC_Prototype_String = NULL;
-eccobjscriptfunction_t* ECC_CtorFunc_String = NULL;
+eccobject_t* io_libecc_string_prototype = NULL;
+eccobjscriptfunction_t* io_libecc_string_constructor = NULL;
 
-const eccobjinterntype_t ECC_Type_String = {
+const eccobjinterntype_t ECCObjTypeString = {
     .text = &ECC_ConstString_StringType,
     .mark = mark,
     .capture = capture,
@@ -29,7 +29,7 @@ static eccobjstring_t* create(ecccharbuffer_t*);
 static eccvalue_t valueAtIndex(eccobjstring_t*, int32_t index);
 static ecctextstring_t textAtIndex(const char* chars, int32_t length, int32_t index, int enableReverse);
 static int32_t unitIndex(const char* chars, int32_t max, int32_t unit);
-const struct eccpseudonsstring_t ECCNSString = {
+const struct eccpseudonsstring_t io_libecc_String = {
     setup, teardown, create, valueAtIndex, textAtIndex, unitIndex,
     {}
 };
@@ -38,7 +38,7 @@ static void mark(eccobject_t* object)
 {
     eccobjstring_t* self = (eccobjstring_t*)object;
 
-    ECCNSMemoryPool.markValue(ECCNSValue.chars(self->value));
+    io_libecc_Pool.markValue(ECCNSValue.chars(self->value));
 }
 
 static void capture(eccobject_t* object)
@@ -57,21 +57,21 @@ static void finalize(eccobject_t* object)
 
 // MARK: - Static Members
 
-static eccvalue_t objstringfn_toString(eccstate_t* context)
+static eccvalue_t toString(eccstate_t* context)
 {
     ECCNSContext.assertThisType(context, ECC_VALTYPE_STRING);
 
     return ECCNSValue.chars(context->thisvalue.data.string->value);
 }
 
-static eccvalue_t objstringfn_valueOf(eccstate_t* context)
+static eccvalue_t valueOf(eccstate_t* context)
 {
     ECCNSContext.assertThisType(context, ECC_VALTYPE_STRING);
 
     return ECCNSValue.chars(context->thisvalue.data.string->value);
 }
 
-static eccvalue_t objstringfn_charAt(eccstate_t* context)
+static eccvalue_t charAt(eccstate_t* context)
 {
     int32_t index, length;
     const char* chars;
@@ -105,13 +105,13 @@ static eccvalue_t objstringfn_charAt(eccstate_t* context)
             else
                 c.codepoint = ((c.codepoint >> 10) & 0x3ff) + 0xd800;
 
-            ECCNSChars.writeCodepoint(buffer, c.codepoint);
+            io_libecc_Chars.writeCodepoint(buffer, c.codepoint);
             return ECCNSValue.buffer(buffer, 3);
         }
     }
 }
 
-static eccvalue_t objstringfn_charCodeAt(eccstate_t* context)
+static eccvalue_t charCodeAt(eccstate_t* context)
 {
     int32_t index, length;
     const char* chars;
@@ -146,7 +146,7 @@ static eccvalue_t objstringfn_charCodeAt(eccstate_t* context)
     }
 }
 
-static eccvalue_t objstringfn_concat(eccstate_t* context)
+static eccvalue_t concat(eccstate_t* context)
 {
     eccappendbuffer_t chars;
     int32_t index, count;
@@ -155,15 +155,15 @@ static eccvalue_t objstringfn_concat(eccstate_t* context)
 
     count = ECCNSContext.argumentCount(context);
 
-    ECCNSChars.beginAppend(&chars);
-    ECCNSChars.appendValue(&chars, context, ECCNSContext.getThis(context));
+    io_libecc_Chars.beginAppend(&chars);
+    io_libecc_Chars.appendValue(&chars, context, ECCNSContext.getThis(context));
     for(index = 0; index < count; ++index)
-        ECCNSChars.appendValue(&chars, context, ECCNSContext.argument(context, index));
+        io_libecc_Chars.appendValue(&chars, context, ECCNSContext.argument(context, index));
 
-    return ECCNSChars.endAppend(&chars);
+    return io_libecc_Chars.endAppend(&chars);
 }
 
-static eccvalue_t objstringfn_indexOf(eccstate_t* context)
+static eccvalue_t indexOf(eccstate_t* context)
 {
     ecctextstring_t text;
     eccvalue_t search, start;
@@ -204,7 +204,7 @@ static eccvalue_t objstringfn_indexOf(eccstate_t* context)
     return ECCNSValue.integer(-1);
 }
 
-static eccvalue_t objstringfn_lastIndexOf(eccstate_t* context)
+static eccvalue_t lastIndexOf(eccstate_t* context)
 {
     ecctextstring_t text;
     eccvalue_t search, start;
@@ -248,7 +248,7 @@ static eccvalue_t objstringfn_lastIndexOf(eccstate_t* context)
     return ECCNSValue.integer(-1);
 }
 
-static eccvalue_t objstringfn_localeCompare(eccstate_t* context)
+static eccvalue_t localeCompare(eccstate_t* context)
 {
     eccvalue_t that;
     ecctextstring_t a, b;
@@ -270,7 +270,7 @@ static eccvalue_t objstringfn_localeCompare(eccstate_t* context)
     return ECCNSValue.integer(memcmp(a.bytes, b.bytes, a.length));
 }
 
-static eccvalue_t objstringfn_match(eccstate_t* context)
+static eccvalue_t match(eccstate_t* context)
 {
     eccobjregexp_t* regexp;
     eccvalue_t value, lastIndex;
@@ -281,11 +281,11 @@ static eccvalue_t objstringfn_match(eccstate_t* context)
     if(value.type == ECC_VALTYPE_REGEXP)
         regexp = value.data.regexp;
     else
-        regexp = ECCNSRegExp.createWith(context, value, ECCValConstUndefined);
+        regexp = io_libecc_RegExp.createWith(context, value, ECCValConstUndefined);
 
-    lastIndex = regexp->global ? ECCNSValue.integer(0) : ECCNSValue.toInteger(context, ECCNSObject.getMember(context, &regexp->object, ECC_ConstKey_lastIndex));
+    lastIndex = regexp->global ? ECCNSValue.integer(0) : ECCNSValue.toInteger(context, ECCNSObject.getMember(context, &regexp->object, io_libecc_key_lastIndex));
 
-    ECCNSObject.putMember(context, &regexp->object, ECC_ConstKey_lastIndex, ECCNSValue.integer(0));
+    ECCNSObject.putMember(context, &regexp->object, io_libecc_key_lastIndex, ECCNSValue.integer(0));
 
     if(lastIndex.data.integer >= 0)
     {
@@ -294,7 +294,7 @@ static eccvalue_t objstringfn_match(eccstate_t* context)
         ecctextstring_t text = textAtIndex(bytes, length, 0, 0);
         const char* capture[regexp->count * 2];
         const char* strindex[regexp->count * 2];
-        eccobject_t* array = ECCNSArray.create();
+        eccobject_t* array = io_libecc_Array.create();
         eccappendbuffer_t chars;
         uint32_t size = 0;
 
@@ -302,11 +302,11 @@ static eccvalue_t objstringfn_match(eccstate_t* context)
         {
             eccrxstate_t state = { text.bytes, text.bytes + text.length, capture, strindex, 0};
 
-            if(ECCNSRegExp.matchWithState(regexp, &state))
+            if(io_libecc_RegExp.matchWithState(regexp, &state))
             {
-                ECCNSChars.beginAppend(&chars);
-                ECCNSChars.append(&chars, "%.*s", capture[1] - capture[0], capture[0]);
-                ECCNSObject.addElement(array, size++, ECCNSChars.endAppend(&chars), 0);
+                io_libecc_Chars.beginAppend(&chars);
+                io_libecc_Chars.append(&chars, "%.*s", capture[1] - capture[0], capture[0]);
+                ECCNSObject.addElement(array, size++, io_libecc_Chars.endAppend(&chars), 0);
 
                 if(!regexp->global)
                 {
@@ -316,9 +316,9 @@ static eccvalue_t objstringfn_match(eccstate_t* context)
                     {
                         if(capture[numindex * 2])
                         {
-                            ECCNSChars.beginAppend(&chars);
-                            ECCNSChars.append(&chars, "%.*s", capture[numindex * 2 + 1] - capture[numindex * 2], capture[numindex * 2]);
-                            ECCNSObject.addElement(array, size++, ECCNSChars.endAppend(&chars), 0);
+                            io_libecc_Chars.beginAppend(&chars);
+                            io_libecc_Chars.append(&chars, "%.*s", capture[numindex * 2 + 1] - capture[numindex * 2], capture[numindex * 2]);
+                            ECCNSObject.addElement(array, size++, io_libecc_Chars.endAppend(&chars), 0);
                         }
                         else
                             ECCNSObject.addElement(array, size++, ECCValConstUndefined, 0);
@@ -337,12 +337,12 @@ static eccvalue_t objstringfn_match(eccstate_t* context)
 
         if(size)
         {
-            ECCNSObject.addMember(array, ECC_ConstKey_input, context->thisvalue, 0);
-            ECCNSObject.addMember(array, ECC_ConstKey_index, ECCNSValue.integer(ECCNSString.unitIndex(bytes, length, (int32_t)(capture[0] - bytes))), 0);
+            ECCNSObject.addMember(array, io_libecc_key_input, context->thisvalue, 0);
+            ECCNSObject.addMember(array, io_libecc_key_index, ECCNSValue.integer(io_libecc_String.unitIndex(bytes, length, (int32_t)(capture[0] - bytes))), 0);
 
             if(regexp->global)
-                ECCNSObject.putMember(context, &regexp->object, ECC_ConstKey_lastIndex,
-                                      ECCNSValue.integer(ECCNSString.unitIndex(bytes, length, (int32_t)(text.bytes - bytes))));
+                ECCNSObject.putMember(context, &regexp->object, io_libecc_key_lastIndex,
+                                      ECCNSValue.integer(io_libecc_String.unitIndex(bytes, length, (int32_t)(text.bytes - bytes))));
 
             return ECCNSValue.object(array);
         }
@@ -368,19 +368,19 @@ replaceText(eccappendbuffer_t* chars, ecctextstring_t replace, ecctextstring_t b
             switch(ECCNSText.character(replace).codepoint)
             {
                 case '$':
-                    ECCNSChars.append(chars, "$");
+                    io_libecc_Chars.append(chars, "$");
                     break;
 
                 case '&':
-                    ECCNSChars.append(chars, "%.*s", match.length, match.bytes);
+                    io_libecc_Chars.append(chars, "%.*s", match.length, match.bytes);
                     break;
 
                 case '`':
-                    ECCNSChars.append(chars, "%.*s", before.length, before.bytes);
+                    io_libecc_Chars.append(chars, "%.*s", before.length, before.bytes);
                     break;
 
                 case '\'':
-                    ECCNSChars.append(chars, "%.*s", after.length, after.bytes);
+                    io_libecc_Chars.append(chars, "%.*s", after.length, after.bytes);
                     break;
 
                 case '0':
@@ -406,11 +406,11 @@ replaceText(eccappendbuffer_t* chars, ecctextstring_t replace, ecctextstring_t b
                             {
                                 if(capture[index * 2])
                                 {
-                                    ECCNSChars.append(chars, "%.*s", capture[index * 2 + 1] - capture[index * 2], capture[index * 2]);
+                                    io_libecc_Chars.append(chars, "%.*s", capture[index * 2 + 1] - capture[index * 2], capture[index * 2]);
                                 }
                                 else
                                 {
-                                    ECCNSChars.append(chars, "");
+                                    io_libecc_Chars.append(chars, "");
                                 }
                                 break;
                             }
@@ -419,20 +419,20 @@ replaceText(eccappendbuffer_t* chars, ecctextstring_t replace, ecctextstring_t b
                     /* fallthrough  */
                 default:
                     {
-                        ECCNSChars.append(chars, "$");
+                        io_libecc_Chars.append(chars, "$");
                     }
                     continue;
             }
         }
         else
         {
-            ECCNSChars.append(chars, "%.*s", c.units, replace.bytes);
+            io_libecc_Chars.append(chars, "%.*s", c.units, replace.bytes);
         }
         ECCNSText.advance(&replace, c.units);
     }
 }
 
-static eccvalue_t objstringfn_replace(eccstate_t* context)
+static eccvalue_t replace(eccstate_t* context)
 {
     eccobjregexp_t* regexp = NULL;
     eccappendbuffer_t chars;
@@ -464,34 +464,34 @@ static eccvalue_t objstringfn_replace(eccstate_t* context)
         const char* strindex[regexp->count * 2];
         ecctextstring_t seek = text;
 
-        ECCNSChars.beginAppend(&chars);
+        io_libecc_Chars.beginAppend(&chars);
         do
         {
             eccrxstate_t state = { seek.bytes, text.bytes + text.length, capture, strindex, 0 };
 
-            if(ECCNSRegExp.matchWithState(regexp, &state))
+            if(io_libecc_RegExp.matchWithState(regexp, &state))
             {
-                ECCNSChars.append(&chars, "%.*s", capture[0] - text.bytes, text.bytes);
+                io_libecc_Chars.append(&chars, "%.*s", capture[0] - text.bytes, text.bytes);
 
                 if(replace.type == ECC_VALTYPE_FUNCTION)
                 {
-                    eccobject_t* arguments = ECCNSArray.createSized(regexp->count + 2);
+                    eccobject_t* arguments = io_libecc_Array.createSized(regexp->count + 2);
                     int32_t numindex, count;
                     eccvalue_t result;
 
                     for(numindex = 0, count = regexp->count; numindex < count; ++numindex)
                     {
                         if(capture[numindex * 2])
-                            arguments->element[numindex].value
-                            = ECCNSValue.chars(ECCNSChars.createWithBytes((int32_t)(capture[numindex * 2 + 1] - capture[numindex * 2]), capture[numindex * 2]));
+                            arguments->element[numindex].elemvalue
+                            = ECCNSValue.chars(io_libecc_Chars.createWithBytes((int32_t)(capture[numindex * 2 + 1] - capture[numindex * 2]), capture[numindex * 2]));
                         else
-                            arguments->element[numindex].value = ECCValConstUndefined;
+                            arguments->element[numindex].elemvalue = ECCValConstUndefined;
                     }
-                    arguments->element[regexp->count].value = ECCNSValue.integer(ECCNSString.unitIndex(bytes, length, (int32_t)(capture[0] - bytes)));
-                    arguments->element[regexp->count + 1].value = context->thisvalue;
+                    arguments->element[regexp->count].elemvalue = ECCNSValue.integer(io_libecc_String.unitIndex(bytes, length, (int32_t)(capture[0] - bytes)));
+                    arguments->element[regexp->count + 1].elemvalue = context->thisvalue;
 
-                    result = ECCNSValue.toString(context, ECCNSOperand.callFunctionArguments(context, 0, replace.data.function, ECCValConstUndefined, arguments));
-                    ECCNSChars.append(&chars, "%.*s", ECCNSValue.stringLength(&result), ECCNSValue.stringBytes(&result));
+                    result = ECCNSValue.toString(context, io_libecc_Op.callFunctionArguments(context, 0, replace.data.function, ECCValConstUndefined, arguments));
+                    io_libecc_Chars.append(&chars, "%.*s", ECCNSValue.stringLength(&result), ECCNSValue.stringBytes(&result));
                 }
                 else
                     replaceText(&chars, ECCNSText.make(ECCNSValue.stringBytes(&replace), ECCNSValue.stringLength(&replace)),
@@ -508,9 +508,9 @@ static eccvalue_t objstringfn_replace(eccstate_t* context)
                 break;
         } while(text.length && regexp->global);
 
-        ECCNSChars.append(&chars, "%.*s", text.length, text.bytes);
+        io_libecc_Chars.append(&chars, "%.*s", text.length, text.bytes);
 
-        return ECCNSChars.endAppend(&chars);
+        return io_libecc_Chars.endAppend(&chars);
     }
     else
     {
@@ -530,33 +530,33 @@ static eccvalue_t objstringfn_replace(eccstate_t* context)
             ECCNSText.nextCharacter(&text);
         }
 
-        ECCNSChars.beginAppend(&chars);
-        ECCNSChars.append(&chars, "%.*s", text.bytes - bytes, bytes);
+        io_libecc_Chars.beginAppend(&chars);
+        io_libecc_Chars.append(&chars, "%.*s", text.bytes - bytes, bytes);
 
         if(replace.type == ECC_VALTYPE_FUNCTION)
         {
-            eccobject_t* arguments = ECCNSArray.createSized(1 + 2);
+            eccobject_t* arguments = io_libecc_Array.createSized(1 + 2);
             eccvalue_t result;
 
-            arguments->element[0].value = ECCNSValue.chars(ECCNSChars.createWithBytes(text.length, text.bytes));
-            arguments->element[1].value = ECCNSValue.integer(ECCNSString.unitIndex(bytes, length, (int32_t)(text.bytes - bytes)));
-            arguments->element[2].value = context->thisvalue;
+            arguments->element[0].elemvalue = ECCNSValue.chars(io_libecc_Chars.createWithBytes(text.length, text.bytes));
+            arguments->element[1].elemvalue = ECCNSValue.integer(io_libecc_String.unitIndex(bytes, length, (int32_t)(text.bytes - bytes)));
+            arguments->element[2].elemvalue = context->thisvalue;
 
-            result = ECCNSValue.toString(context, ECCNSOperand.callFunctionArguments(context, 0, replace.data.function, ECCValConstUndefined, arguments));
-            ECCNSChars.append(&chars, "%.*s", ECCNSValue.stringLength(&result), ECCNSValue.stringBytes(&result));
+            result = ECCNSValue.toString(context, io_libecc_Op.callFunctionArguments(context, 0, replace.data.function, ECCValConstUndefined, arguments));
+            io_libecc_Chars.append(&chars, "%.*s", ECCNSValue.stringLength(&result), ECCNSValue.stringBytes(&result));
         }
         else
             replaceText(&chars, ECCNSText.make(ECCNSValue.stringBytes(&replace), ECCNSValue.stringLength(&replace)),
                         ECCNSText.make(text.bytes, (int32_t)(text.bytes - bytes)), ECCNSText.make(text.bytes, text.length),
                         ECCNSText.make(text.bytes, (int32_t)(length - (text.bytes - bytes))), 0, NULL);
 
-        ECCNSChars.append(&chars, "%.*s", length - (text.bytes - bytes), text.bytes + text.length);
+        io_libecc_Chars.append(&chars, "%.*s", length - (text.bytes - bytes), text.bytes + text.length);
 
-        return ECCNSChars.endAppend(&chars);
+        return io_libecc_Chars.endAppend(&chars);
     }
 }
 
-static eccvalue_t objstringfn_search(eccstate_t* context)
+static eccvalue_t search(eccstate_t* context)
 {
     eccobjregexp_t* regexp;
     eccvalue_t value;
@@ -569,7 +569,7 @@ static eccvalue_t objstringfn_search(eccstate_t* context)
     if(value.type == ECC_VALTYPE_REGEXP)
         regexp = value.data.regexp;
     else
-        regexp = ECCNSRegExp.createWith(context, value, ECCValConstUndefined);
+        regexp = io_libecc_RegExp.createWith(context, value, ECCValConstUndefined);
 
     {
         const char* bytes = ECCNSValue.stringBytes(&context->thisvalue);
@@ -580,13 +580,13 @@ static eccvalue_t objstringfn_search(eccstate_t* context)
 
         eccrxstate_t state = { text.bytes, text.bytes + text.length, capture, index, 0 };
 
-        if(ECCNSRegExp.matchWithState(regexp, &state))
+        if(io_libecc_RegExp.matchWithState(regexp, &state))
             return ECCNSValue.integer(unitIndex(bytes, length, (int32_t)(capture[0] - bytes)));
     }
     return ECCNSValue.integer(-1);
 }
 
-static eccvalue_t objstringfn_slice(eccstate_t* context)
+static eccvalue_t slice(eccstate_t* context)
 {
     eccvalue_t from, to;
     ecctextstring_t start, end;
@@ -632,12 +632,12 @@ static eccvalue_t objstringfn_slice(eccstate_t* context)
         return ECCNSValue.text(&ECC_ConstString_Empty);
     else
     {
-        ecccharbuffer_t* result = ECCNSChars.createSized(length + head + tail);
+        ecccharbuffer_t* result = io_libecc_Chars.createSized(length + head + tail);
 
         if(start.flags & ECC_TEXTFLAG_BREAKFLAG)
         {
             /* simulate 16-bit surrogate */
-            ECCNSChars.writeCodepoint(result->bytes, (((headcp - 0x010000) >> 0) & 0x3ff) + 0xdc00);
+            io_libecc_Chars.writeCodepoint(result->bytes, (((headcp - 0x010000) >> 0) & 0x3ff) + 0xdc00);
         }
 
         if(length > 0)
@@ -646,14 +646,14 @@ static eccvalue_t objstringfn_slice(eccstate_t* context)
         if(end.flags & ECC_TEXTFLAG_BREAKFLAG)
         {
             /* simulate 16-bit surrogate */
-            ECCNSChars.writeCodepoint(result->bytes + head + length, (((ECCNSText.character(end).codepoint - 0x010000) >> 10) & 0x3ff) + 0xd800);
+            io_libecc_Chars.writeCodepoint(result->bytes + head + length, (((ECCNSText.character(end).codepoint - 0x010000) >> 10) & 0x3ff) + 0xd800);
         }
 
         return ECCNSValue.chars(result);
     }
 }
 
-static eccvalue_t objstringfn_split(eccstate_t* context)
+static eccvalue_t split(eccstate_t* context)
 {
     eccvalue_t separatorValue, limitValue;
     eccobjregexp_t* regexp = NULL;
@@ -672,14 +672,14 @@ static eccvalue_t objstringfn_split(eccstate_t* context)
     {
         limit = ECCNSValue.toInteger(context, limitValue).data.integer;
         if(!limit)
-            return ECCNSValue.object(ECCNSArray.createSized(0));
+            return ECCNSValue.object(io_libecc_Array.createSized(0));
     }
 
     separatorValue = ECCNSContext.argument(context, 0);
     if(separatorValue.type == ECC_VALTYPE_UNDEFINED)
     {
-        eccobject_t* subarr = ECCNSArray.createSized(1);
-        subarr->element[0].value = context->thisvalue;
+        eccobject_t* subarr = io_libecc_Array.createSized(1);
+        subarr->element[0].elemvalue = context->thisvalue;
         return ECCNSValue.object(subarr);
     }
     else if(separatorValue.type == ECC_VALTYPE_REGEXP)
@@ -692,7 +692,7 @@ static eccvalue_t objstringfn_split(eccstate_t* context)
 
     ECCNSContext.setTextIndex(context, ECC_CTXINDEXTYPE_CALL);
 
-    array = ECCNSArray.create();
+    array = io_libecc_Array.create();
 
     if(regexp)
     {
@@ -708,7 +708,7 @@ static eccvalue_t objstringfn_split(eccstate_t* context)
             if(size >= limit)
                 break;
 
-            if(seek.length && ECCNSRegExp.matchWithState(regexp, &state))
+            if(seek.length && io_libecc_RegExp.matchWithState(regexp, &state))
             {
                 if(capture[1] <= text.bytes)
                 {
@@ -716,7 +716,7 @@ static eccvalue_t objstringfn_split(eccstate_t* context)
                     continue;
                 }
 
-                element = ECCNSChars.createWithBytes((int32_t)(capture[0] - text.bytes), text.bytes);
+                element = io_libecc_Chars.createWithBytes((int32_t)(capture[0] - text.bytes), text.bytes);
                 ECCNSObject.addElement(array, size++, ECCNSValue.chars(element), 0);
 
                 for(numindex = 1, count = regexp->count; numindex < count; ++numindex)
@@ -726,7 +726,7 @@ static eccvalue_t objstringfn_split(eccstate_t* context)
 
                     if(capture[numindex * 2])
                     {
-                        element = ECCNSChars.createWithBytes((int32_t)(capture[numindex * 2 + 1] - capture[numindex * 2]), capture[numindex * 2]);
+                        element = io_libecc_Chars.createWithBytes((int32_t)(capture[numindex * 2 + 1] - capture[numindex * 2]), capture[numindex * 2]);
                         ECCNSObject.addElement(array, size++, ECCNSValue.chars(element), 0);
                     }
                     else
@@ -738,7 +738,7 @@ static eccvalue_t objstringfn_split(eccstate_t* context)
             }
             else
             {
-                element = ECCNSChars.createWithBytes(text.length, text.bytes);
+                element = io_libecc_Chars.createWithBytes(text.length, text.bytes);
                 ECCNSObject.addElement(array, size++, ECCNSValue.chars(element), 0);
                 break;
             }
@@ -763,10 +763,10 @@ static eccvalue_t objstringfn_split(eccstate_t* context)
 
                 /* simulate 16-bit surrogate */
 
-                ECCNSChars.writeCodepoint(buffer, (((c.codepoint - 0x010000) >> 10) & 0x3ff) + 0xd800);
+                io_libecc_Chars.writeCodepoint(buffer, (((c.codepoint - 0x010000) >> 10) & 0x3ff) + 0xd800);
                 ECCNSObject.addElement(array, size++, ECCNSValue.buffer(buffer, 3), 0);
 
-                ECCNSChars.writeCodepoint(buffer, (((c.codepoint - 0x010000) >> 0) & 0x3ff) + 0xdc00);
+                io_libecc_Chars.writeCodepoint(buffer, (((c.codepoint - 0x010000) >> 0) & 0x3ff) + 0xdc00);
                 ECCNSObject.addElement(array, size++, ECCNSValue.buffer(buffer, 3), 0);
             }
             ECCNSText.advance(&text, c.units);
@@ -787,7 +787,7 @@ static eccvalue_t objstringfn_split(eccstate_t* context)
             if(!memcmp(seek.bytes, separator.bytes, separator.length))
             {
                 length = (int32_t)(seek.bytes - text.bytes);
-                element = ECCNSChars.createSized(length);
+                element = io_libecc_Chars.createSized(length);
                 memcpy(element->bytes, text.bytes, length);
                 ECCNSObject.addElement(array, size++, ECCNSValue.chars(element), 0);
 
@@ -800,7 +800,7 @@ static eccvalue_t objstringfn_split(eccstate_t* context)
 
         if(size < limit)
         {
-            element = ECCNSChars.createSized(text.length);
+            element = io_libecc_Chars.createSized(text.length);
             memcpy(element->bytes, text.bytes, text.length);
             ECCNSObject.addElement(array, size++, ECCNSValue.chars(element), 0);
         }
@@ -809,7 +809,7 @@ static eccvalue_t objstringfn_split(eccstate_t* context)
     return ECCNSValue.object(array);
 }
 
-static eccvalue_t objstringfn_substring(eccstate_t* context)
+static eccvalue_t substring(eccstate_t* context)
 {
     eccvalue_t from, to;
     ecctextstring_t start, end;
@@ -859,12 +859,12 @@ static eccvalue_t objstringfn_substring(eccstate_t* context)
         return ECCNSValue.text(&ECC_ConstString_Empty);
     else
     {
-        ecccharbuffer_t* result = ECCNSChars.createSized(length + head + tail);
+        ecccharbuffer_t* result = io_libecc_Chars.createSized(length + head + tail);
 
         if(start.flags & ECC_TEXTFLAG_BREAKFLAG)
         {
             /* simulate 16-bit surrogate */
-            ECCNSChars.writeCodepoint(result->bytes, (((headcp - 0x010000) >> 0) & 0x3ff) + 0xdc00);
+            io_libecc_Chars.writeCodepoint(result->bytes, (((headcp - 0x010000) >> 0) & 0x3ff) + 0xdc00);
         }
 
         if(length > 0)
@@ -873,14 +873,14 @@ static eccvalue_t objstringfn_substring(eccstate_t* context)
         if(end.flags & ECC_TEXTFLAG_BREAKFLAG)
         {
             /* simulate 16-bit surrogate */
-            ECCNSChars.writeCodepoint(result->bytes + head + length, (((ECCNSText.character(end).codepoint - 0x010000) >> 10) & 0x3ff) + 0xd800);
+            io_libecc_Chars.writeCodepoint(result->bytes + head + length, (((ECCNSText.character(end).codepoint - 0x010000) >> 10) & 0x3ff) + 0xd800);
         }
 
         return ECCNSValue.chars(result);
     }
 }
 
-static eccvalue_t objstringfn_toLowerCase(eccstate_t* context)
+static eccvalue_t toLowerCase(eccstate_t* context)
 {
     ecccharbuffer_t* chars;
     ecctextstring_t text;
@@ -892,13 +892,13 @@ static eccvalue_t objstringfn_toLowerCase(eccstate_t* context)
     {
         char buffer[text.length * 2];
         char* end = ECCNSText.toLower(text, buffer);
-        chars = ECCNSChars.createWithBytes((int32_t)(end - buffer), buffer);
+        chars = io_libecc_Chars.createWithBytes((int32_t)(end - buffer), buffer);
     }
 
     return ECCNSValue.chars(chars);
 }
 
-static eccvalue_t objstringfn_toUpperCase(eccstate_t* context)
+static eccvalue_t toUpperCase(eccstate_t* context)
 {
     ecccharbuffer_t* chars;
     ecctextstring_t text;
@@ -908,13 +908,13 @@ static eccvalue_t objstringfn_toUpperCase(eccstate_t* context)
     {
         char buffer[text.length * 3];
         char* end = ECCNSText.toUpper(text, buffer);
-        chars = ECCNSChars.createWithBytes((int32_t)(end - buffer), buffer);
+        chars = io_libecc_Chars.createWithBytes((int32_t)(end - buffer), buffer);
     }
 
     return ECCNSValue.chars(chars);
 }
 
-static eccvalue_t objstringfn_trim(eccstate_t* context)
+static eccvalue_t trim(eccstate_t* context)
 {
     ecccharbuffer_t* chars;
     ecctextstring_t text, last;
@@ -943,12 +943,12 @@ static eccvalue_t objstringfn_trim(eccstate_t* context)
         text.length = last.length;
     }
 
-    chars = ECCNSChars.createWithBytes(text.length, text.bytes);
+    chars = io_libecc_Chars.createWithBytes(text.length, text.bytes);
 
     return ECCNSValue.chars(chars);
 }
 
-static eccvalue_t objstringfn_constructor(eccstate_t* context)
+static eccvalue_t constructor(eccstate_t* context)
 {
     eccvalue_t value;
 
@@ -959,74 +959,76 @@ static eccvalue_t objstringfn_constructor(eccstate_t* context)
         value = ECCNSValue.toString(context, value);
 
     if(context->construct)
-        return ECCNSValue.string(create(ECCNSChars.createWithBytes(ECCNSValue.stringLength(&value), ECCNSValue.stringBytes(&value))));
+        return ECCNSValue.string(create(io_libecc_Chars.createWithBytes(ECCNSValue.stringLength(&value), ECCNSValue.stringBytes(&value))));
     else
         return value;
 }
 
-static eccvalue_t objstringfn_fromCharCode(eccstate_t* context)
+static eccvalue_t fromCharCode(eccstate_t* context)
 {
     eccappendbuffer_t chars;
     int32_t index, count;
 
     count = ECCNSContext.argumentCount(context);
 
-    ECCNSChars.beginAppend(&chars);
+    io_libecc_Chars.beginAppend(&chars);
 
     for(index = 0; index < count; ++index)
-        ECCNSChars.appendCodepoint(&chars, (uint16_t)ECCNSValue.toInteger(context, ECCNSContext.argument(context, index)).data.integer);
+        io_libecc_Chars.appendCodepoint(&chars, (uint16_t)ECCNSValue.toInteger(context, ECCNSContext.argument(context, index)).data.integer);
 
-    return ECCNSChars.endAppend(&chars);
+    return io_libecc_Chars.endAppend(&chars);
 }
 
-static void setup()
+// MARK: - Methods
+
+void setup()
 {
     const eccvalflag_t h = ECC_VALFLAG_HIDDEN;
 
-    ECCNSFunction.setupBuiltinObject(&ECC_CtorFunc_String, objstringfn_constructor, 1, &ECC_Prototype_String,
-                                          ECCNSValue.string(create(ECCNSChars.createSized(0))), &ECC_Type_String);
+    io_libecc_Function.setupBuiltinObject(&io_libecc_string_constructor, constructor, 1, &io_libecc_string_prototype,
+                                          ECCNSValue.string(create(io_libecc_Chars.createSized(0))), &ECCObjTypeString);
 
-    ECCNSFunction.addMethod(ECC_CtorFunc_String, "fromCharCode", objstringfn_fromCharCode, -1, h);
+    io_libecc_Function.addMethod(io_libecc_string_constructor, "fromCharCode", fromCharCode, -1, h);
 
-    ECCNSFunction.addToObject(ECC_Prototype_String, "toString", objstringfn_toString, 0, h);
-    ECCNSFunction.addToObject(ECC_Prototype_String, "valueOf", objstringfn_valueOf, 0, h);
-    ECCNSFunction.addToObject(ECC_Prototype_String, "charAt", objstringfn_charAt, 1, h);
-    ECCNSFunction.addToObject(ECC_Prototype_String, "charCodeAt", objstringfn_charCodeAt, 1, h);
-    ECCNSFunction.addToObject(ECC_Prototype_String, "concat", objstringfn_concat, -1, h);
-    ECCNSFunction.addToObject(ECC_Prototype_String, "indexOf", objstringfn_indexOf, -1, h);
-    ECCNSFunction.addToObject(ECC_Prototype_String, "lastIndexOf", objstringfn_lastIndexOf, -1, h);
-    ECCNSFunction.addToObject(ECC_Prototype_String, "localeCompare", objstringfn_localeCompare, 1, h);
-    ECCNSFunction.addToObject(ECC_Prototype_String, "match", objstringfn_match, 1, h);
-    ECCNSFunction.addToObject(ECC_Prototype_String, "replace", objstringfn_replace, 2, h);
-    ECCNSFunction.addToObject(ECC_Prototype_String, "search", objstringfn_search, 1, h);
-    ECCNSFunction.addToObject(ECC_Prototype_String, "slice", objstringfn_slice, 2, h);
-    ECCNSFunction.addToObject(ECC_Prototype_String, "split", objstringfn_split, 2, h);
-    ECCNSFunction.addToObject(ECC_Prototype_String, "substring", objstringfn_substring, 2, h);
-    ECCNSFunction.addToObject(ECC_Prototype_String, "toLowerCase", objstringfn_toLowerCase, 0, h);
-    ECCNSFunction.addToObject(ECC_Prototype_String, "toLocaleLowerCase", objstringfn_toLowerCase, 0, h);
-    ECCNSFunction.addToObject(ECC_Prototype_String, "toUpperCase", objstringfn_toUpperCase, 0, h);
-    ECCNSFunction.addToObject(ECC_Prototype_String, "toLocaleUpperCase", objstringfn_toUpperCase, 0, h);
-    ECCNSFunction.addToObject(ECC_Prototype_String, "trim", objstringfn_trim, 0, h);
+    io_libecc_Function.addToObject(io_libecc_string_prototype, "toString", toString, 0, h);
+    io_libecc_Function.addToObject(io_libecc_string_prototype, "valueOf", valueOf, 0, h);
+    io_libecc_Function.addToObject(io_libecc_string_prototype, "charAt", charAt, 1, h);
+    io_libecc_Function.addToObject(io_libecc_string_prototype, "charCodeAt", charCodeAt, 1, h);
+    io_libecc_Function.addToObject(io_libecc_string_prototype, "concat", concat, -1, h);
+    io_libecc_Function.addToObject(io_libecc_string_prototype, "indexOf", indexOf, -1, h);
+    io_libecc_Function.addToObject(io_libecc_string_prototype, "lastIndexOf", lastIndexOf, -1, h);
+    io_libecc_Function.addToObject(io_libecc_string_prototype, "localeCompare", localeCompare, 1, h);
+    io_libecc_Function.addToObject(io_libecc_string_prototype, "match", match, 1, h);
+    io_libecc_Function.addToObject(io_libecc_string_prototype, "replace", replace, 2, h);
+    io_libecc_Function.addToObject(io_libecc_string_prototype, "search", search, 1, h);
+    io_libecc_Function.addToObject(io_libecc_string_prototype, "slice", slice, 2, h);
+    io_libecc_Function.addToObject(io_libecc_string_prototype, "split", split, 2, h);
+    io_libecc_Function.addToObject(io_libecc_string_prototype, "substring", substring, 2, h);
+    io_libecc_Function.addToObject(io_libecc_string_prototype, "toLowerCase", toLowerCase, 0, h);
+    io_libecc_Function.addToObject(io_libecc_string_prototype, "toLocaleLowerCase", toLowerCase, 0, h);
+    io_libecc_Function.addToObject(io_libecc_string_prototype, "toUpperCase", toUpperCase, 0, h);
+    io_libecc_Function.addToObject(io_libecc_string_prototype, "toLocaleUpperCase", toUpperCase, 0, h);
+    io_libecc_Function.addToObject(io_libecc_string_prototype, "trim", trim, 0, h);
 }
 
-static void teardown(void)
+void teardown(void)
 {
-    ECC_Prototype_String = NULL;
-    ECC_CtorFunc_String = NULL;
+    io_libecc_string_prototype = NULL;
+    io_libecc_string_constructor = NULL;
 }
 
-static eccobjstring_t* create(ecccharbuffer_t* chars)
+eccobjstring_t* create(ecccharbuffer_t* chars)
 {
     const eccvalflag_t r = ECC_VALFLAG_READONLY;
     const eccvalflag_t h = ECC_VALFLAG_HIDDEN;
     const eccvalflag_t s = ECC_VALFLAG_SEALED;
     uint32_t length;
     eccobjstring_t* self = malloc(sizeof(*self));
-    *self = ECCNSString.identity;
-    ECCNSMemoryPool.addObject(&self->object);
-    ECCNSObject.initialize(&self->object, ECC_Prototype_String);
+    *self = io_libecc_String.identity;
+    io_libecc_Pool.addObject(&self->object);
+    ECCNSObject.initialize(&self->object, io_libecc_string_prototype);
     length = unitIndex(chars->bytes, chars->length, chars->length);
-    ECCNSObject.addMember(&self->object, ECC_ConstKey_length, ECCNSValue.integer(length), r | h | s);
+    ECCNSObject.addMember(&self->object, io_libecc_key_length, ECCNSValue.integer(length), r | h | s);
     self->value = chars;
     if(length == (uint32_t)chars->length)
     {
@@ -1035,7 +1037,7 @@ static eccobjstring_t* create(ecccharbuffer_t* chars)
     return self;
 }
 
-static eccvalue_t valueAtIndex(eccobjstring_t* self, int32_t index)
+eccvalue_t valueAtIndex(eccobjstring_t* self, int32_t index)
 {
     ecctextchar_t c;
     ecctextstring_t text;
@@ -1061,13 +1063,13 @@ static eccvalue_t valueAtIndex(eccobjstring_t* self, int32_t index)
             else
                 c.codepoint = ((c.codepoint >> 10) & 0x3ff) + 0xd800;
 
-            ECCNSChars.writeCodepoint(buffer, c.codepoint);
+            io_libecc_Chars.writeCodepoint(buffer, c.codepoint);
             return ECCNSValue.buffer(buffer, 3);
         }
     }
 }
 
-static ecctextstring_t textAtIndex(const char* chars, int32_t length, int32_t position, int enableReverse)
+ecctextstring_t textAtIndex(const char* chars, int32_t length, int32_t position, int enableReverse)
 {
     ecctextstring_t text = ECCNSText.make(chars, length), prev;
     ecctextchar_t c;
@@ -1110,7 +1112,7 @@ static ecctextstring_t textAtIndex(const char* chars, int32_t length, int32_t po
     return text;
 }
 
-static int32_t unitIndex(const char* chars, int32_t max, int32_t unit)
+int32_t unitIndex(const char* chars, int32_t max, int32_t unit)
 {
     ecctextstring_t text = ECCNSText.make(chars, max);
     int32_t position = 0;

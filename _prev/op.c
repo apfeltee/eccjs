@@ -193,7 +193,7 @@ static eccvalue_t nsopfn_iterateMoreRef(eccstate_t*);
 static eccvalue_t nsopfn_iterateLessOrEqualRef(eccstate_t*);
 static eccvalue_t nsopfn_iterateMoreOrEqualRef(eccstate_t*);
 static eccvalue_t nsopfn_iterateInRef(eccstate_t*);
-const struct eccpseudonsop_t ECCNSOperand = {
+const struct eccpseudonsop_t io_libecc_Op = {
     nsopfn_make,
     nsopfn_tochars,
     nsopfn_callfunctionarguments,
@@ -311,7 +311,7 @@ const struct eccpseudonsop_t ECCNSOperand = {
 static eccvalue_t retain(eccvalue_t value)
 {
     if(value.type == ECC_VALTYPE_CHARS)
-        ++value.data.chars->referenceCount;
+        ++value.data.charbufdata->referenceCount;
     if(value.type >= ECC_VALTYPE_OBJECT)
         ++value.data.object->referenceCount;
 
@@ -321,7 +321,7 @@ static eccvalue_t retain(eccvalue_t value)
 static eccvalue_t release(eccvalue_t value)
 {
     if(value.type == ECC_VALTYPE_CHARS)
-        --value.data.chars->referenceCount;
+        --value.data.charbufdata->referenceCount;
     if(value.type >= ECC_VALTYPE_OBJECT)
     {
         if(value.data.object != NULL)
@@ -516,7 +516,7 @@ static eccvalue_t replaceRefValue(eccvalue_t* ref, eccvalue_t value)
 static inline eccvalue_t callOps(eccstate_t* context, eccobject_t* environment)
 {
     if(context->depth >= context->ecc->maximumCallDepth)
-        ECCNSContext.rangeError(context, ECCNSChars.create("maximum depth exceeded"));
+        ECCNSContext.rangeError(context, io_libecc_Chars.create("maximum depth exceeded"));
 
     //	if (!context->parent->strictMode)
     //		if (context->thisvalue.type == ECC_VALTYPE_UNDEFINED || context->thisvalue.type == ECC_VALTYPE_NULL)
@@ -548,11 +548,11 @@ static inline void populateEnvironmentWithArguments(eccobject_t* environment, ec
 
     if(argumentCount <= parameterCount)
         for(; index < argumentCount; ++index)
-            environment->hashmap[index + 3].value = retain(arguments->element[index].value);
+            environment->hashmap[index + 3].value = retain(arguments->element[index].elemvalue);
     else
     {
         for(; index < parameterCount; ++index)
-            environment->hashmap[index + 3].value = retain(arguments->element[index].value);
+            environment->hashmap[index + 3].value = retain(arguments->element[index].elemvalue);
     }
 }
 
@@ -565,14 +565,14 @@ static inline void populateEnvironmentAndArgumentsWithVA(eccobject_t* environmen
 
     if(argumentCount <= parameterCount)
         for(; index < argumentCount; ++index)
-            environment->hashmap[index + 3].value = arguments->element[index].value = retain(va_arg(ap, eccvalue_t));
+            environment->hashmap[index + 3].value = arguments->element[index].elemvalue = retain(va_arg(ap, eccvalue_t));
     else
     {
         for(; index < parameterCount; ++index)
-            environment->hashmap[index + 3].value = arguments->element[index].value = retain(va_arg(ap, eccvalue_t));
+            environment->hashmap[index + 3].value = arguments->element[index].elemvalue = retain(va_arg(ap, eccvalue_t));
 
         for(; index < argumentCount; ++index)
-            arguments->element[index].value = retain(va_arg(ap, eccvalue_t));
+            arguments->element[index].elemvalue = retain(va_arg(ap, eccvalue_t));
     }
 }
 
@@ -595,14 +595,14 @@ static inline void populateStackEnvironmentAndArgumentsWithOps(eccstate_t* conte
 
     if(argumentCount <= parameterCount)
         for(; index < argumentCount; ++index)
-            environment->hashmap[index + 3].value = arguments->element[index].value = retain(nextOpValue());
+            environment->hashmap[index + 3].value = arguments->element[index].elemvalue = retain(nextOpValue());
     else
     {
         for(; index < parameterCount; ++index)
-            environment->hashmap[index + 3].value = arguments->element[index].value = retain(nextOpValue());
+            environment->hashmap[index + 3].value = arguments->element[index].elemvalue = retain(nextOpValue());
 
         for(; index < argumentCount; ++index)
-            arguments->element[index].value = nextOpValue();
+            arguments->element[index].elemvalue = nextOpValue();
     }
 }
 
@@ -616,7 +616,7 @@ static inline void populateEnvironmentAndArgumentsWithOps(eccstate_t* context, e
     {
         int32_t index = parameterCount;
         for(; index < argumentCount; ++index)
-            retain(arguments->element[index].value);
+            retain(arguments->element[index].elemvalue);
     }
 }
 
@@ -699,8 +699,8 @@ eccvalue_t nsopfn_callfunctionva(eccstate_t* context, eccctxoffsettype_t offset,
 
             if(!context->strictMode)
             {
-                ECCNSObject.addMember(environment->hashmap[2].value.data.object, ECC_ConstKey_callee, retain(ECCNSValue.function(function)), ECC_VALFLAG_HIDDEN);
-                ECCNSObject.addMember(environment->hashmap[2].value.data.object, ECC_ConstKey_length, ECCNSValue.integer(argumentCount), ECC_VALFLAG_HIDDEN);
+                ECCNSObject.addMember(environment->hashmap[2].value.data.object, io_libecc_key_callee, retain(ECCNSValue.function(function)), ECC_VALFLAG_HIDDEN);
+                ECCNSObject.addMember(environment->hashmap[2].value.data.object, io_libecc_key_length, ECCNSValue.integer(argumentCount), ECC_VALFLAG_HIDDEN);
             }
         }
         else
@@ -745,8 +745,8 @@ static inline eccvalue_t callFunction(eccstate_t* context, eccobjscriptfunction_
 
             if(!context->strictMode)
             {
-                ECCNSObject.addMember(environment->hashmap[2].value.data.object, ECC_ConstKey_callee, retain(ECCNSValue.function(function)), ECC_VALFLAG_HIDDEN);
-                ECCNSObject.addMember(environment->hashmap[2].value.data.object, ECC_ConstKey_length, ECCNSValue.integer(argumentCount), ECC_VALFLAG_HIDDEN);
+                ECCNSObject.addMember(environment->hashmap[2].value.data.object, io_libecc_key_callee, retain(ECCNSValue.function(function)), ECC_VALFLAG_HIDDEN);
+                ECCNSObject.addMember(environment->hashmap[2].value.data.object, io_libecc_key_length, ECCNSValue.integer(argumentCount), ECC_VALFLAG_HIDDEN);
             }
         }
         else
@@ -788,7 +788,7 @@ static inline eccvalue_t callValue(eccstate_t* context, eccvalue_t value, eccval
     const ecctextstring_t* parentTextCall = context->textCall;
 
     if(value.type != ECC_VALTYPE_FUNCTION)
-        ECCNSContext.typeError(context, ECCNSChars.create("'%.*s' is not a function", context->text->length, context->text->bytes));
+        ECCNSContext.typeError(context, io_libecc_Chars.create("'%.*s' is not a function", context->text->length, context->text->bytes));
 
     context->textCall = textCall;
 
@@ -811,12 +811,12 @@ eccvalue_t nsopfn_construct(eccstate_t* context)
     if(function.type != ECC_VALTYPE_FUNCTION)
         goto error;
 
-    prototype = ECCNSObject.member(&function.data.function->object, ECC_ConstKey_prototype, 0);
+    prototype = ECCNSObject.member(&function.data.function->object, io_libecc_key_prototype, 0);
     if(!prototype)
         goto error;
 
     if(!ECCNSValue.isObject(*prototype))
-        object = ECCNSValue.object(ECCNSObject.create(ECC_Prototype_Object));
+        object = ECCNSValue.object(ECCNSObject.create(io_libecc_object_prototype));
     else if(prototype->type == ECC_VALTYPE_FUNCTION)
     {
         object = ECCNSValue.object(ECCNSObject.create(NULL));
@@ -831,14 +831,16 @@ eccvalue_t nsopfn_construct(eccstate_t* context)
     value = callValue(context, function, object, argumentCount, 1, textCall);
 
     if(ECCNSValue.isObject(value))
+    {
         return value;
-    else
-        return object;
+    }
+    return object;
 
 error:
     context->textCall = textCall;
     ECCNSContext.setTextIndex(context, ECC_CTXINDEXTYPE_FUNC);
-    ECCNSContext.typeError(context, ECCNSChars.create("'%.*s' is not a constructor", text->length, text->bytes));
+    ECCNSContext.typeError(context, io_libecc_Chars.create("'%.*s' is not a constructor", text->length, text->bytes));
+    return ECCValConstNull;
 }
 
 eccvalue_t nsopfn_call(eccstate_t* context)
@@ -892,7 +894,7 @@ eccvalue_t nsopfn_eval(eccstate_t* context)
     if(!ECCNSValue.isString(value) || !ECCNSValue.isPrimitive(value))
         return value;
 
-    input = ECCNSInput.createFromBytes(ECCNSValue.stringBytes(&value), ECCNSValue.stringLength(&value), "(eval)");
+    input = io_libecc_Input.createFromBytes(ECCNSValue.stringBytes(&value), ECCNSValue.stringLength(&value), "(eval)");
     ECCNSScript.evalInputWithContext(context->ecc, input, &subContext);
 
     value = context->ecc->result;
@@ -927,8 +929,8 @@ eccvalue_t nsopfn_regexp(eccstate_t* context)
 {
     const ecctextstring_t* text = opmac_text(0);
     eccobjerror_t* error = NULL;
-    ecccharbuffer_t* chars = ECCNSChars.createWithBytes(text->length, text->bytes);
-    eccobjregexp_t* regexp = ECCNSRegExp.create(chars, &error, context->ecc->sloppyMode ? ECC_REGEXOPT_ALLOWUNICODEFLAGS : 0);
+    ecccharbuffer_t* chars = io_libecc_Chars.createWithBytes(text->length, text->bytes);
+    eccobjregexp_t* regexp = io_libecc_RegExp.create(chars, &error, context->ecc->sloppyMode ? ECC_REGEXOPT_ALLOWUNICODEFLAGS : 0);
     if(error)
     {
         error->text.bytes = text->bytes + (error->text.bytes - chars->bytes);
@@ -942,7 +944,7 @@ eccvalue_t nsopfn_function(eccstate_t* context)
     eccobject_t* prototype;
     eccvalue_t value = opmac_value(), result;
 
-    eccobjscriptfunction_t* function = ECCNSFunction.copy(value.data.function);
+    eccobjscriptfunction_t* function = io_libecc_Function.copy(value.data.function);
     function->object.prototype = &value.data.function->object;
     function->environment.prototype = context->environment;
     if(context->refObject)
@@ -951,8 +953,8 @@ eccvalue_t nsopfn_function(eccstate_t* context)
         function->refObject = context->refObject;
     }
 
-    prototype = ECCNSObject.create(ECC_Prototype_Object);
-    ECCNSFunction.linkPrototype(function, ECCNSValue.object(prototype), ECC_VALFLAG_SEALED);
+    prototype = ECCNSObject.create(io_libecc_object_prototype);
+    io_libecc_Function.linkPrototype(function, ECCNSValue.object(prototype), ECC_VALFLAG_SEALED);
 
     ++prototype->referenceCount;
     ++context->environment->referenceCount;
@@ -965,7 +967,7 @@ eccvalue_t nsopfn_function(eccstate_t* context)
 
 eccvalue_t nsopfn_object(eccstate_t* context)
 {
-    eccobject_t* object = ECCNSObject.create(ECC_Prototype_Object);
+    eccobject_t* object = ECCNSObject.create(io_libecc_object_prototype);
     eccvalue_t property, value;
     uint32_t count;
 
@@ -987,7 +989,7 @@ eccvalue_t nsopfn_object(eccstate_t* context)
 eccvalue_t nsopfn_array(eccstate_t* context)
 {
     uint32_t length = opmac_value().data.integer;
-    eccobject_t* object = ECCNSArray.createSized(length);
+    eccobject_t* object = io_libecc_Array.createSized(length);
     eccvalue_t value;
     uint32_t index;
 
@@ -996,7 +998,7 @@ eccvalue_t nsopfn_array(eccstate_t* context)
     for(index = 0; index < length; ++index)
     {
         value = retain(nextOpValue());
-        object->element[index].value = value;
+        object->element[index].elemvalue = value;
     }
     return ECCNSValue.object(object);
 }
@@ -1025,7 +1027,7 @@ static eccvalue_t* localRef(eccstate_t* context, eccindexkey_t key, const ecctex
     if(!ref && required)
     {
         ECCNSContext.setText(context, text);
-        ECCNSContext.referenceError(context, ECCNSChars.create("'%.*s' is not defined", ECCNSKey.textOf(key)->length, ECCNSKey.textOf(key)->bytes));
+        ECCNSContext.referenceError(context, io_libecc_Chars.create("'%.*s' is not defined", io_libecc_Key.textOf(key)->length, io_libecc_Key.textOf(key)->bytes));
     }
     return ref;
 }
@@ -1146,9 +1148,9 @@ eccvalue_t nsopfn_setParentSlot(eccstate_t* context)
     {
         if(context->strictMode)
         {
-            ecctextstring_t property = *ECCNSKey.textOf(ref->key);
+            ecctextstring_t property = *io_libecc_Key.textOf(ref->key);
             ECCNSContext.setText(context, text);
-            ECCNSContext.typeError(context, ECCNSChars.create("'%.*s' is read-only", property.length, property.bytes));
+            ECCNSContext.typeError(context, io_libecc_Chars.create("'%.*s' is read-only", property.length, property.bytes));
         }
     }
     else
@@ -1194,7 +1196,7 @@ eccvalue_t nsopfn_getMemberRef(eccstate_t* context)
         if(object.data.object->flags & ECC_OBJFLAG_SEALED)
         {
             ECCNSContext.setText(context, text);
-            ECCNSContext.typeError(context, ECCNSChars.create("object is not extensible"));
+            ECCNSContext.typeError(context, io_libecc_Chars.create("object is not extensible"));
         }
         ref = ECCNSObject.addMember(object.data.object, key, ECCValConstUndefined, 0);
     }
@@ -1254,7 +1256,7 @@ eccvalue_t nsopfn_deleteMember(eccstate_t* context)
     if(!result && context->strictMode)
     {
         ECCNSContext.setText(context, text);
-        ECCNSContext.typeError(context, ECCNSChars.create("'%.*s' is non-configurable", ECCNSKey.textOf(key)->length, ECCNSKey.textOf(key)->bytes));
+        ECCNSContext.typeError(context, io_libecc_Chars.create("'%.*s' is non-configurable", io_libecc_Key.textOf(key)->length, io_libecc_Key.textOf(key)->bytes));
     }
 
     return ECCNSValue.truth(result);
@@ -1292,7 +1294,7 @@ eccvalue_t nsopfn_getPropertyRef(eccstate_t* context)
         if(object.data.object->flags & ECC_OBJFLAG_SEALED)
         {
             ECCNSContext.setText(context, text);
-            ECCNSContext.typeError(context, ECCNSChars.create("object is not extensible"));
+            ECCNSContext.typeError(context, io_libecc_Chars.create("object is not extensible"));
         }
         ref = ECCNSObject.addProperty(object.data.object, property, ECCValConstUndefined, 0);
     }
@@ -1351,7 +1353,7 @@ eccvalue_t nsopfn_deleteProperty(eccstate_t* context)
     {
         eccvalue_t string = ECCNSValue.toString(context, property);
         ECCNSContext.setText(context, text);
-        ECCNSContext.typeError(context, ECCNSChars.create("'%.*s' is non-configurable", ECCNSValue.stringLength(&string), ECCNSValue.stringBytes(&string)));
+        ECCNSContext.typeError(context, io_libecc_Chars.create("'%.*s' is non-configurable", ECCNSValue.stringLength(&string), ECCNSValue.stringBytes(&string)));
     }
     return ECCNSValue.truth(result);
 }
@@ -1515,14 +1517,14 @@ eccvalue_t nsopfn_instanceOf(eccstate_t* context)
     if(b.type != ECC_VALTYPE_FUNCTION)
     {
         ECCNSContext.setText(context, textAlt);
-        ECCNSContext.typeError(context, ECCNSChars.create("'%.*s' is not a function", textAlt->length, textAlt->bytes));
+        ECCNSContext.typeError(context, io_libecc_Chars.create("'%.*s' is not a function", textAlt->length, textAlt->bytes));
     }
 
-    b = ECCNSObject.getMember(context, b.data.object, ECC_ConstKey_prototype);
+    b = ECCNSObject.getMember(context, b.data.object, io_libecc_key_prototype);
     if(!ECCNSValue.isObject(b))
     {
         ECCNSContext.setText(context, textAlt);
-        ECCNSContext.typeError(context, ECCNSChars.create("'%.*s'.prototype not an object", textAlt->length, textAlt->bytes));
+        ECCNSContext.typeError(context, io_libecc_Chars.create("'%.*s'.prototype not an object", textAlt->length, textAlt->bytes));
     }
 
     if(ECCNSValue.isObject(a))
@@ -1544,7 +1546,7 @@ eccvalue_t nsopfn_in(eccstate_t* context)
     eccvalue_t* ref;
 
     if(!ECCNSValue.isObject(object))
-        ECCNSContext.typeError(context, ECCNSChars.create("'%.*s' not an object", context->ops->text.length, context->ops->text.bytes));
+        ECCNSContext.typeError(context, io_libecc_Chars.create("'%.*s' not an object", context->ops->text.length, context->ops->text.bytes));
 
     ref = ECCNSObject.property(object.data.object, ECCNSValue.toString(context, property), 0);
 
@@ -1871,7 +1873,7 @@ eccvalue_t nsopfn_debugger(eccstate_t* context)
     return trapOp(context, 0);
 }
 
-io_libecc_ecc_useframe eccvalue_t nsopfn_try(eccstate_t* context)
+eccvalue_t nsopfn_try(eccstate_t* context)
 {
     eccobject_t* environment = context->environment;
     eccobject_t* refObject = context->refObject;
@@ -1884,7 +1886,7 @@ io_libecc_ecc_useframe eccvalue_t nsopfn_try(eccstate_t* context)
     eccvalue_t finallyValue;
     uint32_t indices[3];
 
-    ECCNSMemoryPool.getIndices(indices);
+    io_libecc_Pool.getIndices(indices);
 
     if(!setjmp(*ECCNSScript.pushEnv(context->ecc)))// try
         value = opmac_next();
@@ -1896,15 +1898,13 @@ io_libecc_ecc_useframe eccvalue_t nsopfn_try(eccstate_t* context)
 
         if(!rethrow)// catch
         {
-            ECCNSMemoryPool.unreferenceFromIndices(indices);
-
+            io_libecc_Pool.unreferenceFromIndices(indices);
             rethrow = 1;
             context->ops = end + 1;// bypass catch jump
             context->environment = environment;
             context->refObject = refObject;
             key = opmac_next().data.key;
-
-            if(!ECCNSKey.isEqual(key, ECC_ConstKey_none))
+            if(!io_libecc_Key.isEqual(key, io_libecc_key_none))
             {
                 if(value.type == ECC_VALTYPE_FUNCTION)
                 {
@@ -1915,22 +1915,28 @@ io_libecc_ecc_useframe eccvalue_t nsopfn_try(eccstate_t* context)
                 value = opmac_next();// execute until noop
                 rethrow = 0;
                 if(context->breaker)
+                {
                     nsopfn_popEnvironment(context);
+                }
             }
         }
         else// rethrow
+        {
             nsopfn_popEnvironment(context);
+        }
     }
 
     ECCNSScript.popEnv(context->ecc);
 
     breaker = context->breaker;
     context->breaker = 0;
-    context->ops = end;// op[end] = ECCNSOperand.jump, to after catch
+    context->ops = end;// op[end] = io_libecc_Op.jump, to after catch
     finallyValue = opmac_next();// jump to after catch, and execute until noop
 
     if(context->breaker) /* return breaker */
+    {
         return finallyValue;
+    }
     else if(rethrow)
     {
         context->ops = rethrowOps;
@@ -1941,14 +1947,14 @@ io_libecc_ecc_useframe eccvalue_t nsopfn_try(eccstate_t* context)
         context->breaker = breaker;
         return value;
     }
-    else
-        return opmac_next();
+    return opmac_next();
 }
 
-io_libecc_ecc_noreturn eccvalue_t nsopfn_throw(eccstate_t * context)
+eccvalue_t nsopfn_throw(eccstate_t * context)
 {
     context->ecc->text = *opmac_text(1);
     ECCNSContext.doThrow(context, retain(trapOp(context, 0)));
+    return ECCValConstNull;
 }
 
 eccvalue_t nsopfn_with(eccstate_t* context)
@@ -1967,9 +1973,10 @@ eccvalue_t nsopfn_with(eccstate_t* context)
     context->refObject = refObject;
 
     if(context->breaker)
+    {
         return value;
-    else
-        return opmac_next();
+    }
+    return opmac_next();
 }
 
 eccvalue_t nsopfn_next(eccstate_t* context)
@@ -1991,10 +1998,10 @@ eccvalue_t nsopfn_autoreleaseExpression(eccstate_t* context)
 {
     uint32_t indices[3];
 
-    ECCNSMemoryPool.getIndices(indices);
+    io_libecc_Pool.getIndices(indices);
     release(context->ecc->result);
     context->ecc->result = retain(trapOp(context, 1));
-    ECCNSMemoryPool.collectUnreferencedFromIndices(indices);
+    io_libecc_Pool.collectUnreferencedFromIndices(indices);
     return opmac_next();
 }
 
@@ -2002,9 +2009,9 @@ eccvalue_t nsopfn_autoreleaseDiscard(eccstate_t* context)
 {
     uint32_t indices[3];
 
-    ECCNSMemoryPool.getIndices(indices);
+    io_libecc_Pool.getIndices(indices);
     trapOp(context, 1);
-    ECCNSMemoryPool.collectUnreferencedFromIndices(indices);
+    io_libecc_Pool.collectUnreferencedFromIndices(indices);
     return opmac_next();
 }
 
@@ -2188,7 +2195,7 @@ eccvalue_t nsopfn_repopulate(eccstate_t* context)
             eccobject_t* argvals = context->environment->hashmap[2].value.data.object;
 
             for(index = 3; index < context->environment->hashmapCapacity; ++index)
-                argvals->element[index - 3].value = hashmap[index].value;
+                argvals->element[index - 3].elemvalue = hashmap[index].value;
         }
 
         memcpy(context->environment->hashmap, hashmap, sizeof(hashmap));
@@ -2245,7 +2252,7 @@ eccvalue_t nsopfn_switchOp(eccstate_t* context)
 #define stepIteration(value, nextOps, then)                         \
     {                                                               \
         uint32_t indices[3];                                        \
-        ECCNSMemoryPool.getIndices(indices);                         \
+        io_libecc_Pool.getIndices(indices);                         \
         value = opmac_next();                                           \
         if(context->breaker && --context->breaker)                  \
         {                                                           \
@@ -2256,7 +2263,7 @@ eccvalue_t nsopfn_switchOp(eccstate_t* context)
         }                                                           \
         else                                                        \
         {                                                           \
-            ECCNSMemoryPool.collectUnreferencedFromIndices(indices); \
+            io_libecc_Pool.collectUnreferencedFromIndices(indices); \
             context->ops = nextOps;                                 \
         }                                                           \
     }
@@ -2375,15 +2382,15 @@ eccvalue_t nsopfn_iterateInRef(eccstate_t* context)
             {
                 eccobjelement_t* element = object->element + index;
 
-                if(element->value.check != 1 || (element->value.flags & ECC_VALFLAG_HIDDEN))
+                if(element->elemvalue.check != 1 || (element->elemvalue.flags & ECC_VALFLAG_HIDDEN))
                     continue;
 
-                if(object != target.data.object && &element->value != ECCNSObject.element(target.data.object, index, 0))
+                if(object != target.data.object && &element->elemvalue != ECCNSObject.element(target.data.object, index, 0))
                     continue;
 
-                ECCNSChars.beginAppend(&chars);
-                ECCNSChars.append(&chars, "%d", index);
-                key = ECCNSChars.endAppend(&chars);
+                io_libecc_Chars.beginAppend(&chars);
+                io_libecc_Chars.append(&chars, "%d", index);
+                key = io_libecc_Chars.endAppend(&chars);
                 replaceRefValue(ref, key);
 
                 stepIteration(value, startOps, break);
@@ -2404,7 +2411,7 @@ eccvalue_t nsopfn_iterateInRef(eccstate_t* context)
                 if(object != target.data.object && &hashmap->value != ECCNSObject.member(target.data.object, hashmap->value.key, 0))
                     continue;
 
-                key = ECCNSValue.text(ECCNSKey.textOf(hashmap->value.key));
+                key = ECCNSValue.text(io_libecc_Key.textOf(hashmap->value.key));
                 replaceRefValue(ref, key);
 
                 stepIteration(value, startOps, break);
