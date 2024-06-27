@@ -19,7 +19,7 @@ static void ctxfn_syntaxError(eccstate_t*, ecccharbuffer_t*) __attribute__((nore
 static void ctxfn_typeError(eccstate_t*, ecccharbuffer_t*) __attribute__((noreturn));
 static void ctxfn_uriError(eccstate_t*, ecccharbuffer_t*) __attribute__((noreturn));
 static void ctxfn_throw(eccstate_t*, eccvalue_t) __attribute__((noreturn));
-static eccvalue_t ctxfn_callFunction(eccstate_t*, eccobjscriptfunction_t* function, eccvalue_t thisval, int argumentCount, ...);
+static eccvalue_t ctxfn_callFunction(eccstate_t*, eccobjfunction_t* function, eccvalue_t thisval, int argumentCount, ...);
 static int ctxfn_argumentCount(eccstate_t*);
 static eccvalue_t ctxfn_argument(eccstate_t*, int argumentIndex);
 static void ctxfn_replaceArgument(eccstate_t*, int argumentIndex, eccvalue_t value);
@@ -105,7 +105,7 @@ void ctxfn_throw(eccstate_t * self, eccvalue_t value)
     ECCNSScript.jmpEnv(self->ecc, value);
 }
 
-eccvalue_t ctxfn_callFunction(eccstate_t* self, eccobjscriptfunction_t* function, eccvalue_t thisval, int argumentCount, ...)
+eccvalue_t ctxfn_callFunction(eccstate_t* self, eccobjfunction_t* function, eccvalue_t thisval, int argumentCount, ...)
 {
     eccvalue_t result;
     va_list ap;

@@ -18,7 +18,7 @@ static eccmempool_t* self = NULL;
 
 static void setup(void);
 static void teardown(void);
-static void addFunction(eccobjscriptfunction_t* function);
+static void addFunction(eccobjfunction_t* function);
 static void addObject(eccobject_t* object);
 static void addChars(ecccharbuffer_t* chars);
 static void unmarkAll(void);
@@ -100,7 +100,7 @@ void teardown(void)
     free(self), self = NULL;
 }
 
-void addFunction(eccobjscriptfunction_t* function)
+void addFunction(eccobjfunction_t* function)
 {
     assert(function);
 

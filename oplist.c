@@ -147,22 +147,27 @@ eccoplist_t* oplistfn_unshiftJoin(eccoperand_t op, eccoplist_t* self, eccoplist_
 eccoplist_t* oplistfn_unshiftJoin3(eccoperand_t op, eccoplist_t* self, eccoplist_t* a, eccoplist_t* b)
 {
     if(!self)
+    {
         return oplistfn_unshiftJoin(op, a, b);
+    }
     else if(!a)
+    {
         return oplistfn_unshiftJoin(op, self, b);
+    }
     else if(!b)
+    {
         return oplistfn_unshiftJoin(op, self, a);
-
+    }
     self->ops = realloc(self->ops, sizeof(*self->ops) * (self->count + a->count + b->count + 1));
     memmove(self->ops + 1, self->ops, sizeof(*self->ops) * self->count);
     memcpy(self->ops + self->count + 1, a->ops, sizeof(*self->ops) * a->count);
     memcpy(self->ops + self->count + a->count + 1, b->ops, sizeof(*self->ops) * b->count);
     self->ops[0] = op;
     self->count += a->count + b->count + 1;
-
-    oplistfn_destroy(a), a = NULL;
-    oplistfn_destroy(b), b = NULL;
-
+    oplistfn_destroy(a);
+    a = NULL;
+    oplistfn_destroy(b);
+    b = NULL;
     return self;
 }
 
@@ -175,8 +180,9 @@ eccoplist_t* oplistfn_shift(eccoplist_t* self)
 eccoplist_t* oplistfn_append(eccoplist_t* self, eccoperand_t op)
 {
     if(!self)
+    {
         return oplistfn_create(op.native, op.value, op.text);
-
+    }
     self->ops = realloc(self->ops, sizeof(*self->ops) * (self->count + 1));
     self->ops[self->count++] = op;
     return self;
@@ -196,26 +202,44 @@ eccoplist_t* oplistfn_createLoop(eccoplist_t* initial, eccoplist_t* condition, e
             {
                 eccvalue_t stepValue;
                 if(step->count == 2 && (step->ops[0].native == ECCNSOperand.incrementRef || step->ops[0].native == ECCNSOperand.postIncrementRef))
+                {
                     stepValue = ECCNSValue.integer(1);
+                }
                 else if(step->count == 3 && step->ops[0].native == ECCNSOperand.addAssignRef && step->ops[2].native == ECCNSOperand.value
                         && step->ops[2].value.type == ECC_VALTYPE_INTEGER && step->ops[2].value.data.integer > 0)
+                {
                     stepValue = step->ops[2].value;
+                }
                 else
+                {
                     goto normal;
-
+                }
                 if(condition->ops[2].native == ECCNSOperand.getLocal)
+                {
                     body = ECCNSOpList.unshift(ECCNSOperand.make(ECCNSOperand.getLocalRef, condition->ops[2].value, condition->ops[2].text), body);
+                }
                 else if(condition->ops[2].native == ECCNSOperand.value)
+                {
                     body = ECCNSOpList.unshift(ECCNSOperand.make(ECCNSOperand.valueConstRef, condition->ops[2].value, condition->ops[2].text), body);
+                }
                 else
+                {
                     goto normal;
-
+                }
                 body = ECCNSOpList.appendNoop(
-                ECCNSOpList.unshift(ECCNSOperand.make(ECCNSOperand.getLocalRef, condition->ops[1].value, condition->ops[1].text), body));
+                    ECCNSOpList.unshift(
+                        ECCNSOperand.make(ECCNSOperand.getLocalRef, condition->ops[1].value, condition->ops[1].text),
+                        body
+                    )
+                );
                 body = ECCNSOpList.unshift(ECCNSOperand.make(ECCNSOperand.value, stepValue, condition->ops[0].text), body);
-                body = ECCNSOpList.unshift(ECCNSOperand.make(condition->ops[0].native == ECCNSOperand.less ? ECCNSOperand.iterateLessRef : ECCNSOperand.iterateLessOrEqualRef,
-                                                                  ECCNSValue.integer(body->count), condition->ops[0].text),
-                                                body);
+                body = ECCNSOpList.unshift(
+                    ECCNSOperand.make(
+                        (condition->ops[0].native == ECCNSOperand.less ? ECCNSOperand.iterateLessRef : ECCNSOperand.iterateLessOrEqualRef),
+                        ECCNSValue.integer(body->count),
+                        condition->ops[0].text
+                    ), body
+                );
                 ECCNSOpList.destroy(condition), condition = NULL;
                 ECCNSOpList.destroy(step), step = NULL;
                 return ECCNSOpList.join(initial, body);
@@ -226,20 +250,30 @@ eccoplist_t* oplistfn_createLoop(eccoplist_t* initial, eccoplist_t* condition, e
             {
                 eccvalue_t stepValue;
                 if(step->count == 2 && (step->ops[0].native == ECCNSOperand.decrementRef || step->ops[0].native == ECCNSOperand.postDecrementRef))
+                {
                     stepValue = ECCNSValue.integer(1);
+                }
                 else if(step->count == 3 && step->ops[0].native == ECCNSOperand.minusAssignRef && step->ops[2].native == ECCNSOperand.value
                         && step->ops[2].value.type == ECC_VALTYPE_INTEGER && step->ops[2].value.data.integer > 0)
+                {
                     stepValue = step->ops[2].value;
+                }
                 else
+                {
                     goto normal;
-
+                }
                 if(condition->ops[2].native == ECCNSOperand.getLocal)
+                {
                     body = ECCNSOpList.unshift(ECCNSOperand.make(ECCNSOperand.getLocalRef, condition->ops[2].value, condition->ops[2].text), body);
+                }
                 else if(condition->ops[2].native == ECCNSOperand.value)
+                {
                     body = ECCNSOpList.unshift(ECCNSOperand.make(ECCNSOperand.valueConstRef, condition->ops[2].value, condition->ops[2].text), body);
+                }
                 else
+                {
                     goto normal;
-
+                }
                 body = ECCNSOpList.appendNoop(
                 ECCNSOpList.unshift(ECCNSOperand.make(ECCNSOperand.getLocalRef, condition->ops[1].value, condition->ops[1].text), body));
                 body = ECCNSOpList.unshift(ECCNSOperand.make(ECCNSOperand.value, stepValue, condition->ops[0].text), body);
@@ -251,46 +285,50 @@ eccoplist_t* oplistfn_createLoop(eccoplist_t* initial, eccoplist_t* condition, e
                 return ECCNSOpList.join(initial, body);
             }
     }
-
-normal:
-{
-    int skipOpCount;
-
-    if(!condition)
-        condition = ECCNSOpList.create(ECCNSOperand.value, ECCNSValue.truth(1), ECC_ConstString_Empty);
-
-    if(step)
+    normal:
     {
-        step = ECCNSOpList.unshift(ECCNSOperand.make(ECCNSOperand.discard, ECCValConstNone, ECC_ConstString_Empty), step);
-        skipOpCount = step->count;
+        int skipOpCount;
+
+        if(!condition)
+        {
+            condition = ECCNSOpList.create(ECCNSOperand.value, ECCNSValue.truth(1), ECC_ConstString_Empty);
+        }
+        if(step)
+        {
+            step = ECCNSOpList.unshift(ECCNSOperand.make(ECCNSOperand.discard, ECCValConstNone, ECC_ConstString_Empty), step);
+            skipOpCount = step->count;
+        }
+        else
+        {
+            skipOpCount = 0;
+        }
+        body = ECCNSOpList.appendNoop(body);
+        if(reverseCondition)
+        {
+            skipOpCount += condition->count + body->count;
+            body = ECCNSOpList.append(body, ECCNSOperand.make(ECCNSOperand.value, ECCNSValue.truth(1), ECC_ConstString_Empty));
+            body = ECCNSOpList.append(body, ECCNSOperand.make(ECCNSOperand.jump, ECCNSValue.integer(-body->count - 1), ECC_ConstString_Empty));
+        }
+        body = ECCNSOpList.join(ECCNSOpList.join(step, condition), body);
+        body = ECCNSOpList.unshift(ECCNSOperand.make(ECCNSOperand.jump, ECCNSValue.integer(body->count), ECC_ConstString_Empty), body);
+        initial = ECCNSOpList.append(initial, ECCNSOperand.make(ECCNSOperand.iterate, ECCNSValue.integer(skipOpCount), ECC_ConstString_Empty));
+        return ECCNSOpList.join(initial, body);
     }
-    else
-        skipOpCount = 0;
-
-    body = ECCNSOpList.appendNoop(body);
-
-    if(reverseCondition)
-    {
-        skipOpCount += condition->count + body->count;
-        body = ECCNSOpList.append(body, ECCNSOperand.make(ECCNSOperand.value, ECCNSValue.truth(1), ECC_ConstString_Empty));
-        body = ECCNSOpList.append(body, ECCNSOperand.make(ECCNSOperand.jump, ECCNSValue.integer(-body->count - 1), ECC_ConstString_Empty));
-    }
-
-    body = ECCNSOpList.join(ECCNSOpList.join(step, condition), body);
-    body = ECCNSOpList.unshift(ECCNSOperand.make(ECCNSOperand.jump, ECCNSValue.integer(body->count), ECC_ConstString_Empty), body);
-    initial = ECCNSOpList.append(initial, ECCNSOperand.make(ECCNSOperand.iterate, ECCNSValue.integer(skipOpCount), ECC_ConstString_Empty));
-    return ECCNSOpList.join(initial, body);
-}
 }
 
 void oplistfn_optimizeWithEnvironment(eccoplist_t* self, eccobject_t* environment, uint32_t selfIndex)
 {
-    uint32_t index, count, slot, haveLocal = 0, environmentLevel = 0;
+    bool cansearch;
+    uint32_t index;
+    uint32_t count;
+    uint32_t slot;
+    uint32_t haveLocal = 0;
+    uint32_t envlevel = 0;
     eccindexkey_t environments[0xff];
-
     if(!self)
+    {
         return;
-
+    }
     for(index = 0, count = self->count; index < count; ++index)
     {
         if(self->ops[index].native == ECCNSOperand.with)
@@ -298,65 +336,78 @@ void oplistfn_optimizeWithEnvironment(eccoplist_t* self, eccobject_t* environmen
             index += self->ops[index].value.data.integer;
             haveLocal = 1;
         }
-
         if(self->ops[index].native == ECCNSOperand.function)
         {
             uint32_t subselfidx = ((index && (self->ops[index - 1].native == ECCNSOperand.setLocalSlot)) ? self->ops[index - 1].value.data.integer : 0);
             oplistfn_optimizeWithEnvironment(self->ops[index].value.data.function->oplist, &self->ops[index].value.data.function->environment, subselfidx);
         }
-
         if(self->ops[index].native == ECCNSOperand.pushEnvironment)
-            environments[environmentLevel++] = self->ops[index].value.data.key;
-
-        if(self->ops[index].native == ECCNSOperand.popEnvironment)
-            --environmentLevel;
-
-        if(self->ops[index].native == ECCNSOperand.createLocalRef || self->ops[index].native == ECCNSOperand.getLocalRefOrNull
-           || self->ops[index].native == ECCNSOperand.getLocalRef || self->ops[index].native == ECCNSOperand.getLocal
-           || self->ops[index].native == ECCNSOperand.setLocal || self->ops[index].native == ECCNSOperand.deleteLocal)
         {
-            eccobject_t* searchEnvironment = environment;
+            environments[envlevel++] = self->ops[index].value.data.key;
+        }
+        if(self->ops[index].native == ECCNSOperand.popEnvironment)
+        {
+            --envlevel;
+        }
+        cansearch = (
+            (self->ops[index].native == ECCNSOperand.createLocalRef) ||
+            (self->ops[index].native == ECCNSOperand.getLocalRefOrNull) ||
+            (self->ops[index].native == ECCNSOperand.getLocalRef) ||
+            (self->ops[index].native == ECCNSOperand.getLocal) ||
+            (self->ops[index].native == ECCNSOperand.setLocal) ||
+            (self->ops[index].native == ECCNSOperand.deleteLocal)
+        );
+        if(cansearch)
+        {
+            eccobject_t* searchenv = environment;
             uint32_t level;
-
-            level = environmentLevel;
+            level = envlevel;
             while(level--)
+            {
                 if(ECCNSKey.isEqual(environments[level], self->ops[index].value.data.key))
+                {
                     goto notfound;
-
-            level = environmentLevel;
+                }
+            }
+            level = envlevel;
             do
             {
-                for(slot = searchEnvironment->hashmapCount; slot--;)
+                for(slot = searchenv->hashmapCount; slot--;)
                 {
-                    if(searchEnvironment->hashmap[slot].value.check == 1)
+                    if(searchenv->hashmap[slot].value.check == 1)
                     {
-                        if(ECCNSKey.isEqual(searchEnvironment->hashmap[slot].value.key, self->ops[index].value.data.key))
+                        if(ECCNSKey.isEqual(searchenv->hashmap[slot].value.key, self->ops[index].value.data.key))
                         {
                             if(!level)
                             {
-                                self->ops[index] = ECCNSOperand.make(self->ops[index].native == ECCNSOperand.createLocalRef    ? ECCNSOperand.getLocalSlotRef :
-                                                                     self->ops[index].native == ECCNSOperand.getLocalRefOrNull ? ECCNSOperand.getLocalSlotRef :
-                                                                     self->ops[index].native == ECCNSOperand.getLocalRef       ? ECCNSOperand.getLocalSlotRef :
-                                                                     self->ops[index].native == ECCNSOperand.getLocal          ? ECCNSOperand.getLocalSlot :
-                                                                     self->ops[index].native == ECCNSOperand.setLocal          ? ECCNSOperand.setLocalSlot :
-                                                                     self->ops[index].native == ECCNSOperand.deleteLocal       ? ECCNSOperand.deleteLocalSlot :
-                                                                                                                                 NULL,
-                                                                     ECCNSValue.integer(slot), self->ops[index].text);
+                                self->ops[index] = ECCNSOperand.make(
+                                    self->ops[index].native == ECCNSOperand.createLocalRef    ? ECCNSOperand.getLocalSlotRef :
+                                    self->ops[index].native == ECCNSOperand.getLocalRefOrNull ? ECCNSOperand.getLocalSlotRef :
+                                    self->ops[index].native == ECCNSOperand.getLocalRef       ? ECCNSOperand.getLocalSlotRef :
+                                    self->ops[index].native == ECCNSOperand.getLocal          ? ECCNSOperand.getLocalSlot :
+                                    self->ops[index].native == ECCNSOperand.setLocal          ? ECCNSOperand.setLocalSlot :
+                                    self->ops[index].native == ECCNSOperand.deleteLocal       ? ECCNSOperand.deleteLocalSlot :
+                                    NULL
+                                    ,
+                                    ECCNSValue.integer(slot), self->ops[index].text);
                             }
                             else if(slot <= INT16_MAX && level <= INT16_MAX)
                             {
-                                self->ops[index] = ECCNSOperand.make(self->ops[index].native == ECCNSOperand.createLocalRef    ? ECCNSOperand.getParentSlotRef :
-                                                                     self->ops[index].native == ECCNSOperand.getLocalRefOrNull ? ECCNSOperand.getParentSlotRef :
-                                                                     self->ops[index].native == ECCNSOperand.getLocalRef       ? ECCNSOperand.getParentSlotRef :
-                                                                     self->ops[index].native == ECCNSOperand.getLocal          ? ECCNSOperand.getParentSlot :
-                                                                     self->ops[index].native == ECCNSOperand.setLocal          ? ECCNSOperand.setParentSlot :
-                                                                     self->ops[index].native == ECCNSOperand.deleteLocal       ? ECCNSOperand.deleteParentSlot :
-                                                                                                                                 NULL,
-                                                                     ECCNSValue.integer((level << 16) | slot), self->ops[index].text);
+                                self->ops[index] = ECCNSOperand.make(
+                                    self->ops[index].native == ECCNSOperand.createLocalRef    ? ECCNSOperand.getParentSlotRef :
+                                    self->ops[index].native == ECCNSOperand.getLocalRefOrNull ? ECCNSOperand.getParentSlotRef :
+                                    self->ops[index].native == ECCNSOperand.getLocalRef       ? ECCNSOperand.getParentSlotRef :
+                                    self->ops[index].native == ECCNSOperand.getLocal          ? ECCNSOperand.getParentSlot :
+                                    self->ops[index].native == ECCNSOperand.setLocal          ? ECCNSOperand.setParentSlot :
+                                    self->ops[index].native == ECCNSOperand.deleteLocal       ? ECCNSOperand.deleteParentSlot :
+                                    NULL
+                                    ,
+                                    ECCNSValue.integer((level << 16) | slot), self->ops[index].text);
                             }
                             else
+                            {
                                 goto notfound;
-
+                            }
                             if(index > 1 && level == 1 && slot == selfIndex)
                             {
                                 eccoperand_t op = self->ops[index - 1];
@@ -366,18 +417,19 @@ void oplistfn_optimizeWithEnvironment(eccoplist_t* self, eccobject_t* environmen
                                     self->ops[index] = ECCNSOperand.make(ECCNSOperand.value, ECCNSValue.integer(-index - 1), self->ops[index].text);
                                 }
                             }
-
                             goto found;
                         }
                     }
                 }
-
                 ++level;
-            } while((searchEnvironment = searchEnvironment->prototype));
-
+            } while((searchenv = searchenv->prototype));
         notfound:
-            haveLocal = 1;
-        found:;
+            {
+                haveLocal = 1;
+            }
+        found:
+            {
+            }
         }
     }
 

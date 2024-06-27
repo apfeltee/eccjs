@@ -40,7 +40,7 @@ static eccvalue_t nsvaluefn_regexp(eccobjregexp_t*);
 static eccvalue_t nsvaluefn_number(eccobjnumber_t*);
 static eccvalue_t nsvaluefn_boolean(eccobjbool_t*);
 static eccvalue_t nsvaluefn_date(eccobjdate_t*);
-static eccvalue_t nsvaluefn_function(eccobjscriptfunction_t*);
+static eccvalue_t nsvaluefn_function(eccobjfunction_t*);
 static eccvalue_t nsvaluefn_host(eccobject_t*);
 static eccvalue_t nsvaluefn_reference(eccvalue_t*);
 static int nsvaluefn_isPrimitive(eccvalue_t);
@@ -268,7 +268,7 @@ eccvalue_t nsvaluefn_date(eccobjdate_t* date)
     };
 }
 
-eccvalue_t nsvaluefn_function(eccobjscriptfunction_t* function)
+eccvalue_t nsvaluefn_function(eccobjfunction_t* function)
 {
     assert(function);
 
@@ -684,7 +684,7 @@ eccvalue_t nsvaluefn_objectValue(eccobject_t* object)
     if(!object)
         return ECCValConstUndefined;
     else if(object->type == &ECC_Type_Function)
-        return ECCNSValue.function((eccobjscriptfunction_t*)object);
+        return ECCNSValue.function((eccobjfunction_t*)object);
     else if(object->type == &ECC_Type_String)
         return ECCNSValue.string((eccobjstring_t*)object);
     else if(object->type == &ECC_Type_Boolean)

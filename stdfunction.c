@@ -7,9 +7,9 @@
 //
 #include "ecc.h"
 
-static void capture(eccobject_t *object);
-static void mark(eccobject_t *object);
-static eccvalue_t toChars(eccstate_t *context, eccvalue_t value);
+static void eccfunction_capture(eccobject_t *object);
+static void eccfunction_mark(eccobject_t *object);
+static eccvalue_t eccfunction_toChars(eccstate_t *context, eccvalue_t value);
 static eccvalue_t objfunctionfn_toString(eccstate_t *context);
 static eccvalue_t objfunctionfn_apply(eccstate_t *context);
 static eccvalue_t objfunctionfn_call(eccstate_t *context);
@@ -17,26 +17,39 @@ static eccvalue_t objfunctionfn_bindCall(eccstate_t *context);
 static eccvalue_t objfunctionfn_bind(eccstate_t *context);
 static eccvalue_t objfunctionfn_prototypeConstructor(eccstate_t *context);
 static eccvalue_t objfunctionfn_constructor(eccstate_t *context);
-static void setup(void);
-static void teardown(void);
-static eccobjscriptfunction_t *create(eccobject_t *environment);
-static eccobjscriptfunction_t *createSized(eccobject_t *environment, uint32_t size);
-static eccobjscriptfunction_t *createWithNative(const eccnativefuncptr_t native, int parameterCount);
-static eccobjscriptfunction_t *copy(eccobjscriptfunction_t *original);
-static void destroy(eccobjscriptfunction_t *self);
-static void addMember(eccobjscriptfunction_t *self, const char *name, eccvalue_t value, eccvalflag_t flags);
-static eccobjscriptfunction_t *addMethod(eccobjscriptfunction_t *self, const char *name, const eccnativefuncptr_t native, int parameterCount, eccvalflag_t flags);
-static void addValue(eccobjscriptfunction_t *self, const char *name, eccvalue_t value, eccvalflag_t flags);
-static eccobjscriptfunction_t *addFunction(eccobjscriptfunction_t *self, const char *name, const eccnativefuncptr_t native, int parameterCount, eccvalflag_t flags);
-static eccobjscriptfunction_t *addToObject(eccobject_t *object, const char *name, const eccnativefuncptr_t native, int parameterCount, eccvalflag_t flags);
-static void linkPrototype(eccobjscriptfunction_t *self, eccvalue_t prototype, eccvalflag_t flags);
-static void setupBuiltinObject(eccobjscriptfunction_t **constructor, const eccnativefuncptr_t native, int parameterCount, eccobject_t **prototype, eccvalue_t prototypeValue, const eccobjinterntype_t *type);
-static eccvalue_t accessor(const eccnativefuncptr_t getter, const eccnativefuncptr_t setter);
+static void nsfunctionfn_setup(void);
+static void nsfunctionfn_teardown(void);
+static eccobjfunction_t *nsfunctionfn_create(eccobject_t *environment);
+static eccobjfunction_t *nsfunctionfn_createSized(eccobject_t *environment, uint32_t size);
+static eccobjfunction_t *nsfunctionfn_createWithNative(const eccnativefuncptr_t native, int parameterCount);
+static eccobjfunction_t *nsfunctionfn_copy(eccobjfunction_t *original);
+static void nsfunctionfn_destroy(eccobjfunction_t *self);
+static void nsfunctionfn_addMember(eccobjfunction_t *self, const char *name, eccvalue_t value, eccvalflag_t flags);
+static eccobjfunction_t *nsfunctionfn_addMethod(eccobjfunction_t *self, const char *name, const eccnativefuncptr_t native, int parameterCount, eccvalflag_t flags);
+static void nsfunctionfn_addValue(eccobjfunction_t *self, const char *name, eccvalue_t value, eccvalflag_t flags);
+static eccobjfunction_t *nsfunctionfn_addFunction(eccobjfunction_t *self, const char *name, const eccnativefuncptr_t native, int parameterCount, eccvalflag_t flags);
+static eccobjfunction_t *nsfunctionfn_addToObject(eccobject_t *object, const char *name, const eccnativefuncptr_t native, int parameterCount, eccvalflag_t flags);
+static void nsfunctionfn_linkPrototype(eccobjfunction_t *self, eccvalue_t prototype, eccvalflag_t flags);
+static void nsfunctionfn_setupBuiltinObject(eccobjfunction_t **constructor, const eccnativefuncptr_t native, int parameterCount, eccobject_t **prototype, eccvalue_t prototypeValue, const eccobjinterntype_t *type);
+static eccvalue_t nsfunctionfn_accessor(const eccnativefuncptr_t getter, const eccnativefuncptr_t setter);
 
 
 const struct eccpseudonsfunction_t ECCNSFunction = {
-    setup,     teardown,    create,      createSized,   createWithNative,   copy,     destroy, addMember, addValue,
-    addMethod, addFunction, addToObject, linkPrototype, setupBuiltinObject, accessor,
+    nsfunctionfn_setup,
+    nsfunctionfn_teardown,
+    nsfunctionfn_create,
+    nsfunctionfn_createSized,
+    nsfunctionfn_createWithNative,
+    nsfunctionfn_copy,
+    nsfunctionfn_destroy,
+    nsfunctionfn_addMember,
+    nsfunctionfn_addValue,
+    nsfunctionfn_addMethod,
+    nsfunctionfn_addFunction,
+    nsfunctionfn_addToObject,
+    nsfunctionfn_linkPrototype,
+    nsfunctionfn_setupBuiltinObject,
+    nsfunctionfn_accessor,
     {}
 };
 
@@ -45,16 +58,16 @@ const struct eccpseudonsfunction_t ECCNSFunction = {
 static va_list empty_ap;
 
 eccobject_t* ECC_Prototype_Function = NULL;
-eccobjscriptfunction_t* ECC_CtorFunc_Function = NULL;
+eccobjfunction_t* ECC_CtorFunc_Function = NULL;
 
 const eccobjinterntype_t ECC_Type_Function = {
-    .text = &ECC_ConstString_FunctionType, .mark = mark, .capture = capture,
+    .text = &ECC_ConstString_FunctionType, .mark = eccfunction_mark, .capture = eccfunction_capture,
     /* XXX: don't finalize */
 };
 
-static void capture(eccobject_t* object)
+static void eccfunction_capture(eccobject_t* object)
 {
-    eccobjscriptfunction_t* self = (eccobjscriptfunction_t*)object;
+    eccobjfunction_t* self = (eccobjfunction_t*)object;
 
     if(self->refObject)
         ++self->refObject->referenceCount;
@@ -63,9 +76,9 @@ static void capture(eccobject_t* object)
         ++self->pair->object.referenceCount;
 }
 
-static void mark(eccobject_t* object)
+static void eccfunction_mark(eccobject_t* object)
 {
-    eccobjscriptfunction_t* self = (eccobjscriptfunction_t*)object;
+    eccobjfunction_t* self = (eccobjfunction_t*)object;
 
     ECCNSMemoryPool.markObject(&self->environment);
 
@@ -78,9 +91,9 @@ static void mark(eccobject_t* object)
 
 // MARK: - Static Members
 
-static eccvalue_t toChars(eccstate_t* context, eccvalue_t value)
+static eccvalue_t eccfunction_toChars(eccstate_t* context, eccvalue_t value)
 {
-    eccobjscriptfunction_t* self;
+    eccobjfunction_t* self;
     eccappendbuffer_t chars;
     (void)context;
     assert(value.type == ECC_VALTYPE_FUNCTION);
@@ -103,7 +116,7 @@ static eccvalue_t objfunctionfn_toString(eccstate_t* context)
 {
     ECCNSContext.assertThisType(context, ECC_VALTYPE_FUNCTION);
 
-    return toChars(context, context->thisvalue);
+    return eccfunction_toChars(context, context->thisvalue);
 }
 
 static eccvalue_t objfunctionfn_apply(eccstate_t* context)
@@ -164,7 +177,7 @@ static eccvalue_t objfunctionfn_call(eccstate_t* context)
 
 static eccvalue_t objfunctionfn_bindCall(eccstate_t* context)
 {
-    eccobjscriptfunction_t* function;
+    eccobjfunction_t* function;
     eccobject_t* arguments;
     uint16_t count, length;
 
@@ -187,7 +200,7 @@ static eccvalue_t objfunctionfn_bindCall(eccstate_t* context)
 
 static eccvalue_t objfunctionfn_bind(eccstate_t* context)
 {
-    eccobjscriptfunction_t* function;
+    eccobjfunction_t* function;
     uint16_t index, count;
     int parameterCount = 0;
 
@@ -195,7 +208,7 @@ static eccvalue_t objfunctionfn_bind(eccstate_t* context)
 
     count = ECCNSContext.argumentCount(context);
     parameterCount = context->thisvalue.data.function->parameterCount - (count > 1 ? count - 1 : 0);
-    function = createWithNative(objfunctionfn_bindCall, parameterCount > 0 ? parameterCount : 0);
+    function = nsfunctionfn_createWithNative(objfunctionfn_bindCall, parameterCount > 0 ? parameterCount : 0);
 
     ECCNSObject.resizeElement(&function->environment, count ? count : 1);
     if(count)
@@ -266,12 +279,12 @@ static eccvalue_t objfunctionfn_constructor(eccstate_t* context)
 
 // MARK: - Methods
 
-static void setup()
+static void nsfunctionfn_setup()
 {
     const eccvalflag_t h = ECC_VALFLAG_HIDDEN;
 
     ECCNSFunction.setupBuiltinObject(&ECC_CtorFunc_Function, objfunctionfn_constructor, -1, &ECC_Prototype_Function,
-                                          ECCNSValue.function(createWithNative(objfunctionfn_prototypeConstructor, 0)), &ECC_Type_Function);
+                                          ECCNSValue.function(nsfunctionfn_createWithNative(objfunctionfn_prototypeConstructor, 0)), &ECC_Type_Function);
 
     ECC_CtorFunc_Function->object.prototype = ECC_Prototype_Function;
 
@@ -281,20 +294,20 @@ static void setup()
     ECCNSFunction.addToObject(ECC_Prototype_Function, "bind", objfunctionfn_bind, -1, h);
 }
 
-static void teardown(void)
+static void nsfunctionfn_teardown(void)
 {
     ECC_Prototype_Function = NULL;
     ECC_CtorFunc_Function = NULL;
 }
 
-static eccobjscriptfunction_t* create(eccobject_t* environment)
+static eccobjfunction_t* nsfunctionfn_create(eccobject_t* environment)
 {
-    return createSized(environment, 8);
+    return nsfunctionfn_createSized(environment, 8);
 }
 
-static eccobjscriptfunction_t* createSized(eccobject_t* environment, uint32_t size)
+static eccobjfunction_t* nsfunctionfn_createSized(eccobject_t* environment, uint32_t size)
 {
-    eccobjscriptfunction_t* self = malloc(sizeof(*self));
+    eccobjfunction_t* self = malloc(sizeof(*self));
     ECCNSMemoryPool.addFunction(self);
 
     *self = ECCNSFunction.identity;
@@ -305,18 +318,18 @@ static eccobjscriptfunction_t* createSized(eccobject_t* environment, uint32_t si
     return self;
 }
 
-static eccobjscriptfunction_t* createWithNative(const eccnativefuncptr_t native, int parameterCount)
+static eccobjfunction_t* nsfunctionfn_createWithNative(const eccnativefuncptr_t native, int parameterCount)
 {
-    eccobjscriptfunction_t* self = NULL;
+    eccobjfunction_t* self = NULL;
 
     if(parameterCount < 0)
     {
-        self = createSized(NULL, 3);
+        self = nsfunctionfn_createSized(NULL, 3);
         self->flags |= ECC_SCRIPTFUNCFLAG_NEEDARGUMENTS;
     }
     else
     {
-        self = createSized(NULL, 3 + parameterCount);
+        self = nsfunctionfn_createSized(NULL, 3 + parameterCount);
         self->parameterCount = parameterCount;
     }
 
@@ -329,9 +342,9 @@ static eccobjscriptfunction_t* createWithNative(const eccnativefuncptr_t native,
     return self;
 }
 
-static eccobjscriptfunction_t* copy(eccobjscriptfunction_t* original)
+static eccobjfunction_t* nsfunctionfn_copy(eccobjfunction_t* original)
 {
-    eccobjscriptfunction_t* self = malloc(sizeof(*self));
+    eccobjfunction_t* self = malloc(sizeof(*self));
     size_t byteSize;
 
     assert(original);
@@ -346,7 +359,7 @@ static eccobjscriptfunction_t* copy(eccobjscriptfunction_t* original)
     return self;
 }
 
-static void destroy(eccobjscriptfunction_t* self)
+static void nsfunctionfn_destroy(eccobjfunction_t* self)
 {
     assert(self);
 
@@ -359,7 +372,7 @@ static void destroy(eccobjscriptfunction_t* self)
     free(self), self = NULL;
 }
 
-static void addMember(eccobjscriptfunction_t* self, const char* name, eccvalue_t value, eccvalflag_t flags)
+static void nsfunctionfn_addMember(eccobjfunction_t* self, const char* name, eccvalue_t value, eccvalflag_t flags)
 {
     assert(self);
 
@@ -369,14 +382,14 @@ static void addMember(eccobjscriptfunction_t* self, const char* name, eccvalue_t
     ECCNSObject.addMember(&self->object, ECCNSKey.makeWithCString(name), value, flags);
 }
 
-static eccobjscriptfunction_t* addMethod(eccobjscriptfunction_t* self, const char* name, const eccnativefuncptr_t native, int parameterCount, eccvalflag_t flags)
+static eccobjfunction_t* nsfunctionfn_addMethod(eccobjfunction_t* self, const char* name, const eccnativefuncptr_t native, int parameterCount, eccvalflag_t flags)
 {
     assert(self);
 
-    return addToObject(&self->object, name, native, parameterCount, flags);
+    return nsfunctionfn_addToObject(&self->object, name, native, parameterCount, flags);
 }
 
-static void addValue(eccobjscriptfunction_t* self, const char* name, eccvalue_t value, eccvalflag_t flags)
+static void nsfunctionfn_addValue(eccobjfunction_t* self, const char* name, eccvalue_t value, eccvalflag_t flags)
 {
     assert(self);
 
@@ -386,20 +399,20 @@ static void addValue(eccobjscriptfunction_t* self, const char* name, eccvalue_t 
     ECCNSObject.addMember(&self->environment, ECCNSKey.makeWithCString(name), value, flags);
 }
 
-static eccobjscriptfunction_t* addFunction(eccobjscriptfunction_t* self, const char* name, const eccnativefuncptr_t native, int parameterCount, eccvalflag_t flags)
+static eccobjfunction_t* nsfunctionfn_addFunction(eccobjfunction_t* self, const char* name, const eccnativefuncptr_t native, int parameterCount, eccvalflag_t flags)
 {
     assert(self);
 
-    return addToObject(&self->environment, name, native, parameterCount, flags);
+    return nsfunctionfn_addToObject(&self->environment, name, native, parameterCount, flags);
 }
 
-static eccobjscriptfunction_t* addToObject(eccobject_t* object, const char* name, const eccnativefuncptr_t native, int parameterCount, eccvalflag_t flags)
+static eccobjfunction_t* nsfunctionfn_addToObject(eccobject_t* object, const char* name, const eccnativefuncptr_t native, int parameterCount, eccvalflag_t flags)
 {
-    eccobjscriptfunction_t* function;
+    eccobjfunction_t* function;
 
     assert(object);
 
-    function = createWithNative(native, parameterCount);
+    function = nsfunctionfn_createWithNative(native, parameterCount);
     function->name = name;
 
     ECCNSObject.addMember(object, ECCNSKey.makeWithCString(name), ECCNSValue.function(function), flags);
@@ -407,7 +420,7 @@ static eccobjscriptfunction_t* addToObject(eccobject_t* object, const char* name
     return function;
 }
 
-static void linkPrototype(eccobjscriptfunction_t* self, eccvalue_t prototype, eccvalflag_t flags)
+static void nsfunctionfn_linkPrototype(eccobjfunction_t* self, eccvalue_t prototype, eccvalflag_t flags)
 {
     assert(self);
 
@@ -415,14 +428,14 @@ static void linkPrototype(eccobjscriptfunction_t* self, eccvalue_t prototype, ec
     ECCNSObject.addMember(&self->object, ECC_ConstKey_prototype, prototype, flags);
 }
 
-void setupBuiltinObject(eccobjscriptfunction_t** constructor,
+void nsfunctionfn_setupBuiltinObject(eccobjfunction_t** constructor,
                         const eccnativefuncptr_t native,
                         int parameterCount,
                         eccobject_t** prototype,
                         eccvalue_t prototypeValue,
                         const eccobjinterntype_t* type)
 {
-    eccobjscriptfunction_t* function = createWithNative(native, parameterCount);
+    eccobjfunction_t* function = nsfunctionfn_createWithNative(native, parameterCount);
 
     if(prototype)
     {
@@ -435,14 +448,14 @@ void setupBuiltinObject(eccobjscriptfunction_t** constructor,
         *prototype = object;
     }
 
-    linkPrototype(function, prototypeValue, ECC_VALFLAG_READONLY | ECC_VALFLAG_HIDDEN | ECC_VALFLAG_SEALED);
+    nsfunctionfn_linkPrototype(function, prototypeValue, ECC_VALFLAG_READONLY | ECC_VALFLAG_HIDDEN | ECC_VALFLAG_SEALED);
     *constructor = function;
 }
 
-static eccvalue_t accessor(const eccnativefuncptr_t getter, const eccnativefuncptr_t setter)
+static eccvalue_t nsfunctionfn_accessor(const eccnativefuncptr_t getter, const eccnativefuncptr_t setter)
 {
     eccvalue_t value;
-    eccobjscriptfunction_t *getterFunction = NULL, *setterFunction = NULL;
+    eccobjfunction_t *getterFunction = NULL, *setterFunction = NULL;
     if(setter)
         setterFunction = ECCNSFunction.createWithNative(setter, 1);
 

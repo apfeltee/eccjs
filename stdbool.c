@@ -17,7 +17,7 @@ static eccobjbool_t *nsboolfn_create(int truth);
 
 
 eccobject_t* ECC_Prototype_Boolean = NULL;
-eccobjscriptfunction_t* ECC_CtorFunc_Boolean = NULL;
+eccobjfunction_t* ECC_CtorFunc_Boolean = NULL;
 
 const eccobjinterntype_t ECC_Type_Boolean = {
     .text = &ECC_ConstString_BooleanType,

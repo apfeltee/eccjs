@@ -13,13 +13,13 @@ typedef struct eccarraycomparestate_t eccarraycomparestate_t;
 struct eccarraycomparestate_t
 {
     eccstate_t context;
-    eccobjscriptfunction_t* function;
+    eccobjfunction_t* function;
     eccobject_t* arguments;
     const eccoperand_t* ops;
 };
 
 eccobject_t* ECC_Prototype_Array = NULL;
-eccobjscriptfunction_t* ECC_CtorFunc_Array = NULL;
+eccobjfunction_t* ECC_CtorFunc_Array = NULL;
 
 const eccobjinterntype_t ECC_Type_Array = {
     .text = &ECC_ConstString_ArrayType,
@@ -50,7 +50,7 @@ static inline int eccarray_compare(eccarraycomparestate_t *cmp, eccvalue_t left,
 static inline uint32_t eccarray_search(eccobject_t *object, eccarraycomparestate_t *cmp, uint32_t first, uint32_t last, eccvalue_t right);
 static inline void eccarray_merge(eccobject_t *object, eccarraycomparestate_t *cmp, uint32_t first, uint32_t pivot, uint32_t last, uint32_t len1, uint32_t len2);
 static void eccarray_sortAndMerge(eccobject_t *object, eccarraycomparestate_t *cmp, uint32_t first, uint32_t last);
-static void eccarray_sortInPlace(eccstate_t *context, eccobject_t *object, eccobjscriptfunction_t *function, int first, int last);
+static void eccarray_sortInPlace(eccstate_t *context, eccobject_t *object, eccobjfunction_t *function, int first, int last);
 static eccvalue_t objarrayfn_sort(eccstate_t *context);
 static eccvalue_t objarrayfn_splice(eccstate_t *context);
 static eccvalue_t objarrayfn_indexOf(eccstate_t *context);
@@ -189,19 +189,48 @@ static eccvalue_t objarrayfn_join(eccstate_t* context)
     eccvalue_t object;
     eccvalue_t value;
     ecctextstring_t separator;
-
     value = ECCNSContext.argument(context, 0);
     if(value.type == ECC_VALTYPE_UNDEFINED)
+    {
         separator = ECCNSText.make(",", 1);
+    }
     else
     {
         value = ECCNSValue.toString(context, value);
         separator = ECCNSValue.textOf(&value);
     }
-
     object = ECCNSValue.toObject(context, ECCNSContext.getThis(context));
-
     return eccarray_toChars(context, object, separator);
+}
+
+static eccvalue_t objarrayfn_map(eccstate_t* context)
+{
+    eccvalue_t thing;
+    eccvalue_t callme;
+    eccvalue_t numval;
+    eccvalue_t retval;
+    eccvalue_t thisval;
+    uint32_t index;
+    uint32_t length;
+    eccobject_t* thisobj;
+    thisval = ECCNSContext.getThis(context);
+    thisobj = ECCNSValue.toObject(context, thisval).data.object;
+    length = eccarray_objectLength(context, thisobj);
+
+    callme = ECCNSContext.argument(context, 0);
+
+
+    for(index = 0; index < length; index++)
+    {
+        thing = ECCNSObject.getElement(context, thisobj, index);
+        numval = ECCNSValue.integer(index);
+        retval = ECCNSContext.callFunction(context, callme.data.function, thisval, 2, thing, numval);
+
+        ECCNSObject.putElement(context, thisobj, index, retval);
+    }
+
+
+    return ECCNSValue.object(thisobj);
 }
 
 static eccvalue_t objarrayfn_pop(eccstate_t* context)
@@ -217,7 +246,6 @@ static eccvalue_t objarrayfn_pop(eccstate_t* context)
     {
         --length;
         value = ECCNSObject.getElement(context, thisobj, length);
-
         if(!ECCNSObject.deleteElement(thisobj, length) && context->parent->strictMode)
         {
             ECCNSContext.setTextIndex(context, ECC_CTXINDEXTYPE_CALL);
@@ -575,7 +603,7 @@ static void eccarray_sortAndMerge(eccobject_t* object, eccarraycomparestate_t* c
     eccarray_merge(object, cmp, first, half, last, half - first, last - half);
 }
 
-static void eccarray_sortInPlace(eccstate_t* context, eccobject_t* object, eccobjscriptfunction_t* function, int first, int last)
+static void eccarray_sortInPlace(eccstate_t* context, eccobject_t* object, eccobjfunction_t* function, int first, int last)
 {
     eccoperand_t defaultOps = { objarrayfn_defaultComparison, ECCValConstUndefined, ECC_ConstString_NativeCode };
     const eccoperand_t* ops = function ? function->oplist->ops : &defaultOps;
@@ -831,6 +859,7 @@ static void nsarrayfn_setup(void)
     ECCNSFunction.addToObject(ECC_Prototype_Array, "toString", objarrayfn_toString, 0, h);
     ECCNSFunction.addToObject(ECC_Prototype_Array, "toLocaleString", objarrayfn_toString, 0, h);
     ECCNSFunction.addToObject(ECC_Prototype_Array, "concat", objarrayfn_concat, -1, h);
+    ECCNSFunction.addToObject(ECC_Prototype_Array, "map", objarrayfn_map, 1, h);
     ECCNSFunction.addToObject(ECC_Prototype_Array, "join", objarrayfn_join, 1, h);
     ECCNSFunction.addToObject(ECC_Prototype_Array, "pop", objarrayfn_pop, 0, h);
     ECCNSFunction.addToObject(ECC_Prototype_Array, "push", objarrayfn_push, -1, h);

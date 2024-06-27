@@ -12,23 +12,23 @@ static eccvalue_t globalsfn_parseInt(eccstate_t *context);
 static eccvalue_t globalsfn_parseFloat(eccstate_t *context);
 static eccvalue_t globalsfn_isFinite(eccstate_t *context);
 static eccvalue_t globalsfn_isNaN(eccstate_t *context);
-static eccvalue_t decodeExcept(eccstate_t *context, const char *exclude);
+static eccvalue_t eccglobals_decodeExcept(eccstate_t *context, const char *exclude);
 static eccvalue_t globalsfn_decodeURI(eccstate_t *context);
 static eccvalue_t globalsfn_decodeURIComponent(eccstate_t *context);
-static eccvalue_t encodeExpect(eccstate_t *context, const char *exclude);
+static eccvalue_t eccglobals_encodeExpect(eccstate_t *context, const char *exclude);
 static eccvalue_t globalsfn_encodeURI(eccstate_t *context);
 static eccvalue_t globalsfn_encodeURIComponent(eccstate_t *context);
 static eccvalue_t globalsfn_escape(eccstate_t *context);
 static eccvalue_t globalsfn_unescape(eccstate_t *context);
-static void setup(void);
-static void teardown(void);
-static eccobjscriptfunction_t *create(void);
+static void nsglobalfn_setup(void);
+static void nsglobalfn_teardown(void);
+static eccobjfunction_t *nsglobalfn_create(void);
 
 
 const struct eccpseudonsglobal_t ECCNSGlobal = {
-    setup,
-    teardown,
-    create,
+    nsglobalfn_setup,
+    nsglobalfn_teardown,
+    nsglobalfn_create,
     {}
 };
 
@@ -114,7 +114,7 @@ static eccvalue_t globalsfn_isNaN(eccstate_t* context)
     return ECCNSValue.truth(isnan(value.data.binary));
 }
 
-static eccvalue_t decodeExcept(eccstate_t* context, const char* exclude)
+static eccvalue_t eccglobals_decodeExcept(eccstate_t* context, const char* exclude)
 {
     char buffer[5], *b;
     eccvalue_t value;
@@ -185,15 +185,15 @@ error:
 
 static eccvalue_t globalsfn_decodeURI(eccstate_t* context)
 {
-    return decodeExcept(context, ";/?:@&=+$,#");
+    return eccglobals_decodeExcept(context, ";/?:@&=+$,#");
 }
 
 static eccvalue_t globalsfn_decodeURIComponent(eccstate_t* context)
 {
-    return decodeExcept(context, NULL);
+    return eccglobals_decodeExcept(context, NULL);
 }
 
-static eccvalue_t encodeExpect(eccstate_t* context, const char* exclude)
+static eccvalue_t eccglobals_encodeExpect(eccstate_t* context, const char* exclude)
 {
     const char hex[] = "0123456789ABCDEF";
     eccvalue_t value;
@@ -252,13 +252,13 @@ error:
 
 static eccvalue_t globalsfn_encodeURI(eccstate_t* context)
 {
-    return encodeExpect(context, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.!~*'()"
+    return eccglobals_encodeExpect(context, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.!~*'()"
                                  ";/?:@&=+$,#");
 }
 
 static eccvalue_t globalsfn_encodeURIComponent(eccstate_t* context)
 {
-    return encodeExpect(context, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.!~*'()");
+    return eccglobals_encodeExpect(context, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.!~*'()");
 }
 
 static eccvalue_t globalsfn_escape(eccstate_t* context)
@@ -350,7 +350,7 @@ static eccvalue_t globalsfn_unescape(eccstate_t* context)
 
 // MARK: - Methods
 
-static void setup(void)
+static void nsglobalfn_setup(void)
 {
     ECC_Prototype_Function = ECC_Prototype_Object = ECCNSObject.create(NULL);
 
@@ -368,7 +368,7 @@ static void setup(void)
     ECCNSArguments.setup();
 }
 
-static void teardown(void)
+static void nsglobalfn_teardown(void)
 {
     ECCNSFunction.teardown();
     ECCNSObject.teardown();
@@ -384,13 +384,13 @@ static void teardown(void)
     ECCNSArguments.teardown();
 }
 
-static eccobjscriptfunction_t* create(void)
+static eccobjfunction_t* nsglobalfn_create(void)
 {
     const eccvalflag_t r = ECC_VALFLAG_READONLY;
     const eccvalflag_t h = ECC_VALFLAG_HIDDEN;
     const eccvalflag_t s = ECC_VALFLAG_SEALED;
 
-    eccobjscriptfunction_t* self = ECCNSFunction.create(ECC_Prototype_Object);
+    eccobjfunction_t* self = ECCNSFunction.create(ECC_Prototype_Object);
     self->environment.type = &ECC_Type_Global;
 
     ECCNSFunction.addValue(self, "NaN", ECCNSValue.binary(NAN), r | h | s);

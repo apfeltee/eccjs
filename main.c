@@ -81,9 +81,11 @@ io_libecc_ecc_useframe static void actuallyruntest(const char* func, int line, c
     }
     if(testVerbosity >= 0)
     {
+        #if 0
         ECCNSEnv.printColor(ECC_COLOR_GREEN, ECC_ENVATTR_BOLD, "[success]");
         ECCNSEnv.print(" %s:%d", func, line);
         ECCNSEnv.newline();
+        #endif
     }
 error:
     ECCNSScript.garbageCollect(ecc);

@@ -145,7 +145,7 @@ void evalInputWithContext(eccscriptcontext_t* self, eccioinput_t* input, eccstat
 {
     eccastlexer_t* lexer;
     eccastparser_t* parser;
-    eccobjscriptfunction_t* function;
+    eccobjfunction_t* function;
 
     assert(self);
     assert(self->envCount);

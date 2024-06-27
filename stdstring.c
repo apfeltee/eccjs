@@ -14,7 +14,7 @@ static void capture(eccobject_t* object);
 static void finalize(eccobject_t* object);
 
 eccobject_t* ECC_Prototype_String = NULL;
-eccobjscriptfunction_t* ECC_CtorFunc_String = NULL;
+eccobjfunction_t* ECC_CtorFunc_String = NULL;
 
 const eccobjinterntype_t ECC_Type_String = {
     .text = &ECC_ConstString_StringType,

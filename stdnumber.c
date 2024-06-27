@@ -7,19 +7,19 @@
 //
 #include "ecc.h"
 
-static eccvalue_t toExponential(eccstate_t *context);
-static eccvalue_t toFixed(eccstate_t *context);
-static eccvalue_t toPrecision(eccstate_t *context);
-static eccvalue_t toString(eccstate_t *context);
-static eccvalue_t valueOf(eccstate_t *context);
-static eccvalue_t constructor(eccstate_t *context);
-static void setup(void);
-static void teardown(void);
-static eccobjnumber_t *create(double binary);
+static eccvalue_t objnumberfn_toExponential(eccstate_t *context);
+static eccvalue_t objnumberfn_toFixed(eccstate_t *context);
+static eccvalue_t objnumberfn_toPrecision(eccstate_t *context);
+static eccvalue_t objnumberfn_toString(eccstate_t *context);
+static eccvalue_t objnumberfn_valueOf(eccstate_t *context);
+static eccvalue_t objnumberfn_constructor(eccstate_t *context);
+static void nsnumberfn_setup(void);
+static void nsnumberfn_teardown(void);
+static eccobjnumber_t *nsnumberfn_create(double binary);
 
 
 eccobject_t* ECC_Prototype_Number = NULL;
-eccobjscriptfunction_t* ECC_CtorFunc_Number = NULL;
+eccobjfunction_t* ECC_CtorFunc_Number = NULL;
 
 const eccobjinterntype_t ECC_Type_Number = {
     .text = &ECC_ConstString_NumberType,
@@ -27,13 +27,13 @@ const eccobjinterntype_t ECC_Type_Number = {
 
 
 const struct eccpseudonsnumber_t ECCNSNumber = {
-    setup,
-    teardown,
-    create,
+    nsnumberfn_setup,
+    nsnumberfn_teardown,
+    nsnumberfn_create,
     {}
 };
 
-static eccvalue_t toExponential(eccstate_t* context)
+static eccvalue_t objnumberfn_toExponential(eccstate_t* context)
 {
     eccappendbuffer_t chars;
     eccvalue_t value;
@@ -71,7 +71,7 @@ static eccvalue_t toExponential(eccstate_t* context)
     return ECCNSChars.endAppend(&chars);
 }
 
-static eccvalue_t toFixed(eccstate_t* context)
+static eccvalue_t objnumberfn_toFixed(eccstate_t* context)
 {
     eccappendbuffer_t chars;
     eccvalue_t value;
@@ -108,7 +108,7 @@ static eccvalue_t toFixed(eccstate_t* context)
     return ECCNSChars.endAppend(&chars);
 }
 
-static eccvalue_t toPrecision(eccstate_t* context)
+static eccvalue_t objnumberfn_toPrecision(eccstate_t* context)
 {
     eccappendbuffer_t chars;
     eccvalue_t value;
@@ -148,7 +148,7 @@ static eccvalue_t toPrecision(eccstate_t* context)
     return ECCNSChars.endAppend(&chars);
 }
 
-static eccvalue_t toString(eccstate_t* context)
+static eccvalue_t objnumberfn_toString(eccstate_t* context)
 {
     eccvalue_t value;
     int32_t radix = 10;
@@ -171,14 +171,14 @@ static eccvalue_t toString(eccstate_t* context)
     return ECCNSValue.binaryToString(binary, radix);
 }
 
-static eccvalue_t valueOf(eccstate_t* context)
+static eccvalue_t objnumberfn_valueOf(eccstate_t* context)
 {
     ECCNSContext.assertThisType(context, ECC_VALTYPE_NUMBER);
 
     return ECCNSValue.binary(context->thisvalue.data.number->value);
 }
 
-static eccvalue_t constructor(eccstate_t* context)
+static eccvalue_t objnumberfn_constructor(eccstate_t* context)
 {
     eccvalue_t value;
 
@@ -196,13 +196,13 @@ static eccvalue_t constructor(eccstate_t* context)
 
 // MARK: - Methods
 
-static void setup()
+static void nsnumberfn_setup()
 {
     const eccvalflag_t r = ECC_VALFLAG_READONLY;
     const eccvalflag_t h = ECC_VALFLAG_HIDDEN;
     const eccvalflag_t s = ECC_VALFLAG_SEALED;
 
-    ECCNSFunction.setupBuiltinObject(&ECC_CtorFunc_Number, constructor, 1, &ECC_Prototype_Number, ECCNSValue.number(create(0)), &ECC_Type_Number);
+    ECCNSFunction.setupBuiltinObject(&ECC_CtorFunc_Number, objnumberfn_constructor, 1, &ECC_Prototype_Number, ECCNSValue.number(nsnumberfn_create(0)), &ECC_Type_Number);
 
     ECCNSFunction.addMember(ECC_CtorFunc_Number, "MAX_VALUE", ECCNSValue.binary(DBL_MAX), r | h | s);
     ECCNSFunction.addMember(ECC_CtorFunc_Number, "MIN_VALUE", ECCNSValue.binary(DBL_MIN * DBL_EPSILON), r | h | s);
@@ -210,21 +210,21 @@ static void setup()
     ECCNSFunction.addMember(ECC_CtorFunc_Number, "NEGATIVE_INFINITY", ECCNSValue.binary(-INFINITY), r | h | s);
     ECCNSFunction.addMember(ECC_CtorFunc_Number, "POSITIVE_INFINITY", ECCNSValue.binary(INFINITY), r | h | s);
 
-    ECCNSFunction.addToObject(ECC_Prototype_Number, "toString", toString, 1, h);
-    ECCNSFunction.addToObject(ECC_Prototype_Number, "toLocaleString", toString, 1, h);
-    ECCNSFunction.addToObject(ECC_Prototype_Number, "valueOf", valueOf, 0, h);
-    ECCNSFunction.addToObject(ECC_Prototype_Number, "toFixed", toFixed, 1, h);
-    ECCNSFunction.addToObject(ECC_Prototype_Number, "toExponential", toExponential, 1, h);
-    ECCNSFunction.addToObject(ECC_Prototype_Number, "toPrecision", toPrecision, 1, h);
+    ECCNSFunction.addToObject(ECC_Prototype_Number, "toString", objnumberfn_toString, 1, h);
+    ECCNSFunction.addToObject(ECC_Prototype_Number, "toLocaleString", objnumberfn_toString, 1, h);
+    ECCNSFunction.addToObject(ECC_Prototype_Number, "valueOf", objnumberfn_valueOf, 0, h);
+    ECCNSFunction.addToObject(ECC_Prototype_Number, "toFixed", objnumberfn_toFixed, 1, h);
+    ECCNSFunction.addToObject(ECC_Prototype_Number, "toExponential", objnumberfn_toExponential, 1, h);
+    ECCNSFunction.addToObject(ECC_Prototype_Number, "toPrecision", objnumberfn_toPrecision, 1, h);
 }
 
-static void teardown(void)
+static void nsnumberfn_teardown(void)
 {
     ECC_Prototype_Number = NULL;
     ECC_CtorFunc_Number = NULL;
 }
 
-static eccobjnumber_t* create(double binary)
+static eccobjnumber_t* nsnumberfn_create(double binary)
 {
     eccobjnumber_t* self = malloc(sizeof(*self));
     *self = ECCNSNumber.identity;

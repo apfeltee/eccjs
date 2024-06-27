@@ -28,25 +28,25 @@ struct eccdttime_t
     int32_t ms;
 };
 
-static int issign(int c);
-static void setupLocalOffset(void);
-static double toLocal(double ms);
-static double toUTC(double ms);
-static double binaryArgumentOr(eccstate_t *context, int index, double alternative);
-static double msClip(double ms);
-static double msFromDate(eccdtdate_t date);
-static double msFromDateAndTime(eccdtdate_t date, eccdttime_t time);
-static double msFromArguments(eccstate_t *context);
-static double msFromBytes(const char *bytes, uint16_t length);
-static double msToDate(double ms, eccdtdate_t *date);
-static void msToTime(double ms, eccdttime_t *time);
-static void msToDateAndTime(double ms, eccdtdate_t *date, eccdttime_t *time);
-static double msToHours(double ms);
-static double msToMinutes(double ms);
-static double msToSeconds(double ms);
-static double msToMilliseconds(double ms);
-static ecccharbuffer_t *msToChars(double ms, double offset);
-static unsigned int msToWeekday(double ms);
+static int eccdate_issign(int c);
+static void eccdate_setupLocalOffset(void);
+static double eccdate_toLocal(double ms);
+static double eccdate_toUTC(double ms);
+static double eccdate_binaryArgumentOr(eccstate_t *context, int index, double alternative);
+static double eccdate_msClip(double ms);
+static double eccdate_msFromDate(eccdtdate_t date);
+static double eccdate_msFromDateAndTime(eccdtdate_t date, eccdttime_t time);
+static double eccdate_msFromArguments(eccstate_t *context);
+static double eccdate_msFromBytes(const char *bytes, uint16_t length);
+static double eccdate_msToDate(double ms, eccdtdate_t *date);
+static void eccdate_msToTime(double ms, eccdttime_t *time);
+static void eccdate_msToDateAndTime(double ms, eccdtdate_t *date, eccdttime_t *time);
+static double eccdate_msToHours(double ms);
+static double eccdate_msToMinutes(double ms);
+static double eccdate_msToSeconds(double ms);
+static double eccdate_msToMilliseconds(double ms);
+static ecccharbuffer_t *eccdate_msToChars(double ms, double offset);
+static unsigned int eccdate_msToWeekday(double ms);
 static eccvalue_t objdatefn_toString(eccstate_t *context);
 static eccvalue_t objdatefn_toUTCString(eccstate_t *context);
 static eccvalue_t objdatefn_toJSON(eccstate_t *context);
@@ -98,7 +98,7 @@ static eccobjdate_t *nsdatefn_create(double ms);
 
 
 eccobject_t* ECC_Prototype_Date = NULL;
-eccobjscriptfunction_t* ECC_CtorFunc_Date = NULL;
+eccobjfunction_t* ECC_CtorFunc_Date = NULL;
 
 const eccobjinterntype_t ECC_Type_Date = {
     .text = &ECC_ConstString_DateType,
@@ -118,12 +118,12 @@ const struct eccpseudonsdate_t ECCNSDate = {
     {},
 };
 
-static int issign(int c)
+static int eccdate_issign(int c)
 {
     return c == '+' || c == '-';
 }
 
-static void setupLocalOffset(void)
+static void eccdate_setupLocalOffset(void)
 {
     struct tm tm = {
         .tm_mday = 2,
@@ -138,17 +138,17 @@ static void setupLocalOffset(void)
         localOffset = difftime(86400, time) / 3600.;
 }
 
-static double toLocal(double ms)
+static double eccdate_toLocal(double ms)
 {
     return ms + localOffset * msPerHour;
 }
 
-static double toUTC(double ms)
+static double eccdate_toUTC(double ms)
 {
     return ms - localOffset * msPerHour;
 }
 
-static double binaryArgumentOr(eccstate_t* context, int index, double alternative)
+static double eccdate_binaryArgumentOr(eccstate_t* context, int index, double alternative)
 {
     eccvalue_t value = ECCNSContext.argument(context, index);
     if(value.check == 1)
@@ -157,7 +157,7 @@ static double binaryArgumentOr(eccstate_t* context, int index, double alternativ
         return alternative;
 }
 
-static double msClip(double ms)
+static double eccdate_msClip(double ms)
 {
     if(!isfinite(ms) || fabs(ms) > 8.64 * pow(10, 15))
         return NAN;
@@ -165,7 +165,7 @@ static double msClip(double ms)
         return ms;
 }
 
-static double msFromDate(eccdtdate_t date)
+static double eccdate_msFromDate(eccdtdate_t date)
 {
     // Low-Level ECCNSDate Algorithms, http://howardhinnant.github.io/date_algorithms.html#days_from_civil
 
@@ -181,12 +181,12 @@ static double msFromDate(eccdtdate_t date)
     return (double)(era * 146097 + (int32_t)(doe)-719468) * msPerDay;
 }
 
-static double msFromDateAndTime(eccdtdate_t date, eccdttime_t time)
+static double eccdate_msFromDateAndTime(eccdtdate_t date, eccdttime_t time)
 {
-    return msFromDate(date) + time.h * msPerHour + time.m * msPerMinute + time.s * msPerSecond + time.ms;
+    return eccdate_msFromDate(date) + time.h * msPerHour + time.m * msPerMinute + time.s * msPerSecond + time.ms;
 }
 
-static double msFromArguments(eccstate_t* context)
+static double eccdate_msFromArguments(eccstate_t* context)
 {
     uint16_t count;
     eccdtdate_t date;
@@ -217,11 +217,11 @@ static double msFromArguments(eccstate_t* context)
         time.m = m;
         time.s = s;
         time.ms = ms;
-        return msFromDateAndTime(date, time);
+        return eccdate_msFromDateAndTime(date, time);
     }
 }
 
-static double msFromBytes(const char* bytes, uint16_t length)
+static double eccdate_msFromBytes(const char* bytes, uint16_t length)
 {
     char buffer[length + 1];
     int n = 0, nOffset = 0, i = 0;
@@ -236,7 +236,7 @@ static double msFromBytes(const char* bytes, uint16_t length)
     buffer[length] = '\0';
 
     n = 0, i = sscanf(buffer,
-                      issign(buffer[0]) ? "%07d"
+                      eccdate_issign(buffer[0]) ? "%07d"
                                           "%n"
                                           "-%02d"
                                           "%n"
@@ -265,7 +265,7 @@ static double msFromBytes(const char* bytes, uint16_t length)
     {
         if(buffer[n] == 'Z' && n + 1 == length)
             goto done;
-        else if(issign(buffer[n]) && sscanf(buffer + n, "%03d:%02d%n", &hOffset, &mOffset, &nOffset) == 2 && n + nOffset == length)
+        else if(eccdate_issign(buffer[n]) && sscanf(buffer + n, "%03d:%02d%n", &hOffset, &mOffset, &nOffset) == 2 && n + nOffset == length)
             goto done;
         else
             return NAN;
@@ -287,7 +287,7 @@ static double msFromBytes(const char* bytes, uint16_t length)
 
     if(n == length)
         goto done;
-    else if(i >= 5 && buffer[n++] == ' ' && issign(buffer[n]) && sscanf(buffer + n, "%03d%02d%n", &hOffset, &mOffset, &nOffset) == 2 && n + nOffset == length)
+    else if(i >= 5 && buffer[n++] == ' ' && eccdate_issign(buffer[n]) && sscanf(buffer + n, "%03d%02d%n", &hOffset, &mOffset, &nOffset) == 2 && n + nOffset == length)
         goto done;
     else
         return NAN;
@@ -306,10 +306,10 @@ done:
     time.m = m;
     time.s = s;
     time.ms = ms;
-    return msFromDateAndTime(date, time) - (hOffset * 60 + mOffset) * msPerMinute;
+    return eccdate_msFromDateAndTime(date, time) - (hOffset * 60 + mOffset) * msPerMinute;
 }
 
-static double msToDate(double ms, eccdtdate_t* date)
+static double eccdate_msToDate(double ms, eccdtdate_t* date)
 {
     // Low-Level ECCNSDate Algorithms, http://howardhinnant.github.io/date_algorithms.html#civil_from_days
 
@@ -329,7 +329,7 @@ static double msToDate(double ms, eccdtdate_t* date)
     return fmod(ms, 24 * msPerHour) + (ms < 0 ? 24 * msPerHour : 0);
 }
 
-static void msToTime(double ms, eccdttime_t* time)
+static void eccdate_msToTime(double ms, eccdttime_t* time)
 {
     time->h = fmod(floor(ms / msPerHour), 24);
     time->m = fmod(floor(ms / msPerMinute), 60);
@@ -337,44 +337,44 @@ static void msToTime(double ms, eccdttime_t* time)
     time->ms = fmod(ms, 1000);
 }
 
-static void msToDateAndTime(double ms, eccdtdate_t* date, eccdttime_t* time)
+static void eccdate_msToDateAndTime(double ms, eccdtdate_t* date, eccdttime_t* time)
 {
-    msToTime(msToDate(ms, date), time);
+    eccdate_msToTime(eccdate_msToDate(ms, date), time);
 }
 
-static double msToHours(double ms)
+static double eccdate_msToHours(double ms)
 {
     eccdtdate_t date;
     eccdttime_t time;
-    msToDateAndTime(ms, &date, &time);
+    eccdate_msToDateAndTime(ms, &date, &time);
     return time.h;
 }
 
-static double msToMinutes(double ms)
+static double eccdate_msToMinutes(double ms)
 {
     eccdtdate_t date;
     eccdttime_t time;
-    msToDateAndTime(ms, &date, &time);
+    eccdate_msToDateAndTime(ms, &date, &time);
     return time.m;
 }
 
-static double msToSeconds(double ms)
+static double eccdate_msToSeconds(double ms)
 {
     eccdtdate_t date;
     eccdttime_t time;
-    msToDateAndTime(ms, &date, &time);
+    eccdate_msToDateAndTime(ms, &date, &time);
     return time.s;
 }
 
-static double msToMilliseconds(double ms)
+static double eccdate_msToMilliseconds(double ms)
 {
     eccdtdate_t date;
     eccdttime_t time;
-    msToDateAndTime(ms, &date, &time);
+    eccdate_msToDateAndTime(ms, &date, &time);
     return time.ms;
 }
 
-static ecccharbuffer_t* msToChars(double ms, double offset)
+static ecccharbuffer_t* eccdate_msToChars(double ms, double offset)
 {
     const char* format;
     eccdtdate_t date;
@@ -383,7 +383,7 @@ static ecccharbuffer_t* msToChars(double ms, double offset)
     if(isnan(ms))
         return ECCNSChars.create("Invalid Date");
 
-    msToDateAndTime(ms + offset * msPerHour, &date, &time);
+    eccdate_msToDateAndTime(ms + offset * msPerHour, &date, &time);
 
     if(date.year >= 100 && date.year <= 9999)
         format = "%04d/%02d/%02d %02d:%02d:%02d %+03d%02d";
@@ -393,7 +393,7 @@ static ecccharbuffer_t* msToChars(double ms, double offset)
     return ECCNSChars.create(format, date.year, date.month, date.day, time.h, time.m, time.s, (int)offset, (int)fmod(fabs(offset) * 60, 60));
 }
 
-static unsigned int msToWeekday(double ms)
+static unsigned int eccdate_msToWeekday(double ms)
 {
     int z = ms / msPerDay;
     return (unsigned)(z >= -4 ? (z + 4) % 7 : (z + 5) % 7 + 6);
@@ -405,14 +405,14 @@ static eccvalue_t objdatefn_toString(eccstate_t* context)
 {
     ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 
-    return ECCNSValue.chars(msToChars(context->thisvalue.data.date->ms, localOffset));
+    return ECCNSValue.chars(eccdate_msToChars(context->thisvalue.data.date->ms, localOffset));
 }
 
 static eccvalue_t objdatefn_toUTCString(eccstate_t* context)
 {
     ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 
-    return ECCNSValue.chars(msToChars(context->thisvalue.data.date->ms, 0));
+    return ECCNSValue.chars(eccdate_msToChars(context->thisvalue.data.date->ms, 0));
 }
 
 static eccvalue_t objdatefn_toJSON(eccstate_t* context)
@@ -444,7 +444,7 @@ static eccvalue_t objdatefn_toISOString(eccstate_t* context)
     if(isnan(context->thisvalue.data.date->ms))
         ECCNSContext.rangeError(context, ECCNSChars.create("invalid date"));
 
-    msToDateAndTime(context->thisvalue.data.date->ms, &date, &time);
+    eccdate_msToDateAndTime(context->thisvalue.data.date->ms, &date, &time);
 
     if(date.year >= 0 && date.year <= 9999)
         format = "%04d-%02d-%02dT%02d:%02d:%06.3fZ";
@@ -463,7 +463,7 @@ static eccvalue_t objdatefn_toDateString(eccstate_t* context)
     if(isnan(context->thisvalue.data.date->ms))
         return ECCNSValue.chars(ECCNSChars.create("Invalid Date"));
 
-    msToDate(toLocal(context->thisvalue.data.date->ms), &date);
+    eccdate_msToDate(eccdate_toLocal(context->thisvalue.data.date->ms), &date);
 
     return ECCNSValue.chars(ECCNSChars.create("%04d/%02d/%02d", date.year, date.month, date.day));
 }
@@ -477,7 +477,7 @@ static eccvalue_t objdatefn_toTimeString(eccstate_t* context)
     if(isnan(context->thisvalue.data.date->ms))
         return ECCNSValue.chars(ECCNSChars.create("Invalid Date"));
 
-    msToTime(toLocal(context->thisvalue.data.date->ms), &time);
+    eccdate_msToTime(eccdate_toLocal(context->thisvalue.data.date->ms), &time);
 
     return ECCNSValue.chars(ECCNSChars.create("%02d:%02d:%02d %+03d%02d", time.h, time.m, time.s, (int)localOffset, (int)fmod(fabs(localOffset) * 60, 60)));
 }
@@ -495,7 +495,7 @@ static eccvalue_t objdatefn_getYear(eccstate_t* context)
 
     ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 
-    msToDate(toLocal(context->thisvalue.data.date->ms), &date);
+    eccdate_msToDate(eccdate_toLocal(context->thisvalue.data.date->ms), &date);
     return ECCNSValue.binary(date.year - 1900);
 }
 
@@ -505,7 +505,7 @@ static eccvalue_t objdatefn_getFullYear(eccstate_t* context)
 
     ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 
-    msToDate(toLocal(context->thisvalue.data.date->ms), &date);
+    eccdate_msToDate(eccdate_toLocal(context->thisvalue.data.date->ms), &date);
     return ECCNSValue.binary(date.year);
 }
 
@@ -515,7 +515,7 @@ static eccvalue_t objdatefn_getUTCFullYear(eccstate_t* context)
 
     ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 
-    msToDate(context->thisvalue.data.date->ms, &date);
+    eccdate_msToDate(context->thisvalue.data.date->ms, &date);
     return ECCNSValue.binary(date.year);
 }
 
@@ -525,7 +525,7 @@ static eccvalue_t objdatefn_getMonth(eccstate_t* context)
 
     ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 
-    msToDate(toLocal(context->thisvalue.data.date->ms), &date);
+    eccdate_msToDate(eccdate_toLocal(context->thisvalue.data.date->ms), &date);
     return ECCNSValue.binary(date.month - 1);
 }
 
@@ -535,7 +535,7 @@ static eccvalue_t objdatefn_getUTCMonth(eccstate_t* context)
 
     ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 
-    msToDate(context->thisvalue.data.date->ms, &date);
+    eccdate_msToDate(context->thisvalue.data.date->ms, &date);
     return ECCNSValue.binary(date.month - 1);
 }
 
@@ -545,7 +545,7 @@ static eccvalue_t objdatefn_getDate(eccstate_t* context)
 
     ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 
-    msToDate(toLocal(context->thisvalue.data.date->ms), &date);
+    eccdate_msToDate(eccdate_toLocal(context->thisvalue.data.date->ms), &date);
     return ECCNSValue.binary(date.day);
 }
 
@@ -555,7 +555,7 @@ static eccvalue_t objdatefn_getUTCDate(eccstate_t* context)
 
     ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 
-    msToDate(context->thisvalue.data.date->ms, &date);
+    eccdate_msToDate(context->thisvalue.data.date->ms, &date);
     return ECCNSValue.binary(date.day);
 }
 
@@ -563,70 +563,70 @@ static eccvalue_t objdatefn_getDay(eccstate_t* context)
 {
     ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 
-    return ECCNSValue.binary(msToWeekday(toLocal(context->thisvalue.data.date->ms)));
+    return ECCNSValue.binary(eccdate_msToWeekday(eccdate_toLocal(context->thisvalue.data.date->ms)));
 }
 
 static eccvalue_t objdatefn_getUTCDay(eccstate_t* context)
 {
     ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 
-    return ECCNSValue.binary(msToWeekday(context->thisvalue.data.date->ms));
+    return ECCNSValue.binary(eccdate_msToWeekday(context->thisvalue.data.date->ms));
 }
 
 static eccvalue_t objdatefn_getHours(eccstate_t* context)
 {
     ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 
-    return ECCNSValue.binary(msToHours(toLocal(context->thisvalue.data.date->ms)));
+    return ECCNSValue.binary(eccdate_msToHours(eccdate_toLocal(context->thisvalue.data.date->ms)));
 }
 
 static eccvalue_t objdatefn_getUTCHours(eccstate_t* context)
 {
     ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 
-    return ECCNSValue.binary(msToHours(context->thisvalue.data.date->ms));
+    return ECCNSValue.binary(eccdate_msToHours(context->thisvalue.data.date->ms));
 }
 
 static eccvalue_t objdatefn_getMinutes(eccstate_t* context)
 {
     ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 
-    return ECCNSValue.binary(msToMinutes(toLocal(context->thisvalue.data.date->ms)));
+    return ECCNSValue.binary(eccdate_msToMinutes(eccdate_toLocal(context->thisvalue.data.date->ms)));
 }
 
 static eccvalue_t objdatefn_getUTCMinutes(eccstate_t* context)
 {
     ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 
-    return ECCNSValue.binary(msToMinutes(context->thisvalue.data.date->ms));
+    return ECCNSValue.binary(eccdate_msToMinutes(context->thisvalue.data.date->ms));
 }
 
 static eccvalue_t objdatefn_getSeconds(eccstate_t* context)
 {
     ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 
-    return ECCNSValue.binary(msToSeconds(toLocal(context->thisvalue.data.date->ms)));
+    return ECCNSValue.binary(eccdate_msToSeconds(eccdate_toLocal(context->thisvalue.data.date->ms)));
 }
 
 static eccvalue_t objdatefn_getUTCSeconds(eccstate_t* context)
 {
     ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 
-    return ECCNSValue.binary(msToSeconds(context->thisvalue.data.date->ms));
+    return ECCNSValue.binary(eccdate_msToSeconds(context->thisvalue.data.date->ms));
 }
 
 static eccvalue_t objdatefn_getMilliseconds(eccstate_t* context)
 {
     ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 
-    return ECCNSValue.binary(msToMilliseconds(toLocal(context->thisvalue.data.date->ms)));
+    return ECCNSValue.binary(eccdate_msToMilliseconds(eccdate_toLocal(context->thisvalue.data.date->ms)));
 }
 
 static eccvalue_t objdatefn_getUTCMilliseconds(eccstate_t* context)
 {
     ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 
-    return ECCNSValue.binary(msToMilliseconds(context->thisvalue.data.date->ms));
+    return ECCNSValue.binary(eccdate_msToMilliseconds(context->thisvalue.data.date->ms));
 }
 
 static eccvalue_t objdatefn_getTimezoneOffset(eccstate_t* context)
@@ -643,7 +643,7 @@ static eccvalue_t objdatefn_setTime(eccstate_t* context)
 
     ms = ECCNSValue.toBinary(context, ECCNSContext.argument(context, 0)).data.binary;
 
-    return ECCNSValue.binary(context->thisvalue.data.date->ms = msClip(ms));
+    return ECCNSValue.binary(context->thisvalue.data.date->ms = eccdate_msClip(ms));
 }
 
 static eccvalue_t objdatefn_setMilliseconds(eccstate_t* context)
@@ -654,13 +654,13 @@ static eccvalue_t objdatefn_setMilliseconds(eccstate_t* context)
 
     ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 
-    msToDateAndTime(toLocal(context->thisvalue.data.date->ms), &date, &time);
-    ms = binaryArgumentOr(context, 0, NAN);
+    eccdate_msToDateAndTime(eccdate_toLocal(context->thisvalue.data.date->ms), &date, &time);
+    ms = eccdate_binaryArgumentOr(context, 0, NAN);
     if(isnan(ms))
         return ECCNSValue.binary(context->thisvalue.data.date->ms = NAN);
 
     time.ms = ms;
-    return ECCNSValue.binary(context->thisvalue.data.date->ms = msClip(toUTC(msFromDateAndTime(date, time))));
+    return ECCNSValue.binary(context->thisvalue.data.date->ms = eccdate_msClip(eccdate_toUTC(eccdate_msFromDateAndTime(date, time))));
 }
 
 static eccvalue_t objdatefn_setUTCMilliseconds(eccstate_t* context)
@@ -671,13 +671,13 @@ static eccvalue_t objdatefn_setUTCMilliseconds(eccstate_t* context)
 
     ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 
-    msToDateAndTime(context->thisvalue.data.date->ms, &date, &time);
-    ms = binaryArgumentOr(context, 0, NAN);
+    eccdate_msToDateAndTime(context->thisvalue.data.date->ms, &date, &time);
+    ms = eccdate_binaryArgumentOr(context, 0, NAN);
     if(isnan(ms))
         return ECCNSValue.binary(context->thisvalue.data.date->ms = NAN);
 
     time.ms = ms;
-    return ECCNSValue.binary(context->thisvalue.data.date->ms = msClip(msFromDateAndTime(date, time)));
+    return ECCNSValue.binary(context->thisvalue.data.date->ms = eccdate_msClip(eccdate_msFromDateAndTime(date, time)));
 }
 
 static eccvalue_t objdatefn_setSeconds(eccstate_t* context)
@@ -688,15 +688,15 @@ static eccvalue_t objdatefn_setSeconds(eccstate_t* context)
 
     ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 
-    msToDateAndTime(toLocal(context->thisvalue.data.date->ms), &date, &time);
-    s = binaryArgumentOr(context, 0, NAN);
-    ms = binaryArgumentOr(context, 1, time.ms);
+    eccdate_msToDateAndTime(eccdate_toLocal(context->thisvalue.data.date->ms), &date, &time);
+    s = eccdate_binaryArgumentOr(context, 0, NAN);
+    ms = eccdate_binaryArgumentOr(context, 1, time.ms);
     if(isnan(s) || isnan(ms))
         return ECCNSValue.binary(context->thisvalue.data.date->ms = NAN);
 
     time.s = s;
     time.ms = ms;
-    return ECCNSValue.binary(context->thisvalue.data.date->ms = msClip(toUTC(msFromDateAndTime(date, time))));
+    return ECCNSValue.binary(context->thisvalue.data.date->ms = eccdate_msClip(eccdate_toUTC(eccdate_msFromDateAndTime(date, time))));
 }
 
 static eccvalue_t objdatefn_setUTCSeconds(eccstate_t* context)
@@ -707,15 +707,15 @@ static eccvalue_t objdatefn_setUTCSeconds(eccstate_t* context)
 
     ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 
-    msToDateAndTime(context->thisvalue.data.date->ms, &date, &time);
-    s = binaryArgumentOr(context, 0, NAN);
-    ms = binaryArgumentOr(context, 1, time.ms);
+    eccdate_msToDateAndTime(context->thisvalue.data.date->ms, &date, &time);
+    s = eccdate_binaryArgumentOr(context, 0, NAN);
+    ms = eccdate_binaryArgumentOr(context, 1, time.ms);
     if(isnan(s) || isnan(ms))
         return ECCNSValue.binary(context->thisvalue.data.date->ms = NAN);
 
     time.s = s;
     time.ms = ms;
-    return ECCNSValue.binary(context->thisvalue.data.date->ms = msClip(msFromDateAndTime(date, time)));
+    return ECCNSValue.binary(context->thisvalue.data.date->ms = eccdate_msClip(eccdate_msFromDateAndTime(date, time)));
 }
 
 static eccvalue_t objdatefn_setMinutes(eccstate_t* context)
@@ -726,17 +726,17 @@ static eccvalue_t objdatefn_setMinutes(eccstate_t* context)
 
     ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 
-    msToDateAndTime(toLocal(context->thisvalue.data.date->ms), &date, &time);
-    m = binaryArgumentOr(context, 0, NAN);
-    s = binaryArgumentOr(context, 1, time.s);
-    ms = binaryArgumentOr(context, 2, time.ms);
+    eccdate_msToDateAndTime(eccdate_toLocal(context->thisvalue.data.date->ms), &date, &time);
+    m = eccdate_binaryArgumentOr(context, 0, NAN);
+    s = eccdate_binaryArgumentOr(context, 1, time.s);
+    ms = eccdate_binaryArgumentOr(context, 2, time.ms);
     if(isnan(m) || isnan(s) || isnan(ms))
         return ECCNSValue.binary(context->thisvalue.data.date->ms = NAN);
 
     time.m = m;
     time.s = s;
     time.ms = ms;
-    return ECCNSValue.binary(context->thisvalue.data.date->ms = msClip(toUTC(msFromDateAndTime(date, time))));
+    return ECCNSValue.binary(context->thisvalue.data.date->ms = eccdate_msClip(eccdate_toUTC(eccdate_msFromDateAndTime(date, time))));
 }
 
 static eccvalue_t objdatefn_setUTCMinutes(eccstate_t* context)
@@ -747,17 +747,17 @@ static eccvalue_t objdatefn_setUTCMinutes(eccstate_t* context)
 
     ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 
-    msToDateAndTime(context->thisvalue.data.date->ms, &date, &time);
-    m = binaryArgumentOr(context, 0, NAN);
-    s = binaryArgumentOr(context, 1, time.s);
-    ms = binaryArgumentOr(context, 2, time.ms);
+    eccdate_msToDateAndTime(context->thisvalue.data.date->ms, &date, &time);
+    m = eccdate_binaryArgumentOr(context, 0, NAN);
+    s = eccdate_binaryArgumentOr(context, 1, time.s);
+    ms = eccdate_binaryArgumentOr(context, 2, time.ms);
     if(isnan(m) || isnan(s) || isnan(ms))
         return ECCNSValue.binary(context->thisvalue.data.date->ms = NAN);
 
     time.m = m;
     time.s = s;
     time.ms = ms;
-    return ECCNSValue.binary(context->thisvalue.data.date->ms = msClip(msFromDateAndTime(date, time)));
+    return ECCNSValue.binary(context->thisvalue.data.date->ms = eccdate_msClip(eccdate_msFromDateAndTime(date, time)));
 }
 
 static eccvalue_t objdatefn_setHours(eccstate_t* context)
@@ -768,11 +768,11 @@ static eccvalue_t objdatefn_setHours(eccstate_t* context)
 
     ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 
-    msToDateAndTime(toLocal(context->thisvalue.data.date->ms), &date, &time);
-    h = binaryArgumentOr(context, 0, NAN);
-    m = binaryArgumentOr(context, 1, time.m);
-    s = binaryArgumentOr(context, 2, time.s);
-    ms = binaryArgumentOr(context, 3, time.ms);
+    eccdate_msToDateAndTime(eccdate_toLocal(context->thisvalue.data.date->ms), &date, &time);
+    h = eccdate_binaryArgumentOr(context, 0, NAN);
+    m = eccdate_binaryArgumentOr(context, 1, time.m);
+    s = eccdate_binaryArgumentOr(context, 2, time.s);
+    ms = eccdate_binaryArgumentOr(context, 3, time.ms);
     if(isnan(h) || isnan(m) || isnan(s) || isnan(ms))
         return ECCNSValue.binary(context->thisvalue.data.date->ms = NAN);
 
@@ -780,7 +780,7 @@ static eccvalue_t objdatefn_setHours(eccstate_t* context)
     time.m = m;
     time.s = s;
     time.ms = ms;
-    return ECCNSValue.binary(context->thisvalue.data.date->ms = msClip(toUTC(msFromDateAndTime(date, time))));
+    return ECCNSValue.binary(context->thisvalue.data.date->ms = eccdate_msClip(eccdate_toUTC(eccdate_msFromDateAndTime(date, time))));
 }
 
 static eccvalue_t objdatefn_setUTCHours(eccstate_t* context)
@@ -791,11 +791,11 @@ static eccvalue_t objdatefn_setUTCHours(eccstate_t* context)
 
     ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 
-    msToDateAndTime(context->thisvalue.data.date->ms, &date, &time);
-    h = binaryArgumentOr(context, 0, NAN);
-    m = binaryArgumentOr(context, 1, time.m);
-    s = binaryArgumentOr(context, 2, time.s);
-    ms = binaryArgumentOr(context, 3, time.ms);
+    eccdate_msToDateAndTime(context->thisvalue.data.date->ms, &date, &time);
+    h = eccdate_binaryArgumentOr(context, 0, NAN);
+    m = eccdate_binaryArgumentOr(context, 1, time.m);
+    s = eccdate_binaryArgumentOr(context, 2, time.s);
+    ms = eccdate_binaryArgumentOr(context, 3, time.ms);
     if(isnan(h) || isnan(m) || isnan(s) || isnan(ms))
         return ECCNSValue.binary(context->thisvalue.data.date->ms = NAN);
 
@@ -803,7 +803,7 @@ static eccvalue_t objdatefn_setUTCHours(eccstate_t* context)
     time.m = m;
     time.s = s;
     time.ms = ms;
-    return ECCNSValue.binary(context->thisvalue.data.date->ms = msClip(msFromDateAndTime(date, time)));
+    return ECCNSValue.binary(context->thisvalue.data.date->ms = eccdate_msClip(eccdate_msFromDateAndTime(date, time)));
 }
 
 static eccvalue_t objdatefn_setDate(eccstate_t* context)
@@ -813,13 +813,13 @@ static eccvalue_t objdatefn_setDate(eccstate_t* context)
 
     ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 
-    ms = msToDate(toLocal(context->thisvalue.data.date->ms), &date);
-    day = binaryArgumentOr(context, 0, NAN);
+    ms = eccdate_msToDate(eccdate_toLocal(context->thisvalue.data.date->ms), &date);
+    day = eccdate_binaryArgumentOr(context, 0, NAN);
     if(isnan(day))
         return ECCNSValue.binary(context->thisvalue.data.date->ms = NAN);
 
     date.day = day;
-    return ECCNSValue.binary(context->thisvalue.data.date->ms = msClip(toUTC(ms + msFromDate(date))));
+    return ECCNSValue.binary(context->thisvalue.data.date->ms = eccdate_msClip(eccdate_toUTC(ms + eccdate_msFromDate(date))));
 }
 
 static eccvalue_t objdatefn_setUTCDate(eccstate_t* context)
@@ -829,13 +829,13 @@ static eccvalue_t objdatefn_setUTCDate(eccstate_t* context)
 
     ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 
-    ms = msToDate(context->thisvalue.data.date->ms, &date);
-    day = binaryArgumentOr(context, 0, NAN);
+    ms = eccdate_msToDate(context->thisvalue.data.date->ms, &date);
+    day = eccdate_binaryArgumentOr(context, 0, NAN);
     if(isnan(day))
         return ECCNSValue.binary(context->thisvalue.data.date->ms = NAN);
 
     date.day = day;
-    return ECCNSValue.binary(context->thisvalue.data.date->ms = msClip(ms + msFromDate(date)));
+    return ECCNSValue.binary(context->thisvalue.data.date->ms = eccdate_msClip(ms + eccdate_msFromDate(date)));
 }
 
 static eccvalue_t objdatefn_setMonth(eccstate_t* context)
@@ -845,15 +845,15 @@ static eccvalue_t objdatefn_setMonth(eccstate_t* context)
 
     ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 
-    ms = msToDate(toLocal(context->thisvalue.data.date->ms), &date);
-    month = binaryArgumentOr(context, 0, NAN) + 1;
-    day = binaryArgumentOr(context, 1, date.day);
+    ms = eccdate_msToDate(eccdate_toLocal(context->thisvalue.data.date->ms), &date);
+    month = eccdate_binaryArgumentOr(context, 0, NAN) + 1;
+    day = eccdate_binaryArgumentOr(context, 1, date.day);
     if(isnan(month) || isnan(day))
         return ECCNSValue.binary(context->thisvalue.data.date->ms = NAN);
 
     date.month = month;
     date.day = day;
-    return ECCNSValue.binary(context->thisvalue.data.date->ms = msClip(toUTC(ms + msFromDate(date))));
+    return ECCNSValue.binary(context->thisvalue.data.date->ms = eccdate_msClip(eccdate_toUTC(ms + eccdate_msFromDate(date))));
 }
 
 static eccvalue_t objdatefn_setUTCMonth(eccstate_t* context)
@@ -863,15 +863,15 @@ static eccvalue_t objdatefn_setUTCMonth(eccstate_t* context)
 
     ECCNSContext.assertThisType(context, ECC_VALTYPE_DATE);
 
-    ms = msToDate(context->thisvalue.data.date->ms, &date);
-    month = binaryArgumentOr(context, 0, NAN) + 1;
-    day = binaryArgumentOr(context, 1, date.day);
+    ms = eccdate_msToDate(context->thisvalue.data.date->ms, &date);
+    month = eccdate_binaryArgumentOr(context, 0, NAN) + 1;
+    day = eccdate_binaryArgumentOr(context, 1, date.day);
     if(isnan(month) || isnan(day))
         return ECCNSValue.binary(context->thisvalue.data.date->ms = NAN);
 
     date.month = month;
     date.day = day;
-    return ECCNSValue.binary(context->thisvalue.data.date->ms = msClip(ms + msFromDate(date)));
+    return ECCNSValue.binary(context->thisvalue.data.date->ms = eccdate_msClip(ms + eccdate_msFromDate(date)));
 }
 
 static eccvalue_t objdatefn_setFullYear(eccstate_t* context)
@@ -884,17 +884,17 @@ static eccvalue_t objdatefn_setFullYear(eccstate_t* context)
     if(isnan(context->thisvalue.data.date->ms))
         context->thisvalue.data.date->ms = 0;
 
-    ms = msToDate(toLocal(context->thisvalue.data.date->ms), &date);
-    year = binaryArgumentOr(context, 0, NAN);
-    month = binaryArgumentOr(context, 1, date.month - 1) + 1;
-    day = binaryArgumentOr(context, 2, date.day);
+    ms = eccdate_msToDate(eccdate_toLocal(context->thisvalue.data.date->ms), &date);
+    year = eccdate_binaryArgumentOr(context, 0, NAN);
+    month = eccdate_binaryArgumentOr(context, 1, date.month - 1) + 1;
+    day = eccdate_binaryArgumentOr(context, 2, date.day);
     if(isnan(year) || isnan(month) || isnan(day))
         return ECCNSValue.binary(context->thisvalue.data.date->ms = NAN);
 
     date.year = year;
     date.month = month;
     date.day = day;
-    return ECCNSValue.binary(context->thisvalue.data.date->ms = msClip(toUTC(ms + msFromDate(date))));
+    return ECCNSValue.binary(context->thisvalue.data.date->ms = eccdate_msClip(eccdate_toUTC(ms + eccdate_msFromDate(date))));
 }
 
 static eccvalue_t objdatefn_setYear(eccstate_t* context)
@@ -907,17 +907,17 @@ static eccvalue_t objdatefn_setYear(eccstate_t* context)
     if(isnan(context->thisvalue.data.date->ms))
         context->thisvalue.data.date->ms = 0;
 
-    ms = msToDate(toLocal(context->thisvalue.data.date->ms), &date);
-    year = binaryArgumentOr(context, 0, NAN);
-    month = binaryArgumentOr(context, 1, date.month - 1) + 1;
-    day = binaryArgumentOr(context, 2, date.day);
+    ms = eccdate_msToDate(eccdate_toLocal(context->thisvalue.data.date->ms), &date);
+    year = eccdate_binaryArgumentOr(context, 0, NAN);
+    month = eccdate_binaryArgumentOr(context, 1, date.month - 1) + 1;
+    day = eccdate_binaryArgumentOr(context, 2, date.day);
     if(isnan(year) || isnan(month) || isnan(day))
         return ECCNSValue.binary(context->thisvalue.data.date->ms = NAN);
 
     date.year = year < 100 ? year + 1900 : year;
     date.month = month;
     date.day = day;
-    return ECCNSValue.binary(context->thisvalue.data.date->ms = msClip(toUTC(ms + msFromDate(date))));
+    return ECCNSValue.binary(context->thisvalue.data.date->ms = eccdate_msClip(eccdate_toUTC(ms + eccdate_msFromDate(date))));
 }
 
 static eccvalue_t objdatefn_setUTCFullYear(eccstate_t* context)
@@ -930,23 +930,23 @@ static eccvalue_t objdatefn_setUTCFullYear(eccstate_t* context)
     if(isnan(context->thisvalue.data.date->ms))
         context->thisvalue.data.date->ms = 0;
 
-    ms = msToDate(context->thisvalue.data.date->ms, &date);
-    year = binaryArgumentOr(context, 0, NAN);
-    month = binaryArgumentOr(context, 1, date.month - 1) + 1;
-    day = binaryArgumentOr(context, 2, date.day);
+    ms = eccdate_msToDate(context->thisvalue.data.date->ms, &date);
+    year = eccdate_binaryArgumentOr(context, 0, NAN);
+    month = eccdate_binaryArgumentOr(context, 1, date.month - 1) + 1;
+    day = eccdate_binaryArgumentOr(context, 2, date.day);
     if(isnan(year) || isnan(month) || isnan(day))
         return ECCNSValue.binary(context->thisvalue.data.date->ms = NAN);
 
     date.year = year;
     date.month = month;
     date.day = day;
-    return ECCNSValue.binary(context->thisvalue.data.date->ms = msClip(ms + msFromDate(date)));
+    return ECCNSValue.binary(context->thisvalue.data.date->ms = eccdate_msClip(ms + eccdate_msFromDate(date)));
 }
 
 static eccvalue_t objdatefn_now(eccstate_t* context)
 {
     (void)context;
-    return ECCNSValue.binary(msClip(ECCNSEnv.currentTime()));
+    return ECCNSValue.binary(eccdate_msClip(ECCNSEnv.currentTime()));
 }
 
 static eccvalue_t objdatefn_parse(eccstate_t* context)
@@ -955,13 +955,13 @@ static eccvalue_t objdatefn_parse(eccstate_t* context)
 
     value = ECCNSValue.toString(context, ECCNSContext.argument(context, 0));
 
-    return ECCNSValue.binary(msClip(msFromBytes(ECCNSValue.stringBytes(&value), ECCNSValue.stringLength(&value))));
+    return ECCNSValue.binary(eccdate_msClip(eccdate_msFromBytes(ECCNSValue.stringBytes(&value), ECCNSValue.stringLength(&value))));
 }
 
 static eccvalue_t objdatefn_UTC(eccstate_t* context)
 {
     if(ECCNSContext.argumentCount(context) > 1)
-        return ECCNSValue.binary(msClip(msFromArguments(context)));
+        return ECCNSValue.binary(eccdate_msClip(eccdate_msFromArguments(context)));
 
     return ECCNSValue.binary(NAN);
 }
@@ -972,18 +972,18 @@ static eccvalue_t objdatefn_constructor(eccstate_t* context)
     uint16_t count;
 
     if(!context->construct)
-        return ECCNSValue.chars(msToChars(ECCNSEnv.currentTime(), localOffset));
+        return ECCNSValue.chars(eccdate_msToChars(ECCNSEnv.currentTime(), localOffset));
 
     count = ECCNSContext.argumentCount(context);
 
     if(count > 1)
-        time = toUTC(msFromArguments(context));
+        time = eccdate_toUTC(eccdate_msFromArguments(context));
     else if(count)
     {
         eccvalue_t value = ECCNSValue.toPrimitive(context, ECCNSContext.argument(context, 0), ECC_VALHINT_AUTO);
 
         if(ECCNSValue.isString(value))
-            time = msFromBytes(ECCNSValue.stringBytes(&value), ECCNSValue.stringLength(&value));
+            time = eccdate_msFromBytes(ECCNSValue.stringBytes(&value), ECCNSValue.stringLength(&value));
         else
             time = ECCNSValue.toBinary(context, value).data.binary;
     }
@@ -997,7 +997,7 @@ static void nsdatefn_setup(void)
 {
     const eccvalflag_t h = ECC_VALFLAG_HIDDEN;
 
-    setupLocalOffset();
+    eccdate_setupLocalOffset();
 
     ECCNSFunction.setupBuiltinObject(&ECC_CtorFunc_Date, objdatefn_constructor, -7, &ECC_Prototype_Date, ECCNSValue.date(nsdatefn_create(NAN)), &ECC_Type_Date);
 
@@ -1066,7 +1066,7 @@ static eccobjdate_t* nsdatefn_create(double ms)
     ECCNSMemoryPool.addObject(&self->object);
     ECCNSObject.initialize(&self->object, ECC_Prototype_Date);
 
-    self->ms = msClip(ms);
+    self->ms = eccdate_msClip(ms);
 
     return self;
 }

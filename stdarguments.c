@@ -7,10 +7,10 @@
 //
 #include "ecc.h"
 
-static void setup(void);
-static void teardown(void);
-static eccobject_t* createSized(uint32_t size);
-static eccobject_t* createWithCList(int count, const char* list[]);
+static void nsargumentsfn_setup(void);
+static void nsargumentsfn_teardown(void);
+static eccobject_t* nsargumentsfn_createSized(uint32_t size);
+static eccobject_t* nsargumentsfn_createWithCList(int count, const char* list[]);
 
 
 eccobject_t* ECC_Prototype_Arguments;
@@ -20,10 +20,10 @@ const eccobjinterntype_t ECC_Type_Arguments = {
 };
 
 const struct eccpseudonsarguments_t ECCNSArguments = {
-    setup,
-    teardown,
-    createSized,
-    createWithCList,
+    nsargumentsfn_setup,
+    nsargumentsfn_teardown,
+    nsargumentsfn_createSized,
+    nsargumentsfn_createWithCList,
     {}
 };
 
@@ -65,7 +65,7 @@ static eccvalue_t argobjfn_setCallee(eccstate_t* context)
 }
 
 
-static void setup(void)
+static void nsargumentsfn_setup(void)
 {
     const eccvalflag_t h = ECC_VALFLAG_HIDDEN;
     const eccvalflag_t s = ECC_VALFLAG_SEALED;
@@ -76,12 +76,12 @@ static void setup(void)
     ECCNSObject.addMember(ECC_Prototype_Arguments, ECC_ConstKey_callee, ECCNSFunction.accessor(argobjfn_getCallee, argobjfn_setCallee), h | s | ECC_VALFLAG_ASOWN);
 }
 
-static void teardown(void)
+static void nsargumentsfn_teardown(void)
 {
     ECC_Prototype_Arguments = NULL;
 }
 
-static eccobject_t* createSized(uint32_t size)
+static eccobject_t* nsargumentsfn_createSized(uint32_t size)
 {
     eccobject_t* self = ECCNSObject.create(ECC_Prototype_Arguments);
 
@@ -90,9 +90,9 @@ static eccobject_t* createSized(uint32_t size)
     return self;
 }
 
-static eccobject_t* createWithCList(int count, const char* list[])
+static eccobject_t* nsargumentsfn_createWithCList(int count, const char* list[])
 {
-    eccobject_t* self = createSized(count);
+    eccobject_t* self = nsargumentsfn_createSized(count);
 
     ECCNSObject.populateElementWithCList(self, count, list);
 

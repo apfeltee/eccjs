@@ -335,7 +335,7 @@ typedef struct ecccharbuffer_t ecccharbuffer_t;
 typedef struct eccobjinterntype_t eccobjinterntype_t;
 typedef struct eccobjbool_t eccobjbool_t;
 typedef struct eccobjstring_t eccobjstring_t;
-typedef struct eccobjscriptfunction_t eccobjscriptfunction_t;
+typedef struct eccobjfunction_t eccobjfunction_t;
 typedef struct eccobjdate_t eccobjdate_t;
 typedef struct eccobjerror_t eccobjerror_t;
 typedef struct eccobjregexp_t eccobjregexp_t;
@@ -456,7 +456,7 @@ struct eccvalue_t
         eccobjnumber_t* number;
         eccobjbool_t* boolean;
         eccobjdate_t* date;
-        eccobjscriptfunction_t* function;
+        eccobjfunction_t* function;
         eccvalue_t* reference;
     } data;
 
@@ -482,7 +482,7 @@ struct eccpseudonsvalue_t
     eccvalue_t (*number)(eccobjnumber_t*);
     eccvalue_t (*boolean)(eccobjbool_t*);
     eccvalue_t (*date)(eccobjdate_t*);
-    eccvalue_t (*function)(eccobjscriptfunction_t*);
+    eccvalue_t (*function)(eccobjfunction_t*);
     eccvalue_t (*host)(eccobject_t*);
     eccvalue_t (*reference)(eccvalue_t*);
     int (*isPrimitive)(eccvalue_t);
@@ -547,7 +547,7 @@ struct eccpseudonscontext_t
     void (*typeError)(eccstate_t*, ecccharbuffer_t*) __attribute__((noreturn));
     void (*uriError)(eccstate_t*, ecccharbuffer_t*) __attribute__((noreturn));
     void (*doThrow)(eccstate_t*, eccvalue_t) __attribute__((noreturn));
-    eccvalue_t (*callFunction)(eccstate_t*, eccobjscriptfunction_t* function, eccvalue_t thisval, int argumentCount, ...);
+    eccvalue_t (*callFunction)(eccstate_t*, eccobjfunction_t* function, eccvalue_t thisval, int argumentCount, ...);
     int (*argumentCount)(eccstate_t*);
     eccvalue_t (*argument)(eccstate_t*, int argumentIndex);
     void (*replaceArgument)(eccstate_t*, int argumentIndex, eccvalue_t value);
@@ -783,13 +783,13 @@ struct eccpseudonserror_t
 };
 
 
-struct eccobjscriptfunction_t
+struct eccobjfunction_t
 {
     eccobject_t object;
     eccobject_t environment;
     eccobject_t* refObject;
     eccoplist_t* oplist;
-    eccobjscriptfunction_t* pair;
+    eccobjfunction_t* pair;
     eccvalue_t boundThis;
     ecctextstring_t text;
     const char* name;
@@ -801,20 +801,20 @@ struct eccpseudonsfunction_t
 {
     void (*setup)(void);
     void (*teardown)(void);
-    eccobjscriptfunction_t* (*create)(eccobject_t* environment);
-    eccobjscriptfunction_t* (*createSized)(eccobject_t* environment, uint32_t size);
-    eccobjscriptfunction_t* (*createWithNative)(const eccnativefuncptr_t native, int parameterCount);
-    eccobjscriptfunction_t* (*copy)(eccobjscriptfunction_t* original);
-    void (*destroy)(eccobjscriptfunction_t*);
-    void (*addMember)(eccobjscriptfunction_t*, const char* name, eccvalue_t value, eccvalflag_t);
-    void (*addValue)(eccobjscriptfunction_t*, const char* name, eccvalue_t value, eccvalflag_t);
-    eccobjscriptfunction_t* (*addMethod)(eccobjscriptfunction_t*, const char* name, const eccnativefuncptr_t native, int argumentCount, eccvalflag_t);
-    eccobjscriptfunction_t* (*addFunction)(eccobjscriptfunction_t*, const char* name, const eccnativefuncptr_t native, int argumentCount, eccvalflag_t);
-    eccobjscriptfunction_t* (*addToObject)(eccobject_t* object, const char* name, const eccnativefuncptr_t native, int parameterCount, eccvalflag_t);
-    void (*linkPrototype)(eccobjscriptfunction_t*, eccvalue_t prototype, eccvalflag_t);
-    void (*setupBuiltinObject)(eccobjscriptfunction_t**, const eccnativefuncptr_t, int parameterCount, eccobject_t**, eccvalue_t prototype, const eccobjinterntype_t* type);
+    eccobjfunction_t* (*create)(eccobject_t* environment);
+    eccobjfunction_t* (*createSized)(eccobject_t* environment, uint32_t size);
+    eccobjfunction_t* (*createWithNative)(const eccnativefuncptr_t native, int parameterCount);
+    eccobjfunction_t* (*copy)(eccobjfunction_t* original);
+    void (*destroy)(eccobjfunction_t*);
+    void (*addMember)(eccobjfunction_t*, const char* name, eccvalue_t value, eccvalflag_t);
+    void (*addValue)(eccobjfunction_t*, const char* name, eccvalue_t value, eccvalflag_t);
+    eccobjfunction_t* (*addMethod)(eccobjfunction_t*, const char* name, const eccnativefuncptr_t native, int argumentCount, eccvalflag_t);
+    eccobjfunction_t* (*addFunction)(eccobjfunction_t*, const char* name, const eccnativefuncptr_t native, int argumentCount, eccvalflag_t);
+    eccobjfunction_t* (*addToObject)(eccobject_t* object, const char* name, const eccnativefuncptr_t native, int parameterCount, eccvalflag_t);
+    void (*linkPrototype)(eccobjfunction_t*, eccvalue_t prototype, eccvalflag_t);
+    void (*setupBuiltinObject)(eccobjfunction_t**, const eccnativefuncptr_t, int parameterCount, eccobject_t**, eccvalue_t prototype, const eccobjinterntype_t* type);
     eccvalue_t (*accessor)(const eccnativefuncptr_t getter, const eccnativefuncptr_t setter);
-    const eccobjscriptfunction_t identity;
+    const eccobjfunction_t identity;
 };
 
 struct ECCNSJSON
@@ -876,7 +876,7 @@ struct eccpseudonsglobal_t
 {
     void (*setup)(void);
     void (*teardown)(void);
-    eccobjscriptfunction_t* (*create)(void);
+    eccobjfunction_t* (*create)(void);
 
     const struct
     {
@@ -932,7 +932,7 @@ struct eccscriptcontext_t
     jmp_buf* envList;
     uint16_t envCount;
     uint16_t envCapacity;
-    eccobjscriptfunction_t* global;
+    eccobjfunction_t* global;
     eccvalue_t result;
     ecctextstring_t text;
     int32_t ofLine;
@@ -1001,8 +1001,8 @@ struct eccpseudonsop_t
 {
     eccoperand_t (*make)(const eccnativefuncptr_t native, eccvalue_t value, ecctextstring_t text);
     const char* (*toChars)(const eccnativefuncptr_t native);
-    eccvalue_t (*callFunctionArguments)(eccstate_t*, eccctxoffsettype_t, eccobjscriptfunction_t* function, eccvalue_t thisval, eccobject_t* arguments);
-    eccvalue_t (*callFunctionVA)(eccstate_t*, eccctxoffsettype_t, eccobjscriptfunction_t* function, eccvalue_t thisval, int argumentCount, va_list ap);
+    eccvalue_t (*callFunctionArguments)(eccstate_t*, eccctxoffsettype_t, eccobjfunction_t* function, eccvalue_t thisval, eccobject_t* arguments);
+    eccvalue_t (*callFunctionVA)(eccstate_t*, eccctxoffsettype_t, eccobjfunction_t* function, eccvalue_t thisval, int argumentCount, va_list ap);
     eccvalue_t (*noop)(eccstate_t*);
     eccvalue_t (*value)(eccstate_t*);
     eccvalue_t (*valueConstRef)(eccstate_t*);
@@ -1153,7 +1153,7 @@ struct eccastparser_t
 
     uint16_t depthCount;
     eccobject_t* global;
-    eccobjscriptfunction_t* function;
+    eccobjfunction_t* function;
     uint16_t sourceDepth;
     int preferInteger;
     int strictMode;
@@ -1164,13 +1164,13 @@ struct eccpseudonsparser_t
 {
     eccastparser_t* (*createWithLexer)(eccastlexer_t*);
     void (*destroy)(eccastparser_t*);
-    eccobjscriptfunction_t* (*parseWithEnvironment)(eccastparser_t* const, eccobject_t* environment, eccobject_t* global);
+    eccobjfunction_t* (*parseWithEnvironment)(eccastparser_t* const, eccobject_t* environment, eccobject_t* global);
     const eccastparser_t identity;
 };
 
 struct eccmempool_t
 {
-    eccobjscriptfunction_t** functionList;
+    eccobjfunction_t** functionList;
     uint32_t functionCount;
     uint32_t functionCapacity;
     eccobject_t** objectList;
@@ -1185,7 +1185,7 @@ struct eccpseudonspool_t
 {
     void (*setup)(void);
     void (*teardown)(void);
-    void (*addFunction)(eccobjscriptfunction_t* function);
+    void (*addFunction)(eccobjfunction_t* function);
     void (*addObject)(eccobject_t* object);
     void (*addChars)(ecccharbuffer_t* chars);
     void (*unmarkAll)(void);
@@ -1296,21 +1296,21 @@ extern eccobject_t* ECC_Prototype_ErrorTypeError;
 extern eccobject_t* ECC_Prototype_ErrorUriError;
 extern eccobject_t* ECC_Prototype_ErrorEvalError;
 
-extern eccobjscriptfunction_t* ECC_CtorFunc_String;
-extern eccobjscriptfunction_t* ECC_CtorFunc_Number;
-extern eccobjscriptfunction_t* ECC_CtorFunc_Function;
-extern eccobjscriptfunction_t* ECC_CtorFunc_Object;
-extern eccobjscriptfunction_t* ECC_CtorFunc_Regexp;
-extern eccobjscriptfunction_t* ECC_CtorFunc_Array;
-extern eccobjscriptfunction_t* ECC_CtorFunc_Boolean;
-extern eccobjscriptfunction_t* ECC_CtorFunc_Date;
-extern eccobjscriptfunction_t* ECC_CtorFunc_Error;
-extern eccobjscriptfunction_t* ECC_CtorFunc_ErrorRangeError;
-extern eccobjscriptfunction_t* ECC_CtorFunc_ErrorReferenceError;
-extern eccobjscriptfunction_t* ECC_CtorFunc_ErrorSyntaxError;
-extern eccobjscriptfunction_t* ECC_CtorFunc_ErrorTypeError;
-extern eccobjscriptfunction_t* ECC_CtorFunc_ErrorUriError;
-extern eccobjscriptfunction_t* ECC_CtorFunc_ErrorEvalError;
+extern eccobjfunction_t* ECC_CtorFunc_String;
+extern eccobjfunction_t* ECC_CtorFunc_Number;
+extern eccobjfunction_t* ECC_CtorFunc_Function;
+extern eccobjfunction_t* ECC_CtorFunc_Object;
+extern eccobjfunction_t* ECC_CtorFunc_Regexp;
+extern eccobjfunction_t* ECC_CtorFunc_Array;
+extern eccobjfunction_t* ECC_CtorFunc_Boolean;
+extern eccobjfunction_t* ECC_CtorFunc_Date;
+extern eccobjfunction_t* ECC_CtorFunc_Error;
+extern eccobjfunction_t* ECC_CtorFunc_ErrorRangeError;
+extern eccobjfunction_t* ECC_CtorFunc_ErrorReferenceError;
+extern eccobjfunction_t* ECC_CtorFunc_ErrorSyntaxError;
+extern eccobjfunction_t* ECC_CtorFunc_ErrorTypeError;
+extern eccobjfunction_t* ECC_CtorFunc_ErrorUriError;
+extern eccobjfunction_t* ECC_CtorFunc_ErrorEvalError;
 
 extern const eccobjinterntype_t ECC_Type_Regexp;
 extern const eccobjinterntype_t ECC_Type_Arguments;
