@@ -7,94 +7,81 @@
 //
 #include "ecc.h"
 
-static void nsargumentsfn_setup(void);
-static void nsargumentsfn_teardown(void);
-static eccobject_t* nsargumentsfn_createSized(uint32_t size);
-static eccobject_t* nsargumentsfn_createWithCList(int count, const char* list[]);
-
-
 eccobject_t* ECC_Prototype_Arguments;
 
 const eccobjinterntype_t ECC_Type_Arguments = {
     .text = &ECC_ConstString_ArgumentsType,
 };
 
-const struct eccpseudonsarguments_t ECCNSArguments = {
-    nsargumentsfn_setup,
-    nsargumentsfn_teardown,
-    nsargumentsfn_createSized,
-    nsargumentsfn_createWithCList,
-    {}
-};
 
-static eccvalue_t argobjfn_getLength(eccstate_t* context)
+eccvalue_t argobjfn_getLength(eccstate_t* context)
 {
     return ecc_value_binary(context->thisvalue.data.object->elementCount);
 }
 
-static eccvalue_t argobjfn_setLength(eccstate_t* context)
+eccvalue_t argobjfn_setLength(eccstate_t* context)
 {
     double length;
 
-    length = ecc_value_tobinary(context, ECCNSContext.argument(context, 0)).data.binary;
+    length = ecc_value_tobinary(context, ecc_context_argument(context, 0)).data.binary;
     if(!isfinite(length) || length < 0 || length > UINT32_MAX || length != (uint32_t)length)
-        ECCNSContext.rangeError(context, ECCNSChars.create("invalid array length"));
+        ecc_context_rangeerror(context, ecc_charbuf_create("invalid array length"));
 
-    if(ECCNSObject.resizeElement(context->thisvalue.data.object, length) && context->strictMode)
+    if(ecc_object_resizeelement(context->thisvalue.data.object, length) && context->strictMode)
     {
-        ECCNSContext.typeError(context, ECCNSChars.create("'%u' is non-configurable", context->thisvalue.data.object->elementCount));
+        ecc_context_typeerror(context, ecc_charbuf_create("'%u' is non-configurable", context->thisvalue.data.object->elementCount));
     }
 
     return ECCValConstUndefined;
 }
 
-static eccvalue_t argobjfn_getCallee(eccstate_t* context)
+eccvalue_t argobjfn_getCallee(eccstate_t* context)
 {
-    ECCNSContext.rewindStatement(context->parent);
-    ECCNSContext.typeError(context, ECCNSChars.create("'callee' cannot be accessed in this context"));
+    ecc_context_rewindstatement(context->parent);
+    ecc_context_typeerror(context, ecc_charbuf_create("'callee' cannot be accessed in this context"));
 
     return ECCValConstUndefined;
 }
 
-static eccvalue_t argobjfn_setCallee(eccstate_t* context)
+eccvalue_t argobjfn_setCallee(eccstate_t* context)
 {
-    ECCNSContext.rewindStatement(context->parent);
-    ECCNSContext.typeError(context, ECCNSChars.create("'callee' cannot be accessed in this context"));
+    ecc_context_rewindstatement(context->parent);
+    ecc_context_typeerror(context, ecc_charbuf_create("'callee' cannot be accessed in this context"));
 
     return ECCValConstUndefined;
 }
 
 
-static void nsargumentsfn_setup(void)
+void ecc_args_setup(void)
 {
     const eccvalflag_t h = ECC_VALFLAG_HIDDEN;
     const eccvalflag_t s = ECC_VALFLAG_SEALED;
 
-    ECC_Prototype_Arguments = ECCNSObject.createTyped(&ECC_Type_Arguments);
+    ECC_Prototype_Arguments = ecc_object_createtyped(&ECC_Type_Arguments);
 
-    ECCNSObject.addMember(ECC_Prototype_Arguments, ECC_ConstKey_length, ECCNSFunction.accessor(argobjfn_getLength, argobjfn_setLength), h | s | ECC_VALFLAG_ASOWN | ECC_VALFLAG_ASDATA);
-    ECCNSObject.addMember(ECC_Prototype_Arguments, ECC_ConstKey_callee, ECCNSFunction.accessor(argobjfn_getCallee, argobjfn_setCallee), h | s | ECC_VALFLAG_ASOWN);
+    ecc_object_addmember(ECC_Prototype_Arguments, ECC_ConstKey_length, ecc_function_accessor(argobjfn_getLength, argobjfn_setLength), h | s | ECC_VALFLAG_ASOWN | ECC_VALFLAG_ASDATA);
+    ecc_object_addmember(ECC_Prototype_Arguments, ECC_ConstKey_callee, ecc_function_accessor(argobjfn_getCallee, argobjfn_setCallee), h | s | ECC_VALFLAG_ASOWN);
 }
 
-static void nsargumentsfn_teardown(void)
+void ecc_args_teardown(void)
 {
     ECC_Prototype_Arguments = NULL;
 }
 
-static eccobject_t* nsargumentsfn_createSized(uint32_t size)
+eccobject_t* ecc_args_createsized(uint32_t size)
 {
-    eccobject_t* self = ECCNSObject.create(ECC_Prototype_Arguments);
+    eccobject_t* self = ecc_object_create(ECC_Prototype_Arguments);
 
-    ECCNSObject.resizeElement(self, size);
+    ecc_object_resizeelement(self, size);
 
     return self;
 }
 
-static eccobject_t* nsargumentsfn_createWithCList(int count, const char* list[])
+eccobject_t* ecc_args_createwithclist(int count, const char* list[])
 {
-    eccobject_t* self = nsargumentsfn_createSized(count);
+    eccobject_t* self = ecc_args_createsized(count);
 
-    ECCNSObject.populateElementWithCList(self, count, list);
+    ecc_object_populateelementwithclist(self, count, list);
 
     return self;
 }

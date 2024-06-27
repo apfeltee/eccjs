@@ -26,7 +26,7 @@ static void actuallyruntest(const char* func, int line, const char* test, const 
     start = clock();
     if(testVerbosity > 0 || !setjmp(*ecc_script_pushenv(ecc)))
     {
-        ecc_script_evalinput(ecc, ECCNSInput.createFromBytes(test, (uint32_t)strlen(test), "%s:%d", func, line), ECC_SCRIPTEVAL_STRINGRESULT);
+        ecc_script_evalinput(ecc, ecc_ioinput_createfrombytes(test, (uint32_t)strlen(test), "%s:%d", func, line), ECC_SCRIPTEVAL_STRINGRESULT);
     }
     if(testVerbosity <= 0)
     {
@@ -40,10 +40,10 @@ static void actuallyruntest(const char* func, int line, const char* test, const 
     if(length != strlen(expect) || memcmp(expect, bytes, length))
     {
         ++testErrorCount;
-        ECCNSEnv.printColor(ECC_COLOR_RED, ECC_ENVATTR_BOLD, "[failure]");
-        ECCNSEnv.print(" %s:%d - ", func, line);
-        ECCNSEnv.printColor(0, ECC_ENVATTR_BOLD, "expect \"%s\" was \"%.*s\"", expect, length, bytes);
-        ECCNSEnv.newline();
+        ecc_env_printcolor(ECC_COLOR_RED, ECC_ENVATTR_BOLD, "[failure]");
+        ecc_env_print(" %s:%d - ", func, line);
+        ecc_env_printcolor(0, ECC_ENVATTR_BOLD, "expect \"%s\" was \"%.*s\"", expect, length, bytes);
+        ecc_env_newline();
         goto error;
     }
     if(text)
@@ -72,19 +72,19 @@ static void actuallyruntest(const char* func, int line, const char* test, const 
         if(!bytes || ecc->text.bytes - bytes != textStart || ecc->text.length != textLength)
         {
             ++testErrorCount;
-            ECCNSEnv.printColor(ECC_COLOR_RED, ECC_ENVATTR_BOLD, "[failure]");
-            ECCNSEnv.print(" %s:%d - ", func, line);
-            ECCNSEnv.printColor(0, ECC_ENVATTR_BOLD, "text should highlight `%.*s`", textLength, test + textStart);
-            ECCNSEnv.newline();
+            ecc_env_printcolor(ECC_COLOR_RED, ECC_ENVATTR_BOLD, "[failure]");
+            ecc_env_print(" %s:%d - ", func, line);
+            ecc_env_printcolor(0, ECC_ENVATTR_BOLD, "text should highlight `%.*s`", textLength, test + textStart);
+            ecc_env_newline();
             goto error;
         }
     }
     if(testVerbosity >= 0)
     {
         #if 0
-        ECCNSEnv.printColor(ECC_COLOR_GREEN, ECC_ENVATTR_BOLD, "[success]");
-        ECCNSEnv.print(" %s:%d", func, line);
-        ECCNSEnv.newline();
+        ecc_env_printcolor(ECC_COLOR_GREEN, ECC_ENVATTR_BOLD, "[success]");
+        ecc_env_print(" %s:%d", func, line);
+        ecc_env_newline();
         #endif
     }
 error:
@@ -122,25 +122,25 @@ static int runTest(int verbosity)
     testString();
     testRegExp();
     testJSON();
-    ECCNSEnv.newline();
+    ecc_env_newline();
     if(testErrorCount)
     {
-        ECCNSEnv.printColor(0, ECC_ENVATTR_BOLD, "test failure: %d", testErrorCount);
+        ecc_env_printcolor(0, ECC_ENVATTR_BOLD, "test failure: %d", testErrorCount);
     }
     else
     {
-        ECCNSEnv.printColor(0, ECC_ENVATTR_BOLD, "all success");
+        ecc_env_printcolor(0, ECC_ENVATTR_BOLD, "all success");
     }
-    ECCNSEnv.newline();
-    ECCNSEnv.newline();
-    ECCNSEnv.print("%d tests, %.2f ms", testCount, testTime * 1000);
+    ecc_env_newline();
+    ecc_env_newline();
+    ecc_env_print("%d tests, %.2f ms", testCount, testTime * 1000);
     return testErrorCount ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
 static int alertUsage(void)
 {
     const char error[] = "Usage";
-    ECCNSEnv.printError(sizeof(error) - 1, error, "libecc [<filename> | --test | --test-verbose | --test-quiet]");
+    ecc_env_printerror(sizeof(error) - 1, error, "libecc [<filename> | --test | --test-verbose | --test-quiet]");
 
     return EXIT_FAILURE;
 }
@@ -150,13 +150,13 @@ static eccvalue_t printhelper(eccstate_t* context, FILE* file, bool space, bool 
     int index;
     int count;
     eccvalue_t value;
-    for(index = 0, count = ECCNSContext.argumentCount(context); index < count; ++index)
+    for(index = 0, count = ecc_context_argumentcount(context); index < count; ++index)
     {
         if(index && space)
         {
             //putc(' ', file);
         }
-        value = ECCNSContext.argument(context, index);
+        value = ecc_context_argument(context, index);
         ecc_value_dumpto(ecc_value_tostring(context, value), file);
     }
     if(linefeed)
@@ -206,9 +206,9 @@ int main(int argc, const char* argv[])
     }
     else
     {
-        eccobject_t* arguments = ECCNSArguments.createWithCList(argc - 2, &argv[2]);
+        eccobject_t* arguments = ecc_args_createwithclist(argc - 2, &argv[2]);
         ecc_script_addvalue(ecc, "arguments", ecc_value_object(arguments), 0);
-        result = ecc_script_evalinput(ecc, ECCNSInput.createFromFile(argv[1]), ECC_SCRIPTEVAL_SLOPPYMODE);
+        result = ecc_script_evalinput(ecc, ecc_ioinput_createfromfile(argv[1]), ECC_SCRIPTEVAL_SLOPPYMODE);
     }
     ecc_script_destroy(ecc), ecc = NULL;
     return result;

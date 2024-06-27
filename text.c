@@ -442,30 +442,9 @@ static const unsigned char g_textchars_uppers[]=
     0xB1, 0xEF, 0xBC, 0xB2, 0xEF, 0xBC, 0xB3, 0xEF, 0xBC, 0xB4, 0xEF, 0xBC, 0xB5, 0xEF, 0xBC, 
     0xB6, 0xEF, 0xBC, 0xB7, 0xEF, 0xBC, 0xB8, 0xEF, 0xBC, 0xB9, 0xEF, 0xBC, 0xBA, 0   , 
 };
-
 /* clang-format on */
 
-// MARK: - Methods
-static ecctextstring_t nstextfn_make(const char* bytes, int32_t length);
-static ecctextstring_t nstextfn_join(ecctextstring_t from, ecctextstring_t to);
-static ecctextchar_t nstextfn_character(ecctextstring_t);
-static ecctextchar_t nstextfn_nextCharacter(ecctextstring_t* text);
-static ecctextchar_t nstextfn_prevCharacter(ecctextstring_t* text);
-static void nstextfn_advance(ecctextstring_t* text, int32_t units);
-static uint16_t nstextfn_toUTF16Length(ecctextstring_t);
-static uint16_t nstextfn_toUTF16(ecctextstring_t, uint16_t* wbuffer);
-static char* nstextfn_toLower(ecctextstring_t, char* x2buffer);
-static char* nstextfn_toUpper(ecctextstring_t, char* x3buffer);
-static int nstextfn_isSpace(ecctextchar_t);
-static int nstextfn_isDigit(ecctextchar_t);
-static int nstextfn_isWord(ecctextchar_t);
-static int nstextfn_isLineFeed(ecctextchar_t);
-const struct eccpseudonstext_t ECCNSText = {
-    nstextfn_make, nstextfn_join, nstextfn_character, nstextfn_nextCharacter, nstextfn_prevCharacter, nstextfn_advance, nstextfn_toUTF16Length, nstextfn_toUTF16, nstextfn_toLower, nstextfn_toUpper, nstextfn_isSpace, nstextfn_isDigit, nstextfn_isWord, nstextfn_isLineFeed,
-    {},
-};
-
-ecctextstring_t nstextfn_make(const char* bytes, int32_t length)
+ecctextstring_t ecc_textbuf_make(const char* bytes, int32_t length)
 {
     return (ecctextstring_t){
         .bytes = bytes,
@@ -473,12 +452,12 @@ ecctextstring_t nstextfn_make(const char* bytes, int32_t length)
     };
 }
 
-ecctextstring_t nstextfn_join(ecctextstring_t from, ecctextstring_t to)
+ecctextstring_t ecc_textbuf_join(ecctextstring_t from, ecctextstring_t to)
 {
-    return nstextfn_make(from.bytes, (int32_t)(to.bytes - from.bytes) + to.length);
+    return ecc_textbuf_make(from.bytes, (int32_t)(to.bytes - from.bytes) + to.length);
 }
 
-ecctextchar_t nstextfn_character(ecctextstring_t text)
+ecctextchar_t ecc_textbuf_character(ecctextstring_t text)
 {
     ecctextchar_t c = { 0 };
 
@@ -533,14 +512,14 @@ ecctextchar_t nstextfn_character(ecctextstring_t text)
     return c;
 }
 
-ecctextchar_t nstextfn_nextCharacter(ecctextstring_t* text)
+ecctextchar_t ecc_textbuf_nextcharacter(ecctextstring_t* text)
 {
-    ecctextchar_t c = nstextfn_character(*text);
-    nstextfn_advance(text, c.units);
+    ecctextchar_t c = ecc_textbuf_character(*text);
+    ecc_textbuf_advance(text, c.units);
     return c;
 }
 
-ecctextchar_t nstextfn_prevCharacter(ecctextstring_t* text)
+ecctextchar_t ecc_textbuf_prevcharacter(ecctextstring_t* text)
 {
     ecctextchar_t c = { 0 };
 
@@ -597,7 +576,7 @@ ecctextchar_t nstextfn_prevCharacter(ecctextstring_t* text)
     return c;
 }
 
-void nstextfn_advance(ecctextstring_t* text, int32_t units)
+void ecc_textbuf_advance(ecctextstring_t* text, int32_t units)
 {
     if(units >= text->length)
     {
@@ -611,24 +590,24 @@ void nstextfn_advance(ecctextstring_t* text, int32_t units)
     }
 }
 
-uint16_t nstextfn_toUTF16Length(ecctextstring_t text)
+uint16_t ecc_textbuf_toutf16length(ecctextstring_t text)
 {
     uint16_t windex = 0;
 
     while(text.length)
-        windex += nstextfn_nextCharacter(&text).codepoint >= 0x010000 ? 2 : 1;
+        windex += ecc_textbuf_nextcharacter(&text).codepoint >= 0x010000 ? 2 : 1;
 
     return windex;
 }
 
-uint16_t nstextfn_toUTF16(ecctextstring_t text, uint16_t* wbuffer)
+uint16_t ecc_textbuf_toutf16(ecctextstring_t text, uint16_t* wbuffer)
 {
     uint16_t windex = 0;
     uint32_t cp;
 
     while(text.length)
     {
-        cp = nstextfn_nextCharacter(&text).codepoint;
+        cp = ecc_textbuf_nextcharacter(&text).codepoint;
 
         if(cp >= 0x010000)
         {
@@ -643,7 +622,7 @@ uint16_t nstextfn_toUTF16(ecctextstring_t text, uint16_t* wbuffer)
     return windex;
 }
 
-char* nstextfn_toLower(ecctextstring_t i, char* o /* length x 2 */)
+char* ecc_textbuf_tolower(ecctextstring_t i, char* o /* length x 2 */)
 {
     char buffer[5];
     const char* p;
@@ -651,10 +630,10 @@ char* nstextfn_toLower(ecctextstring_t i, char* o /* length x 2 */)
 
     while(i.length)
     {
-        c = nstextfn_character(i);
+        c = ecc_textbuf_character(i);
         memcpy(buffer, i.bytes, c.units);
         buffer[c.units] = '\0';
-        nstextfn_advance(&i, c.units);
+        ecc_textbuf_advance(&i, c.units);
         p = buffer;
 
         if(c.units > 1 || isupper(*p))
@@ -679,7 +658,7 @@ char* nstextfn_toLower(ecctextstring_t i, char* o /* length x 2 */)
     return o;
 }
 
-char* nstextfn_toUpper(ecctextstring_t i, char* o /* length x 3 */)
+char* ecc_textbuf_toupper(ecctextstring_t i, char* o /* length x 3 */)
 {
     char buffer[5];
     const char* p;
@@ -687,10 +666,10 @@ char* nstextfn_toUpper(ecctextstring_t i, char* o /* length x 3 */)
 
     while(i.length)
     {
-        c = nstextfn_character(i);
+        c = ecc_textbuf_character(i);
         memcpy(buffer, i.bytes, c.units);
         buffer[c.units] = '\0';
-        nstextfn_advance(&i, c.units);
+        ecc_textbuf_advance(&i, c.units);
         p = buffer;
 
         if(c.units > 1 || islower(*p))
@@ -715,23 +694,23 @@ char* nstextfn_toUpper(ecctextstring_t i, char* o /* length x 3 */)
     return o;
 }
 
-int nstextfn_isSpace(ecctextchar_t c)
+int ecc_textbuf_isspace(ecctextchar_t c)
 {
     return (c.codepoint < 0x7f && isspace(c.codepoint)) || c.codepoint == 0xA0 || c.codepoint == 0xFEFF || c.codepoint == 0x1680 || c.codepoint == 0x180E
-           || (c.codepoint >= 0x2000 && c.codepoint <= 0x200A) || c.codepoint == 0x202F || c.codepoint == 0x205F || c.codepoint == 0x3000 || nstextfn_isLineFeed(c);
+           || (c.codepoint >= 0x2000 && c.codepoint <= 0x200A) || c.codepoint == 0x202F || c.codepoint == 0x205F || c.codepoint == 0x3000 || ecc_textbuf_islinefeed(c);
 }
 
-int nstextfn_isDigit(ecctextchar_t c)
+int ecc_textbuf_isdigit(ecctextchar_t c)
 {
     return isdigit(c.codepoint) != 0;
 }
 
-int nstextfn_isWord(ecctextchar_t c)
+int ecc_textbuf_isword(ecctextchar_t c)
 {
     return isalnum(c.codepoint) || c.codepoint == '_';
 }
 
-int nstextfn_isLineFeed(ecctextchar_t c)
+int ecc_textbuf_islinefeed(ecctextchar_t c)
 {
     return c.codepoint == '\n' || c.codepoint == '\r' || c.codepoint == 0x2028 || c.codepoint == 0x2029;
 }

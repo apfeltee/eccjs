@@ -7,44 +7,9 @@
 //
 #include "ecc.h"
 
-// MARK: - Private
-
-static void nspoolfn_markValue(eccvalue_t value);
-static void eccpool_cleanupObject(eccobject_t* object);
-
 static eccmempool_t* self = NULL;
 
-// MARK: - Static Members
-
-static void nspoolfn_setup(void);
-static void nspoolfn_teardown(void);
-static void nspoolfn_addFunction(eccobjfunction_t* function);
-static void nspoolfn_addObject(eccobject_t* object);
-static void nspoolfn_addChars(ecccharbuffer_t* chars);
-static void nspoolfn_unmarkAll(void);
-static void nspoolfn_markValue(eccvalue_t value);
-static void nspoolfn_markObject(eccobject_t* object);
-static void nspoolfn_collectUnmarked(void);
-static void nspoolfn_collectUnreferencedFromIndices(uint32_t indices[3]);
-static void nspoolfn_unreferenceFromIndices(uint32_t indices[3]);
-static void nspoolfn_getIndices(uint32_t indices[3]);
-const struct eccpseudonspool_t ECCNSMemoryPool = {
-    nspoolfn_setup,
-    nspoolfn_teardown,
-    nspoolfn_addFunction,
-    nspoolfn_addObject,
-    nspoolfn_addChars,
-    nspoolfn_unmarkAll,
-    nspoolfn_markValue,
-    nspoolfn_markObject,
-    nspoolfn_collectUnmarked,
-    nspoolfn_collectUnreferencedFromIndices,
-    nspoolfn_unreferenceFromIndices,
-    nspoolfn_getIndices,
-    {}
-};
-
-void nspoolfn_markObject(eccobject_t* object)
+void ecc_mempool_markobject(eccobject_t* object)
 {
     uint32_t index, count;
 
@@ -54,21 +19,21 @@ void nspoolfn_markObject(eccobject_t* object)
     object->flags |= ECC_OBJFLAG_MARK;
 
     if(object->prototype)
-        nspoolfn_markObject(object->prototype);
+        ecc_mempool_markobject(object->prototype);
 
     for(index = 0, count = object->elementCount; index < count; ++index)
         if(object->element[index].value.check == 1)
-            nspoolfn_markValue(object->element[index].value);
+            ecc_mempool_markvalue(object->element[index].value);
 
     for(index = 2, count = object->hashmapCount; index < count; ++index)
         if(object->hashmap[index].value.check == 1)
-            nspoolfn_markValue(object->hashmap[index].value);
+            ecc_mempool_markvalue(object->hashmap[index].value);
 
     if(object->type->mark)
         object->type->mark(object);
 }
 
-static void eccpool_markChars(ecccharbuffer_t* chars)
+void ecc_mempool_markchars(ecccharbuffer_t* chars)
 {
     if(chars->flags & ECC_CHARBUFFLAG_MARK)
         return;
@@ -78,20 +43,19 @@ static void eccpool_markChars(ecccharbuffer_t* chars)
 
 // MARK: - Methods
 
-void nspoolfn_setup(void)
+void ecc_mempool_setup(void)
 {
     assert(!self);
-
     self = (eccmempool_t*)malloc(sizeof(*self));
-    *self = ECCNSMemoryPool.identity;
+    memset(self,0, sizeof(eccmempool_t));
 }
 
-void nspoolfn_teardown(void)
+void ecc_mempool_teardown(void)
 {
     assert(self);
 
-    nspoolfn_unmarkAll();
-    nspoolfn_collectUnmarked();
+    ecc_mempool_unmarkall();
+    ecc_mempool_collectunmarked();
 
     free(self->functionList), self->functionList = NULL;
     free(self->objectList), self->objectList = NULL;
@@ -100,7 +64,7 @@ void nspoolfn_teardown(void)
     free(self), self = NULL;
 }
 
-void nspoolfn_addFunction(eccobjfunction_t* function)
+void ecc_mempool_addfunction(eccobjfunction_t* function)
 {
     assert(function);
 
@@ -114,12 +78,12 @@ void nspoolfn_addFunction(eccobjfunction_t* function)
     self->functionList[self->functionCount++] = function;
 }
 
-void nspoolfn_addObject(eccobject_t* object)
+void ecc_mempool_addobject(eccobject_t* object)
 {
     assert(object);
 
     //	fprintf(stderr, " > add %p %u\n", object, self->objectCount);
-    //	ECCNSObject.dumpTo(object, stderr);
+    //	ecc_object_dumpto(object, stderr);
 
     if(self->objectCount >= self->objectCapacity)
     {
@@ -131,7 +95,7 @@ void nspoolfn_addObject(eccobject_t* object)
     self->objectList[self->objectCount++] = object;
 }
 
-void nspoolfn_addChars(ecccharbuffer_t* chars)
+void ecc_mempool_addchars(ecccharbuffer_t* chars)
 {
     assert(chars);
 
@@ -145,7 +109,7 @@ void nspoolfn_addChars(ecccharbuffer_t* chars)
     self->charsList[self->charsCount++] = chars;
 }
 
-void nspoolfn_unmarkAll(void)
+void ecc_mempool_unmarkall(void)
 {
     uint32_t index, count;
 
@@ -162,33 +126,31 @@ void nspoolfn_unmarkAll(void)
         self->charsList[index]->flags &= ~ECC_CHARBUFFLAG_MARK;
 }
 
-void nspoolfn_markValue(eccvalue_t value)
+void ecc_mempool_markvalue(eccvalue_t value)
 {
     if(value.type >= ECC_VALTYPE_OBJECT)
-        nspoolfn_markObject(value.data.object);
+        ecc_mempool_markobject(value.data.object);
     else if(value.type == ECC_VALTYPE_CHARS)
-        eccpool_markChars(value.data.chars);
+        ecc_mempool_markchars(value.data.chars);
 }
 
-static void eccpool_releaseObject(eccobject_t* object)
+void ecc_mempool_releaseobject(eccobject_t* object)
 {
     if(object->referenceCount > 0 && !--object->referenceCount)
-        eccpool_cleanupObject(object);
+        ecc_mempool_cleanupobject(object);
 }
 
-static eccvalue_t eccpool_releaseValue(eccvalue_t value)
+eccvalue_t ecc_mempool_releasevalue(eccvalue_t value)
 {
     if(value.type == ECC_VALTYPE_CHARS)
         --value.data.chars->referenceCount;
     if(value.type >= ECC_VALTYPE_OBJECT)
-        eccpool_releaseObject(value.data.object);
+        ecc_mempool_releaseobject(value.data.object);
 
     return value;
 }
 
-static void eccpool_captureObject(eccobject_t* object);
-
-static eccvalue_t eccpool_retainValue(eccvalue_t value)
+eccvalue_t ecc_mempool_retainvalue(eccvalue_t value)
 {
     if(value.type == ECC_VALTYPE_CHARS)
         ++value.data.chars->referenceCount;
@@ -198,13 +160,13 @@ static eccvalue_t eccpool_retainValue(eccvalue_t value)
         if(!(value.data.object->flags & ECC_OBJFLAG_MARK))
         {
             value.data.object->flags |= ECC_OBJFLAG_MARK;
-            eccpool_captureObject(value.data.object);
+            ecc_mempool_captureobject(value.data.object);
         }
     }
     return value;
 }
 
-static void eccpool_cleanupObject(eccobject_t* object)
+void ecc_mempool_cleanupobject(eccobject_t* object)
 {
     eccvalue_t value;
 
@@ -214,15 +176,15 @@ static void eccpool_cleanupObject(eccobject_t* object)
     if(object->elementCount)
         while(object->elementCount--)
             if((value = object->element[object->elementCount].value).check == 1)
-                eccpool_releaseValue(value);
+                ecc_mempool_releasevalue(value);
 
     if(object->hashmapCount)
         while(object->hashmapCount--)
             if((value = object->hashmap[object->hashmapCount].value).check == 1)
-                eccpool_releaseValue(value);
+                ecc_mempool_releasevalue(value);
 }
 
-static void eccpool_captureObject(eccobject_t* object)
+void ecc_mempool_captureobject(eccobject_t* object)
 {
     uint32_t index, count;
     ecchashitem_t* element;
@@ -234,7 +196,7 @@ static void eccpool_captureObject(eccobject_t* object)
         if(!(object->prototype->flags & ECC_OBJFLAG_MARK))
         {
             object->prototype->flags |= ECC_OBJFLAG_MARK;
-            eccpool_captureObject(object->prototype);
+            ecc_mempool_captureobject(object->prototype);
         }
     }
 
@@ -243,7 +205,7 @@ static void eccpool_captureObject(eccobject_t* object)
     {
         element = object->element + index;
         if(element->value.check == 1)
-            eccpool_retainValue(element->value);
+            ecc_mempool_retainvalue(element->value);
     }
 
     count = object->hashmapCount;
@@ -251,14 +213,14 @@ static void eccpool_captureObject(eccobject_t* object)
     {
         hashmap = object->hashmap + index;
         if(hashmap->value.check == 1)
-            eccpool_retainValue(hashmap->value);
+            ecc_mempool_retainvalue(hashmap->value);
     }
 
     if(object->type->capture)
         object->type->capture(object);
 }
 
-void nspoolfn_collectUnmarked(void)
+void ecc_mempool_collectunmarked(void)
 {
     uint32_t index;
 
@@ -268,7 +230,7 @@ void nspoolfn_collectUnmarked(void)
     while(index--)
         if(!(self->functionList[index]->object.flags & ECC_OBJFLAG_MARK) && !(self->functionList[index]->environment.flags & ECC_OBJFLAG_MARK))
         {
-            ECCNSFunction.destroy(self->functionList[index]);
+            ecc_function_destroy(self->functionList[index]);
             self->functionList[index] = self->functionList[--self->functionCount];
         }
 
@@ -276,8 +238,8 @@ void nspoolfn_collectUnmarked(void)
     while(index--)
         if(!(self->objectList[index]->flags & ECC_OBJFLAG_MARK))
         {
-            ECCNSObject.finalize(self->objectList[index]);
-            ECCNSObject.destroy(self->objectList[index]);
+            ecc_object_finalize(self->objectList[index]);
+            ecc_object_destroy(self->objectList[index]);
             self->objectList[index] = self->objectList[--self->objectCount];
         }
 
@@ -285,12 +247,12 @@ void nspoolfn_collectUnmarked(void)
     while(index--)
         if(!(self->charsList[index]->flags & ECC_CHARBUFFLAG_MARK))
         {
-            ECCNSChars.destroy(self->charsList[index]);
+            ecc_charbuf_destroy(self->charsList[index]);
             self->charsList[index] = self->charsList[--self->charsCount];
         }
 }
 
-void nspoolfn_collectUnreferencedFromIndices(uint32_t indices[3])
+void ecc_mempool_collectunreferencedfromindices(uint32_t indices[3])
 {
     uint32_t index;
 
@@ -299,14 +261,14 @@ void nspoolfn_collectUnreferencedFromIndices(uint32_t indices[3])
     index = self->objectCount;
     while(index-- > indices[1])
         if(self->objectList[index]->referenceCount <= 0)
-            eccpool_cleanupObject(self->objectList[index]);
+            ecc_mempool_cleanupobject(self->objectList[index]);
 
     index = self->objectCount;
     while(index-- > indices[1])
         if(self->objectList[index]->referenceCount > 0 && !(self->objectList[index]->flags & ECC_OBJFLAG_MARK))
         {
             self->objectList[index]->flags |= ECC_OBJFLAG_MARK;
-            eccpool_captureObject(self->objectList[index]);
+            ecc_mempool_captureobject(self->objectList[index]);
         }
 
     // destroy
@@ -315,7 +277,7 @@ void nspoolfn_collectUnreferencedFromIndices(uint32_t indices[3])
     while(index-- > indices[0])
         if(!self->functionList[index]->object.referenceCount && !self->functionList[index]->environment.referenceCount)
         {
-            ECCNSFunction.destroy(self->functionList[index]);
+            ecc_function_destroy(self->functionList[index]);
             self->functionList[index] = self->functionList[--self->functionCount];
         }
 
@@ -323,8 +285,8 @@ void nspoolfn_collectUnreferencedFromIndices(uint32_t indices[3])
     while(index-- > indices[1])
         if(self->objectList[index]->referenceCount <= 0)
         {
-            ECCNSObject.finalize(self->objectList[index]);
-            ECCNSObject.destroy(self->objectList[index]);
+            ecc_object_finalize(self->objectList[index]);
+            ecc_object_destroy(self->objectList[index]);
             self->objectList[index] = self->objectList[--self->objectCount];
         }
 
@@ -332,12 +294,12 @@ void nspoolfn_collectUnreferencedFromIndices(uint32_t indices[3])
     while(index-- > indices[2])
         if(self->charsList[index]->referenceCount <= 0)
         {
-            ECCNSChars.destroy(self->charsList[index]);
+            ecc_charbuf_destroy(self->charsList[index]);
             self->charsList[index] = self->charsList[--self->charsCount];
         }
 }
 
-void nspoolfn_unreferenceFromIndices(uint32_t indices[3])
+void ecc_mempool_unreferencefromindices(uint32_t indices[3])
 {
     uint32_t index;
 
@@ -357,7 +319,7 @@ void nspoolfn_unreferenceFromIndices(uint32_t indices[3])
         --self->charsList[index]->referenceCount;
 }
 
-void nspoolfn_getIndices(uint32_t indices[3])
+void ecc_mempool_getindices(uint32_t indices[3])
 {
     indices[0] = self->functionCount;
     indices[1] = self->objectCount;

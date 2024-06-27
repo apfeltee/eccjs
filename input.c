@@ -7,26 +7,11 @@
 //
 #include "ecc.h"
 
-// MARK: - Private
-
-// MARK: - Static Members
-eccioinput_t* eccinput_create(void);
-static eccioinput_t* nsinputfn_createFromFile(const char* filename);
-static eccioinput_t* nsinputfn_createFromBytes(const char* bytes, uint32_t length, const char* name, ...);
-static void nsinputfn_destroy(eccioinput_t*);
-static void nsinputfn_printText(eccioinput_t*, ecctextstring_t text, int32_t ofLine, ecctextstring_t ofText, const char* ofInput, int fullLine);
-static int32_t nsinputfn_findLine(eccioinput_t*, ecctextstring_t text);
-static eccvalue_t nsinputfn_attachValue(eccioinput_t*, eccvalue_t value);
-const struct eccpseudonsinput_t ECCNSInput = {
-    nsinputfn_createFromFile, nsinputfn_createFromBytes, nsinputfn_destroy, nsinputfn_printText, nsinputfn_findLine, nsinputfn_attachValue,
-    {}
-};
-
-eccioinput_t* eccinput_create(void)
+eccioinput_t* ecc_ioinput_create(void)
 {
     size_t linesBytes;
     eccioinput_t* self = (eccioinput_t*)malloc(sizeof(*self));
-    *self = ECCNSInput.identity;
+    memset(self, 0, sizeof(eccioinput_t));
     self->lineCapacity = 8;
     self->lineCount = 1;
     linesBytes = sizeof(*self->lines) * self->lineCapacity;
@@ -35,19 +20,17 @@ eccioinput_t* eccinput_create(void)
     return self;
 }
 
-static void eccinput_printInput(const char* name, uint16_t line)
+void ecc_ioinput_printinput(const char* name, uint16_t line)
 {
     if(name[0] == '(')
-        ECCNSEnv.printColor(0, ECC_ENVATTR_DIM, "%s", name);
+        ecc_env_printcolor(0, ECC_ENVATTR_DIM, "%s", name);
     else
-        ECCNSEnv.printColor(0, ECC_ENVATTR_BOLD, "%s", name);
+        ecc_env_printcolor(0, ECC_ENVATTR_BOLD, "%s", name);
 
-    ECCNSEnv.printColor(0, ECC_ENVATTR_BOLD, " line:%d", line);
+    ecc_env_printcolor(0, ECC_ENVATTR_BOLD, " line:%d", line);
 }
 
-// MARK: - Methods
-
-eccioinput_t* nsinputfn_createFromFile(const char* filename)
+eccioinput_t* ecc_ioinput_createfromfile(const char* filename)
 {
     ecctextstring_t inputError = ECC_ConstString_InputErrorName;
     FILE* file;
@@ -59,18 +42,18 @@ eccioinput_t* nsinputfn_createFromFile(const char* filename)
     file = fopen(filename, "rb");
     if(!file)
     {
-        ECCNSEnv.printError(inputError.length, inputError.bytes, "cannot open file '%s'", filename);
+        ecc_env_printerror(inputError.length, inputError.bytes, "cannot open file '%s'", filename);
         return NULL;
     }
 
     if(fseek(file, 0, SEEK_END) || (size = ftell(file)) < 0 || fseek(file, 0, SEEK_SET))
     {
-        ECCNSEnv.printError(inputError.length, inputError.bytes, "cannot handle file '%s'", filename);
+        ecc_env_printerror(inputError.length, inputError.bytes, "cannot handle file '%s'", filename);
         fclose(file);
         return NULL;
     }
 
-    self = eccinput_create();
+    self = ecc_ioinput_create();
 
     strncat(self->name, filename, sizeof(self->name) - 1);
     self->bytes = (char*)malloc(size + 1);
@@ -85,13 +68,13 @@ eccioinput_t* nsinputfn_createFromFile(const char* filename)
     return self;
 }
 
-eccioinput_t* nsinputfn_createFromBytes(const char* bytes, uint32_t length, const char* name, ...)
+eccioinput_t* ecc_ioinput_createfrombytes(const char* bytes, uint32_t length, const char* name, ...)
 {
     eccioinput_t* self;
 
     assert(bytes);
 
-    self = eccinput_create();
+    self = ecc_ioinput_create();
 
     if(name)
     {
@@ -108,7 +91,7 @@ eccioinput_t* nsinputfn_createFromBytes(const char* bytes, uint32_t length, cons
     return self;
 }
 
-void nsinputfn_destroy(eccioinput_t* self)
+void ecc_ioinput_destroy(eccioinput_t* self)
 {
     assert(self);
 
@@ -118,7 +101,7 @@ void nsinputfn_destroy(eccioinput_t* self)
     free(self), self = NULL;
 }
 
-void nsinputfn_printText(eccioinput_t* self, ecctextstring_t text, int32_t ofLine, ecctextstring_t ofText, const char* ofInput, int fullLine)
+void ecc_ioinput_printtext(eccioinput_t* self, ecctextstring_t text, int32_t ofLine, ecctextstring_t ofText, const char* ofInput, int fullLine)
 {
     int32_t line;
     uint32_t start;
@@ -134,16 +117,16 @@ void nsinputfn_printText(eccioinput_t* self, ecctextstring_t text, int32_t ofLin
     {
         bytes = ofText.bytes;
         length = ofText.length;
-        eccinput_printInput(ofInput ? ofInput : "native code", ofLine ? ofLine : 1);
+        ecc_ioinput_printinput(ofInput ? ofInput : "native code", ofLine ? ofLine : 1);
     }
     else if(!self)
     {
-        eccinput_printInput(ofInput ? ofInput : "(unknown input)", 0);
+        ecc_ioinput_printinput(ofInput ? ofInput : "(unknown input)", 0);
     }
     else
     {
-        line = nsinputfn_findLine(self, text);
-        eccinput_printInput(ofInput ? ofInput : self->name, line > 0 ? line : 0);
+        line = ecc_ioinput_findline(self, text);
+        ecc_ioinput_printinput(ofInput ? ofInput : self->name, line > 0 ? line : 0);
         if(line > 0)
         {
             start = self->lines[line];
@@ -162,19 +145,19 @@ void nsinputfn_printText(eccioinput_t* self, ecctextstring_t text, int32_t ofLin
     {
         if(text.length)
         {
-            ECCNSEnv.printColor(0, 0, " `%.*s`", text.length, text.bytes);
+            ecc_env_printcolor(0, 0, " `%.*s`", text.length, text.bytes);
         }
     }
     else if(!length)
     {
-        ECCNSEnv.newline();
-        ECCNSEnv.printColor(0, 0, "%.*s", text.length, text.bytes);
+        ecc_env_newline();
+        ecc_env_printcolor(0, 0, "%.*s", text.length, text.bytes);
     }
     else
     {
-        ECCNSEnv.newline();
-        ECCNSEnv.print("%.*s", length, bytes);
-        ECCNSEnv.newline();
+        ecc_env_newline();
+        ecc_env_print("%.*s", length, bytes);
+        ecc_env_newline();
 
         if(length >= text.bytes - bytes)
         {
@@ -226,17 +209,17 @@ void nsinputfn_printText(eccioinput_t* self, ecctextstring_t text, int32_t ofLin
 
             if((text.bytes - bytes) > 0)
             {
-                ECCNSEnv.printColor(0, ECC_ENVATTR_INVISIBLE, "%.*s", (text.bytes - bytes), mark);
+                ecc_env_printcolor(0, ECC_ENVATTR_INVISIBLE, "%.*s", (text.bytes - bytes), mark);
             }
-            ECCNSEnv.printColor(ECC_COLOR_GREEN, ECC_ENVATTR_BOLD, "%s", mark + (text.bytes - bytes));
+            ecc_env_printcolor(ECC_COLOR_GREEN, ECC_ENVATTR_BOLD, "%s", mark + (text.bytes - bytes));
             free(mark);
         }
     }
 
-    ECCNSEnv.newline();
+    ecc_env_newline();
 }
 
-int32_t nsinputfn_findLine(eccioinput_t* self, ecctextstring_t text)
+int32_t ecc_ioinput_findline(eccioinput_t* self, ecctextstring_t text)
 {
     uint16_t line = self->lineCount + 1;
     while(line--)
@@ -246,7 +229,7 @@ int32_t nsinputfn_findLine(eccioinput_t* self, ecctextstring_t text)
     return -1;
 }
 
-eccvalue_t nsinputfn_attachValue(eccioinput_t* self, eccvalue_t value)
+eccvalue_t ecc_ioinput_attachvalue(eccioinput_t* self, eccvalue_t value)
 {
     if(value.type == ECC_VALTYPE_CHARS)
         value.data.chars->referenceCount++;

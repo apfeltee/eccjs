@@ -10,15 +10,6 @@
 // MARK: - Private
 #define eccmac_stringandlen(str) str, sizeof(str) - 1
 
-eccastlexer_t* nslexerfn_createWithInput(eccioinput_t*);
-void nslexerfn_destroy(eccastlexer_t*);
-int nslexerfn_nextToken(eccastlexer_t*);
-const char* nslexerfn_tokenChars(int token, char buffer[4]);
-eccvalue_t nslexerfn_scanBinary(ecctextstring_t text, int);
-eccvalue_t nslexerfn_scanInteger(ecctextstring_t text, int base, int);
-uint32_t nslexerfn_scanElement(ecctextstring_t text);
-uint8_t nslexerfn_uint8Hex(char a, char b);
-uint16_t nslexerfn_uint16Hex(char a, char b, char c, char d);
 
 
 static const struct
@@ -71,21 +62,6 @@ static const struct
     { eccmac_stringandlen("package") }, { eccmac_stringandlen("protected") }, { eccmac_stringandlen("static") },  { eccmac_stringandlen("yield") },
 };
 
-
-const struct eccpseudonslexer_t ECCNSLexer = {
-    nslexerfn_createWithInput,
-    nslexerfn_destroy,
-    nslexerfn_nextToken,
-    nslexerfn_tokenChars,
-    nslexerfn_scanBinary,
-    nslexerfn_scanInteger,
-    nslexerfn_scanElement,
-    nslexerfn_uint8Hex,
-    nslexerfn_uint16Hex,
-    {}
-};
-
-
 int8_t ecclex_hexhigit(int c)
 {
     if(c >= 'a' && c <= 'f')
@@ -99,12 +75,12 @@ int8_t ecclex_hexhigit(int c)
     return c - '0';
 }
 
-uint8_t nslexerfn_uint8Hex(char a, char b)
+uint8_t ecc_astlex_uint8hex(char a, char b)
 {
     return ecclex_hexhigit(a) << 4 | ecclex_hexhigit(b);
 }
 
-uint16_t nslexerfn_uint16Hex(char a, char b, char c, char d)
+uint16_t ecc_astlex_uint16hex(char a, char b, char c, char d)
 {
     return ecclex_hexhigit(a) << 12 | ecclex_hexhigit(b) << 8 | ecclex_hexhigit(c) << 4 | ecclex_hexhigit(d);
 }
@@ -166,17 +142,17 @@ uint32_t ecclex_nextChar(eccastlexer_t* self)
 {
     if(self->offset < self->input->length)
     {
-        ecctextchar_t c = ECCNSText.character(ECCNSText.make(self->input->bytes + self->offset, self->input->length - self->offset));
+        ecctextchar_t c = ecc_textbuf_character(ecc_textbuf_make(self->input->bytes + self->offset, self->input->length - self->offset));
 
         self->offset += c.units;
 
-        if((self->allowUnicodeOutsideLiteral && ECCNSText.isLineFeed(c)) || (c.codepoint == '\r' && ecclex_previewChar(self) != '\n') || c.codepoint == '\n')
+        if((self->allowUnicodeOutsideLiteral && ecc_textbuf_islinefeed(c)) || (c.codepoint == '\r' && ecclex_previewChar(self) != '\n') || c.codepoint == '\n')
         {
             self->didLineBreak = 1;
             ecclex_addLine(self, self->offset);
             c.codepoint = '\n';
         }
-        else if(self->allowUnicodeOutsideLiteral && ECCNSText.isSpace(c))
+        else if(self->allowUnicodeOutsideLiteral && ecc_textbuf_isspace(c))
             c.codepoint = ' ';
 
         self->text.length += c.units;
@@ -204,17 +180,17 @@ char ecclex_eof(eccastlexer_t* self)
 
 int ecclex_syntaxError(eccastlexer_t* self, ecccharbuffer_t* message)
 {
-    eccobjerror_t* error = ECCNSError.syntaxError(self->text, message);
+    eccobjerror_t* error = ecc_error_syntaxerror(self->text, message);
     self->value = ecc_value_error(error);
     return ECC_TOK_ERROR;
 }
 
 // MARK: - Methods
 
-eccastlexer_t* nslexerfn_createWithInput(eccioinput_t* input)
+eccastlexer_t* ecc_astlex_createwithinput(eccioinput_t* input)
 {
     eccastlexer_t* self = (eccastlexer_t*)malloc(sizeof(*self));
-    *self = ECCNSLexer.identity;
+    memset(self, 0, sizeof(eccastlexer_t));
 
     assert(input);
     self->input = input;
@@ -222,7 +198,7 @@ eccastlexer_t* nslexerfn_createWithInput(eccioinput_t* input)
     return self;
 }
 
-void nslexerfn_destroy(eccastlexer_t* self)
+void ecc_astlex_destroy(eccastlexer_t* self)
 {
     assert(self);
 
@@ -230,7 +206,7 @@ void nslexerfn_destroy(eccastlexer_t* self)
     free(self), self = NULL;
 }
 
-int nslexerfn_nextToken(eccastlexer_t* self)
+int ecc_astlex_nexttoken(eccastlexer_t* self)
 {
     uint32_t c;
     assert(self);
@@ -261,7 +237,7 @@ retry:
                         if(ecclex_nextChar(self) == '*' && ecclex_acceptChar(self, '/'))
                             goto retry;
 
-                    return ecclex_syntaxError(self, ECCNSChars.create("unterminated comment"));
+                    return ecclex_syntaxError(self, ecc_charbuf_create("unterminated comment"));
                 }
                 else if(ecclex_previewChar(self) == '/')
                 {
@@ -290,7 +266,7 @@ retry:
                         if(rxclit == '\n')
                             break;
                     }
-                    return ecclex_syntaxError(self, ECCNSChars.create("unterminated regexp literal"));
+                    return ecclex_syntaxError(self, ecc_charbuf_create("unterminated regexp literal"));
                 }
                 else if(ecclex_acceptChar(self, '='))
                     return ECC_TOK_DIVIDEASSIGN;
@@ -324,7 +300,7 @@ retry:
 
                                 ++bytes;
                                 --length;
-                                ECCNSChars.beginAppend(&chars);
+                                ecc_charbuf_beginappend(&chars);
 
                                 for(index = 0; index <= length; ++index)
                                     if(bytes[index] == '\\' && bytes[++index] != '\\')
@@ -332,47 +308,47 @@ retry:
                                         switch(bytes[index])
                                         {
                                             case '0':
-                                                ECCNSChars.appendCodepoint(&chars, '\0');
+                                                ecc_charbuf_appendcodepoint(&chars, '\0');
                                                 break;
                                             case 'b':
-                                                ECCNSChars.appendCodepoint(&chars, '\b');
+                                                ecc_charbuf_appendcodepoint(&chars, '\b');
                                                 break;
                                             case 'f':
-                                                ECCNSChars.appendCodepoint(&chars, '\f');
+                                                ecc_charbuf_appendcodepoint(&chars, '\f');
                                                 break;
                                             case 'n':
-                                                ECCNSChars.appendCodepoint(&chars, '\n');
+                                                ecc_charbuf_appendcodepoint(&chars, '\n');
                                                 break;
                                             case 'r':
-                                                ECCNSChars.appendCodepoint(&chars, '\r');
+                                                ecc_charbuf_appendcodepoint(&chars, '\r');
                                                 break;
                                             case 't':
-                                                ECCNSChars.appendCodepoint(&chars, '\t');
+                                                ecc_charbuf_appendcodepoint(&chars, '\t');
                                                 break;
                                             case 'v':
-                                                ECCNSChars.appendCodepoint(&chars, '\v');
+                                                ecc_charbuf_appendcodepoint(&chars, '\v');
                                                 break;
                                             case 'x':
                                                 {
                                                     if(isxdigit(bytes[index + 1]) && isxdigit(bytes[index + 2]))
                                                     {
-                                                        ECCNSChars.appendCodepoint(&chars, nslexerfn_uint8Hex(bytes[index + 1], bytes[index + 2]));
+                                                        ecc_charbuf_appendcodepoint(&chars, ecc_astlex_uint8hex(bytes[index + 1], bytes[index + 2]));
                                                         index += 2;
                                                         break;
                                                     }
-                                                    self->text = ECCNSText.make(self->text.bytes + index - 1, 4);
-                                                    return ecclex_syntaxError(self, ECCNSChars.create("malformed hexadecimal character escape sequence"));
+                                                    self->text = ecc_textbuf_make(self->text.bytes + index - 1, 4);
+                                                    return ecclex_syntaxError(self, ecc_charbuf_create("malformed hexadecimal character escape sequence"));
                                                 }
                                             case 'u':
                                                 {
                                                     if(isxdigit(bytes[index + 1]) && isxdigit(bytes[index + 2]) && isxdigit(bytes[index + 3]) && isxdigit(bytes[index + 4]))
                                                     {
-                                                        ECCNSChars.appendCodepoint(&chars, nslexerfn_uint16Hex(bytes[index + 1], bytes[index + 2], bytes[index + 3], bytes[index + 4]));
+                                                        ecc_charbuf_appendcodepoint(&chars, ecc_astlex_uint16hex(bytes[index + 1], bytes[index + 2], bytes[index + 3], bytes[index + 4]));
                                                         index += 4;
                                                         break;
                                                     }
-                                                    self->text = ECCNSText.make(self->text.bytes + index - 1, 6);
-                                                    return ecclex_syntaxError(self, ECCNSChars.create("malformed Unicode character escape sequence"));
+                                                    self->text = ecc_textbuf_make(self->text.bytes + index - 1, 6);
+                                                    return ecclex_syntaxError(self, ecc_charbuf_create("malformed Unicode character escape sequence"));
                                                 }
                                             case '\r':
                                                 {
@@ -387,14 +363,14 @@ retry:
                                                 continue;
                                             default:
                                                 {
-                                                    ECCNSChars.append(&chars, "%c", bytes[index]);
+                                                    ecc_charbuf_append(&chars, "%c", bytes[index]);
                                                 }
                                         }
                                     }
                                     else
-                                        ECCNSChars.append(&chars, "%c", bytes[index]);
+                                        ecc_charbuf_append(&chars, "%c", bytes[index]);
 
-                                self->value = ECCNSInput.attachValue(self->input, ECCNSChars.endAppend(&chars));
+                                self->value = ecc_ioinput_attachvalue(self->input, ecc_charbuf_endappend(&chars));
                                 return ECC_TOK_ESCAPEDSTRING;
                             }
 
@@ -403,7 +379,7 @@ retry:
                         else if(c == '\r' || c == '\n')
                             break;
                     }
-                    return ecclex_syntaxError(self, ECCNSChars.create("unterminated string literal"));
+                    return ecclex_syntaxError(self, ecc_charbuf_create("unterminated string literal"));
                 }
 
             case '.':
@@ -441,7 +417,7 @@ retry:
                         }
                         if(self->text.length <= 2)
                         {
-                            return ecclex_syntaxError(self, ECCNSChars.create("missing hexadecimal digits after '0x'"));
+                            return ecclex_syntaxError(self, ecc_charbuf_create("missing hexadecimal digits after '0x'"));
                         }
                     }
                     else
@@ -467,7 +443,7 @@ retry:
                             }
                             if(!isdigit(ecclex_previewChar(self)))
                             {
-                                return ecclex_syntaxError(self, ECCNSChars.create("missing exponent"));
+                                return ecclex_syntaxError(self, ecc_charbuf_create("missing exponent"));
                             }
                             while(isdigit(ecclex_previewChar(self)))
                             {
@@ -479,16 +455,16 @@ retry:
                     {
                         self->text.bytes += self->text.length;
                         self->text.length = 1;
-                        return ecclex_syntaxError(self, ECCNSChars.create("identifier starts immediately after numeric literal"));
+                        return ecclex_syntaxError(self, ecc_charbuf_create("identifier starts immediately after numeric literal"));
                     }
                     if(binary)
                     {
-                        self->value = nslexerfn_scanBinary(self->text, 0);
+                        self->value = ecc_astlex_scanbinary(self->text, 0);
                         return ECC_TOK_BINARY;
                     }
                     else
                     {
-                        self->value = nslexerfn_scanInteger(self->text, 0, 0);
+                        self->value = ecc_astlex_scaninteger(self->text, 0, 0);
                         if(self->value.type == ECC_VALTYPE_INTEGER)
                         {
                             return ECC_TOK_INTEGER;
@@ -657,16 +633,16 @@ retry:
                                 char uu = ecclex_nextChar(self), u1 = ecclex_nextChar(self), u2 = ecclex_nextChar(self), u3 = ecclex_nextChar(self), u4 = ecclex_nextChar(self);
                                 if(uu == 'u' && isxdigit(u1) && isxdigit(u2) && isxdigit(u3) && isxdigit(u4))
                                 {
-                                    c = nslexerfn_uint16Hex(u1, u2, u3, u4);
+                                    c = ecc_astlex_uint16hex(u1, u2, u3, u4);
                                     haveesc = 1;
                                 }
                                 else
                                 {
-                                    return ecclex_syntaxError(self, ECCNSChars.create("incomplete unicode escape"));
+                                    return ecclex_syntaxError(self, ecc_charbuf_create("incomplete unicode escape"));
                                 }
                             }
 
-                            if(ECCNSText.isSpace((ecctextchar_t){ c, 0 }))
+                            if(ecc_textbuf_isspace((ecctextchar_t){ c, 0 }))
                             {
                                 break;
                             }
@@ -680,33 +656,33 @@ retry:
                             ecctextstring_t subtext = self->text;
                             eccappendbuffer_t chars;
                             eccvalue_t value;
-                            ECCNSChars.beginAppend(&chars);
+                            ecc_charbuf_beginappend(&chars);
                             while(subtext.length)
                             {
-                                c = ECCNSText.nextCharacter(&subtext).codepoint;
-                                if(c == '\\' && ECCNSText.nextCharacter(&subtext).codepoint == 'u')
+                                c = ecc_textbuf_nextcharacter(&subtext).codepoint;
+                                if(c == '\\' && ecc_textbuf_nextcharacter(&subtext).codepoint == 'u')
                                 {
                                     char u1;
                                     char u2;
                                     char u3;
                                     char u4;
-                                    u1 = ECCNSText.nextCharacter(&subtext).codepoint;
-                                    u2 = ECCNSText.nextCharacter(&subtext).codepoint;
-                                    u3 = ECCNSText.nextCharacter(&subtext).codepoint;
-                                    u4 = ECCNSText.nextCharacter(&subtext).codepoint;
+                                    u1 = ecc_textbuf_nextcharacter(&subtext).codepoint;
+                                    u2 = ecc_textbuf_nextcharacter(&subtext).codepoint;
+                                    u3 = ecc_textbuf_nextcharacter(&subtext).codepoint;
+                                    u4 = ecc_textbuf_nextcharacter(&subtext).codepoint;
                                     if(isxdigit(u1) && isxdigit(u2) && isxdigit(u3) && isxdigit(u4))
                                     {
-                                        c = nslexerfn_uint16Hex(u1, u2, u3, u4);
+                                        c = ecc_astlex_uint16hex(u1, u2, u3, u4);
                                     }
                                     else
                                     {
-                                        ECCNSText.advance(&subtext, -5);
+                                        ecc_textbuf_advance(&subtext, -5);
                                     }
                                 }
-                                ECCNSChars.appendCodepoint(&chars, c);
+                                ecc_charbuf_appendcodepoint(&chars, c);
                             }
-                            value = ECCNSInput.attachValue(self->input, ECCNSChars.endAppend(&chars));
-                            self->value = ecc_value_key(ECCNSKey.makeWithText(ecc_value_textof(&value), value.type != ECC_VALTYPE_CHARS));
+                            value = ecc_ioinput_attachvalue(self->input, ecc_charbuf_endappend(&chars));
+                            self->value = ecc_value_key(ecc_keyidx_makewithtext(ecc_value_textof(&value), value.type != ECC_VALTYPE_CHARS));
                             return ECC_TOK_IDENTIFIER;
                         }
                         if(!self->disallowKeyword)
@@ -722,26 +698,26 @@ retry:
                             {
                                 if(self->text.length == (int)reservedKeywords[k].length && memcmp(self->text.bytes, reservedKeywords[k].name, reservedKeywords[k].length) == 0)
                                 {
-                                    return ecclex_syntaxError(self, ECCNSChars.create("'%s' is a reserved identifier", reservedKeywords[k]));
+                                    return ecclex_syntaxError(self, ecc_charbuf_create("'%s' is a reserved identifier", reservedKeywords[k]));
                                 }
                             }
                         }
-                        self->value = ecc_value_key(ECCNSKey.makeWithText(self->text, 0));
+                        self->value = ecc_value_key(ecc_keyidx_makewithtext(self->text, 0));
                         return ECC_TOK_IDENTIFIER;
                     }
                     else
                     {
                         if(c >= 0x80)
                         {
-                            return ecclex_syntaxError(self, ECCNSChars.create("invalid character '%.*s'", self->text.length, self->text.bytes));
+                            return ecclex_syntaxError(self, ecc_charbuf_create("invalid character '%.*s'", self->text.length, self->text.bytes));
                         }
                         else if(isprint(c))
                         {
-                            return ecclex_syntaxError(self, ECCNSChars.create("invalid character '%c'", c));
+                            return ecclex_syntaxError(self, ecc_charbuf_create("invalid character '%c'", c));
                         }
                         else
                         {
-                            return ecclex_syntaxError(self, ECCNSChars.create("invalid character '\\%d'", c & 0xff));
+                            return ecclex_syntaxError(self, ecc_charbuf_create("invalid character '\\%d'", c & 0xff));
                         }
                     }
                 }
@@ -752,7 +728,7 @@ retry:
     return ECC_TOK_NO;
 }
 
-const char* nslexerfn_tokenChars(int token, char buffer[4])
+const char* ecc_astlex_tokenchars(int token, char buffer[4])
 {
     int index;
     static const struct
@@ -843,7 +819,7 @@ const char* nslexerfn_tokenChars(int token, char buffer[4])
     return "unknown";
 }
 
-eccvalue_t nslexerfn_scanBinary(ecctextstring_t text, int flags)
+eccvalue_t ecc_astlex_scanbinary(ecctextstring_t text, int flags)
 {
     int lazy;
     double binary;
@@ -855,21 +831,21 @@ eccvalue_t nslexerfn_scanBinary(ecctextstring_t text, int flags)
     binary = NAN;
     if(flags & ECC_LEXFLAG_SCANSLOPPY)
     {
-        ecctextstring_t tail = ECCNSText.make(text.bytes + text.length, text.length);
-        while(tail.length && ECCNSText.isSpace(ECCNSText.prevCharacter(&tail)))
+        ecctextstring_t tail = ecc_textbuf_make(text.bytes + text.length, text.length);
+        while(tail.length && ecc_textbuf_isspace(ecc_textbuf_prevcharacter(&tail)))
         {
             text.length = tail.length;
         }
-        while(text.length && ECCNSText.isSpace(ECCNSText.character(text)))
+        while(text.length && ecc_textbuf_isspace(ecc_textbuf_character(text)))
         {
-            ECCNSText.nextCharacter(&text);
+            ecc_textbuf_nextcharacter(&text);
         }
     }
     else
     {
         while(text.length && isspace(*text.bytes))
         {
-            ECCNSText.advance(&text, 1);
+            ecc_textbuf_advance(&text, 1);
         }
     }
     memcpy(buffer, text.bytes, text.length);
@@ -909,7 +885,7 @@ eccvalue_t nslexerfn_scanBinary(ecctextstring_t text, int flags)
 }
 
 
-eccvalue_t nslexerfn_scanInteger(ecctextstring_t text, int base, int flags)
+eccvalue_t ecc_astlex_scaninteger(ecctextstring_t text, int base, int flags)
 {
     int lazy;
     long integer;
@@ -919,21 +895,21 @@ eccvalue_t nslexerfn_scanInteger(ecctextstring_t text, int base, int flags)
     lazy = flags & ECC_LEXFLAG_SCANLAZY;
     if(flags & ECC_LEXFLAG_SCANSLOPPY)
     {
-        ecctextstring_t tail = ECCNSText.make(text.bytes + text.length, text.length);
-        while(tail.length && ECCNSText.isSpace(ECCNSText.prevCharacter(&tail)))
+        ecctextstring_t tail = ecc_textbuf_make(text.bytes + text.length, text.length);
+        while(tail.length && ecc_textbuf_isspace(ecc_textbuf_prevcharacter(&tail)))
         {
             text.length = tail.length;
         }        
-        while(text.length && ECCNSText.isSpace(ECCNSText.character(text)))
+        while(text.length && ecc_textbuf_isspace(ecc_textbuf_character(text)))
         {
-            ECCNSText.nextCharacter(&text);
+            ecc_textbuf_nextcharacter(&text);
         }
     }
     else
     {
         while(text.length && isspace(*text.bytes))
         {
-            ECCNSText.advance(&text, 1);
+            ecc_textbuf_advance(&text, 1);
         }
     }
     memcpy(buffer, text.bytes, text.length);
@@ -958,7 +934,7 @@ eccvalue_t nslexerfn_scanInteger(ecctextstring_t text, int base, int flags)
             return ecc_value_binary(binary);
         }
         free(buffer);
-        ECCNSEnv.printWarning("`parseInt('%.*s', %d)` out of bounds; only long int are supported by radices other than 10 or 16", text.length, text.bytes, base);
+        ecc_env_printwarning("`parseInt('%.*s', %d)` out of bounds; only long int are supported by radices other than 10 or 16", text.length, text.bytes, base);
         return ecc_value_binary(NAN);
     }
     free(buffer);
@@ -969,7 +945,7 @@ eccvalue_t nslexerfn_scanInteger(ecctextstring_t text, int base, int flags)
     return ecc_value_integer((int32_t)integer);
 }
 
-uint32_t nslexerfn_scanElement(ecctextstring_t text)
+uint32_t ecc_astlex_scanelement(ecctextstring_t text)
 {
     eccvalue_t value;
     uint16_t index;
@@ -981,7 +957,7 @@ uint32_t nslexerfn_scanElement(ecctextstring_t text)
         if(!isdigit(text.bytes[index]))
             return UINT32_MAX;
 
-    value = nslexerfn_scanInteger(text, 0, 0);
+    value = ecc_astlex_scaninteger(text, 0, 0);
 
     if(value.type == ECC_VALTYPE_INTEGER)
         return value.data.integer;
