@@ -446,26 +446,26 @@ static const char uppers[]=
 /* clang-format on */
 
 // MARK: - Methods
-static ecctextstring_t make(const char* bytes, int32_t length);
-static ecctextstring_t join(ecctextstring_t from, ecctextstring_t to);
-static ecctextchar_t character(ecctextstring_t);
-static ecctextchar_t nextCharacter(ecctextstring_t* text);
-static ecctextchar_t prevCharacter(ecctextstring_t* text);
-static void advance(ecctextstring_t* text, int32_t units);
-static uint16_t toUTF16Length(ecctextstring_t);
-static uint16_t toUTF16(ecctextstring_t, uint16_t* wbuffer);
-static char* toLower(ecctextstring_t, char* x2buffer);
-static char* toUpper(ecctextstring_t, char* x3buffer);
-static int isSpace(ecctextchar_t);
-static int isDigit(ecctextchar_t);
-static int isWord(ecctextchar_t);
-static int isLineFeed(ecctextchar_t);
+static ecctextstring_t nstextfn_make(const char* bytes, int32_t length);
+static ecctextstring_t nstextfn_join(ecctextstring_t from, ecctextstring_t to);
+static ecctextchar_t nstextfn_character(ecctextstring_t);
+static ecctextchar_t nstextfn_nextCharacter(ecctextstring_t* text);
+static ecctextchar_t nstextfn_prevCharacter(ecctextstring_t* text);
+static void nstextfn_advance(ecctextstring_t* text, int32_t units);
+static uint16_t nstextfn_toUTF16Length(ecctextstring_t);
+static uint16_t nstextfn_toUTF16(ecctextstring_t, uint16_t* wbuffer);
+static char* nstextfn_toLower(ecctextstring_t, char* x2buffer);
+static char* nstextfn_toUpper(ecctextstring_t, char* x3buffer);
+static int nstextfn_isSpace(ecctextchar_t);
+static int nstextfn_isDigit(ecctextchar_t);
+static int nstextfn_isWord(ecctextchar_t);
+static int nstextfn_isLineFeed(ecctextchar_t);
 const struct eccpseudonstext_t ECCNSText = {
-    make, join, character, nextCharacter, prevCharacter, advance, toUTF16Length, toUTF16, toLower, toUpper, isSpace, isDigit, isWord, isLineFeed,
+    nstextfn_make, nstextfn_join, nstextfn_character, nstextfn_nextCharacter, nstextfn_prevCharacter, nstextfn_advance, nstextfn_toUTF16Length, nstextfn_toUTF16, nstextfn_toLower, nstextfn_toUpper, nstextfn_isSpace, nstextfn_isDigit, nstextfn_isWord, nstextfn_isLineFeed,
     {},
 };
 
-ecctextstring_t make(const char* bytes, int32_t length)
+ecctextstring_t nstextfn_make(const char* bytes, int32_t length)
 {
     return (ecctextstring_t){
         .bytes = bytes,
@@ -473,12 +473,12 @@ ecctextstring_t make(const char* bytes, int32_t length)
     };
 }
 
-ecctextstring_t join(ecctextstring_t from, ecctextstring_t to)
+ecctextstring_t nstextfn_join(ecctextstring_t from, ecctextstring_t to)
 {
-    return make(from.bytes, (int32_t)(to.bytes - from.bytes) + to.length);
+    return nstextfn_make(from.bytes, (int32_t)(to.bytes - from.bytes) + to.length);
 }
 
-ecctextchar_t character(ecctextstring_t text)
+ecctextchar_t nstextfn_character(ecctextstring_t text)
 {
     ecctextchar_t c = { 0 };
 
@@ -533,14 +533,14 @@ ecctextchar_t character(ecctextstring_t text)
     return c;
 }
 
-ecctextchar_t nextCharacter(ecctextstring_t* text)
+ecctextchar_t nstextfn_nextCharacter(ecctextstring_t* text)
 {
-    ecctextchar_t c = character(*text);
-    advance(text, c.units);
+    ecctextchar_t c = nstextfn_character(*text);
+    nstextfn_advance(text, c.units);
     return c;
 }
 
-ecctextchar_t prevCharacter(ecctextstring_t* text)
+ecctextchar_t nstextfn_prevCharacter(ecctextstring_t* text)
 {
     ecctextchar_t c = { 0 };
 
@@ -597,7 +597,7 @@ ecctextchar_t prevCharacter(ecctextstring_t* text)
     return c;
 }
 
-void advance(ecctextstring_t* text, int32_t units)
+void nstextfn_advance(ecctextstring_t* text, int32_t units)
 {
     if(units >= text->length)
     {
@@ -611,24 +611,24 @@ void advance(ecctextstring_t* text, int32_t units)
     }
 }
 
-uint16_t toUTF16Length(ecctextstring_t text)
+uint16_t nstextfn_toUTF16Length(ecctextstring_t text)
 {
     uint16_t windex = 0;
 
     while(text.length)
-        windex += nextCharacter(&text).codepoint >= 0x010000 ? 2 : 1;
+        windex += nstextfn_nextCharacter(&text).codepoint >= 0x010000 ? 2 : 1;
 
     return windex;
 }
 
-uint16_t toUTF16(ecctextstring_t text, uint16_t* wbuffer)
+uint16_t nstextfn_toUTF16(ecctextstring_t text, uint16_t* wbuffer)
 {
     uint16_t windex = 0;
     uint32_t cp;
 
     while(text.length)
     {
-        cp = nextCharacter(&text).codepoint;
+        cp = nstextfn_nextCharacter(&text).codepoint;
 
         if(cp >= 0x010000)
         {
@@ -643,7 +643,7 @@ uint16_t toUTF16(ecctextstring_t text, uint16_t* wbuffer)
     return windex;
 }
 
-char* toLower(ecctextstring_t i, char* o /* length x 2 */)
+char* nstextfn_toLower(ecctextstring_t i, char* o /* length x 2 */)
 {
     char buffer[5];
     const char* p;
@@ -651,10 +651,10 @@ char* toLower(ecctextstring_t i, char* o /* length x 2 */)
 
     while(i.length)
     {
-        c = character(i);
+        c = nstextfn_character(i);
         memcpy(buffer, i.bytes, c.units);
         buffer[c.units] = '\0';
-        advance(&i, c.units);
+        nstextfn_advance(&i, c.units);
         p = buffer;
 
         if(c.units > 1 || isupper(*p))
@@ -679,7 +679,7 @@ char* toLower(ecctextstring_t i, char* o /* length x 2 */)
     return o;
 }
 
-char* toUpper(ecctextstring_t i, char* o /* length x 3 */)
+char* nstextfn_toUpper(ecctextstring_t i, char* o /* length x 3 */)
 {
     char buffer[5];
     const char* p;
@@ -687,10 +687,10 @@ char* toUpper(ecctextstring_t i, char* o /* length x 3 */)
 
     while(i.length)
     {
-        c = character(i);
+        c = nstextfn_character(i);
         memcpy(buffer, i.bytes, c.units);
         buffer[c.units] = '\0';
-        advance(&i, c.units);
+        nstextfn_advance(&i, c.units);
         p = buffer;
 
         if(c.units > 1 || islower(*p))
@@ -715,23 +715,23 @@ char* toUpper(ecctextstring_t i, char* o /* length x 3 */)
     return o;
 }
 
-int isSpace(ecctextchar_t c)
+int nstextfn_isSpace(ecctextchar_t c)
 {
     return (c.codepoint < 0x7f && isspace(c.codepoint)) || c.codepoint == 0xA0 || c.codepoint == 0xFEFF || c.codepoint == 0x1680 || c.codepoint == 0x180E
-           || (c.codepoint >= 0x2000 && c.codepoint <= 0x200A) || c.codepoint == 0x202F || c.codepoint == 0x205F || c.codepoint == 0x3000 || isLineFeed(c);
+           || (c.codepoint >= 0x2000 && c.codepoint <= 0x200A) || c.codepoint == 0x202F || c.codepoint == 0x205F || c.codepoint == 0x3000 || nstextfn_isLineFeed(c);
 }
 
-int isDigit(ecctextchar_t c)
+int nstextfn_isDigit(ecctextchar_t c)
 {
     return isdigit(c.codepoint) != 0;
 }
 
-int isWord(ecctextchar_t c)
+int nstextfn_isWord(ecctextchar_t c)
 {
     return isalnum(c.codepoint) || c.codepoint == '_';
 }
 
-int isLineFeed(ecctextchar_t c)
+int nstextfn_isLineFeed(ecctextchar_t c)
 {
     return c.codepoint == '\n' || c.codepoint == '\r' || c.codepoint == 0x2028 || c.codepoint == 0x2029;
 }

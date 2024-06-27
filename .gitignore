@@ -43,7 +43,6 @@ ed.sh
 CMakeFiles*
 CMakeFiles*/*
 cmakefiles*
-CMakeFiles*/*
 misc/*
 deps
 deps/*
@@ -60,7 +59,6 @@ uftrace.data
 uftrace.data*
 uftrace.data/*
 uftrace.data*/*
-callgrind.out*
 
 # visualstudio clutter
 Debug
@@ -72,22 +70,17 @@ x86/*
 .vs
 .vs/
 .vs/*
-
 ## files emitted by each stage
 td.*.txt
 td?.*.txt
-
 # kate leaving junk all over the place
 *.kate-swp
-
 # ignore cmake build directory
 build/
-
 #### big fat warning: this will catch D lang files. funny, that.
 *.d
 *.dep
 *.depends
-
 # extra stuff from https://www.gitignore.io
 ### C++ ###
 # Compiled Object files
@@ -95,30 +88,24 @@ build/
 *.lo
 *.o
 *.obj
-
 # Precompiled Headers
 *.gch
 *.pch
-
 # Compiled Dynamic libraries
 *.so
 *.dylib
 *.dll
-
 # Fortran module files
 *.mod
-
 # Compiled Static libraries
 *.lai
 *.la
 *.a
 *.lib
-
 # Executables
 *.exe
 *.out
 *.app
-
 # debug files
 *.ilk
 *.dbg
@@ -127,5 +114,29 @@ build/
 *.tbh
 *.tbt
 *.tbs
-*.stackdump
 *.core
+build/*/bin/
+build/*/lib/
+build/*/object/
+# OSX
+.DS_Store
+# Linux
+*~
+.directory
+.Trash-*
+# Windows
+Thumbs.db
+# Xcode
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+xcuserdata
+*.xccheckout
+*.moved-aside
+DerivedData
+*.xcuserstate

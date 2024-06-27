@@ -25,8 +25,8 @@ static eccvalue_t mathobjfn_mathRound(eccstate_t *context);
 static eccvalue_t mathobjfn_mathSin(eccstate_t *context);
 static eccvalue_t mathobjfn_mathSqrt(eccstate_t *context);
 static eccvalue_t mathobjfn_mathTan(eccstate_t *context);
-static void setup(void);
-static void teardown(void);
+static void nsmathfn_setup(void);
+static void nsmathfn_teardown(void);
 
 
 const eccobjinterntype_t ECC_Type_Math = {
@@ -34,8 +34,8 @@ const eccobjinterntype_t ECC_Type_Math = {
 };
 
 const struct eccpseudonsmath_t io_libecc_Math = {
-    setup,
-    teardown,
+    nsmathfn_setup,
+    nsmathfn_teardown,
     {},
 };
 
@@ -267,7 +267,7 @@ static eccvalue_t mathobjfn_mathTan(eccstate_t* context)
 
 eccobject_t* ECC_Prototype_MathObject = NULL;
 
-static void setup()
+static void nsmathfn_setup()
 {
     const eccvalflag_t r = ECC_VALFLAG_READONLY;
     const eccvalflag_t h = ECC_VALFLAG_HIDDEN;
@@ -304,7 +304,7 @@ static void setup()
     ECCNSFunction.addToObject(ECC_Prototype_MathObject, "tan", mathobjfn_mathTan, 1, h);
 }
 
-static void teardown(void)
+static void nsmathfn_teardown(void)
 {
     ECC_Prototype_MathObject = NULL;
 }

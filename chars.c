@@ -9,27 +9,27 @@
 
 // MARK: - Private
 
-static ecccharbuffer_t* createVA(int32_t length, const char* format, va_list ap);
-static ecccharbuffer_t* create(const char* format, ...);
-static ecccharbuffer_t* createSized(int32_t length);
-static ecccharbuffer_t* createWithBytes(int32_t length, const char* bytes);
-static void beginAppend(eccappendbuffer_t*);
-static void append(eccappendbuffer_t*, const char* format, ...);
-static void appendCodepoint(eccappendbuffer_t*, uint32_t cp);
-static void appendValue(eccappendbuffer_t*, eccstate_t* context, eccvalue_t value);
-static void appendBinary(eccappendbuffer_t*, double binary, int base);
-static void normalizeBinary(eccappendbuffer_t*);
-static eccvalue_t endAppend(eccappendbuffer_t*);
-static void destroy(ecccharbuffer_t*);
-static uint8_t codepointLength(uint32_t cp);
-static uint8_t writeCodepoint(char*, uint32_t cp);
+static ecccharbuffer_t* nsccharsfn_createVA(int32_t length, const char* format, va_list ap);
+static ecccharbuffer_t* nsccharsfn_create(const char* format, ...);
+static ecccharbuffer_t* nsccharsfn_createSized(int32_t length);
+static ecccharbuffer_t* nsccharsfn_createWithBytes(int32_t length, const char* bytes);
+static void nsccharsfn_beginAppend(eccappendbuffer_t*);
+static void nsccharsfn_append(eccappendbuffer_t*, const char* format, ...);
+static void nsccharsfn_appendCodepoint(eccappendbuffer_t*, uint32_t cp);
+static void nsccharsfn_appendValue(eccappendbuffer_t*, eccstate_t* context, eccvalue_t value);
+static void nsccharsfn_appendBinary(eccappendbuffer_t*, double binary, int base);
+static void nsccharsfn_normalizeBinary(eccappendbuffer_t*);
+static eccvalue_t nsccharsfn_endAppend(eccappendbuffer_t*);
+static void nsccharsfn_destroy(ecccharbuffer_t*);
+static uint8_t nsccharsfn_codepointLength(uint32_t cp);
+static uint8_t nsccharsfn_writeCodepoint(char*, uint32_t cp);
 const struct eccpseudonschars_t ECCNSChars = {
-    createVA,    create,       createSized,     createWithBytes, beginAppend, append,          appendCodepoint,
-    appendValue, appendBinary, normalizeBinary, endAppend,       destroy,     codepointLength, writeCodepoint,
+    nsccharsfn_createVA,    nsccharsfn_create,       nsccharsfn_createSized,     nsccharsfn_createWithBytes, nsccharsfn_beginAppend, nsccharsfn_append,          nsccharsfn_appendCodepoint,
+    nsccharsfn_appendValue, nsccharsfn_appendBinary, nsccharsfn_normalizeBinary, nsccharsfn_endAppend,       nsccharsfn_destroy,     nsccharsfn_codepointLength, nsccharsfn_writeCodepoint,
     {}
 };
 
-static inline uint32_t nextPowerOfTwo(uint32_t v)
+static inline uint32_t eccchars_nextPowerOfTwo(uint32_t v)
 {
     v--;
     v |= v >> 1;
@@ -41,21 +41,21 @@ static inline uint32_t nextPowerOfTwo(uint32_t v)
     return v;
 }
 
-static inline uint32_t sizeForLength(uint32_t length)
+static inline uint32_t eccchars_sizeForLength(uint32_t length)
 {
     uint32_t size = sizeof(ecccharbuffer_t) + length;
 
     if(size < 16)
         return 16;
     else
-        return nextPowerOfTwo(size);
+        return eccchars_nextPowerOfTwo(size);
 }
 
-static ecccharbuffer_t* reuseOrCreate(eccappendbuffer_t* chars, uint32_t length)
+static ecccharbuffer_t* eccchars_reuseOrCreate(eccappendbuffer_t* chars, uint32_t length)
 {
     ecccharbuffer_t *self = NULL, *reuse = chars ? chars->value : NULL;
 
-    if(reuse && sizeForLength(reuse->length) >= sizeForLength(length))
+    if(reuse && eccchars_sizeForLength(reuse->length) >= eccchars_sizeForLength(length))
         return reuse;
     //	else
     //		chars = ECCNSMemoryPool.reusableChars(length);
@@ -65,7 +65,7 @@ static ecccharbuffer_t* reuseOrCreate(eccappendbuffer_t* chars, uint32_t length)
         if(length < 8)
             return NULL;
 
-        self = malloc(sizeForLength(length));
+        self = malloc(eccchars_sizeForLength(length));
         ECCNSMemoryPool.addChars(self);
     }
 
@@ -86,17 +86,17 @@ static ecccharbuffer_t* reuseOrCreate(eccappendbuffer_t* chars, uint32_t length)
 
 // MARK: - Methods
 
-ecccharbuffer_t* createVA(int32_t length, const char* format, va_list ap)
+ecccharbuffer_t* nsccharsfn_createVA(int32_t length, const char* format, va_list ap)
 {
     ecccharbuffer_t* self;
 
-    self = createSized(length);
+    self = nsccharsfn_createSized(length);
     vsprintf(self->bytes, format, ap);
 
     return self;
 }
 
-ecccharbuffer_t* create(const char* format, ...)
+ecccharbuffer_t* nsccharsfn_create(const char* format, ...)
 {
     uint16_t length;
     va_list ap;
@@ -107,15 +107,15 @@ ecccharbuffer_t* create(const char* format, ...)
     va_end(ap);
 
     va_start(ap, format);
-    self = createVA(length, format, ap);
+    self = nsccharsfn_createVA(length, format, ap);
     va_end(ap);
 
     return self;
 }
 
-ecccharbuffer_t* createSized(int32_t length)
+ecccharbuffer_t* nsccharsfn_createSized(int32_t length)
 {
-    ecccharbuffer_t* self = malloc(sizeForLength(length));
+    ecccharbuffer_t* self = malloc(eccchars_sizeForLength(length));
     ECCNSMemoryPool.addChars(self);
     *self = ECCNSChars.identity;
 
@@ -125,9 +125,9 @@ ecccharbuffer_t* createSized(int32_t length)
     return self;
 }
 
-ecccharbuffer_t* createWithBytes(int32_t length, const char* bytes)
+ecccharbuffer_t* nsccharsfn_createWithBytes(int32_t length, const char* bytes)
 {
-    ecccharbuffer_t* self = malloc(sizeForLength(length));
+    ecccharbuffer_t* self = malloc(eccchars_sizeForLength(length));
     ECCNSMemoryPool.addChars(self);
     *self = ECCNSChars.identity;
 
@@ -138,13 +138,13 @@ ecccharbuffer_t* createWithBytes(int32_t length, const char* bytes)
     return self;
 }
 
-void beginAppend(eccappendbuffer_t* chars)
+void nsccharsfn_beginAppend(eccappendbuffer_t* chars)
 {
     chars->value = NULL;
     chars->units = 0;
 }
 
-void append(eccappendbuffer_t* chars, const char* format, ...)
+void nsccharsfn_append(eccappendbuffer_t* chars, const char* format, ...)
 {
     uint32_t length;
     va_list ap;
@@ -154,7 +154,7 @@ void append(eccappendbuffer_t* chars, const char* format, ...)
     length = vsnprintf(NULL, 0, format, ap);
     va_end(ap);
 
-    self = reuseOrCreate(chars, (self ? self->length : chars->units) + length);
+    self = eccchars_reuseOrCreate(chars, (self ? self->length : chars->units) + length);
 
     va_start(ap, format);
     vsprintf(self ? (self->bytes + self->length) : (chars->buffer + chars->units), format, ap);
@@ -166,7 +166,7 @@ void append(eccappendbuffer_t* chars, const char* format, ...)
         chars->units += length;
 }
 
-static void appendText(eccappendbuffer_t* chars, ecctextstring_t text)
+static void eccchars_appendText(eccappendbuffer_t* chars, ecctextstring_t text)
 {
     ecccharbuffer_t* self = chars->value;
     ecctextchar_t lo = ECCNSText.character(text), hi = { 0 };
@@ -195,16 +195,16 @@ static void appendText(eccappendbuffer_t* chars, ecctextstring_t text)
         }
     }
 
-    self = reuseOrCreate(chars, (self ? self->length : chars->units) + text.length);
+    self = eccchars_reuseOrCreate(chars, (self ? self->length : chars->units) + text.length);
 
     if(surrogates)
     {
         uint32_t cp = 0x10000 + (((hi.codepoint - 0xD800) << 10) | ((lo.codepoint - 0xDC00) & 0x03FF));
 
         if(self)
-            self->length += writeCodepoint(self->bytes + self->length, cp);
+            self->length += nsccharsfn_writeCodepoint(self->bytes + self->length, cp);
         else
-            chars->units += writeCodepoint(chars->buffer + chars->units, cp);
+            chars->units += nsccharsfn_writeCodepoint(chars->buffer + chars->units, cp);
     }
 
     memcpy(self ? (self->bytes + self->length) : (chars->buffer + chars->units), text.bytes, text.length);
@@ -214,14 +214,14 @@ static void appendText(eccappendbuffer_t* chars, ecctextstring_t text)
         chars->units += text.length;
 }
 
-void appendCodepoint(eccappendbuffer_t* chars, uint32_t cp)
+void nsccharsfn_appendCodepoint(eccappendbuffer_t* chars, uint32_t cp)
 {
     char buffer[5] = { 0 };
-    ecctextstring_t text = ECCNSText.make(buffer, writeCodepoint(buffer, cp));
-    appendText(chars, text);
+    ecctextstring_t text = ECCNSText.make(buffer, nsccharsfn_writeCodepoint(buffer, cp));
+    eccchars_appendText(chars, text);
 }
 
-void appendValue(eccappendbuffer_t* chars, eccstate_t* context, eccvalue_t value)
+void nsccharsfn_appendValue(eccappendbuffer_t* chars, eccstate_t* context, eccvalue_t value)
 {
     switch((eccvaltype_t)value.type)
     {
@@ -230,39 +230,39 @@ void appendValue(eccappendbuffer_t* chars, eccstate_t* context, eccvalue_t value
         case ECC_VALTYPE_STRING:
         case ECC_VALTYPE_CHARS:
         case ECC_VALTYPE_BUFFER:
-            appendText(chars, ECCNSValue.textOf(&value));
+            eccchars_appendText(chars, ECCNSValue.textOf(&value));
             return;
 
         case ECC_VALTYPE_NULL:
-            appendText(chars, ECC_ConstString_Null);
+            eccchars_appendText(chars, ECC_ConstString_Null);
             return;
 
         case ECC_VALTYPE_UNDEFINED:
-            appendText(chars, ECC_ConstString_Undefined);
+            eccchars_appendText(chars, ECC_ConstString_Undefined);
             return;
 
         case ECC_VALTYPE_FALSE:
-            appendText(chars, ECC_ConstString_False);
+            eccchars_appendText(chars, ECC_ConstString_False);
             return;
 
         case ECC_VALTYPE_TRUE:
-            appendText(chars, ECC_ConstString_True);
+            eccchars_appendText(chars, ECC_ConstString_True);
             return;
 
         case ECC_VALTYPE_BOOLEAN:
-            appendText(chars, value.data.boolean->truth ? ECC_ConstString_True : ECC_ConstString_False);
+            eccchars_appendText(chars, value.data.boolean->truth ? ECC_ConstString_True : ECC_ConstString_False);
             return;
 
         case ECC_VALTYPE_INTEGER:
-            appendBinary(chars, value.data.integer, 10);
+            nsccharsfn_appendBinary(chars, value.data.integer, 10);
             return;
 
         case ECC_VALTYPE_NUMBER:
-            appendBinary(chars, value.data.number->value, 10);
+            nsccharsfn_appendBinary(chars, value.data.number->value, 10);
             return;
 
         case ECC_VALTYPE_BINARY:
-            appendBinary(chars, value.data.binary, 10);
+            nsccharsfn_appendBinary(chars, value.data.binary, 10);
             return;
 
         case ECC_VALTYPE_REGEXP:
@@ -271,7 +271,7 @@ void appendValue(eccappendbuffer_t* chars, eccstate_t* context, eccvalue_t value
         case ECC_VALTYPE_ERROR:
         case ECC_VALTYPE_DATE:
         case ECC_VALTYPE_HOST:
-            appendValue(chars, context, ECCNSValue.toString(context, value));
+            nsccharsfn_appendValue(chars, context, ECCNSValue.toString(context, value));
             return;
 
         case ECC_VALTYPE_REFERENCE:
@@ -280,7 +280,7 @@ void appendValue(eccappendbuffer_t* chars, eccstate_t* context, eccvalue_t value
     ECCNSScript.fatal("Invalid value type : %u", value.type);
 }
 
-static uint32_t stripBinaryOfBytes(char* bytes, uint32_t length)
+static uint32_t eccchars_stripBinaryOfBytes(char* bytes, uint32_t length)
 {
     while(bytes[length - 1] == '0')
         bytes[--length] = '\0';
@@ -291,7 +291,7 @@ static uint32_t stripBinaryOfBytes(char* bytes, uint32_t length)
     return length;
 }
 
-static uint32_t normalizeBinaryOfBytes(char* bytes, uint32_t length)
+static uint32_t eccchars_normalizeBinaryOfBytes(char* bytes, uint32_t length)
 {
     if(length > 5 && bytes[length - 5] == 'e' && bytes[length - 3] == '0')
     {
@@ -309,19 +309,19 @@ static uint32_t normalizeBinaryOfBytes(char* bytes, uint32_t length)
     return length;
 }
 
-void appendBinary(eccappendbuffer_t* chars, double binary, int base)
+void nsccharsfn_appendBinary(eccappendbuffer_t* chars, double binary, int base)
 {
     if(isnan(binary))
     {
-        appendText(chars, ECC_ConstString_Nan);
+        eccchars_appendText(chars, ECC_ConstString_Nan);
         return;
     }
     else if(!isfinite(binary))
     {
         if(binary < 0)
-            appendText(chars, ECC_ConstString_NegativeInfinity);
+            eccchars_appendText(chars, ECC_ConstString_NegativeInfinity);
         else
-            appendText(chars, ECC_ConstString_Infinity);
+            eccchars_appendText(chars, ECC_ConstString_Infinity);
 
         return;
     }
@@ -329,14 +329,14 @@ void appendBinary(eccappendbuffer_t* chars, double binary, int base)
     if(!base || base == 10)
     {
         if(binary <= -1e+21 || binary >= 1e+21)
-            append(chars, "%g", binary);
+            nsccharsfn_append(chars, "%g", binary);
         else if((binary < 1 && binary >= 0.000001) || (binary > -1 && binary <= -0.000001))
         {
-            append(chars, "%.10f", binary);
+            nsccharsfn_append(chars, "%.10f", binary);
             if(chars->value)
-                chars->value->length = stripBinaryOfBytes(chars->value->bytes, chars->value->length);
+                chars->value->length = eccchars_stripBinaryOfBytes(chars->value->bytes, chars->value->length);
             else
-                chars->units = stripBinaryOfBytes(chars->buffer, chars->units);
+                chars->units = eccchars_stripBinaryOfBytes(chars->buffer, chars->units);
 
             return;
         }
@@ -345,10 +345,10 @@ void appendBinary(eccappendbuffer_t* chars, double binary, int base)
             double dblDig10 = pow(10, DBL_DIG);
             int precision = binary >= -dblDig10 && binary <= dblDig10 ? DBL_DIG : 21;
 
-            append(chars, "%.*g", precision, binary);
+            nsccharsfn_append(chars, "%.*g", precision, binary);
         }
 
-        normalizeBinary(chars);
+        nsccharsfn_normalizeBinary(chars);
         return;
     }
     else
@@ -360,7 +360,7 @@ void appendBinary(eccappendbuffer_t* chars, double binary, int base)
         {
             const char* format = sign ? (base == 8 ? "-%lo" : "-%lx") : (base == 8 ? "%lo" : "%lx");
 
-            append(chars, format, integer);
+            nsccharsfn_append(chars, format, integer);
         }
         else
         {
@@ -378,20 +378,20 @@ void appendBinary(eccappendbuffer_t* chars, double binary, int base)
                 *(--p) = '-';
 
             count = buffer + sizeof(buffer) - 1 - p;
-            append(chars, "%.*s", count, p);
+            nsccharsfn_append(chars, "%.*s", count, p);
         }
     }
 }
 
-void normalizeBinary(eccappendbuffer_t* chars)
+void nsccharsfn_normalizeBinary(eccappendbuffer_t* chars)
 {
     if(chars->value)
-        chars->value->length = normalizeBinaryOfBytes(chars->value->bytes, chars->value->length);
+        chars->value->length = eccchars_normalizeBinaryOfBytes(chars->value->bytes, chars->value->length);
     else
-        chars->units = normalizeBinaryOfBytes(chars->buffer, chars->units);
+        chars->units = eccchars_normalizeBinaryOfBytes(chars->buffer, chars->units);
 }
 
-eccvalue_t endAppend(eccappendbuffer_t* chars)
+eccvalue_t nsccharsfn_endAppend(eccappendbuffer_t* chars)
 {
     ecccharbuffer_t* self = chars->value;
 
@@ -404,14 +404,14 @@ eccvalue_t endAppend(eccappendbuffer_t* chars)
         return ECCNSValue.buffer(chars->buffer, chars->units);
 }
 
-void destroy(ecccharbuffer_t* self)
+void nsccharsfn_destroy(ecccharbuffer_t* self)
 {
     assert(self);
 
     free(self), self = NULL;
 }
 
-uint8_t codepointLength(uint32_t cp)
+uint8_t nsccharsfn_codepointLength(uint32_t cp)
 {
     if(cp < 0x80)
         return 1;
@@ -425,7 +425,7 @@ uint8_t codepointLength(uint32_t cp)
     return 0;
 }
 
-uint8_t writeCodepoint(char* bytes, uint32_t cp)
+uint8_t nsccharsfn_writeCodepoint(char* bytes, uint32_t cp)
 {
     if(cp < 0x80)
     {

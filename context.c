@@ -7,75 +7,70 @@
 //
 #include "ecc.h"
 
-// MARK: - Private
 
-// MARK: - Static Members
-
-// MARK: - Methods
-
-static void ctxfn_rangeError(eccstate_t*, ecccharbuffer_t*) __attribute__((noreturn));
-static void ctxfn_referenceError(eccstate_t*, ecccharbuffer_t*) __attribute__((noreturn));
-static void ctxfn_syntaxError(eccstate_t*, ecccharbuffer_t*) __attribute__((noreturn));
-static void ctxfn_typeError(eccstate_t*, ecccharbuffer_t*) __attribute__((noreturn));
-static void ctxfn_uriError(eccstate_t*, ecccharbuffer_t*) __attribute__((noreturn));
-static void ctxfn_throw(eccstate_t*, eccvalue_t) __attribute__((noreturn));
-static eccvalue_t ctxfn_callFunction(eccstate_t*, eccobjfunction_t* function, eccvalue_t thisval, int argumentCount, ...);
-static int ctxfn_argumentCount(eccstate_t*);
-static eccvalue_t ctxfn_argument(eccstate_t*, int argumentIndex);
-static void ctxfn_replaceArgument(eccstate_t*, int argumentIndex, eccvalue_t value);
-static eccvalue_t ctxfn_this(eccstate_t*);
-static void ctxfn_assertThisType(eccstate_t*, eccvaltype_t);
-static void ctxfn_assertThisMask(eccstate_t*, eccvalmask_t);
-static void ctxfn_assertThisCoerciblePrimitive(eccstate_t*);
-static void ctxfn_setText(eccstate_t*, const ecctextstring_t* text);
-static void ctxfn_setTexts(eccstate_t*, const ecctextstring_t* text, const ecctextstring_t* textAlt);
-static void ctxfn_setTextIndex(eccstate_t*, eccctxindextype_t index);
-static void ctxfn_setTextIndexArgument(eccstate_t*, int argument);
-static ecctextstring_t ctxfn_textSeek(eccstate_t*);
-static void ctxfn_rewindStatement(eccstate_t*);
-static void ctxfn_printBacktrace(eccstate_t* context);
-static eccobject_t* ctxfn_environmentRoot(eccstate_t* context);
+static void nscontextfn_rangeError(eccstate_t*, ecccharbuffer_t*) __attribute__((noreturn));
+static void nscontextfn_referenceError(eccstate_t*, ecccharbuffer_t*) __attribute__((noreturn));
+static void nscontextfn_syntaxError(eccstate_t*, ecccharbuffer_t*) __attribute__((noreturn));
+static void nscontextfn_typeError(eccstate_t*, ecccharbuffer_t*) __attribute__((noreturn));
+static void nscontextfn_uriError(eccstate_t*, ecccharbuffer_t*) __attribute__((noreturn));
+static void nscontextfn_throw(eccstate_t*, eccvalue_t) __attribute__((noreturn));
+static eccvalue_t nscontextfn_callFunction(eccstate_t*, eccobjfunction_t* function, eccvalue_t thisval, int argumentCount, ...);
+static int nscontextfn_argumentCount(eccstate_t*);
+static eccvalue_t nscontextfn_argument(eccstate_t*, int argumentIndex);
+static void nscontextfn_replaceArgument(eccstate_t*, int argumentIndex, eccvalue_t value);
+static eccvalue_t nscontextfn_this(eccstate_t*);
+static void nscontextfn_assertThisType(eccstate_t*, eccvaltype_t);
+static void nscontextfn_assertThisMask(eccstate_t*, eccvalmask_t);
+static void nscontextfn_assertThisCoerciblePrimitive(eccstate_t*);
+static void nscontextfn_setText(eccstate_t*, const ecctextstring_t* text);
+static void nscontextfn_setTexts(eccstate_t*, const ecctextstring_t* text, const ecctextstring_t* textAlt);
+static void nscontextfn_setTextIndex(eccstate_t*, eccctxindextype_t index);
+static void nscontextfn_setTextIndexArgument(eccstate_t*, int argument);
+static ecctextstring_t nscontextfn_textSeek(eccstate_t*);
+static void nscontextfn_rewindStatement(eccstate_t*);
+static void nscontextfn_printBacktrace(eccstate_t* context);
+static eccobject_t* nscontextfn_environmentRoot(eccstate_t* context);
 const struct eccpseudonscontext_t ECCNSContext = {
-    ctxfn_rangeError,     ctxfn_referenceError,
-    ctxfn_syntaxError,    ctxfn_typeError,
-    ctxfn_uriError,       ctxfn_throw,
-    ctxfn_callFunction,   ctxfn_argumentCount,
-    ctxfn_argument,       ctxfn_replaceArgument,
-    ctxfn_this,           ctxfn_assertThisType,
-    ctxfn_assertThisMask, ctxfn_assertThisCoerciblePrimitive,
-    ctxfn_setText,        ctxfn_setTexts,
-    ctxfn_setTextIndex,   ctxfn_setTextIndexArgument,
-    ctxfn_textSeek,       ctxfn_rewindStatement,
-    ctxfn_printBacktrace, ctxfn_environmentRoot,
+    nscontextfn_rangeError,     nscontextfn_referenceError,
+    nscontextfn_syntaxError,    nscontextfn_typeError,
+    nscontextfn_uriError,       nscontextfn_throw,
+    nscontextfn_callFunction,   nscontextfn_argumentCount,
+    nscontextfn_argument,       nscontextfn_replaceArgument,
+    nscontextfn_this,           nscontextfn_assertThisType,
+    nscontextfn_assertThisMask, nscontextfn_assertThisCoerciblePrimitive,
+    nscontextfn_setText,        nscontextfn_setTexts,
+    nscontextfn_setTextIndex,   nscontextfn_setTextIndexArgument,
+    nscontextfn_textSeek,       nscontextfn_rewindStatement,
+    nscontextfn_printBacktrace, nscontextfn_environmentRoot,
     {}
 };
 
-void ctxfn_rangeError(eccstate_t* self, ecccharbuffer_t* chars)
+void nscontextfn_rangeError(eccstate_t* self, ecccharbuffer_t* chars)
 {
-    ctxfn_throw(self, ECCNSValue.error(ECCNSError.rangeError(ctxfn_textSeek(self), chars)));
+    nscontextfn_throw(self, ECCNSValue.error(ECCNSError.rangeError(nscontextfn_textSeek(self), chars)));
 }
 
-void ctxfn_referenceError(eccstate_t* self, ecccharbuffer_t* chars)
+void nscontextfn_referenceError(eccstate_t* self, ecccharbuffer_t* chars)
 {
-    ctxfn_throw(self, ECCNSValue.error(ECCNSError.referenceError(ctxfn_textSeek(self), chars)));
+    nscontextfn_throw(self, ECCNSValue.error(ECCNSError.referenceError(nscontextfn_textSeek(self), chars)));
 }
 
-void ctxfn_syntaxError(eccstate_t* self, ecccharbuffer_t* chars)
+void nscontextfn_syntaxError(eccstate_t* self, ecccharbuffer_t* chars)
 {
-    ctxfn_throw(self, ECCNSValue.error(ECCNSError.syntaxError(ctxfn_textSeek(self), chars)));
+    nscontextfn_throw(self, ECCNSValue.error(ECCNSError.syntaxError(nscontextfn_textSeek(self), chars)));
 }
 
-void ctxfn_typeError(eccstate_t* self, ecccharbuffer_t* chars)
+void nscontextfn_typeError(eccstate_t* self, ecccharbuffer_t* chars)
 {
-    ctxfn_throw(self, ECCNSValue.error(ECCNSError.typeError(ctxfn_textSeek(self), chars)));
+    nscontextfn_throw(self, ECCNSValue.error(ECCNSError.typeError(nscontextfn_textSeek(self), chars)));
 }
 
-void ctxfn_uriError(eccstate_t* self, ecccharbuffer_t* chars)
+void nscontextfn_uriError(eccstate_t* self, ecccharbuffer_t* chars)
 {
-    ctxfn_throw(self, ECCNSValue.error(ECCNSError.uriError(ctxfn_textSeek(self), chars)));
+    nscontextfn_throw(self, ECCNSValue.error(ECCNSError.uriError(nscontextfn_textSeek(self), chars)));
 }
 
-void ctxfn_throw(eccstate_t * self, eccvalue_t value)
+void nscontextfn_throw(eccstate_t * self, eccvalue_t value)
 {
     if(value.type == ECC_VALTYPE_ERROR)
         self->ecc->text = value.data.error->text;
@@ -98,14 +93,14 @@ void ctxfn_throw(eccstate_t * self, eccvalue_t value)
 
         ECCNSEnv.newline();
         ECCNSEnv.printError(ECCNSValue.stringLength(&name), ECCNSValue.stringBytes(&name), "%.*s", ECCNSValue.stringLength(&message), ECCNSValue.stringBytes(&message));
-        ctxfn_printBacktrace(self);
+        nscontextfn_printBacktrace(self);
         ECCNSScript.printTextInput(self->ecc, self->ecc->text, 1);
     }
 
     ECCNSScript.jmpEnv(self->ecc, value);
 }
 
-eccvalue_t ctxfn_callFunction(eccstate_t* self, eccobjfunction_t* function, eccvalue_t thisval, int argumentCount, ...)
+eccvalue_t nscontextfn_callFunction(eccstate_t* self, eccobjfunction_t* function, eccvalue_t thisval, int argumentCount, ...)
 {
     eccvalue_t result;
     va_list ap;
@@ -123,7 +118,7 @@ eccvalue_t ctxfn_callFunction(eccstate_t* self, eccobjfunction_t* function, eccv
     return result;
 }
 
-int ctxfn_argumentCount(eccstate_t* self)
+int nscontextfn_argumentCount(eccstate_t* self)
 {
     if(self->environment->hashmap[2].value.type == ECC_VALTYPE_OBJECT)
         return self->environment->hashmap[2].value.data.object->elementCount;
@@ -131,7 +126,7 @@ int ctxfn_argumentCount(eccstate_t* self)
         return self->environment->hashmapCount - 3;
 }
 
-eccvalue_t ctxfn_argument(eccstate_t* self, int argumentIndex)
+eccvalue_t nscontextfn_argument(eccstate_t* self, int argumentIndex)
 {
     self->textIndex = argumentIndex + 4;
 
@@ -146,7 +141,7 @@ eccvalue_t ctxfn_argument(eccstate_t* self, int argumentIndex)
     return ECCValConstNone;
 }
 
-void ctxfn_replaceArgument(eccstate_t* self, int argumentIndex, eccvalue_t value)
+void nscontextfn_replaceArgument(eccstate_t* self, int argumentIndex, eccvalue_t value)
 {
     if(self->environment->hashmap[2].value.type == ECC_VALTYPE_OBJECT)
     {
@@ -157,63 +152,63 @@ void ctxfn_replaceArgument(eccstate_t* self, int argumentIndex, eccvalue_t value
         self->environment->hashmap[argumentIndex + 3].value = value;
 }
 
-eccvalue_t ctxfn_this(eccstate_t* self)
+eccvalue_t nscontextfn_this(eccstate_t* self)
 {
     self->textIndex = ECC_CTXINDEXTYPE_THIS;
     return self->thisvalue;
 }
 
-void ctxfn_assertThisType(eccstate_t* self, eccvaltype_t type)
+void nscontextfn_assertThisType(eccstate_t* self, eccvaltype_t type)
 {
     if(self->thisvalue.type != type)
     {
-        ctxfn_setTextIndex(self, ECC_CTXINDEXTYPE_THIS);
-        ctxfn_typeError(self, ECCNSChars.create("'this' is not a %s", ECCNSValue.typeName(type)));
+        nscontextfn_setTextIndex(self, ECC_CTXINDEXTYPE_THIS);
+        nscontextfn_typeError(self, ECCNSChars.create("'this' is not a %s", ECCNSValue.typeName(type)));
     }
 }
 
-void ctxfn_assertThisMask(eccstate_t* self, eccvalmask_t mask)
+void nscontextfn_assertThisMask(eccstate_t* self, eccvalmask_t mask)
 {
     if(!(self->thisvalue.type & mask))
     {
-        ctxfn_setTextIndex(self, ECC_CTXINDEXTYPE_THIS);
-        ctxfn_typeError(self, ECCNSChars.create("'this' is not a %s", ECCNSValue.maskName(mask)));
+        nscontextfn_setTextIndex(self, ECC_CTXINDEXTYPE_THIS);
+        nscontextfn_typeError(self, ECCNSChars.create("'this' is not a %s", ECCNSValue.maskName(mask)));
     }
 }
 
-void ctxfn_assertThisCoerciblePrimitive(eccstate_t* self)
+void nscontextfn_assertThisCoerciblePrimitive(eccstate_t* self)
 {
     if(self->thisvalue.type == ECC_VALTYPE_UNDEFINED || self->thisvalue.type == ECC_VALTYPE_NULL)
     {
-        ctxfn_setTextIndex(self, ECC_CTXINDEXTYPE_THIS);
-        ctxfn_typeError(self, ECCNSChars.create("'this' cannot be null or undefined"));
+        nscontextfn_setTextIndex(self, ECC_CTXINDEXTYPE_THIS);
+        nscontextfn_typeError(self, ECCNSChars.create("'this' cannot be null or undefined"));
     }
 }
 
-void ctxfn_setText(eccstate_t* self, const ecctextstring_t* text)
+void nscontextfn_setText(eccstate_t* self, const ecctextstring_t* text)
 {
     self->textIndex = ECC_CTXINDEXTYPE_SAVED;
     self->text = text;
 }
 
-void ctxfn_setTexts(eccstate_t* self, const ecctextstring_t* text, const ecctextstring_t* textAlt)
+void nscontextfn_setTexts(eccstate_t* self, const ecctextstring_t* text, const ecctextstring_t* textAlt)
 {
     self->textIndex = ECC_CTXINDEXTYPE_SAVED;
     self->text = text;
     self->textAlt = textAlt;
 }
 
-void ctxfn_setTextIndex(eccstate_t* self, eccctxindextype_t index)
+void nscontextfn_setTextIndex(eccstate_t* self, eccctxindextype_t index)
 {
     self->textIndex = index;
 }
 
-void ctxfn_setTextIndexArgument(eccstate_t* self, int argument)
+void nscontextfn_setTextIndexArgument(eccstate_t* self, int argument)
 {
     self->textIndex = argument + 4;
 }
 
-ecctextstring_t ctxfn_textSeek(eccstate_t* self)
+ecctextstring_t nscontextfn_textSeek(eccstate_t* self)
 {
     const char* bytes;
     eccstate_t seek = *self;
@@ -296,13 +291,13 @@ ecctextstring_t ctxfn_textSeek(eccstate_t* self)
     return seek.ops->text;
 }
 
-void ctxfn_rewindStatement(eccstate_t* context)
+void nscontextfn_rewindStatement(eccstate_t* context)
 {
     while(!(context->ops->text.flags & ECC_TEXTFLAG_BREAKFLAG))
         --context->ops;
 }
 
-void ctxfn_printBacktrace(eccstate_t* context)
+void nscontextfn_printBacktrace(eccstate_t* context)
 {
     int depth = context->depth, count, skip;
     eccstate_t frame;
@@ -341,7 +336,7 @@ void ctxfn_printBacktrace(eccstate_t* context)
     }
 }
 
-eccobject_t* ctxfn_environmentRoot(eccstate_t* context)
+eccobject_t* nscontextfn_environmentRoot(eccstate_t* context)
 {
     eccobject_t* environment = context->strictMode ? context->environment : &context->ecc->global->environment;
 

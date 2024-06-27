@@ -25,16 +25,16 @@
 
 #define PRINT_MAX 2048
 
-static void setup(void);
-static void teardown(void);
-static void print(const char* format, ...);
-static void printColor(eccenvcolor_t color, eccenvattribute_t attribute, const char* format, ...);
-static void printError(int typeLength, const char* type, const char* format, ...);
-static void printWarning(const char* format, ...);
-static void newline(void);
-static double currentTime(void);
+static void nsenvfn_setup(void);
+static void nsenvfn_teardown(void);
+static void nsenvfn_print(const char* format, ...);
+static void nsenvfn_printColor(eccenvcolor_t color, eccenvattribute_t attribute, const char* format, ...);
+static void nsenvfn_printError(int typeLength, const char* type, const char* format, ...);
+static void nsenvfn_printWarning(const char* format, ...);
+static void nsenvfn_newline(void);
+static double nsenvfn_currentTime(void);
 const struct eccpseudonsenv_t ECCNSEnv = {
-    setup, teardown, print, printColor, printError, printWarning, newline, currentTime,
+    nsenvfn_setup, nsenvfn_teardown, nsenvfn_print, nsenvfn_printColor, nsenvfn_printError, nsenvfn_printWarning, nsenvfn_newline, nsenvfn_currentTime,
     {}
 };
 
@@ -53,7 +53,7 @@ static struct
 #endif
 } env;
 
-void setup(void)
+void nsenvfn_setup(void)
 {
     srand((unsigned)time(NULL));
 
@@ -73,7 +73,7 @@ void setup(void)
 #endif
 }
 
-void teardown(void)
+void nsenvfn_teardown(void)
 {
 #if __MSDOS__
     textattr(env.attribute);
@@ -82,10 +82,10 @@ void teardown(void)
     SetConsoleTextAttribute(env.console, env.attribute);
 #endif
 
-    newline();
+    nsenvfn_newline();
 }
 
-static void textc(eccenvcolor_t c, eccenvattribute_t a)
+static void eccenv_textc(eccenvcolor_t c, eccenvattribute_t a)
 {
 #if __MSDOS__ || _WIN32
     if(a == ECC_ENVATTR_INVISIBLE)
@@ -119,7 +119,7 @@ static void textc(eccenvcolor_t c, eccenvattribute_t a)
 #endif
 }
 
-static void vprintc(const char* format, va_list ap)
+static void eccenv_vprintc(const char* format, va_list ap)
 {
     char buffer[PRINT_MAX];
     size_t size = sizeof(buffer);
@@ -141,59 +141,59 @@ static void vprintc(const char* format, va_list ap)
 #endif
 }
 
-void print(const char* format, ...)
+void nsenvfn_print(const char* format, ...)
 {
     va_list ap;
 
     va_start(ap, format);
-    vprintc(format, ap);
+    eccenv_vprintc(format, ap);
     va_end(ap);
 }
 
-void printColor(eccenvcolor_t color, eccenvattribute_t attribute, const char* format, ...)
+void nsenvfn_printColor(eccenvcolor_t color, eccenvattribute_t attribute, const char* format, ...)
 {
     va_list ap;
 
     va_start(ap, format);
-    textc(color, attribute);
-    vprintc(format, ap);
-    textc(0, 0);
+    eccenv_textc(color, attribute);
+    eccenv_vprintc(format, ap);
+    eccenv_textc(0, 0);
     va_end(ap);
 }
 
-void printError(int typeLength, const char* type, const char* format, ...)
+void nsenvfn_printError(int typeLength, const char* type, const char* format, ...)
 {
     va_list ap;
 
-    printColor(ECC_COLOR_RED, ECC_ENVATTR_BOLD, "%.*s", typeLength, type);
-    print(": ");
+    nsenvfn_printColor(ECC_COLOR_RED, ECC_ENVATTR_BOLD, "%.*s", typeLength, type);
+    nsenvfn_print(": ");
 
     va_start(ap, format);
-    textc(0, ECC_ENVATTR_BOLD);
-    vprintc(format, ap);
-    textc(0, 0);
+    eccenv_textc(0, ECC_ENVATTR_BOLD);
+    eccenv_vprintc(format, ap);
+    eccenv_textc(0, 0);
     va_end(ap);
 
-    newline();
+    nsenvfn_newline();
 }
 
-void printWarning(const char* format, ...)
+void nsenvfn_printWarning(const char* format, ...)
 {
     va_list ap;
 
-    printColor(ECC_COLOR_YELLOW, ECC_ENVATTR_BOLD, "Warning");
-    print(": ");
+    nsenvfn_printColor(ECC_COLOR_YELLOW, ECC_ENVATTR_BOLD, "Warning");
+    nsenvfn_print(": ");
 
     va_start(ap, format);
-    textc(0, ECC_ENVATTR_BOLD);
-    vprintc(format, ap);
-    textc(0, 0);
+    eccenv_textc(0, ECC_ENVATTR_BOLD);
+    eccenv_vprintc(format, ap);
+    eccenv_textc(0, 0);
     va_end(ap);
 
-    newline();
+    nsenvfn_newline();
 }
 
-void newline()
+void nsenvfn_newline()
 {
 #if __MSDOS__ || _WIN32
     putc('\r', stderr);
@@ -201,7 +201,7 @@ void newline()
     putc('\n', stderr);
 }
 
-double currentTime()
+double nsenvfn_currentTime()
 {
 #if _WIN32
     struct _timeb timebuffer;

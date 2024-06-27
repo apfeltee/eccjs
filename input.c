@@ -10,19 +10,19 @@
 // MARK: - Private
 
 // MARK: - Static Members
-eccioinput_t* ecc_input_create(void);
-static eccioinput_t* createFromFile(const char* filename);
-static eccioinput_t* createFromBytes(const char* bytes, uint32_t length, const char* name, ...);
-static void destroy(eccioinput_t*);
-static void printText(eccioinput_t*, ecctextstring_t text, int32_t ofLine, ecctextstring_t ofText, const char* ofInput, int fullLine);
-static int32_t findLine(eccioinput_t*, ecctextstring_t text);
-static eccvalue_t attachValue(eccioinput_t*, eccvalue_t value);
+eccioinput_t* eccinput_create(void);
+static eccioinput_t* nsinputfn_createFromFile(const char* filename);
+static eccioinput_t* nsinputfn_createFromBytes(const char* bytes, uint32_t length, const char* name, ...);
+static void nsinputfn_destroy(eccioinput_t*);
+static void nsinputfn_printText(eccioinput_t*, ecctextstring_t text, int32_t ofLine, ecctextstring_t ofText, const char* ofInput, int fullLine);
+static int32_t nsinputfn_findLine(eccioinput_t*, ecctextstring_t text);
+static eccvalue_t nsinputfn_attachValue(eccioinput_t*, eccvalue_t value);
 const struct eccpseudonsinput_t ECCNSInput = {
-    createFromFile, createFromBytes, destroy, printText, findLine, attachValue,
+    nsinputfn_createFromFile, nsinputfn_createFromBytes, nsinputfn_destroy, nsinputfn_printText, nsinputfn_findLine, nsinputfn_attachValue,
     {}
 };
 
-eccioinput_t* ecc_input_create(void)
+eccioinput_t* eccinput_create(void)
 {
     size_t linesBytes;
     eccioinput_t* self = malloc(sizeof(*self));
@@ -35,7 +35,7 @@ eccioinput_t* ecc_input_create(void)
     return self;
 }
 
-static void printInput(const char* name, uint16_t line)
+static void eccinput_printInput(const char* name, uint16_t line)
 {
     if(name[0] == '(')
         ECCNSEnv.printColor(0, ECC_ENVATTR_DIM, "%s", name);
@@ -47,7 +47,7 @@ static void printInput(const char* name, uint16_t line)
 
 // MARK: - Methods
 
-eccioinput_t* createFromFile(const char* filename)
+eccioinput_t* nsinputfn_createFromFile(const char* filename)
 {
     ecctextstring_t inputError = ECC_ConstString_InputErrorName;
     FILE* file;
@@ -70,7 +70,7 @@ eccioinput_t* createFromFile(const char* filename)
         return NULL;
     }
 
-    self = ecc_input_create();
+    self = eccinput_create();
 
     strncat(self->name, filename, sizeof(self->name) - 1);
     self->bytes = malloc(size + 1);
@@ -85,13 +85,13 @@ eccioinput_t* createFromFile(const char* filename)
     return self;
 }
 
-eccioinput_t* createFromBytes(const char* bytes, uint32_t length, const char* name, ...)
+eccioinput_t* nsinputfn_createFromBytes(const char* bytes, uint32_t length, const char* name, ...)
 {
     eccioinput_t* self;
 
     assert(bytes);
 
-    self = ecc_input_create();
+    self = eccinput_create();
 
     if(name)
     {
@@ -108,7 +108,7 @@ eccioinput_t* createFromBytes(const char* bytes, uint32_t length, const char* na
     return self;
 }
 
-void destroy(eccioinput_t* self)
+void nsinputfn_destroy(eccioinput_t* self)
 {
     assert(self);
 
@@ -118,7 +118,7 @@ void destroy(eccioinput_t* self)
     free(self), self = NULL;
 }
 
-void printText(eccioinput_t* self, ecctextstring_t text, int32_t ofLine, ecctextstring_t ofText, const char* ofInput, int fullLine)
+void nsinputfn_printText(eccioinput_t* self, ecctextstring_t text, int32_t ofLine, ecctextstring_t ofText, const char* ofInput, int fullLine)
 {
     int32_t line = -1;
     const char* bytes = NULL;
@@ -128,14 +128,14 @@ void printText(eccioinput_t* self, ecctextstring_t text, int32_t ofLine, ecctext
     {
         bytes = ofText.bytes;
         length = ofText.length;
-        printInput(ofInput ? ofInput : "native code", ofLine ? ofLine : 1);
+        eccinput_printInput(ofInput ? ofInput : "native code", ofLine ? ofLine : 1);
     }
     else if(!self)
-        printInput(ofInput ? ofInput : "(unknown input)", 0);
+        eccinput_printInput(ofInput ? ofInput : "(unknown input)", 0);
     else
     {
-        line = findLine(self, text);
-        printInput(ofInput ? ofInput : self->name, line > 0 ? line : 0);
+        line = nsinputfn_findLine(self, text);
+        eccinput_printInput(ofInput ? ofInput : self->name, line > 0 ? line : 0);
 
         if(line > 0)
         {
@@ -215,7 +215,7 @@ void printText(eccioinput_t* self, ecctextstring_t text, int32_t ofLine, ecctext
     ECCNSEnv.newline();
 }
 
-int32_t findLine(eccioinput_t* self, ecctextstring_t text)
+int32_t nsinputfn_findLine(eccioinput_t* self, ecctextstring_t text)
 {
     uint16_t line = self->lineCount + 1;
     while(line--)
@@ -225,7 +225,7 @@ int32_t findLine(eccioinput_t* self, ecctextstring_t text)
     return -1;
 }
 
-eccvalue_t attachValue(eccioinput_t* self, eccvalue_t value)
+eccvalue_t nsinputfn_attachValue(eccioinput_t* self, eccvalue_t value)
 {
     if(value.type == ECC_VALTYPE_CHARS)
         value.data.chars->referenceCount++;

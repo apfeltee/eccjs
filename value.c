@@ -125,6 +125,105 @@ const struct eccpseudonsvalue_t ECCNSValue =
     ECCValConstNone
 };
 
+/*
+* 'floor*' lifted from musl-libc, because the builtins break during
+* aggressive optimization (-march=native -ffast-math -Ofast...)
+* -----
+* fp_force_eval ensures that the input value is computed when that's
+* otherwise unused.  To prevent the constant folding of the input
+* expression, an additional fp_barrier may be needed or a compilation
+* mode that does so (e.g. -frounding-math in gcc). Then it can be
+* used to evaluate an expression for its fenv side-effects only.
+*/
+
+#ifndef fp_force_evalf
+#define fp_force_evalf fp_force_evalf
+void fp_force_evalf(float x)
+{
+    volatile float y;
+    y = x;
+}
+#endif
+
+#ifndef fp_force_eval
+#define fp_force_eval fp_force_eval
+void fp_force_eval(double x)
+{
+    volatile double y;
+    y = x;
+}
+#endif
+
+#ifndef fp_force_evall
+#define fp_force_evall fp_force_evall
+void fp_force_evall(long double x)
+{
+    volatile long double y;
+    y = x;
+}
+#endif
+
+#define FORCE_EVAL(x) \
+    do \
+    { \
+        if(sizeof(x) == sizeof(float)) \
+        { \
+            fp_force_evalf(x);\
+        } \
+        else if (sizeof(x) == sizeof(double)) \
+        { \
+            fp_force_eval(x);\
+        } \
+        else \
+        { \
+            fp_force_evall(x);\
+        } \
+    } while (0)
+
+
+#if FLT_EVAL_METHOD==0 || FLT_EVAL_METHOD==1
+    #define EPS DBL_EPSILON
+#elif FLT_EVAL_METHOD==2
+    #define EPS LDBL_EPSILON
+#endif
+static const double_t toint = 1/EPS;
+
+double eccutil_mathfloor(double x)
+{
+    int e;
+    double_t y;
+    union {
+        double f;
+        uint64_t i;
+    } u = {x};
+    e = u.i >> 52 & 0x7ff;
+    if (e >= 0x3ff+52 || x == 0)
+    {
+        return x;
+    }
+    /* y = int(x) - x, where int(x) is an integer neighbor of x */
+    if (u.i >> 63)
+    {
+        y = x - toint + toint - x;
+    }
+    else
+    {
+        y = x + toint - toint - x;
+    }
+    /* special case because of non-nearest rounding modes */
+    if (e <= 0x3ff-1)
+    {
+        FORCE_EVAL(y);
+        return u.i >> 63 ? -1 : 0;
+    }
+    if (y > 0)
+    {
+        return x + y - 1;
+    }
+    return x + y;
+}
+
+
 eccvalue_t nsvaluefn_truth(int truth)
 {
     return (eccvalue_t){
@@ -465,13 +564,17 @@ eccvalue_t nsvaluefn_toInteger(eccstate_t* context, eccvalue_t value)
 
     binary = fmod(binary, modulus);
     if(binary >= 0)
-        binary = floor(binary);
+    {
+        binary = eccutil_mathfloor(binary);
+    }
     else
+    {
         binary = ceil(binary) + modulus;
-
+    }
     if(binary > INT32_MAX)
+    {
         return nsvaluefn_integer(binary - modulus);
-
+    }
     return nsvaluefn_integer(binary);
 }
 
@@ -837,7 +940,7 @@ eccvalue_t nsvaluefn_subtract(eccstate_t* context, eccvalue_t a, eccvalue_t b)
     return nsvaluefn_binary(nsvaluefn_toBinary(context, a).data.binary - nsvaluefn_toBinary(context, b).data.binary);
 }
 
-static eccvalue_t compare(eccstate_t* context, eccvalue_t a, eccvalue_t b)
+static eccvalue_t eccvalue_compare(eccstate_t* context, eccvalue_t a, eccvalue_t b)
 {
     a = nsvaluefn_toPrimitive(context, a, ECC_VALHINT_NUMBER);
     ECCNSContext.setTextIndex(context, ECC_CTXINDECTYPE_SAVEDINDEXALT);
@@ -865,7 +968,7 @@ static eccvalue_t compare(eccstate_t* context, eccvalue_t a, eccvalue_t b)
 
 eccvalue_t nsvaluefn_less(eccstate_t* context, eccvalue_t a, eccvalue_t b)
 {
-    a = compare(context, a, b);
+    a = eccvalue_compare(context, a, b);
     if(a.type == ECC_VALTYPE_UNDEFINED)
         return ECCValConstFalse;
     return a;
@@ -873,7 +976,7 @@ eccvalue_t nsvaluefn_less(eccstate_t* context, eccvalue_t a, eccvalue_t b)
 
 eccvalue_t nsvaluefn_more(eccstate_t* context, eccvalue_t a, eccvalue_t b)
 {
-    a = compare(context, b, a);
+    a = eccvalue_compare(context, b, a);
     if(a.type == ECC_VALTYPE_UNDEFINED)
         return ECCValConstFalse;
     return a;
@@ -881,7 +984,7 @@ eccvalue_t nsvaluefn_more(eccstate_t* context, eccvalue_t a, eccvalue_t b)
 
 eccvalue_t nsvaluefn_lessOrEqual(eccstate_t* context, eccvalue_t a, eccvalue_t b)
 {
-    a = compare(context, b, a);
+    a = eccvalue_compare(context, b, a);
     if(a.type == ECC_VALTYPE_UNDEFINED || a.type == ECC_VALTYPE_TRUE)
         return ECCValConstFalse;
     return ECCValConstTrue;
@@ -889,7 +992,7 @@ eccvalue_t nsvaluefn_lessOrEqual(eccstate_t* context, eccvalue_t a, eccvalue_t b
 
 eccvalue_t nsvaluefn_moreOrEqual(eccstate_t* context, eccvalue_t a, eccvalue_t b)
 {
-    a = compare(context, a, b);
+    a = eccvalue_compare(context, a, b);
     if(a.type == ECC_VALTYPE_UNDEFINED || a.type == ECC_VALTYPE_TRUE)
         return ECCValConstFalse;
     return ECCValConstTrue;

@@ -94,40 +94,65 @@ const eccobjinterntype_t ECC_Type_Object = {
 
 // MARK: - Static Members
 
-static inline uint16_t eccobject_getSlot(const eccobject_t* const self, const eccindexkey_t key)
+static uint16_t eccobject_getSlot(const eccobject_t* const self, const eccindexkey_t key)
 {
     return self->hashmap[self->hashmap[self->hashmap[self->hashmap[1].slot[key.data.depth[0]]].slot[key.data.depth[1]]].slot[key.data.depth[2]]].slot[key.data.depth[3]];
 }
 
-static inline uint32_t eccobject_getIndexOrKey(eccvalue_t property, eccindexkey_t* key)
+static uint32_t eccobject_getIndexOrKey(eccvalue_t property, eccindexkey_t* key)
 {
-    uint32_t index = UINT32_MAX;
-
+    bool isbin;
+    bool issame;
+    bool abovezero;
+    bool belomax;
+    uint32_t index;
+    index = UINT32_MAX;
     assert(ECCNSValue.isPrimitive(property));
-
     if(property.type == ECC_VALTYPE_KEY)
+    {
         *key = property.data.key;
+    }
     else
     {
         if(property.type == ECC_VALTYPE_INTEGER && property.data.integer >= 0)
-            index = property.data.integer;
-        else if(property.type == ECC_VALTYPE_BINARY && property.data.binary >= 0 && property.data.binary < UINT32_MAX
-                && property.data.binary == (uint32_t)property.data.binary)
-            index = property.data.binary;
-        else if(ECCNSValue.isString(property))
         {
-            ecctextstring_t text = ECCNSValue.textOf(&property);
-            if((index = ECCNSLexer.scanElement(text)) == UINT32_MAX)
-                *key = ECCNSKey.makeWithText(text, ECC_INDEXFLAG_COPYONCREATE);
+            index = property.data.integer;
         }
         else
-            return eccobject_getIndexOrKey(ECCNSValue.toString(NULL, property), key);
+        {
+            abovezero = false;
+            belomax = false;
+            issame = false;
+            isbin = (property.type == ECC_VALTYPE_BINARY);
+            if(isbin)
+            {
+                abovezero = (property.data.binary >= 0);
+                belomax = (property.data.binary < UINT32_MAX);
+                /*
+                * NOTE: this *will* break when using '-march=native' and '-ffast-math' mode.
+                * it emits illegal instructions. but i have no clue why.
+                */
+                issame = (((float)property.data.binary) == ((uint32_t)property.data.binary));
+            }
+            if(isbin && abovezero && belomax && issame)
+            {
+                index = property.data.binary;
+            }
+            else if(ECCNSValue.isString(property))
+            {
+                ecctextstring_t text = ECCNSValue.textOf(&property);
+                if((index = ECCNSLexer.scanElement(text)) == UINT32_MAX)
+                    *key = ECCNSKey.makeWithText(text, ECC_INDEXFLAG_COPYONCREATE);
+            }
+            else
+                return eccobject_getIndexOrKey(ECCNSValue.toString(NULL, property), key);
+        }
     }
 
     return index;
 }
 
-static inline eccindexkey_t eccobject_keyOfIndex(uint32_t index, int create)
+static eccindexkey_t eccobject_keyOfIndex(uint32_t index, int create)
 {
     char buffer[10 + 1];
     uint16_t length;
@@ -139,7 +164,7 @@ static inline eccindexkey_t eccobject_keyOfIndex(uint32_t index, int create)
         return ECCNSKey.search(ECCNSText.make(buffer, length));
 }
 
-static inline uint32_t eccobject_nextPowerOfTwo(uint32_t v)
+static uint32_t eccobject_nextPowerOfTwo(uint32_t v)
 {
     v--;
     v |= v >> 1;
@@ -151,7 +176,7 @@ static inline uint32_t eccobject_nextPowerOfTwo(uint32_t v)
     return v;
 }
 
-static inline uint32_t eccobject_elementCount(eccobject_t* self)
+static uint32_t eccobject_elementCount(eccobject_t* self)
 {
     if(self->elementCount < io_libecc_object_ElementMax)
         return self->elementCount;

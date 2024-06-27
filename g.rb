@@ -6,9 +6,10 @@ require 'optparse'
 IGNNAMES = %w(__bswap_16 __bswap_32 __uint16_identity __uint32_identity __uint64_identity)
 
 source = <<__eos__
-    setup,
-    teardown,
-    create,
+
+
+    make, join, character, nextCharacter, prevCharacter, advance, toUTF16Length, toUTF16, toLower, toUpper, isSpace, isDigit, isWord, isLineFeed,
+
 __eos__
 
 def readsymsfrom(file, opts)

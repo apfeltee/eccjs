@@ -9,46 +9,46 @@
 
 // MARK: - Private
 
-static void mark(eccobject_t* object);
-static void capture(eccobject_t* object);
-static void finalize(eccobject_t* object);
+static void eccstringtypefn_mark(eccobject_t* object);
+static void eccstringtypefn_capture(eccobject_t* object);
+static void eccstringtypefn_finalize(eccobject_t* object);
 
 eccobject_t* ECC_Prototype_String = NULL;
 eccobjfunction_t* ECC_CtorFunc_String = NULL;
 
 const eccobjinterntype_t ECC_Type_String = {
     .text = &ECC_ConstString_StringType,
-    .mark = mark,
-    .capture = capture,
-    .finalize = finalize,
+    .mark = eccstringtypefn_mark,
+    .capture = eccstringtypefn_capture,
+    .finalize = eccstringtypefn_finalize,
 };
 
-static void setup(void);
-static void teardown(void);
-static eccobjstring_t* create(ecccharbuffer_t*);
-static eccvalue_t valueAtIndex(eccobjstring_t*, int32_t index);
-static ecctextstring_t textAtIndex(const char* chars, int32_t length, int32_t index, int enableReverse);
-static int32_t unitIndex(const char* chars, int32_t max, int32_t unit);
+static void nsstringfn_setup(void);
+static void nsstringfn_teardown(void);
+static eccobjstring_t* nsstringfn_create(ecccharbuffer_t*);
+static eccvalue_t nsstringfn_valueAtIndex(eccobjstring_t*, int32_t index);
+static ecctextstring_t nsstringfn_textAtIndex(const char* chars, int32_t length, int32_t index, int enableReverse);
+static int32_t nsstringfn_unitIndex(const char* chars, int32_t max, int32_t unit);
 const struct eccpseudonsstring_t ECCNSString = {
-    setup, teardown, create, valueAtIndex, textAtIndex, unitIndex,
+    nsstringfn_setup, nsstringfn_teardown, nsstringfn_create, nsstringfn_valueAtIndex, nsstringfn_textAtIndex, nsstringfn_unitIndex,
     {}
 };
 
-static void mark(eccobject_t* object)
+static void eccstringtypefn_mark(eccobject_t* object)
 {
     eccobjstring_t* self = (eccobjstring_t*)object;
 
     ECCNSMemoryPool.markValue(ECCNSValue.chars(self->value));
 }
 
-static void capture(eccobject_t* object)
+static void eccstringtypefn_capture(eccobject_t* object)
 {
     eccobjstring_t* self = (eccobjstring_t*)object;
 
     ++self->value->referenceCount;
 }
 
-static void finalize(eccobject_t* object)
+static void eccstringtypefn_finalize(eccobject_t* object)
 {
     eccobjstring_t* self = (eccobjstring_t*)object;
 
@@ -84,7 +84,7 @@ static eccvalue_t objstringfn_charAt(eccstate_t* context)
     length = ECCNSValue.stringLength(&context->thisvalue);
     index = ECCNSValue.toInteger(context, ECCNSContext.argument(context, 0)).data.integer;
 
-    text = textAtIndex(chars, length, index, 0);
+    text = nsstringfn_textAtIndex(chars, length, index, 0);
     if(!text.length)
         return ECCNSValue.text(&ECC_ConstString_Empty);
     else
@@ -124,7 +124,7 @@ static eccvalue_t objstringfn_charCodeAt(eccstate_t* context)
     length = ECCNSValue.stringLength(&context->thisvalue);
     index = ECCNSValue.toInteger(context, ECCNSContext.argument(context, 0)).data.integer;
 
-    text = textAtIndex(chars, length, index, 0);
+    text = nsstringfn_textAtIndex(chars, length, index, 0);
     if(!text.length)
         return ECCNSValue.binary(NAN);
     else
@@ -184,7 +184,7 @@ static eccvalue_t objstringfn_indexOf(eccstate_t* context)
     if(index < 0)
         index = 0;
 
-    text = textAtIndex(chars, length, index, 0);
+    text = nsstringfn_textAtIndex(chars, length, index, 0);
     if(text.flags & ECC_TEXTFLAG_BREAKFLAG)
     {
         ECCNSText.nextCharacter(&text);
@@ -222,11 +222,11 @@ static eccvalue_t objstringfn_lastIndexOf(eccstate_t* context)
     searchLength = ECCNSValue.stringLength(&search);
 
     start = ECCNSValue.toBinary(context, ECCNSContext.argument(context, 1));
-    index = unitIndex(chars, length, length);
+    index = nsstringfn_unitIndex(chars, length, length);
     if(!isnan(start.data.binary) && start.data.binary < index)
         index = start.data.binary < 0 ? 0 : start.data.binary;
 
-    text = textAtIndex(chars, length, index, 0);
+    text = nsstringfn_textAtIndex(chars, length, index, 0);
     if(text.flags & ECC_TEXTFLAG_BREAKFLAG)
         --index;
 
@@ -291,7 +291,7 @@ static eccvalue_t objstringfn_match(eccstate_t* context)
     {
         const char* bytes = ECCNSValue.stringBytes(&context->thisvalue);
         int32_t length = ECCNSValue.stringLength(&context->thisvalue);
-        ecctextstring_t text = textAtIndex(bytes, length, 0, 0);
+        ecctextstring_t text = nsstringfn_textAtIndex(bytes, length, 0, 0);
         const char* capture[regexp->count * 2];
         const char* strindex[regexp->count * 2];
         eccobject_t* array = ECCNSArray.create();
@@ -351,38 +351,31 @@ static eccvalue_t objstringfn_match(eccstate_t* context)
 }
 
 static void
-replaceText(eccappendbuffer_t* chars, ecctextstring_t replace, ecctextstring_t before, ecctextstring_t match, ecctextstring_t after, int count, const char* capture[])
+eccstring_replace(eccappendbuffer_t* chars, ecctextstring_t replace, ecctextstring_t before, ecctextstring_t match, ecctextstring_t after, int count, const char* dcap[])
 {
     ecctextchar_t c;
 
     while(replace.length)
     {
         c = ECCNSText.character(replace);
-
         if(c.codepoint == '$')
         {
             int index;
-
             ECCNSText.advance(&replace, 1);
-
             switch(ECCNSText.character(replace).codepoint)
             {
                 case '$':
                     ECCNSChars.append(chars, "$");
                     break;
-
                 case '&':
                     ECCNSChars.append(chars, "%.*s", match.length, match.bytes);
                     break;
-
                 case '`':
                     ECCNSChars.append(chars, "%.*s", before.length, before.bytes);
                     break;
-
                 case '\'':
                     ECCNSChars.append(chars, "%.*s", after.length, after.bytes);
                     break;
-
                 case '0':
                 case '1':
                 case '2':
@@ -402,11 +395,11 @@ replaceText(eccappendbuffer_t* chars, ecctextstring_t replace, ecctextstring_t b
                                 index = index * 10 + replace.bytes[1] - '0';
                                 ECCNSText.advance(&replace, 1);
                             }
-                            if(capture && index && index < count)
+                            if(dcap && index && index < count)
                             {
-                                if(capture[index * 2])
+                                if(dcap[index * 2])
                                 {
-                                    ECCNSChars.append(chars, "%.*s", capture[index * 2 + 1] - capture[index * 2], capture[index * 2]);
+                                    ECCNSChars.append(chars, "%.*s", dcap[index * 2 + 1] - dcap[index * 2], dcap[index * 2]);
                                 }
                                 else
                                 {
@@ -440,24 +433,19 @@ static eccvalue_t objstringfn_replace(eccstate_t* context)
     ecctextstring_t text;
     const char *bytes, *searchBytes;
     int32_t length, searchLength;
-
     ECCNSContext.assertThisCoerciblePrimitive(context);
-
     context->thisvalue = ECCNSValue.toString(context, ECCNSContext.getThis(context));
     bytes = ECCNSValue.stringBytes(&context->thisvalue);
     length = ECCNSValue.stringLength(&context->thisvalue);
     text = ECCNSText.make(bytes, length);
-
     value = ECCNSContext.argument(context, 0);
     if(value.type == ECC_VALTYPE_REGEXP)
         regexp = value.data.regexp;
     else
         value = ECCNSValue.toString(context, value);
-
     replace = ECCNSContext.argument(context, 1);
     if(replace.type != ECC_VALTYPE_FUNCTION)
         replace = ECCNSValue.toString(context, replace);
-
     if(regexp)
     {
         const char* capture[regexp->count * 2];
@@ -494,7 +482,7 @@ static eccvalue_t objstringfn_replace(eccstate_t* context)
                     ECCNSChars.append(&chars, "%.*s", ECCNSValue.stringLength(&result), ECCNSValue.stringBytes(&result));
                 }
                 else
-                    replaceText(&chars, ECCNSText.make(ECCNSValue.stringBytes(&replace), ECCNSValue.stringLength(&replace)),
+                    eccstring_replace(&chars, ECCNSText.make(ECCNSValue.stringBytes(&replace), ECCNSValue.stringLength(&replace)),
                                 ECCNSText.make(bytes, (int32_t)(capture[0] - bytes)), ECCNSText.make(capture[0], (int32_t)(capture[1] - capture[0])),
                                 ECCNSText.make(capture[1], (int32_t)((bytes + length) - capture[1])), regexp->count, capture);
 
@@ -546,7 +534,7 @@ static eccvalue_t objstringfn_replace(eccstate_t* context)
             ECCNSChars.append(&chars, "%.*s", ECCNSValue.stringLength(&result), ECCNSValue.stringBytes(&result));
         }
         else
-            replaceText(&chars, ECCNSText.make(ECCNSValue.stringBytes(&replace), ECCNSValue.stringLength(&replace)),
+            eccstring_replace(&chars, ECCNSText.make(ECCNSValue.stringBytes(&replace), ECCNSValue.stringLength(&replace)),
                         ECCNSText.make(text.bytes, (int32_t)(text.bytes - bytes)), ECCNSText.make(text.bytes, text.length),
                         ECCNSText.make(text.bytes, (int32_t)(length - (text.bytes - bytes))), 0, NULL);
 
@@ -574,14 +562,14 @@ static eccvalue_t objstringfn_search(eccstate_t* context)
     {
         const char* bytes = ECCNSValue.stringBytes(&context->thisvalue);
         int32_t length = ECCNSValue.stringLength(&context->thisvalue);
-        ecctextstring_t text = textAtIndex(bytes, length, 0, 0);
+        ecctextstring_t text = nsstringfn_textAtIndex(bytes, length, 0, 0);
         const char* capture[regexp->count * 2];
         const char* index[regexp->count * 2];
 
         eccrxstate_t state = { text.bytes, text.bytes + text.length, capture, index, 0 };
 
         if(ECCNSRegExp.matchWithState(regexp, &state))
-            return ECCNSValue.integer(unitIndex(bytes, length, (int32_t)(capture[0] - bytes)));
+            return ECCNSValue.integer(nsstringfn_unitIndex(bytes, length, (int32_t)(capture[0] - bytes)));
     }
     return ECCNSValue.integer(-1);
 }
@@ -607,7 +595,7 @@ static eccvalue_t objstringfn_slice(eccstate_t* context)
     else if(from.type == ECC_VALTYPE_BINARY && from.data.binary == INFINITY)
         start = ECCNSText.make(chars + length, 0);
     else
-        start = textAtIndex(chars, length, ECCNSValue.toInteger(context, from).data.integer, 1);
+        start = nsstringfn_textAtIndex(chars, length, ECCNSValue.toInteger(context, from).data.integer, 1);
 
     to = ECCNSContext.argument(context, 1);
     if(to.type == ECC_VALTYPE_UNDEFINED || (to.type == ECC_VALTYPE_BINARY && (isnan(to.data.binary) || to.data.binary == INFINITY)))
@@ -615,7 +603,7 @@ static eccvalue_t objstringfn_slice(eccstate_t* context)
     else if(to.type == ECC_VALTYPE_BINARY && to.data.binary == -INFINITY)
         end = ECCNSText.make(chars, length);
     else
-        end = textAtIndex(chars, length, ECCNSValue.toInteger(context, to).data.integer, 1);
+        end = nsstringfn_textAtIndex(chars, length, ECCNSValue.toInteger(context, to).data.integer, 1);
 
     if(start.flags & ECC_TEXTFLAG_BREAKFLAG)
         headcp = ECCNSText.nextCharacter(&start).codepoint;
@@ -827,7 +815,7 @@ static eccvalue_t objstringfn_substring(eccstate_t* context)
     else if(from.type == ECC_VALTYPE_BINARY && from.data.binary == INFINITY)
         start = ECCNSText.make(chars + length, 0);
     else
-        start = textAtIndex(chars, length, ECCNSValue.toInteger(context, from).data.integer, 0);
+        start = nsstringfn_textAtIndex(chars, length, ECCNSValue.toInteger(context, from).data.integer, 0);
 
     to = ECCNSContext.argument(context, 1);
     if(to.type == ECC_VALTYPE_UNDEFINED || (to.type == ECC_VALTYPE_BINARY && to.data.binary == INFINITY))
@@ -835,7 +823,7 @@ static eccvalue_t objstringfn_substring(eccstate_t* context)
     else if(to.type == ECC_VALTYPE_BINARY && !isfinite(to.data.binary))
         end = ECCNSText.make(chars, length);
     else
-        end = textAtIndex(chars, length, ECCNSValue.toInteger(context, to).data.integer, 0);
+        end = nsstringfn_textAtIndex(chars, length, ECCNSValue.toInteger(context, to).data.integer, 0);
 
     if(start.bytes > end.bytes)
     {
@@ -959,7 +947,7 @@ static eccvalue_t objstringfn_constructor(eccstate_t* context)
         value = ECCNSValue.toString(context, value);
 
     if(context->construct)
-        return ECCNSValue.string(create(ECCNSChars.createWithBytes(ECCNSValue.stringLength(&value), ECCNSValue.stringBytes(&value))));
+        return ECCNSValue.string(nsstringfn_create(ECCNSChars.createWithBytes(ECCNSValue.stringLength(&value), ECCNSValue.stringBytes(&value))));
     else
         return value;
 }
@@ -979,12 +967,12 @@ static eccvalue_t objstringfn_fromCharCode(eccstate_t* context)
     return ECCNSChars.endAppend(&chars);
 }
 
-static void setup()
+static void nsstringfn_setup()
 {
     const eccvalflag_t h = ECC_VALFLAG_HIDDEN;
 
     ECCNSFunction.setupBuiltinObject(&ECC_CtorFunc_String, objstringfn_constructor, 1, &ECC_Prototype_String,
-                                          ECCNSValue.string(create(ECCNSChars.createSized(0))), &ECC_Type_String);
+                                          ECCNSValue.string(nsstringfn_create(ECCNSChars.createSized(0))), &ECC_Type_String);
 
     ECCNSFunction.addMethod(ECC_CtorFunc_String, "fromCharCode", objstringfn_fromCharCode, -1, h);
 
@@ -1009,13 +997,13 @@ static void setup()
     ECCNSFunction.addToObject(ECC_Prototype_String, "trim", objstringfn_trim, 0, h);
 }
 
-static void teardown(void)
+static void nsstringfn_teardown(void)
 {
     ECC_Prototype_String = NULL;
     ECC_CtorFunc_String = NULL;
 }
 
-static eccobjstring_t* create(ecccharbuffer_t* chars)
+static eccobjstring_t* nsstringfn_create(ecccharbuffer_t* chars)
 {
     const eccvalflag_t r = ECC_VALFLAG_READONLY;
     const eccvalflag_t h = ECC_VALFLAG_HIDDEN;
@@ -1025,7 +1013,7 @@ static eccobjstring_t* create(ecccharbuffer_t* chars)
     *self = ECCNSString.identity;
     ECCNSMemoryPool.addObject(&self->object);
     ECCNSObject.initialize(&self->object, ECC_Prototype_String);
-    length = unitIndex(chars->bytes, chars->length, chars->length);
+    length = nsstringfn_unitIndex(chars->bytes, chars->length, chars->length);
     ECCNSObject.addMember(&self->object, ECC_ConstKey_length, ECCNSValue.integer(length), r | h | s);
     self->value = chars;
     if(length == (uint32_t)chars->length)
@@ -1035,12 +1023,12 @@ static eccobjstring_t* create(ecccharbuffer_t* chars)
     return self;
 }
 
-static eccvalue_t valueAtIndex(eccobjstring_t* self, int32_t index)
+static eccvalue_t nsstringfn_valueAtIndex(eccobjstring_t* self, int32_t index)
 {
     ecctextchar_t c;
     ecctextstring_t text;
 
-    text = textAtIndex(self->value->bytes, self->value->length, index, 0);
+    text = nsstringfn_textAtIndex(self->value->bytes, self->value->length, index, 0);
     c = ECCNSText.character(text);
 
     if(c.units <= 0)
@@ -1067,7 +1055,7 @@ static eccvalue_t valueAtIndex(eccobjstring_t* self, int32_t index)
     }
 }
 
-static ecctextstring_t textAtIndex(const char* chars, int32_t length, int32_t position, int enableReverse)
+static ecctextstring_t nsstringfn_textAtIndex(const char* chars, int32_t length, int32_t position, int enableReverse)
 {
     ecctextstring_t text = ECCNSText.make(chars, length), prev;
     ecctextchar_t c;
@@ -1110,7 +1098,7 @@ static ecctextstring_t textAtIndex(const char* chars, int32_t length, int32_t po
     return text;
 }
 
-static int32_t unitIndex(const char* chars, int32_t max, int32_t unit)
+static int32_t nsstringfn_unitIndex(const char* chars, int32_t max, int32_t unit)
 {
     ecctextstring_t text = ECCNSText.make(chars, max);
     int32_t position = 0;
