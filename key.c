@@ -49,7 +49,7 @@ eccindexkey_t ECC_ConstKey_source;
 static void nskeyfn_setup(void);
 static void nskeyfn_teardown(void);
 static eccindexkey_t nskeyfn_makeWithCString(const char* cString);
-static eccindexkey_t nskeyfn_makeWithText(const ecctextstring_t text, eccindexflags_t flags);
+static eccindexkey_t nskeyfn_makeWithText(const ecctextstring_t text, int flags);
 static eccindexkey_t nskeyfn_search(const ecctextstring_t text);
 static int nskeyfn_isEqual(eccindexkey_t, eccindexkey_t);
 static const ecctextstring_t* nskeyfn_textOf(eccindexkey_t);
@@ -71,15 +71,15 @@ static eccindexkey_t ecckey_makeWithNumber(uint16_t number)
     return key;
 }
 
-static eccindexkey_t ecckey_addWithText(const ecctextstring_t text, eccindexflags_t flags)
+static eccindexkey_t ecckey_addWithText(const ecctextstring_t text, int flags)
 {
     if(keyCount >= keyCapacity)
     {
         if(keyCapacity == UINT16_MAX)
-            ECCNSScript.fatal("No more identifier left");
+            ecc_script_fatal("No more identifier left");
 
         keyCapacity += 0xff;
-        keyPool = realloc(keyPool, keyCapacity * sizeof(*keyPool));
+        keyPool = (ecctextstring_t*)realloc(keyPool, keyCapacity * sizeof(*keyPool));
     }
     /*
     if((isdigit(text.bytes[0]) || text.bytes[0] == '-') && !isnan(ECCNSLexer.scanBinary(text, 0).data.binary))
@@ -90,10 +90,10 @@ static eccindexkey_t ecckey_addWithText(const ecctextstring_t text, eccindexflag
     */
     if(flags & ECC_INDEXFLAG_COPYONCREATE)
     {
-        char* chars = malloc(text.length + 1);
+        char* chars = (char*)malloc(text.length + 1);
         memcpy(chars, text.bytes, text.length);
         chars[text.length] = '\0';
-        charsList = realloc(charsList, sizeof(*charsList) * (charsCount + 1));
+        charsList = (char**)realloc(charsList, sizeof(*charsList) * (charsCount + 1));
         charsList[charsCount++] = chars;
         keyPool[keyCount++] = ECCNSText.make(chars, text.length);
     }
@@ -227,7 +227,7 @@ eccindexkey_t nskeyfn_makeWithCString(const char* cString)
     return nskeyfn_makeWithText(ECCNSText.make(cString, (uint16_t)strlen(cString)), 0);
 }
 
-eccindexkey_t nskeyfn_makeWithText(const ecctextstring_t text, eccindexflags_t flags)
+eccindexkey_t nskeyfn_makeWithText(const ecctextstring_t text, int flags)
 {
     eccindexkey_t key = nskeyfn_search(text);
 

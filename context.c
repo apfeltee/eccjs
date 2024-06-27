@@ -8,23 +8,23 @@
 #include "ecc.h"
 
 
-static void nscontextfn_rangeError(eccstate_t*, ecccharbuffer_t*) __attribute__((noreturn));
-static void nscontextfn_referenceError(eccstate_t*, ecccharbuffer_t*) __attribute__((noreturn));
-static void nscontextfn_syntaxError(eccstate_t*, ecccharbuffer_t*) __attribute__((noreturn));
-static void nscontextfn_typeError(eccstate_t*, ecccharbuffer_t*) __attribute__((noreturn));
-static void nscontextfn_uriError(eccstate_t*, ecccharbuffer_t*) __attribute__((noreturn));
-static void nscontextfn_throw(eccstate_t*, eccvalue_t) __attribute__((noreturn));
+static void nscontextfn_rangeError(eccstate_t*, ecccharbuffer_t*);
+static void nscontextfn_referenceError(eccstate_t*, ecccharbuffer_t*);
+static void nscontextfn_syntaxError(eccstate_t*, ecccharbuffer_t*);
+static void nscontextfn_typeError(eccstate_t*, ecccharbuffer_t*);
+static void nscontextfn_uriError(eccstate_t*, ecccharbuffer_t*);
+static void nscontextfn_throw(eccstate_t*, eccvalue_t);
 static eccvalue_t nscontextfn_callFunction(eccstate_t*, eccobjfunction_t* function, eccvalue_t thisval, int argumentCount, ...);
 static int nscontextfn_argumentCount(eccstate_t*);
 static eccvalue_t nscontextfn_argument(eccstate_t*, int argumentIndex);
 static void nscontextfn_replaceArgument(eccstate_t*, int argumentIndex, eccvalue_t value);
 static eccvalue_t nscontextfn_this(eccstate_t*);
-static void nscontextfn_assertThisType(eccstate_t*, eccvaltype_t);
-static void nscontextfn_assertThisMask(eccstate_t*, eccvalmask_t);
+static void nscontextfn_assertThisType(eccstate_t*, int);
+static void nscontextfn_assertThisMask(eccstate_t*, int);
 static void nscontextfn_assertThisCoerciblePrimitive(eccstate_t*);
 static void nscontextfn_setText(eccstate_t*, const ecctextstring_t* text);
 static void nscontextfn_setTexts(eccstate_t*, const ecctextstring_t* text, const ecctextstring_t* textAlt);
-static void nscontextfn_setTextIndex(eccstate_t*, eccctxindextype_t index);
+static void nscontextfn_setTextIndex(eccstate_t*, int index);
 static void nscontextfn_setTextIndexArgument(eccstate_t*, int argument);
 static ecctextstring_t nscontextfn_textSeek(eccstate_t*);
 static void nscontextfn_rewindStatement(eccstate_t*);
@@ -47,27 +47,27 @@ const struct eccpseudonscontext_t ECCNSContext = {
 
 void nscontextfn_rangeError(eccstate_t* self, ecccharbuffer_t* chars)
 {
-    nscontextfn_throw(self, ECCNSValue.error(ECCNSError.rangeError(nscontextfn_textSeek(self), chars)));
+    nscontextfn_throw(self, ecc_value_error(ECCNSError.rangeError(nscontextfn_textSeek(self), chars)));
 }
 
 void nscontextfn_referenceError(eccstate_t* self, ecccharbuffer_t* chars)
 {
-    nscontextfn_throw(self, ECCNSValue.error(ECCNSError.referenceError(nscontextfn_textSeek(self), chars)));
+    nscontextfn_throw(self, ecc_value_error(ECCNSError.referenceError(nscontextfn_textSeek(self), chars)));
 }
 
 void nscontextfn_syntaxError(eccstate_t* self, ecccharbuffer_t* chars)
 {
-    nscontextfn_throw(self, ECCNSValue.error(ECCNSError.syntaxError(nscontextfn_textSeek(self), chars)));
+    nscontextfn_throw(self, ecc_value_error(ECCNSError.syntaxError(nscontextfn_textSeek(self), chars)));
 }
 
 void nscontextfn_typeError(eccstate_t* self, ecccharbuffer_t* chars)
 {
-    nscontextfn_throw(self, ECCNSValue.error(ECCNSError.typeError(nscontextfn_textSeek(self), chars)));
+    nscontextfn_throw(self, ecc_value_error(ECCNSError.typeError(nscontextfn_textSeek(self), chars)));
 }
 
 void nscontextfn_uriError(eccstate_t* self, ecccharbuffer_t* chars)
 {
-    nscontextfn_throw(self, ECCNSValue.error(ECCNSError.uriError(nscontextfn_textSeek(self), chars)));
+    nscontextfn_throw(self, ecc_value_error(ECCNSError.uriError(nscontextfn_textSeek(self), chars)));
 }
 
 void nscontextfn_throw(eccstate_t * self, eccvalue_t value)
@@ -82,22 +82,22 @@ void nscontextfn_throw(eccstate_t * self, eccvalue_t value)
 
         if(value.type == ECC_VALTYPE_ERROR)
         {
-            name = ECCNSValue.toString(self, ECCNSObject.getMember(self, value.data.object, ECC_ConstKey_name));
-            message = ECCNSValue.toString(self, ECCNSObject.getMember(self, value.data.object, ECC_ConstKey_message));
+            name = ecc_value_tostring(self, ECCNSObject.getMember(self, value.data.object, ECC_ConstKey_name));
+            message = ecc_value_tostring(self, ECCNSObject.getMember(self, value.data.object, ECC_ConstKey_message));
         }
         else
-            message = ECCNSValue.toString(self, value);
+            message = ecc_value_tostring(self, value);
 
         if(name.type == ECC_VALTYPE_UNDEFINED)
-            name = ECCNSValue.text(&ECC_ConstString_ErrorName);
+            name = ecc_value_text(&ECC_ConstString_ErrorName);
 
         ECCNSEnv.newline();
-        ECCNSEnv.printError(ECCNSValue.stringLength(&name), ECCNSValue.stringBytes(&name), "%.*s", ECCNSValue.stringLength(&message), ECCNSValue.stringBytes(&message));
+        ECCNSEnv.printError(ecc_value_stringlength(&name), ecc_value_stringbytes(&name), "%.*s", ecc_value_stringlength(&message), ecc_value_stringbytes(&message));
         nscontextfn_printBacktrace(self);
-        ECCNSScript.printTextInput(self->ecc, self->ecc->text, 1);
+        ecc_script_printtextinput(self->ecc, self->ecc->text, 1);
     }
 
-    ECCNSScript.jmpEnv(self->ecc, value);
+    ecc_script_jmpenv(self->ecc, value);
 }
 
 eccvalue_t nscontextfn_callFunction(eccstate_t* self, eccobjfunction_t* function, eccvalue_t thisval, int argumentCount, ...)
@@ -158,21 +158,21 @@ eccvalue_t nscontextfn_this(eccstate_t* self)
     return self->thisvalue;
 }
 
-void nscontextfn_assertThisType(eccstate_t* self, eccvaltype_t type)
+void nscontextfn_assertThisType(eccstate_t* self, int type)
 {
     if(self->thisvalue.type != type)
     {
         nscontextfn_setTextIndex(self, ECC_CTXINDEXTYPE_THIS);
-        nscontextfn_typeError(self, ECCNSChars.create("'this' is not a %s", ECCNSValue.typeName(type)));
+        nscontextfn_typeError(self, ECCNSChars.create("'this' is not a %s", ecc_value_typename(type)));
     }
 }
 
-void nscontextfn_assertThisMask(eccstate_t* self, eccvalmask_t mask)
+void nscontextfn_assertThisMask(eccstate_t* self, int mask)
 {
     if(!(self->thisvalue.type & mask))
     {
         nscontextfn_setTextIndex(self, ECC_CTXINDEXTYPE_THIS);
-        nscontextfn_typeError(self, ECCNSChars.create("'this' is not a %s", ECCNSValue.maskName(mask)));
+        nscontextfn_typeError(self, ECCNSChars.create("'this' is not a %s", ecc_value_maskname(mask)));
     }
 }
 
@@ -198,7 +198,7 @@ void nscontextfn_setTexts(eccstate_t* self, const ecctextstring_t* text, const e
     self->textAlt = textAlt;
 }
 
-void nscontextfn_setTextIndex(eccstate_t* self, eccctxindextype_t index)
+void nscontextfn_setTextIndex(eccstate_t* self, int index)
 {
     self->textIndex = index;
 }
@@ -214,7 +214,7 @@ ecctextstring_t nscontextfn_textSeek(eccstate_t* self)
     eccstate_t seek = *self;
     uint32_t breakArray = 0, argumentCount = 0;
     ecctextstring_t callText;
-    eccctxindextype_t index;
+    int index;
     int isAccessor = 0;
 
     assert(self);
@@ -331,7 +331,7 @@ void nscontextfn_printBacktrace(eccstate_t* context)
         {
             ECCNSContext.rewindStatement(&frame);
             if(frame.ops->text.length)
-                ECCNSScript.printTextInput(frame.ecc, frame.ops->text, 0);
+                ecc_script_printtextinput(frame.ecc, frame.ops->text, 0);
         }
     }
 }

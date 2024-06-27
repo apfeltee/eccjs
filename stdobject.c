@@ -21,18 +21,18 @@ static eccobject_t* objnsfn_copy(const eccobject_t* original);
 static void objnsfn_destroy(eccobject_t*);
 static eccvalue_t objnsfn_getMember(eccstate_t*, eccobject_t*, eccindexkey_t key);
 static eccvalue_t objnsfn_putMember(eccstate_t*, eccobject_t*, eccindexkey_t key, eccvalue_t);
-static eccvalue_t* objnsfn_member(eccobject_t*, eccindexkey_t key, eccvalflag_t);
-static eccvalue_t* objnsfn_addMember(eccobject_t*, eccindexkey_t key, eccvalue_t, eccvalflag_t);
+static eccvalue_t* objnsfn_member(eccobject_t*, eccindexkey_t key, int);
+static eccvalue_t* objnsfn_addMember(eccobject_t*, eccindexkey_t key, eccvalue_t, int);
 static int objnsfn_deleteMember(eccobject_t*, eccindexkey_t key);
 static eccvalue_t objnsfn_getElement(eccstate_t*, eccobject_t*, uint32_t index);
 static eccvalue_t objnsfn_putElement(eccstate_t*, eccobject_t*, uint32_t index, eccvalue_t);
-static eccvalue_t* objnsfn_element(eccobject_t*, uint32_t index, eccvalflag_t);
-static eccvalue_t* objnsfn_addElement(eccobject_t*, uint32_t index, eccvalue_t, eccvalflag_t);
+static eccvalue_t* objnsfn_element(eccobject_t*, uint32_t index, int);
+static eccvalue_t* objnsfn_addElement(eccobject_t*, uint32_t index, eccvalue_t, int);
 static int objnsfn_deleteElement(eccobject_t*, uint32_t index);
 static eccvalue_t objnsfn_getProperty(eccstate_t*, eccobject_t*, eccvalue_t primitive);
 static eccvalue_t objnsfn_putProperty(eccstate_t*, eccobject_t*, eccvalue_t primitive, eccvalue_t);
-static eccvalue_t* objnsfn_property(eccobject_t*, eccvalue_t primitive, eccvalflag_t);
-static eccvalue_t* objnsfn_addProperty(eccobject_t*, eccvalue_t primitive, eccvalue_t, eccvalflag_t);
+static eccvalue_t* objnsfn_property(eccobject_t*, eccvalue_t primitive, int);
+static eccvalue_t* objnsfn_addProperty(eccobject_t*, eccvalue_t primitive, eccvalue_t, int);
 static int objnsfn_deleteProperty(eccobject_t*, eccvalue_t primitive);
 static eccvalue_t objnsfn_putValue(eccstate_t*, eccobject_t*, eccvalue_t*, eccvalue_t);
 static eccvalue_t objnsfn_getValue(eccstate_t*, eccobject_t*, eccvalue_t*);
@@ -107,7 +107,7 @@ static uint32_t eccobject_getIndexOrKey(eccvalue_t property, eccindexkey_t* key)
     bool belomax;
     uint32_t index;
     index = UINT32_MAX;
-    assert(ECCNSValue.isPrimitive(property));
+    assert(ecc_value_isprimitive(property));
     if(property.type == ECC_VALTYPE_KEY)
     {
         *key = property.data.key;
@@ -138,14 +138,14 @@ static uint32_t eccobject_getIndexOrKey(eccvalue_t property, eccindexkey_t* key)
             {
                 index = property.data.binary;
             }
-            else if(ECCNSValue.isString(property))
+            else if(ecc_value_isstring(property))
             {
-                ecctextstring_t text = ECCNSValue.textOf(&property);
+                ecctextstring_t text = ecc_value_textof(&property);
                 if((index = ECCNSLexer.scanElement(text)) == UINT32_MAX)
                     *key = ECCNSKey.makeWithText(text, ECC_INDEXFLAG_COPYONCREATE);
             }
             else
-                return eccobject_getIndexOrKey(ECCNSValue.toString(NULL, property), key);
+                return eccobject_getIndexOrKey(ecc_value_tostring(NULL, property), key);
         }
     }
 
@@ -191,7 +191,7 @@ static void eccobject_readonlyError(eccstate_t* context, eccvalue_t* ref, eccobj
     do
     {
         ecchashmap_t* hashmap = (ecchashmap_t*)ref;
-        eccobjelement_t* element = (eccobjelement_t*)ref;
+        ecchashitem_t* element = (ecchashitem_t*)ref;
 
         if(hashmap >= thisobj->hashmap && hashmap < thisobj->hashmap + thisobj->hashmapCount)
         {
@@ -212,7 +212,7 @@ static void eccobject_readonlyError(eccstate_t* context, eccvalue_t* ref, eccobj
 static eccobject_t* eccobject_checkObject(eccstate_t* context, int argument)
 {
     eccvalue_t value = ECCNSContext.argument(context, argument);
-    if(!ECCNSValue.isObject(value))
+    if(!ecc_value_isobject(value))
         ECCNSContext.typeError(context, ECCNSChars.create("not an object"));
 
     return value.data.object;
@@ -220,7 +220,7 @@ static eccobject_t* eccobject_checkObject(eccstate_t* context, int argument)
 
 static eccvalue_t objobjectfn_valueOf(eccstate_t* context)
 {
-    return ECCNSValue.toObject(context, ECCNSContext.getThis(context));
+    return ecc_value_toobject(context, ECCNSContext.getThis(context));
 }
 
 static eccvalue_t objobjectfn_hasOwnProperty(eccstate_t* context)
@@ -230,14 +230,14 @@ static eccvalue_t objobjectfn_hasOwnProperty(eccstate_t* context)
     eccindexkey_t key;
     uint32_t index;
 
-    self = ECCNSValue.toObject(context, ECCNSContext.getThis(context)).data.object;
-    value = ECCNSValue.toPrimitive(context, ECCNSContext.argument(context, 0), ECC_VALHINT_STRING);
+    self = ecc_value_toobject(context, ECCNSContext.getThis(context)).data.object;
+    value = ecc_value_toprimitive(context, ECCNSContext.argument(context, 0), ECC_VALHINT_STRING);
     index = eccobject_getIndexOrKey(value, &key);
 
     if(index < UINT32_MAX)
-        return ECCNSValue.truth(objnsfn_element(self, index, ECC_VALFLAG_ASOWN) != NULL);
+        return ecc_value_truth(objnsfn_element(self, index, ECC_VALFLAG_ASOWN) != NULL);
     else
-        return ECCNSValue.truth(objnsfn_member(self, key, ECC_VALFLAG_ASOWN) != NULL);
+        return ecc_value_truth(objnsfn_member(self, key, ECC_VALFLAG_ASOWN) != NULL);
 }
 
 static eccvalue_t objobjectfn_isPrototypeOf(eccstate_t* context)
@@ -246,10 +246,10 @@ static eccvalue_t objobjectfn_isPrototypeOf(eccstate_t* context)
 
     arg0 = ECCNSContext.argument(context, 0);
 
-    if(ECCNSValue.isObject(arg0))
+    if(ecc_value_isobject(arg0))
     {
         eccobject_t* v = arg0.data.object;
-        eccobject_t* o = ECCNSValue.toObject(context, ECCNSContext.getThis(context)).data.object;
+        eccobject_t* o = ecc_value_toobject(context, ECCNSContext.getThis(context)).data.object;
 
         do
             if(v == o)
@@ -266,12 +266,12 @@ static eccvalue_t objobjectfn_propertyIsEnumerable(eccstate_t* context)
     eccobject_t* object;
     eccvalue_t* ref;
 
-    value = ECCNSValue.toPrimitive(context, ECCNSContext.argument(context, 0), ECC_VALHINT_STRING);
-    object = ECCNSValue.toObject(context, ECCNSContext.getThis(context)).data.object;
+    value = ecc_value_toprimitive(context, ECCNSContext.argument(context, 0), ECC_VALHINT_STRING);
+    object = ecc_value_toobject(context, ECCNSContext.getThis(context)).data.object;
     ref = objnsfn_property(object, value, ECC_VALFLAG_ASOWN);
 
     if(ref)
-        return ECCNSValue.truth(!(ref->flags & ECC_VALFLAG_HIDDEN));
+        return ecc_value_truth(!(ref->flags & ECC_VALFLAG_HIDDEN));
     else
         return ECCValConstFalse;
 }
@@ -283,20 +283,20 @@ static eccvalue_t objobjectfn_constructor(eccstate_t* context)
     value = ECCNSContext.argument(context, 0);
 
     if(value.type == ECC_VALTYPE_NULL || value.type == ECC_VALTYPE_UNDEFINED)
-        return ECCNSValue.object(objnsfn_create(ECC_Prototype_Object));
-    else if(context->construct && ECCNSValue.isObject(value))
+        return ecc_value_object(objnsfn_create(ECC_Prototype_Object));
+    else if(context->construct && ecc_value_isobject(value))
         return value;
     else
-        return ECCNSValue.toObject(context, value);
+        return ecc_value_toobject(context, value);
 }
 
 static eccvalue_t objobjectfn_getPrototypeOf(eccstate_t* context)
 {
     eccobject_t* object;
 
-    object = ECCNSValue.toObject(context, ECCNSContext.argument(context, 0)).data.object;
+    object = ecc_value_toobject(context, ECCNSContext.argument(context, 0)).data.object;
 
-    return object->prototype ? ECCNSValue.objectValue(object->prototype) : ECCValConstUndefined;
+    return object->prototype ? ecc_value_objectvalue(object->prototype) : ECCValConstUndefined;
 }
 
 static eccvalue_t objobjectfn_getOwnPropertyDescriptor(eccstate_t* context)
@@ -305,8 +305,8 @@ static eccvalue_t objobjectfn_getOwnPropertyDescriptor(eccstate_t* context)
     eccvalue_t value;
     eccvalue_t* ref;
 
-    object = ECCNSValue.toObject(context, ECCNSContext.argument(context, 0)).data.object;
-    value = ECCNSValue.toPrimitive(context, ECCNSContext.argument(context, 1), ECC_VALHINT_STRING);
+    object = ecc_value_toobject(context, ECCNSContext.argument(context, 0)).data.object;
+    value = ecc_value_toprimitive(context, ECCNSContext.argument(context, 1), ECC_VALHINT_STRING);
     ref = objnsfn_property(object, value, ECC_VALFLAG_ASOWN);
 
     if(ref)
@@ -318,25 +318,25 @@ static eccvalue_t objobjectfn_getOwnPropertyDescriptor(eccstate_t* context)
             if(ref->flags & ECC_VALFLAG_ASDATA)
             {
                 objnsfn_addMember(result, ECC_ConstKey_value, ECCNSObject.getValue(context, object, ref), 0);
-                objnsfn_addMember(result, ECC_ConstKey_writable, ECCNSValue.truth(!(ref->flags & ECC_VALFLAG_READONLY)), 0);
+                objnsfn_addMember(result, ECC_ConstKey_writable, ecc_value_truth(!(ref->flags & ECC_VALFLAG_READONLY)), 0);
             }
             else
             {
-                objnsfn_addMember(result, ref->flags & ECC_VALFLAG_GETTER ? ECC_ConstKey_get : ECC_ConstKey_set, ECCNSValue.function(ref->data.function), 0);
+                objnsfn_addMember(result, ref->flags & ECC_VALFLAG_GETTER ? ECC_ConstKey_get : ECC_ConstKey_set, ecc_value_function(ref->data.function), 0);
                 if(ref->data.function->pair)
-                    objnsfn_addMember(result, ref->flags & ECC_VALFLAG_GETTER ? ECC_ConstKey_set : ECC_ConstKey_get, ECCNSValue.function(ref->data.function->pair), 0);
+                    objnsfn_addMember(result, ref->flags & ECC_VALFLAG_GETTER ? ECC_ConstKey_set : ECC_ConstKey_get, ecc_value_function(ref->data.function->pair), 0);
             }
         }
         else
         {
             objnsfn_addMember(result, ECC_ConstKey_value, *ref, 0);
-            objnsfn_addMember(result, ECC_ConstKey_writable, ECCNSValue.truth(!(ref->flags & ECC_VALFLAG_READONLY)), 0);
+            objnsfn_addMember(result, ECC_ConstKey_writable, ecc_value_truth(!(ref->flags & ECC_VALFLAG_READONLY)), 0);
         }
 
-        objnsfn_addMember(result, ECC_ConstKey_enumerable, ECCNSValue.truth(!(ref->flags & ECC_VALFLAG_HIDDEN)), 0);
-        objnsfn_addMember(result, ECC_ConstKey_configurable, ECCNSValue.truth(!(ref->flags & ECC_VALFLAG_SEALED)), 0);
+        objnsfn_addMember(result, ECC_ConstKey_enumerable, ecc_value_truth(!(ref->flags & ECC_VALFLAG_HIDDEN)), 0);
+        objnsfn_addMember(result, ECC_ConstKey_configurable, ecc_value_truth(!(ref->flags & ECC_VALFLAG_SEALED)), 0);
 
-        return ECCNSValue.object(result);
+        return ecc_value_object(result);
     }
 
     return ECCValConstUndefined;
@@ -354,7 +354,7 @@ static eccvalue_t objobjectfn_getOwnPropertyNames(eccstate_t* context)
 
     for(index = 0, count = eccobject_elementCount(object); index < count; ++index)
         if(object->element[index].value.check == 1)
-            objnsfn_addElement(result, length++, ECCNSValue.chars(ECCNSChars.create("%d", index)), 0);
+            objnsfn_addElement(result, length++, ecc_value_chars(ECCNSChars.create("%d", index)), 0);
 
     parent = object;
     while((parent = parent->prototype))
@@ -363,15 +363,15 @@ static eccvalue_t objobjectfn_getOwnPropertyNames(eccstate_t* context)
         {
             eccvalue_t value = parent->hashmap[index].value;
             if(value.check == 1 && value.flags & ECC_VALFLAG_ASOWN)
-                objnsfn_addElement(result, length++, ECCNSValue.text(ECCNSKey.textOf(value.key)), 0);
+                objnsfn_addElement(result, length++, ecc_value_text(ECCNSKey.textOf(value.key)), 0);
         }
     }
 
     for(index = 2; index < object->hashmapCount; ++index)
         if(object->hashmap[index].value.check == 1)
-            objnsfn_addElement(result, length++, ECCNSValue.text(ECCNSKey.textOf(object->hashmap[index].value.key)), 0);
+            objnsfn_addElement(result, length++, ecc_value_text(ECCNSKey.textOf(object->hashmap[index].value.key)), 0);
 
-    return ECCNSValue.object(result);
+    return ecc_value_object(result);
 }
 
 static eccvalue_t objobjectfn_defineProperty(eccstate_t* context)
@@ -382,7 +382,7 @@ static eccvalue_t objobjectfn_defineProperty(eccstate_t* context)
     uint32_t index;
 
     object = eccobject_checkObject(context, 0);
-    property = ECCNSValue.toPrimitive(context, ECCNSContext.argument(context, 1), ECC_VALHINT_STRING);
+    property = ecc_value_toprimitive(context, ECCNSContext.argument(context, 1), ECC_VALHINT_STRING);
     descriptor = eccobject_checkObject(context, 2);
 
     getter = objnsfn_member(descriptor, ECC_ConstKey_get, 0);
@@ -422,7 +422,7 @@ static eccvalue_t objobjectfn_defineProperty(eccstate_t* context)
         }
         else
         {
-            value = ECCNSValue.function(ECCNSFunction.createWithNative(ECCNSOperand.noop, 0));
+            value = ecc_value_function(ECCNSFunction.createWithNative(ECCNSOperand.noop, 0));
             value.flags |= ECC_VALFLAG_GETTER;
         }
     }
@@ -431,16 +431,16 @@ static eccvalue_t objobjectfn_defineProperty(eccstate_t* context)
         value = objnsfn_getMember(context, descriptor, ECC_ConstKey_value);
 
         flag = objnsfn_member(descriptor, ECC_ConstKey_writable, 0);
-        if((flag && !ECCNSValue.isTrue(objnsfn_getValue(context, descriptor, flag))) || (!flag && (!current || current->flags & ECC_VALFLAG_READONLY)))
+        if((flag && !ecc_value_istrue(objnsfn_getValue(context, descriptor, flag))) || (!flag && (!current || current->flags & ECC_VALFLAG_READONLY)))
             value.flags |= ECC_VALFLAG_READONLY;
     }
 
     flag = objnsfn_member(descriptor, ECC_ConstKey_enumerable, 0);
-    if((flag && !ECCNSValue.isTrue(objnsfn_getValue(context, descriptor, flag))) || (!flag && (!current || current->flags & ECC_VALFLAG_HIDDEN)))
+    if((flag && !ecc_value_istrue(objnsfn_getValue(context, descriptor, flag))) || (!flag && (!current || current->flags & ECC_VALFLAG_HIDDEN)))
         value.flags |= ECC_VALFLAG_HIDDEN;
 
     flag = objnsfn_member(descriptor, ECC_ConstKey_configurable, 0);
-    if((flag && !ECCNSValue.isTrue(objnsfn_getValue(context, descriptor, flag))) || (!flag && (!current || current->flags & ECC_VALFLAG_SEALED)))
+    if((flag && !ecc_value_istrue(objnsfn_getValue(context, descriptor, flag))) || (!flag && (!current || current->flags & ECC_VALFLAG_SEALED)))
         value.flags |= ECC_VALFLAG_SEALED;
 
     if(!current)
@@ -464,7 +464,7 @@ static eccvalue_t objobjectfn_defineProperty(eccstate_t* context)
                         eccobjfunction_t* currentSetter = current->flags & ECC_VALFLAG_GETTER ? current->data.function->pair : current->data.function;
                         if(currentSetter)
                         {
-                            ECCNSContext.callFunction(context, currentSetter, ECCNSValue.object(object), 1, value);
+                            ECCNSContext.callFunction(context, currentSetter, ecc_value_object(object), 1, value);
                             return ECCValConstTrue;
                         }
                     }
@@ -485,7 +485,7 @@ static eccvalue_t objobjectfn_defineProperty(eccstate_t* context)
             }
             else
             {
-                if(!ECCNSValue.isTrue(ECCNSValue.same(context, *current, value)))
+                if(!ecc_value_istrue(ecc_value_same(context, *current, value)))
                     goto sealedError;
             }
         }
@@ -505,6 +505,7 @@ sealedError:
     }
     else
         ECCNSContext.typeError(context, ECCNSChars.create("'%u' is non-configurable", index));
+    return ECCValConstUndefined;
 }
 
 static eccvalue_t objobjectfn_defineProperties(eccstate_t* context)
@@ -519,19 +520,19 @@ static eccvalue_t objobjectfn_defineProperties(eccstate_t* context)
     memset(hashmap, 0, hashmapCount * sizeof(*hashmap));
 
     object = eccobject_checkObject(context, 0);
-    properties = ECCNSValue.toObject(context, ECCNSContext.argument(context, 1)).data.object;
+    properties = ecc_value_toobject(context, ECCNSContext.argument(context, 1)).data.object;
 
     context->environment->hashmap = hashmap;
     context->environment->hashmapCount = hashmapCount;
 
-    ECCNSContext.replaceArgument(context, 0, ECCNSValue.object(object));
+    ECCNSContext.replaceArgument(context, 0, ecc_value_object(object));
 
     for(index = 0, count = eccobject_elementCount(properties); index < count; ++index)
     {
         if(!properties->element[index].value.check)
             continue;
 
-        ECCNSContext.replaceArgument(context, 1, ECCNSValue.binary(index));
+        ECCNSContext.replaceArgument(context, 1, ecc_value_binary(index));
         ECCNSContext.replaceArgument(context, 2, properties->element[index].value);
         objobjectfn_defineProperty(context);
     }
@@ -541,7 +542,7 @@ static eccvalue_t objobjectfn_defineProperties(eccstate_t* context)
         if(!properties->hashmap[index].value.check)
             continue;
 
-        ECCNSContext.replaceArgument(context, 1, ECCNSValue.key(properties->hashmap[index].value.key));
+        ECCNSContext.replaceArgument(context, 1, ecc_value_key(properties->hashmap[index].value.key));
         ECCNSContext.replaceArgument(context, 2, properties->hashmap[index].value);
         objobjectfn_defineProperty(context);
     }
@@ -563,11 +564,11 @@ static eccvalue_t objobjectfn_objectCreate(eccstate_t* context)
     result = objnsfn_create(object);
     if(properties.type != ECC_VALTYPE_UNDEFINED)
     {
-        ECCNSContext.replaceArgument(context, 0, ECCNSValue.object(result));
+        ECCNSContext.replaceArgument(context, 0, ecc_value_object(result));
         objobjectfn_defineProperties(context);
     }
 
-    return ECCNSValue.object(result);
+    return ecc_value_object(result);
 }
 
 static eccvalue_t objobjectfn_seal(eccstate_t* context)
@@ -586,7 +587,7 @@ static eccvalue_t objobjectfn_seal(eccstate_t* context)
         if(object->hashmap[index].value.check == 1)
             object->hashmap[index].value.flags |= ECC_VALFLAG_SEALED;
 
-    return ECCNSValue.object(object);
+    return ecc_value_object(object);
 }
 
 static eccvalue_t objobjectfn_freeze(eccstate_t* context)
@@ -605,7 +606,7 @@ static eccvalue_t objobjectfn_freeze(eccstate_t* context)
         if(object->hashmap[index].value.check == 1)
             object->hashmap[index].value.flags |= ECC_VALFLAG_FROZEN;
 
-    return ECCNSValue.object(object);
+    return ecc_value_object(object);
 }
 
 static eccvalue_t objobjectfn_preventExtensions(eccstate_t* context)
@@ -615,7 +616,7 @@ static eccvalue_t objobjectfn_preventExtensions(eccstate_t* context)
     object = eccobject_checkObject(context, 0);
     object->flags |= ECC_OBJFLAG_SEALED;
 
-    return ECCNSValue.object(object);
+    return ecc_value_object(object);
 }
 
 static eccvalue_t objobjectfn_isSealed(eccstate_t* context)
@@ -663,7 +664,7 @@ static eccvalue_t objobjectfn_isExtensible(eccstate_t* context)
     eccobject_t* object;
 
     object = eccobject_checkObject(context, 0);
-    return ECCNSValue.truth(!(object->flags & ECC_OBJFLAG_SEALED));
+    return ecc_value_truth(!(object->flags & ECC_OBJFLAG_SEALED));
 }
 
 static eccvalue_t objobjectfn_keys(eccstate_t* context)
@@ -678,7 +679,7 @@ static eccvalue_t objobjectfn_keys(eccstate_t* context)
 
     for(index = 0, count = eccobject_elementCount(object); index < count; ++index)
         if(object->element[index].value.check == 1 && !(object->element[index].value.flags & ECC_VALFLAG_HIDDEN))
-            objnsfn_addElement(result, length++, ECCNSValue.chars(ECCNSChars.create("%d", index)), 0);
+            objnsfn_addElement(result, length++, ecc_value_chars(ECCNSChars.create("%d", index)), 0);
 
     parent = object;
     while((parent = parent->prototype))
@@ -687,15 +688,15 @@ static eccvalue_t objobjectfn_keys(eccstate_t* context)
         {
             eccvalue_t value = parent->hashmap[index].value;
             if(value.check == 1 && value.flags & ECC_VALFLAG_ASOWN & !(value.flags & ECC_VALFLAG_HIDDEN))
-                objnsfn_addElement(result, length++, ECCNSValue.text(ECCNSKey.textOf(value.key)), 0);
+                objnsfn_addElement(result, length++, ecc_value_text(ECCNSKey.textOf(value.key)), 0);
         }
     }
 
     for(index = 2; index < object->hashmapCount; ++index)
         if(object->hashmap[index].value.check == 1 && !(object->hashmap[index].value.flags & ECC_VALFLAG_HIDDEN))
-            objnsfn_addElement(result, length++, ECCNSValue.text(ECCNSKey.textOf(object->hashmap[index].value.key)), 0);
+            objnsfn_addElement(result, length++, ecc_value_text(ECCNSKey.textOf(object->hashmap[index].value.key)), 0);
 
-    return ECCNSValue.object(result);
+    return ecc_value_object(result);
 }
 
 // MARK: - Methods
@@ -706,7 +707,7 @@ static void objnsfn_setup()
 
     assert(sizeof(*ECC_Prototype_Object->hashmap) == 32);
 
-    ECCNSFunction.setupBuiltinObject(&ECC_CtorFunc_Object, objobjectfn_constructor, 1, NULL, ECCNSValue.object(ECC_Prototype_Object), NULL);
+    ECCNSFunction.setupBuiltinObject(&ECC_CtorFunc_Object, objobjectfn_constructor, 1, NULL, ecc_value_object(ECC_Prototype_Object), NULL);
 
     ECCNSFunction.addMethod(ECC_CtorFunc_Object, "getPrototypeOf", objobjectfn_getPrototypeOf, 1, h);
     ECCNSFunction.addMethod(ECC_CtorFunc_Object, "getOwnPropertyDescriptor", objobjectfn_getOwnPropertyDescriptor, 2, h);
@@ -743,7 +744,8 @@ static eccobject_t* objnsfn_create(eccobject_t* prototype)
 
 static eccobject_t* objnsfn_createSized(eccobject_t* prototype, uint16_t size)
 {
-    eccobject_t* self = calloc(sizeof(*self), 1);
+    eccobject_t* self;
+    self = (eccobject_t*)calloc(sizeof(*self), 1);
     ECCNSMemoryPool.addObject(self);
     return objnsfn_initializeSized(self, prototype, size);
 }
@@ -782,7 +784,7 @@ static eccobject_t* objnsfn_initializeSized(eccobject_t* restrict self, eccobjec
         self->hashmapCapacity = size;
 
         byteSize = sizeof(*self->hashmap) * self->hashmapCapacity;
-        self->hashmap = malloc(byteSize);
+        self->hashmap = (ecchashmap_t*)malloc(byteSize);
         memset(self->hashmap, 0, byteSize);
     }
     else
@@ -809,17 +811,18 @@ static eccobject_t* objnsfn_copy(const eccobject_t* original)
 {
     size_t byteSize;
 
-    eccobject_t* self = malloc(sizeof(*self));
+    eccobject_t* self;
+    self = (eccobject_t*)malloc(sizeof(*self));
     ECCNSMemoryPool.addObject(self);
 
     *self = *original;
 
     byteSize = sizeof(*self->element) * self->elementCount;
-    self->element = malloc(byteSize);
+    self->element = (ecchashitem_t*)malloc(byteSize);
     memcpy(self->element, original->element, byteSize);
 
     byteSize = sizeof(*self->hashmap) * self->hashmapCount;
-    self->hashmap = malloc(byteSize);
+    self->hashmap = (ecchashmap_t*)malloc(byteSize);
     memcpy(self->hashmap, original->hashmap, byteSize);
 
     return self;
@@ -832,7 +835,7 @@ static void objnsfn_destroy(eccobject_t* self)
     free(self), self = NULL;
 }
 
-static eccvalue_t* objnsfn_member(eccobject_t* self, eccindexkey_t member, eccvalflag_t flags)
+static eccvalue_t* objnsfn_member(eccobject_t* self, eccindexkey_t member, int flags)
 {
     int lookupChain = !(flags & ECC_VALFLAG_ASOWN);
     eccobject_t* object = self;
@@ -854,7 +857,7 @@ static eccvalue_t* objnsfn_member(eccobject_t* self, eccindexkey_t member, eccva
     return NULL;
 }
 
-static eccvalue_t* objnsfn_element(eccobject_t* self, uint32_t index, eccvalflag_t flags)
+static eccvalue_t* objnsfn_element(eccobject_t* self, uint32_t index, int flags)
 {
     int lookupChain = !(flags & ECC_VALFLAG_ASOWN);
     eccobject_t* object = self;
@@ -888,7 +891,7 @@ static eccvalue_t* objnsfn_element(eccobject_t* self, uint32_t index, eccvalflag
     return NULL;
 }
 
-static eccvalue_t* objnsfn_property(eccobject_t* self, eccvalue_t property, eccvalflag_t flags)
+static eccvalue_t* objnsfn_property(eccobject_t* self, eccvalue_t property, int flags)
 {
     eccindexkey_t key;
     uint32_t index = eccobject_getIndexOrKey(property, &key);
@@ -907,12 +910,12 @@ static eccvalue_t objnsfn_getValue(eccstate_t* context, eccobject_t* self, eccva
     if(ref->flags & ECC_VALFLAG_ACCESSOR)
     {
         if(!context)
-            ECCNSScript.fatal("cannot use getter outside context");
+            ecc_script_fatal("cannot use getter outside context");
 
         if(ref->flags & ECC_VALFLAG_GETTER)
-            return ECCNSContext.callFunction(context, ref->data.function, ECCNSValue.object(self), 0 | ECC_CTXSPECIALTYPE_ASACCESSOR);
+            return ECCNSContext.callFunction(context, ref->data.function, ecc_value_object(self), 0 | ECC_CTXSPECIALTYPE_ASACCESSOR);
         else if(ref->data.function->pair)
-            return ECCNSContext.callFunction(context, ref->data.function->pair, ECCNSValue.object(self), 0 | ECC_CTXSPECIALTYPE_ASACCESSOR);
+            return ECCNSContext.callFunction(context, ref->data.function->pair, ecc_value_object(self), 0 | ECC_CTXSPECIALTYPE_ASACCESSOR);
         else
             return ECCValConstUndefined;
     }
@@ -951,9 +954,9 @@ static eccvalue_t objnsfn_putValue(eccstate_t* context, eccobject_t* self, eccva
         assert(context);
 
         if(ref->flags & ECC_VALFLAG_SETTER)
-            ECCNSContext.callFunction(context, ref->data.function, ECCNSValue.object(self), 1 | ECC_CTXSPECIALTYPE_ASACCESSOR, value);
+            ECCNSContext.callFunction(context, ref->data.function, ecc_value_object(self), 1 | ECC_CTXSPECIALTYPE_ASACCESSOR, value);
         else if(ref->data.function->pair)
-            ECCNSContext.callFunction(context, ref->data.function->pair, ECCNSValue.object(self), 1 | ECC_CTXSPECIALTYPE_ASACCESSOR, value);
+            ECCNSContext.callFunction(context, ref->data.function->pair, ecc_value_object(self), 1 | ECC_CTXSPECIALTYPE_ASACCESSOR, value);
         else if(context->strictMode || (context->parent && context->parent->strictMode))
             eccobject_readonlyError(context, ref, self);
 
@@ -1037,7 +1040,7 @@ static eccvalue_t objnsfn_putProperty(eccstate_t* context, eccobject_t* self, ec
         return objnsfn_putMember(context, self, key, value);
 }
 
-static eccvalue_t* objnsfn_addMember(eccobject_t* self, eccindexkey_t key, eccvalue_t value, eccvalflag_t flags)
+static eccvalue_t* objnsfn_addMember(eccobject_t* self, eccindexkey_t key, eccvalue_t value, int flags)
 {
     uint32_t slot = 1;
     int depth = 0;
@@ -1053,7 +1056,7 @@ static eccvalue_t* objnsfn_addMember(eccobject_t* self, eccindexkey_t key, eccva
             {
                 uint16_t capacity = self->hashmapCapacity;
                 self->hashmapCapacity = self->hashmapCapacity ? self->hashmapCapacity * 2 : 2;
-                self->hashmap = realloc(self->hashmap, sizeof(*self->hashmap) * self->hashmapCapacity);
+                self->hashmap = (ecchashmap_t*)realloc(self->hashmap, sizeof(*self->hashmap) * self->hashmapCapacity);
                 memset(self->hashmap + capacity, 0, sizeof(*self->hashmap) * (self->hashmapCapacity - capacity));
             }
 
@@ -1085,7 +1088,7 @@ static eccvalue_t* objnsfn_addMember(eccobject_t* self, eccindexkey_t key, eccva
     return &self->hashmap[slot].value;
 }
 
-static eccvalue_t* objnsfn_addElement(eccobject_t* self, uint32_t index, eccvalue_t value, eccvalflag_t flags)
+static eccvalue_t* objnsfn_addElement(eccobject_t* self, uint32_t index, eccvalue_t value, int flags)
 {
     eccvalue_t* ref;
 
@@ -1107,7 +1110,7 @@ static eccvalue_t* objnsfn_addElement(eccobject_t* self, uint32_t index, eccvalu
     return ref;
 }
 
-static eccvalue_t* objnsfn_addProperty(eccobject_t* self, eccvalue_t primitive, eccvalue_t value, eccvalflag_t flags)
+static eccvalue_t* objnsfn_addProperty(eccobject_t* self, eccvalue_t primitive, eccvalue_t value, int flags)
 {
     eccindexkey_t key;
     uint32_t index = eccobject_getIndexOrKey(primitive, &key);
@@ -1216,7 +1219,7 @@ static void objnsfn_packValue(eccobject_t* self)
             self->hashmap[valueIndex++] = data;
         }
     }
-    self->hashmap = realloc(self->hashmap, sizeof(*self->hashmap) * (self->hashmapCount));
+    self->hashmap = (ecchashmap_t*)realloc(self->hashmap, sizeof(*self->hashmap) * (self->hashmapCount));
     self->hashmapCapacity = self->hashmapCount;
 
     if(self->elementCount)
@@ -1235,7 +1238,7 @@ static void objnsfn_stripMap(eccobject_t* self)
         ++index;
 
     self->hashmapCapacity = self->hashmapCount = index;
-    self->hashmap = realloc(self->hashmap, sizeof(*self->hashmap) * self->hashmapCapacity);
+    self->hashmap = (ecchashmap_t*)realloc(self->hashmap, sizeof(*self->hashmap) * self->hashmapCapacity);
 
     memset(self->hashmap + 1, 0, sizeof(*self->hashmap));
 }
@@ -1250,7 +1253,7 @@ static void objnsfn_reserveSlots(eccobject_t* self, uint16_t slots)
     {
         uint16_t capacity = self->hashmapCapacity;
         self->hashmapCapacity = self->hashmapCapacity ? self->hashmapCapacity * 2 : 2;
-        self->hashmap = realloc(self->hashmap, sizeof(*self->hashmap) * self->hashmapCapacity);
+        self->hashmap = (ecchashmap_t*)realloc(self->hashmap, sizeof(*self->hashmap) * self->hashmapCapacity);
         memset(self->hashmap + capacity, 0, sizeof(*self->hashmap) * (self->hashmapCapacity - capacity));
     }
 }
@@ -1291,7 +1294,7 @@ static int objnsfn_resizeElement(eccobject_t* self, uint32_t size)
                                   io_libecc_object_ElementMax);
         }
 
-        self->element = realloc(self->element, sizeof(*self->element) * capacity);
+        self->element = (ecchashitem_t*)realloc(self->element, sizeof(*self->element) * capacity);
         if(capacity > self->elementCapacity)
             memset(self->element + self->elementCapacity, 0, sizeof(*self->element) * (capacity - self->elementCapacity));
 
@@ -1299,7 +1302,7 @@ static int objnsfn_resizeElement(eccobject_t* self, uint32_t size)
     }
     else if(size < self->elementCount)
     {
-        eccobjelement_t* element;
+        ecchashitem_t* element;
         uint32_t until = size, e;
 
         if(self->elementCount > io_libecc_object_ElementMax)
@@ -1372,13 +1375,13 @@ static void objnsfn_populateElementWithCList(eccobject_t* self, uint32_t count, 
         binary = strtod(list[index], &end);
 
         if(end == list[index] + length)
-            self->element[index].value = ECCNSValue.binary(binary);
+            self->element[index].value = ecc_value_binary(binary);
         else
         {
             ecccharbuffer_t* chars = ECCNSChars.createSized(length);
             memcpy(chars->bytes, list[index], length);
 
-            self->element[index].value = ECCNSValue.chars(chars);
+            self->element[index].value = ecc_value_chars(chars);
         }
     }
 }
@@ -1386,17 +1389,17 @@ static void objnsfn_populateElementWithCList(eccobject_t* self, uint32_t count, 
 static eccvalue_t objobjectfn_toString(eccstate_t* context)
 {
     if(context->thisvalue.type == ECC_VALTYPE_NULL)
-        return ECCNSValue.text(&ECC_ConstString_NullType);
+        return ecc_value_text(&ECC_ConstString_NullType);
     else if(context->thisvalue.type == ECC_VALTYPE_UNDEFINED)
-        return ECCNSValue.text(&ECC_ConstString_UndefinedType);
-    else if(ECCNSValue.isString(context->thisvalue))
-        return ECCNSValue.text(&ECC_ConstString_StringType);
-    else if(ECCNSValue.isNumber(context->thisvalue))
-        return ECCNSValue.text(&ECC_ConstString_NumberType);
-    else if(ECCNSValue.isBoolean(context->thisvalue))
-        return ECCNSValue.text(&ECC_ConstString_BooleanType);
-    else if(ECCNSValue.isObject(context->thisvalue))
-        return ECCNSValue.text(context->thisvalue.data.object->type->text);
+        return ecc_value_text(&ECC_ConstString_UndefinedType);
+    else if(ecc_value_isstring(context->thisvalue))
+        return ecc_value_text(&ECC_ConstString_StringType);
+    else if(ecc_value_isnumber(context->thisvalue))
+        return ecc_value_text(&ECC_ConstString_NumberType);
+    else if(ecc_value_isboolean(context->thisvalue))
+        return ecc_value_text(&ECC_ConstString_BooleanType);
+    else if(ecc_value_isobject(context->thisvalue))
+        return ecc_value_text(context->thisvalue.data.object->type->text);
     else
         assert(0);
 
@@ -1410,7 +1413,7 @@ static void objnsfn_dumpTo(eccobject_t* self, FILE* file)
 
     assert(self);
 
-    isArray = ECCNSValue.objectIsArray(self);
+    isArray = ecc_value_objectisarray(self);
 
     fprintf(file, isArray ? "[ " : "{ ");
 
@@ -1424,7 +1427,7 @@ static void objnsfn_dumpTo(eccobject_t* self, FILE* file)
             if(self->element[index].value.type == ECC_VALTYPE_OBJECT && self->element[index].value.data.object == self)
                 fprintf(file, "this");
             else
-                ECCNSValue.dumpTo(self->element[index].value, file);
+                ecc_value_dumpto(self->element[index].value, file);
 
             fprintf(file, ", ");
         }
@@ -1443,7 +1446,7 @@ static void objnsfn_dumpTo(eccobject_t* self, FILE* file)
                 if(self->hashmap[index].value.type == ECC_VALTYPE_OBJECT && self->hashmap[index].value.data.object == self)
                     fprintf(file, "this");
                 else
-                    ECCNSValue.dumpTo(self->hashmap[index].value, file);
+                    ecc_value_dumpto(self->hashmap[index].value, file);
 
                 fprintf(file, ", ");
             }

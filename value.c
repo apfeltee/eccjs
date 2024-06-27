@@ -14,116 +14,11 @@
         .type = T, .check = 1 \
     }
 
-const eccvalue_t ECCValConstNone = { { 0 }, {}, 0, 0, 0 };
+const eccvalue_t ECCValConstNone = { { 0 }, {}, (eccvaltype_t)0, 0, 0 };
 const eccvalue_t ECCValConstUndefined = valueMake(ECC_VALTYPE_UNDEFINED);
 const eccvalue_t ECCValConstTrue = valueMake(ECC_VALTYPE_TRUE);
 const eccvalue_t ECCValConstFalse = valueMake(ECC_VALTYPE_FALSE);
 const eccvalue_t ECCValConstNull = valueMake(ECC_VALTYPE_NULL);
-
-// MARK: - Static Members
-
-// MARK: - Methods
-
-// make
-
-static eccvalue_t nsvaluefn_truth(int truth);
-static eccvalue_t nsvaluefn_integer(int32_t integer);
-static eccvalue_t nsvaluefn_binary(double binary);
-static eccvalue_t nsvaluefn_buffer(const char buffer[7], uint8_t units);
-static eccvalue_t nsvaluefn_key(eccindexkey_t key);
-static eccvalue_t nsvaluefn_text(const ecctextstring_t* text);
-static eccvalue_t nsvaluefn_chars(ecccharbuffer_t* chars);
-static eccvalue_t nsvaluefn_object(eccobject_t*);
-static eccvalue_t nsvaluefn_error(eccobjerror_t*);
-static eccvalue_t nsvaluefn_string(eccobjstring_t*);
-static eccvalue_t nsvaluefn_regexp(eccobjregexp_t*);
-static eccvalue_t nsvaluefn_number(eccobjnumber_t*);
-static eccvalue_t nsvaluefn_boolean(eccobjbool_t*);
-static eccvalue_t nsvaluefn_date(eccobjdate_t*);
-static eccvalue_t nsvaluefn_function(eccobjfunction_t*);
-static eccvalue_t nsvaluefn_host(eccobject_t*);
-static eccvalue_t nsvaluefn_reference(eccvalue_t*);
-static int nsvaluefn_isPrimitive(eccvalue_t);
-static int nsvaluefn_isBoolean(eccvalue_t);
-static int nsvaluefn_isNumber(eccvalue_t);
-static int nsvaluefn_isString(eccvalue_t);
-static int nsvaluefn_isObject(eccvalue_t);
-static int nsvaluefn_isDynamic(eccvalue_t);
-static int nsvaluefn_isTrue(eccvalue_t);
-static eccvalue_t nsvaluefn_toPrimitive(eccstate_t*, eccvalue_t, eccvalhint_t);
-static eccvalue_t nsvaluefn_toBinary(eccstate_t*, eccvalue_t);
-static eccvalue_t nsvaluefn_toInteger(eccstate_t*, eccvalue_t);
-static eccvalue_t nsvaluefn_binaryToString(double binary, int base);
-static eccvalue_t nsvaluefn_toString(eccstate_t*, eccvalue_t);
-static int32_t nsvaluefn_stringLength(const eccvalue_t*);
-static const char* nsvaluefn_stringBytes(const eccvalue_t*);
-static ecctextstring_t nsvaluefn_textOf(const eccvalue_t* string);
-static eccvalue_t nsvaluefn_toObject(eccstate_t*, eccvalue_t);
-static eccvalue_t nsvaluefn_objectValue(eccobject_t*);
-static int nsvaluefn_objectIsArray(eccobject_t*);
-static eccvalue_t nsvaluefn_toType(eccvalue_t);
-static eccvalue_t nsvaluefn_equals(eccstate_t*, eccvalue_t, eccvalue_t);
-static eccvalue_t nsvaluefn_same(eccstate_t*, eccvalue_t, eccvalue_t);
-static eccvalue_t nsvaluefn_add(eccstate_t*, eccvalue_t, eccvalue_t);
-static eccvalue_t nsvaluefn_subtract(eccstate_t*, eccvalue_t, eccvalue_t);
-static eccvalue_t nsvaluefn_less(eccstate_t*, eccvalue_t, eccvalue_t);
-static eccvalue_t nsvaluefn_more(eccstate_t*, eccvalue_t, eccvalue_t);
-static eccvalue_t nsvaluefn_lessOrEqual(eccstate_t*, eccvalue_t, eccvalue_t);
-static eccvalue_t nsvaluefn_moreOrEqual(eccstate_t*, eccvalue_t, eccvalue_t);
-static const char* nsvaluefn_typeName(eccvaltype_t);
-static const char* nsvaluefn_maskName(eccvalmask_t);
-static void nsvaluefn_dumpTo(eccvalue_t, FILE*);
-const struct eccpseudonsvalue_t ECCNSValue =
-{
-    nsvaluefn_truth,
-    nsvaluefn_integer,
-    nsvaluefn_binary,
-    nsvaluefn_buffer,
-    nsvaluefn_key,
-    nsvaluefn_text,
-    nsvaluefn_chars,
-    nsvaluefn_object,
-    nsvaluefn_error,
-    nsvaluefn_string,
-    nsvaluefn_regexp,
-    nsvaluefn_number,
-    nsvaluefn_boolean,
-    nsvaluefn_date,
-    nsvaluefn_function,
-    nsvaluefn_host,
-    nsvaluefn_reference,
-    nsvaluefn_isPrimitive,
-    nsvaluefn_isBoolean,
-    nsvaluefn_isNumber,
-    nsvaluefn_isString,
-    nsvaluefn_isObject,
-    nsvaluefn_isDynamic,
-    nsvaluefn_isTrue,
-    nsvaluefn_toPrimitive,
-    nsvaluefn_toBinary,
-    nsvaluefn_toInteger,
-    nsvaluefn_binaryToString,
-    nsvaluefn_toString,
-    nsvaluefn_stringLength,
-    nsvaluefn_stringBytes,
-    nsvaluefn_textOf,
-    nsvaluefn_toObject,
-    nsvaluefn_objectValue,
-    nsvaluefn_objectIsArray,
-    nsvaluefn_toType,
-    nsvaluefn_equals,
-    nsvaluefn_same,
-    nsvaluefn_add,
-    nsvaluefn_subtract,
-    nsvaluefn_less,
-    nsvaluefn_more,
-    nsvaluefn_lessOrEqual,
-    nsvaluefn_moreOrEqual,
-    nsvaluefn_typeName,
-    nsvaluefn_maskName,
-    nsvaluefn_dumpTo,
-    ECCValConstNone
-};
 
 /*
 * 'floor*' lifted from musl-libc, because the builtins break during
@@ -223,234 +118,239 @@ double eccutil_mathfloor(double x)
     return x + y;
 }
 
-
-eccvalue_t nsvaluefn_truth(int truth)
+eccvalue_t ecc_value_makevalue(eccvaltype_t t)
 {
-    return (eccvalue_t){
-        .type = truth ? ECC_VALTYPE_TRUE : ECC_VALTYPE_FALSE,
-        .check = 1,
-    };
+    eccvalue_t v;
+    memset(&v, 0, sizeof(eccvalue_t));
+    v.type = t;
+    return v;
 }
 
-eccvalue_t nsvaluefn_integer(int32_t integer)
+eccvalue_t ecc_value_truth(int truth)
 {
-    return (eccvalue_t){
-        .data = { .integer = integer },
-        .type = ECC_VALTYPE_INTEGER,
-        .check = 1,
-    };
+    eccvalue_t v;
+    v = ecc_value_makevalue(truth ? ECC_VALTYPE_TRUE : ECC_VALTYPE_FALSE);
+    v.check = 1;
+    return v;
 }
 
-eccvalue_t nsvaluefn_binary(double binary)
+eccvalue_t ecc_value_integer(int32_t integer)
 {
-    return (eccvalue_t){
-        .data = { .binary = binary },
-        .type = ECC_VALTYPE_BINARY,
-        .check = 1,
-    };
+    eccvalue_t v;
+    v = ecc_value_makevalue(ECC_VALTYPE_INTEGER);
+    v.data.integer = integer;
+    v.check = 1;
+    return v;
 }
 
-eccvalue_t nsvaluefn_buffer(const char b[7], uint8_t units)
+eccvalue_t ecc_value_binary(double binary)
 {
-    eccvalue_t value = {
-        .type = ECC_VALTYPE_BUFFER,
-        .check = 1,
-    };
+    eccvalue_t v;
+    v = ecc_value_makevalue(ECC_VALTYPE_BINARY);
+    v.data.binary = binary;
+    v.check = 1;
+    return v;
+}
+
+eccvalue_t ecc_value_buffer(const char b[7], uint8_t units)
+{
+    eccvalue_t value;
+    value = ecc_value_makevalue(ECC_VALTYPE_BUFFER);
+    value.check = 1;
     memcpy(value.data.buffer, b, units);
     value.data.buffer[7] = units;
     return value;
 }
 
-eccvalue_t nsvaluefn_key(eccindexkey_t key)
+eccvalue_t ecc_value_key(eccindexkey_t key)
 {
-    return (eccvalue_t){
-        .data = { .key = key },
-        .type = ECC_VALTYPE_KEY,
-        .check = 0,
-    };
+    eccvalue_t v;
+    v = ecc_value_makevalue(ECC_VALTYPE_KEY);
+    v.data.key = key;
+    v.check = 0;
+    return v;
 }
 
-eccvalue_t nsvaluefn_text(const ecctextstring_t* text)
+eccvalue_t ecc_value_text(const ecctextstring_t* text)
 {
-    return (eccvalue_t){
-        .data = { .text = text },
-        .type = ECC_VALTYPE_TEXT,
-        .check = 1,
-    };
+    eccvalue_t v;
+    v = ecc_value_makevalue(ECC_VALTYPE_TEXT);
+    v.data.text = text;
+    v.check = 1;
+    return v;
 }
 
-eccvalue_t nsvaluefn_chars(ecccharbuffer_t* chars)
+eccvalue_t ecc_value_chars(ecccharbuffer_t* chars)
 {
+    eccvalue_t v;
     assert(chars);
-
-    return (eccvalue_t){
-        .data = { .chars = chars },
-        .type = ECC_VALTYPE_CHARS,
-        .check = 1,
-    };
+    v = ecc_value_makevalue(ECC_VALTYPE_CHARS);
+    v.data.chars = chars;
+    v.check = 1;
+    return v;
 }
 
-eccvalue_t nsvaluefn_object(eccobject_t* object)
+eccvalue_t ecc_value_object(eccobject_t* object)
 {
     assert(object);
-
-    return (eccvalue_t){
-        .data = { .object = object },
-        .type = ECC_VALTYPE_OBJECT,
-        .check = 1,
-    };
+    eccvalue_t v;
+    v = ecc_value_makevalue(ECC_VALTYPE_OBJECT);
+    v.data.object = object;
+    v.check = 1;
+    return v;
 }
 
-eccvalue_t nsvaluefn_error(eccobjerror_t* error)
+eccvalue_t ecc_value_error(eccobjerror_t* error)
 {
+    eccvalue_t v;
     assert(error);
-
-    return (eccvalue_t){
-        .data = { .error = error },
-        .type = ECC_VALTYPE_ERROR,
-        .check = 1,
-    };
+    v = ecc_value_makevalue(ECC_VALTYPE_ERROR);
+    v.data.error = error;
+    v.check = 1;
+    return v;
 }
 
-eccvalue_t nsvaluefn_string(eccobjstring_t* string)
+eccvalue_t ecc_value_string(eccobjstring_t* string)
 {
+    eccvalue_t v;
     assert(string);
-
-    return (eccvalue_t){
-        .data = { .string = string },
-        .type = ECC_VALTYPE_STRING,
-        .check = 1,
-    };
+    v = ecc_value_makevalue(ECC_VALTYPE_STRING);
+    v.data.string = string;
+    v.check = 1;
+    return v;
 }
 
-eccvalue_t nsvaluefn_regexp(eccobjregexp_t* regexp)
+eccvalue_t ecc_value_regexp(eccobjregexp_t* regexp)
 {
+    eccvalue_t v;
     assert(regexp);
-
-    return (eccvalue_t){
-        .data = { .regexp = regexp },
-        .type = ECC_VALTYPE_REGEXP,
-        .check = 1,
-    };
+    v = ecc_value_makevalue(ECC_VALTYPE_REGEXP);
+    v.data.regexp = regexp;
+    v.check = 1;
+    return v;
 }
 
-eccvalue_t nsvaluefn_number(eccobjnumber_t* number)
+eccvalue_t ecc_value_number(eccobjnumber_t* number)
 {
+    eccvalue_t v;
     assert(number);
-
-    return (eccvalue_t){
-        .data = { .number = number },
-        .type = ECC_VALTYPE_NUMBER,
-        .check = 1,
-    };
+    v = ecc_value_makevalue(ECC_VALTYPE_NUMBER);
+    v.data.number = number;
+    v.check = 1;
+    return v;
 }
 
-eccvalue_t nsvaluefn_boolean(eccobjbool_t* boolean)
+eccvalue_t ecc_value_boolean(eccobjbool_t* boolean)
 {
+    eccvalue_t v;
     assert(boolean);
-
-    return (eccvalue_t){
-        .data = { .boolean = boolean },
-        .type = ECC_VALTYPE_BOOLEAN,
-        .check = 1,
-    };
+    v= ecc_value_makevalue(ECC_VALTYPE_BOOLEAN);
+    v.data.boolean = boolean;
+    v.check = 1;
+    return v;
 }
 
-eccvalue_t nsvaluefn_date(eccobjdate_t* date)
+eccvalue_t ecc_value_date(eccobjdate_t* date)
 {
+    eccvalue_t v;
     assert(date);
-
-    return (eccvalue_t){
-        .data = { .date = date },
-        .type = ECC_VALTYPE_DATE,
-        .check = 1,
-    };
+    v = ecc_value_makevalue(ECC_VALTYPE_DATE);
+    v.data.date = date;
+    v.check = 1;
+    return v;
 }
 
-eccvalue_t nsvaluefn_function(eccobjfunction_t* function)
+eccvalue_t ecc_value_function(eccobjfunction_t* function)
 {
+    eccvalue_t v;
     assert(function);
-
-    return (eccvalue_t){
-        .data = { .function = function },
-        .type = ECC_VALTYPE_FUNCTION,
-        .check = 1,
-    };
+    v = ecc_value_makevalue(ECC_VALTYPE_FUNCTION);
+    v.data.function = function;
+    v.check = 1;
+    return v;
 }
 
-eccvalue_t nsvaluefn_host(eccobject_t* object)
+eccvalue_t ecc_value_host(eccobject_t* object)
 {
     assert(object);
-
-    return (eccvalue_t){
-        .data = { .object = object },
-        .type = ECC_VALTYPE_HOST,
-        .check = 1,
-    };
+    eccvalue_t v;
+    v = ecc_value_makevalue(ECC_VALTYPE_HOST);
+    v.data.object = object;
+    v.check = 1;
+    return v;
 }
 
-eccvalue_t nsvaluefn_reference(eccvalue_t* reference)
+eccvalue_t ecc_value_reference(eccvalue_t* reference)
 {
     assert(reference);
-
-    return (eccvalue_t){
-        .data = { .reference = reference },
-        .type = ECC_VALTYPE_REFERENCE,
-        .check = 0,
-    };
+    eccvalue_t v;
+    v = ecc_value_makevalue(ECC_VALTYPE_REFERENCE);
+    v.data.reference = reference;
+    v.check = 0;
+    return v;
 }
 
 // check
 
-int nsvaluefn_isPrimitive(eccvalue_t value)
+int ecc_value_isprimitive(eccvalue_t value)
 {
     return !(value.type & ECC_VALMASK_OBJECT);
 }
 
-int nsvaluefn_isBoolean(eccvalue_t value)
+int ecc_value_isboolean(eccvalue_t value)
 {
     return value.type & ECC_VALMASK_BOOLEAN;
 }
 
-int nsvaluefn_isNumber(eccvalue_t value)
+int ecc_value_isnumber(eccvalue_t value)
 {
     return value.type & ECC_VALMASK_NUMBER;
 }
 
-int nsvaluefn_isString(eccvalue_t value)
+int ecc_value_isstring(eccvalue_t value)
 {
     return value.type & ECC_VALMASK_STRING;
 }
 
-int nsvaluefn_isObject(eccvalue_t value)
+int ecc_value_isobject(eccvalue_t value)
 {
     return value.type & ECC_VALMASK_OBJECT;
 }
 
-int nsvaluefn_isDynamic(eccvalue_t value)
+int ecc_value_isdynamic(eccvalue_t value)
 {
     return value.type & ECC_VALMASK_DYNAMIC;
 }
 
-int nsvaluefn_isTrue(eccvalue_t value)
+int ecc_value_istrue(eccvalue_t value)
 {
     if(value.type <= ECC_VALTYPE_UNDEFINED)
+    {
         return 0;
+    }
     if(value.type >= ECC_VALTYPE_TRUE)
+    {
         return 1;
+    }
     else if(value.type == ECC_VALTYPE_INTEGER)
+    {
         return value.data.integer != 0;
+    }
     else if(value.type == ECC_VALTYPE_BINARY)
+    {
         return !isnan(value.data.binary) && value.data.binary != 0;
-    else if(nsvaluefn_isString(value))
-        return nsvaluefn_stringLength(&value) > 0;
-
-    ECCNSScript.fatal("Invalid value type : %u", value.type);
+    }
+    else if(ecc_value_isstring(value))
+    {
+        return ecc_value_stringlength(&value) > 0;
+    }
+    ecc_script_fatal("Invalid value type : %u", value.type);
+    return 0;
 }
 
 // convert
 
-eccvalue_t nsvaluefn_toPrimitive(eccstate_t* context, eccvalue_t value, eccvalhint_t hint)
+eccvalue_t ecc_value_toprimitive(eccstate_t* context, eccvalue_t value, int hint)
 {
     eccobject_t* object;
     eccindexkey_t aKey;
@@ -464,7 +364,7 @@ eccvalue_t nsvaluefn_toPrimitive(eccstate_t* context, eccvalue_t value, eccvalhi
         return value;
 
     if(!context)
-        ECCNSScript.fatal("cannot use toPrimitive outside context");
+        ecc_script_fatal("cannot use toPrimitive outside context");
 
     object = value.data.object;
     hint = hint ? hint : value.type == ECC_VALTYPE_DATE ? ECC_VALHINT_STRING : ECC_VALHINT_NUMBER;
@@ -475,7 +375,7 @@ eccvalue_t nsvaluefn_toPrimitive(eccstate_t* context, eccvalue_t value, eccvalhi
     if(aFunction.type == ECC_VALTYPE_FUNCTION)
     {
         result = ECCNSContext.callFunction(context, aFunction.data.function, value, 0 | ECC_CTXSPECIALTYPE_ASACCESSOR);
-        if(nsvaluefn_isPrimitive(result))
+        if(ecc_value_isprimitive(result))
             return result;
     }
 
@@ -483,7 +383,7 @@ eccvalue_t nsvaluefn_toPrimitive(eccstate_t* context, eccvalue_t value, eccvalhi
     if(bFunction.type == ECC_VALTYPE_FUNCTION)
     {
         result = ECCNSContext.callFunction(context, bFunction.data.function, value, 0 | ECC_CTXSPECIALTYPE_ASACCESSOR);
-        if(nsvaluefn_isPrimitive(result))
+        if(ecc_value_isprimitive(result))
             return result;
     }
 
@@ -492,9 +392,10 @@ eccvalue_t nsvaluefn_toPrimitive(eccstate_t* context, eccvalue_t value, eccvalhi
         ECCNSContext.typeError(context, ECCNSChars.create("cannot convert '%.*s' to primitive", text.length, text.bytes));
     else
         ECCNSContext.typeError(context, ECCNSChars.create("cannot convert value to primitive"));
+    return ECCValConstUndefined;
 }
 
-eccvalue_t nsvaluefn_toBinary(eccstate_t* context, eccvalue_t value)
+eccvalue_t ecc_value_tobinary(eccstate_t* context, eccvalue_t value)
 {
     switch((eccvaltype_t)value.type)
     {
@@ -502,43 +403,43 @@ eccvalue_t nsvaluefn_toBinary(eccstate_t* context, eccvalue_t value)
             return value;
 
         case ECC_VALTYPE_INTEGER:
-            return nsvaluefn_binary(value.data.integer);
+            return ecc_value_binary(value.data.integer);
 
         case ECC_VALTYPE_NUMBER:
-            return nsvaluefn_binary(value.data.number->value);
+            return ecc_value_binary(value.data.number->value);
 
         case ECC_VALTYPE_NULL:
         case ECC_VALTYPE_FALSE:
-            return nsvaluefn_binary(0);
+            return ecc_value_binary(0);
 
         case ECC_VALTYPE_TRUE:
-            return nsvaluefn_binary(1);
+            return ecc_value_binary(1);
 
         case ECC_VALTYPE_BOOLEAN:
-            return nsvaluefn_binary(value.data.boolean->truth ? 1 : 0);
+            return ecc_value_binary(value.data.boolean->truth ? 1 : 0);
 
         case ECC_VALTYPE_UNDEFINED:
-            return nsvaluefn_binary(NAN);
+            return ecc_value_binary(NAN);
 
         case ECC_VALTYPE_TEXT:
         {
             if(value.data.text == &ECC_ConstString_Zero)
-                return nsvaluefn_binary(0);
+                return ecc_value_binary(0);
             else if(value.data.text == &ECC_ConstString_One)
-                return nsvaluefn_binary(1);
+                return ecc_value_binary(1);
             else if(value.data.text == &ECC_ConstString_Nan)
-                return nsvaluefn_binary(NAN);
+                return ecc_value_binary(NAN);
             else if(value.data.text == &ECC_ConstString_Infinity)
-                return nsvaluefn_binary(INFINITY);
+                return ecc_value_binary(INFINITY);
             else if(value.data.text == &ECC_ConstString_NegativeInfinity)
-                return nsvaluefn_binary(-INFINITY);
+                return ecc_value_binary(-INFINITY);
         }
             /* fallthrough */
         case ECC_VALTYPE_KEY:
         case ECC_VALTYPE_CHARS:
         case ECC_VALTYPE_STRING:
         case ECC_VALTYPE_BUFFER:
-            return ECCNSLexer.scanBinary(nsvaluefn_textOf(&value), context && context->ecc->sloppyMode ? ECC_LEXFLAG_SCANSLOPPY : 0);
+            return ECCNSLexer.scanBinary(ecc_value_textof(&value), context && context->ecc->sloppyMode ? ECC_LEXFLAG_SCANSLOPPY : 0);
 
         case ECC_VALTYPE_OBJECT:
         case ECC_VALTYPE_ERROR:
@@ -546,21 +447,22 @@ eccvalue_t nsvaluefn_toBinary(eccstate_t* context, eccvalue_t value)
         case ECC_VALTYPE_FUNCTION:
         case ECC_VALTYPE_REGEXP:
         case ECC_VALTYPE_HOST:
-            return nsvaluefn_toBinary(context, nsvaluefn_toPrimitive(context, value, ECC_VALHINT_NUMBER));
+            return ecc_value_tobinary(context, ecc_value_toprimitive(context, value, ECC_VALHINT_NUMBER));
 
         case ECC_VALTYPE_REFERENCE:
             break;
     }
-    ECCNSScript.fatal("Invalid value type : %u", value.type);
+    ecc_script_fatal("Invalid value type : %u", value.type);
+    return ECCValConstUndefined;
 }
 
-eccvalue_t nsvaluefn_toInteger(eccstate_t* context, eccvalue_t value)
+eccvalue_t ecc_value_tointeger(eccstate_t* context, eccvalue_t value)
 {
     const double modulus = (double)UINT32_MAX + 1;
-    double binary = nsvaluefn_toBinary(context, value).data.binary;
+    double binary = ecc_value_tobinary(context, value).data.binary;
 
     if(!binary || !isfinite(binary))
-        return nsvaluefn_integer(0);
+        return ecc_value_integer(0);
 
     binary = fmod(binary, modulus);
     if(binary >= 0)
@@ -573,27 +475,27 @@ eccvalue_t nsvaluefn_toInteger(eccstate_t* context, eccvalue_t value)
     }
     if(binary > INT32_MAX)
     {
-        return nsvaluefn_integer(binary - modulus);
+        return ecc_value_integer(binary - modulus);
     }
-    return nsvaluefn_integer(binary);
+    return ecc_value_integer(binary);
 }
 
-eccvalue_t nsvaluefn_binaryToString(double binary, int base)
+eccvalue_t ecc_value_binarytostring(double binary, int base)
 {
     eccappendbuffer_t chars;
 
     if(binary == 0)
-        return nsvaluefn_text(&ECC_ConstString_Zero);
+        return ecc_value_text(&ECC_ConstString_Zero);
     else if(binary == 1)
-        return nsvaluefn_text(&ECC_ConstString_One);
+        return ecc_value_text(&ECC_ConstString_One);
     else if(isnan(binary))
-        return nsvaluefn_text(&ECC_ConstString_Nan);
+        return ecc_value_text(&ECC_ConstString_Nan);
     else if(isinf(binary))
     {
         if(binary < 0)
-            return nsvaluefn_text(&ECC_ConstString_NegativeInfinity);
+            return ecc_value_text(&ECC_ConstString_NegativeInfinity);
         else
-            return nsvaluefn_text(&ECC_ConstString_Infinity);
+            return ecc_value_text(&ECC_ConstString_Infinity);
     }
 
     ECCNSChars.beginAppend(&chars);
@@ -601,7 +503,7 @@ eccvalue_t nsvaluefn_binaryToString(double binary, int base)
     return ECCNSChars.endAppend(&chars);
 }
 
-eccvalue_t nsvaluefn_toString(eccstate_t* context, eccvalue_t value)
+eccvalue_t ecc_value_tostring(eccstate_t* context, eccvalue_t value)
 {
     switch((eccvaltype_t)value.type)
     {
@@ -614,31 +516,31 @@ eccvalue_t nsvaluefn_toString(eccstate_t* context, eccvalue_t value)
         break;
         case ECC_VALTYPE_KEY:
         {
-            return nsvaluefn_text(ECCNSKey.textOf(value.data.key));
+            return ecc_value_text(ECCNSKey.textOf(value.data.key));
         }
         break;
         case ECC_VALTYPE_STRING:
         {
-            return nsvaluefn_chars(value.data.string->value);
+            return ecc_value_chars(value.data.string->value);
         }
         break;
         case ECC_VALTYPE_NULL:
-            return nsvaluefn_text(&ECC_ConstString_Null);
+            return ecc_value_text(&ECC_ConstString_Null);
 
         case ECC_VALTYPE_UNDEFINED:
-            return nsvaluefn_text(&ECC_ConstString_Undefined);
+            return ecc_value_text(&ECC_ConstString_Undefined);
 
         case ECC_VALTYPE_FALSE:
-            return nsvaluefn_text(&ECC_ConstString_False);
+            return ecc_value_text(&ECC_ConstString_False);
 
         case ECC_VALTYPE_TRUE:
-            return nsvaluefn_text(&ECC_ConstString_True);
+            return ecc_value_text(&ECC_ConstString_True);
 
         case ECC_VALTYPE_BOOLEAN:
-            return value.data.boolean->truth ? nsvaluefn_text(&ECC_ConstString_True) : nsvaluefn_text(&ECC_ConstString_False);
+            return value.data.boolean->truth ? ecc_value_text(&ECC_ConstString_True) : ecc_value_text(&ECC_ConstString_False);
 
         case ECC_VALTYPE_INTEGER:
-            return nsvaluefn_binaryToString(value.data.integer, 10);
+            return ecc_value_binarytostring(value.data.integer, 10);
 
         case ECC_VALTYPE_NUMBER:
         {
@@ -646,7 +548,7 @@ eccvalue_t nsvaluefn_toString(eccstate_t* context, eccvalue_t value)
         }
             /* fallthrough */
         case ECC_VALTYPE_BINARY:
-            return nsvaluefn_binaryToString(value.data.binary, 10);
+            return ecc_value_binarytostring(value.data.binary, 10);
 
         case ECC_VALTYPE_OBJECT:
         case ECC_VALTYPE_DATE:
@@ -654,15 +556,16 @@ eccvalue_t nsvaluefn_toString(eccstate_t* context, eccvalue_t value)
         case ECC_VALTYPE_ERROR:
         case ECC_VALTYPE_REGEXP:
         case ECC_VALTYPE_HOST:
-            return nsvaluefn_toString(context, nsvaluefn_toPrimitive(context, value, ECC_VALHINT_STRING));
+            return ecc_value_tostring(context, ecc_value_toprimitive(context, value, ECC_VALHINT_STRING));
 
         case ECC_VALTYPE_REFERENCE:
             break;
     }
-    ECCNSScript.fatal("Invalid value type : %u", value.type);
+    ecc_script_fatal("Invalid value type : %u", value.type);
+    return ECCValConstUndefined;
 }
 
-int32_t nsvaluefn_stringLength(const eccvalue_t* value)
+int32_t ecc_value_stringlength(const eccvalue_t* value)
 {
     switch(value->type)
     {
@@ -679,11 +582,12 @@ int32_t nsvaluefn_stringLength(const eccvalue_t* value)
             return value->data.buffer[7];
 
         default:
-            return 0;
+            break;
     }
+    return 0;
 }
 
-const char* nsvaluefn_stringBytes(const eccvalue_t* value)
+const char* ecc_value_stringbytes(const eccvalue_t* value)
 {
     switch(value->type)
     {
@@ -700,11 +604,12 @@ const char* nsvaluefn_stringBytes(const eccvalue_t* value)
             return value->data.buffer;
 
         default:
-            return NULL;
+            break;
     }
+    return NULL;
 }
 
-ecctextstring_t nsvaluefn_textOf(const eccvalue_t* value)
+ecctextstring_t ecc_value_textof(const eccvalue_t* value)
 {
     switch(value->type)
     {
@@ -724,11 +629,12 @@ ecctextstring_t nsvaluefn_textOf(const eccvalue_t* value)
             return ECCNSText.make(value->data.buffer, value->data.buffer[7]);
 
         default:
-            return ECC_ConstString_Empty;
+            break;
     }
+    return ECC_ConstString_Empty;
 }
 
-eccvalue_t nsvaluefn_toObject(eccstate_t* context, eccvalue_t value)
+eccvalue_t ecc_value_toobject(eccstate_t* context, eccvalue_t value)
 {
     if(value.type >= ECC_VALTYPE_OBJECT)
         return value;
@@ -736,19 +642,19 @@ eccvalue_t nsvaluefn_toObject(eccstate_t* context, eccvalue_t value)
     switch((eccvaltype_t)value.type)
     {
         case ECC_VALTYPE_BINARY:
-            return nsvaluefn_number(ECCNSNumber.create(value.data.binary));
+            return ecc_value_number(ECCNSNumber.create(value.data.binary));
 
         case ECC_VALTYPE_INTEGER:
-            return nsvaluefn_number(ECCNSNumber.create(value.data.integer));
+            return ecc_value_number(ECCNSNumber.create(value.data.integer));
 
         case ECC_VALTYPE_TEXT:
         case ECC_VALTYPE_CHARS:
         case ECC_VALTYPE_BUFFER:
-            return nsvaluefn_string(ECCNSString.create(ECCNSChars.createWithBytes(nsvaluefn_stringLength(&value), nsvaluefn_stringBytes(&value))));
+            return ecc_value_string(ECCNSString.create(ECCNSChars.createWithBytes(ecc_value_stringlength(&value), ecc_value_stringbytes(&value))));
 
         case ECC_VALTYPE_FALSE:
         case ECC_VALTYPE_TRUE:
-            return nsvaluefn_boolean(ECCNSBool.create(value.type == ECC_VALTYPE_TRUE));
+            return ecc_value_boolean(ECCNSBool.create(value.type == ECC_VALTYPE_TRUE));
 
         case ECC_VALTYPE_NULL:
             goto error;
@@ -769,68 +675,67 @@ eccvalue_t nsvaluefn_toObject(eccstate_t* context, eccvalue_t value)
         case ECC_VALTYPE_HOST:
             break;
     }
-    ECCNSScript.fatal("Invalid value type : %u", value.type);
-
-error:
-{
-    ecctextstring_t text = ECCNSContext.textSeek(context);
-
-    if(context->textIndex != ECC_CTXINDEXTYPE_CALL && text.length)
-        ECCNSContext.typeError(context, ECCNSChars.create("cannot convert '%.*s' to object", text.length, text.bytes));
-    else
-        ECCNSContext.typeError(context, ECCNSChars.create("cannot convert %s to object", nsvaluefn_typeName(value.type)));
+    ecc_script_fatal("Invalid value type : %u", value.type);
+    return ECCValConstUndefined;
+    error:
+    {
+        ecctextstring_t text = ECCNSContext.textSeek(context);
+        if(context->textIndex != ECC_CTXINDEXTYPE_CALL && text.length)
+            ECCNSContext.typeError(context, ECCNSChars.create("cannot convert '%.*s' to object", text.length, text.bytes));
+        else
+            ECCNSContext.typeError(context, ECCNSChars.create("cannot convert %s to object", ecc_value_typename(value.type)));
+    }
+    return ECCValConstUndefined;
 }
-}
 
-eccvalue_t nsvaluefn_objectValue(eccobject_t* object)
+eccvalue_t ecc_value_objectvalue(eccobject_t* object)
 {
     if(!object)
         return ECCValConstUndefined;
     else if(object->type == &ECC_Type_Function)
-        return ECCNSValue.function((eccobjfunction_t*)object);
+        return ecc_value_function((eccobjfunction_t*)object);
     else if(object->type == &ECC_Type_String)
-        return ECCNSValue.string((eccobjstring_t*)object);
+        return ecc_value_string((eccobjstring_t*)object);
     else if(object->type == &ECC_Type_Boolean)
-        return ECCNSValue.boolean((eccobjbool_t*)object);
+        return ecc_value_boolean((eccobjbool_t*)object);
     else if(object->type == &ECC_Type_Number)
-        return ECCNSValue.number((eccobjnumber_t*)object);
+        return ecc_value_number((eccobjnumber_t*)object);
     else if(object->type == &ECC_Type_Date)
-        return ECCNSValue.date((eccobjdate_t*)object);
+        return ecc_value_date((eccobjdate_t*)object);
     else if(object->type == &ECC_Type_Regexp)
-        return ECCNSValue.regexp((eccobjregexp_t*)object);
+        return ecc_value_regexp((eccobjregexp_t*)object);
     else if(object->type == &ECC_Type_Error)
-        return ECCNSValue.error((eccobjerror_t*)object);
+        return ecc_value_error((eccobjerror_t*)object);
     else if(object->type == &ECC_Type_Object || object->type == &ECC_Type_Array || object->type == &ECC_Type_Arguments || object->type == &ECC_Type_Math)
-        return ECCNSValue.object((eccobject_t*)object);
-    else
-        return ECCNSValue.host(object);
+        return ecc_value_object((eccobject_t*)object);
+    return ecc_value_host(object);
 }
 
-int nsvaluefn_objectIsArray(eccobject_t* object)
+int ecc_value_objectisarray(eccobject_t* object)
 {
     return object->type == &ECC_Type_Array || object->type == &ECC_Type_Arguments;
 }
 
-eccvalue_t nsvaluefn_toType(eccvalue_t value)
+eccvalue_t ecc_value_totype(eccvalue_t value)
 {
     switch((eccvaltype_t)value.type)
     {
         case ECC_VALTYPE_TRUE:
         case ECC_VALTYPE_FALSE:
-            return nsvaluefn_text(&ECC_ConstString_Boolean);
+            return ecc_value_text(&ECC_ConstString_Boolean);
 
         case ECC_VALTYPE_UNDEFINED:
-            return nsvaluefn_text(&ECC_ConstString_Undefined);
+            return ecc_value_text(&ECC_ConstString_Undefined);
 
         case ECC_VALTYPE_INTEGER:
         case ECC_VALTYPE_BINARY:
-            return nsvaluefn_text(&ECC_ConstString_Number);
+            return ecc_value_text(&ECC_ConstString_Number);
 
         case ECC_VALTYPE_KEY:
         case ECC_VALTYPE_TEXT:
         case ECC_VALTYPE_CHARS:
         case ECC_VALTYPE_BUFFER:
-            return nsvaluefn_text(&ECC_ConstString_String);
+            return ecc_value_text(&ECC_ConstString_String);
 
         case ECC_VALTYPE_NULL:
         case ECC_VALTYPE_OBJECT:
@@ -841,39 +746,40 @@ eccvalue_t nsvaluefn_toType(eccvalue_t value)
         case ECC_VALTYPE_DATE:
         case ECC_VALTYPE_REGEXP:
         case ECC_VALTYPE_HOST:
-            return nsvaluefn_text(&ECC_ConstString_Object);
+            return ecc_value_text(&ECC_ConstString_Object);
 
         case ECC_VALTYPE_FUNCTION:
-            return nsvaluefn_text(&ECC_ConstString_Function);
+            return ecc_value_text(&ECC_ConstString_Function);
 
         case ECC_VALTYPE_REFERENCE:
             break;
     }
-    ECCNSScript.fatal("Invalid value type : %u", value.type);
+    ecc_script_fatal("Invalid value type : %u", value.type);
+    return ECCValConstUndefined;
 }
 
-eccvalue_t nsvaluefn_equals(eccstate_t* context, eccvalue_t a, eccvalue_t b)
+eccvalue_t ecc_value_equals(eccstate_t* context, eccvalue_t a, eccvalue_t b)
 {
-    if(nsvaluefn_isObject(a) && nsvaluefn_isObject(b))
-        return nsvaluefn_truth(a.data.object == b.data.object);
-    else if(((nsvaluefn_isString(a) || nsvaluefn_isNumber(a)) && nsvaluefn_isObject(b)) || (nsvaluefn_isObject(a) && (nsvaluefn_isString(b) || nsvaluefn_isNumber(b))))
+    if(ecc_value_isobject(a) && ecc_value_isobject(b))
+        return ecc_value_truth(a.data.object == b.data.object);
+    else if(((ecc_value_isstring(a) || ecc_value_isnumber(a)) && ecc_value_isobject(b)) || (ecc_value_isobject(a) && (ecc_value_isstring(b) || ecc_value_isnumber(b))))
     {
-        a = nsvaluefn_toPrimitive(context, a, ECC_VALHINT_AUTO);
+        a = ecc_value_toprimitive(context, a, ECC_VALHINT_AUTO);
         ECCNSContext.setTextIndex(context, ECC_CTXINDECTYPE_SAVEDINDEXALT);
-        b = nsvaluefn_toPrimitive(context, b, ECC_VALHINT_AUTO);
+        b = ecc_value_toprimitive(context, b, ECC_VALHINT_AUTO);
 
-        return nsvaluefn_equals(context, a, b);
+        return ecc_value_equals(context, a, b);
     }
-    else if(nsvaluefn_isNumber(a) && nsvaluefn_isNumber(b))
-        return nsvaluefn_truth(nsvaluefn_toBinary(context, a).data.binary == nsvaluefn_toBinary(context, b).data.binary);
-    else if(nsvaluefn_isString(a) && nsvaluefn_isString(b))
+    else if(ecc_value_isnumber(a) && ecc_value_isnumber(b))
+        return ecc_value_truth(ecc_value_tobinary(context, a).data.binary == ecc_value_tobinary(context, b).data.binary);
+    else if(ecc_value_isstring(a) && ecc_value_isstring(b))
     {
-        int32_t aLength = nsvaluefn_stringLength(&a);
-        int32_t bLength = nsvaluefn_stringLength(&b);
+        int32_t aLength = ecc_value_stringlength(&a);
+        int32_t bLength = ecc_value_stringlength(&b);
         if(aLength != bLength)
             return ECCValConstFalse;
 
-        return nsvaluefn_truth(!memcmp(nsvaluefn_stringBytes(&a), nsvaluefn_stringBytes(&b), aLength));
+        return ecc_value_truth(!memcmp(ecc_value_stringbytes(&a), ecc_value_stringbytes(&b), aLength));
     }
     else if(a.type == b.type)
         return ECCValConstTrue;
@@ -881,48 +787,47 @@ eccvalue_t nsvaluefn_equals(eccstate_t* context, eccvalue_t a, eccvalue_t b)
         return ECCValConstTrue;
     else if(a.type == ECC_VALTYPE_UNDEFINED && b.type == ECC_VALTYPE_NULL)
         return ECCValConstTrue;
-    else if(nsvaluefn_isNumber(a) && nsvaluefn_isString(b))
-        return nsvaluefn_equals(context, a, nsvaluefn_toBinary(context, b));
-    else if(nsvaluefn_isString(a) && nsvaluefn_isNumber(b))
-        return nsvaluefn_equals(context, nsvaluefn_toBinary(context, a), b);
-    else if(nsvaluefn_isBoolean(a))
-        return nsvaluefn_equals(context, nsvaluefn_toBinary(context, a), b);
-    else if(nsvaluefn_isBoolean(b))
-        return nsvaluefn_equals(context, a, nsvaluefn_toBinary(context, b));
+    else if(ecc_value_isnumber(a) && ecc_value_isstring(b))
+        return ecc_value_equals(context, a, ecc_value_tobinary(context, b));
+    else if(ecc_value_isstring(a) && ecc_value_isnumber(b))
+        return ecc_value_equals(context, ecc_value_tobinary(context, a), b);
+    else if(ecc_value_isboolean(a))
+        return ecc_value_equals(context, ecc_value_tobinary(context, a), b);
+    else if(ecc_value_isboolean(b))
+        return ecc_value_equals(context, a, ecc_value_tobinary(context, b));
 
     return ECCValConstFalse;
 }
 
-eccvalue_t nsvaluefn_same(eccstate_t* context, eccvalue_t a, eccvalue_t b)
+eccvalue_t ecc_value_same(eccstate_t* context, eccvalue_t a, eccvalue_t b)
 {
-    if(nsvaluefn_isObject(a) || nsvaluefn_isObject(b))
-        return nsvaluefn_truth(nsvaluefn_isObject(a) && nsvaluefn_isObject(b) && a.data.object == b.data.object);
-    else if(nsvaluefn_isNumber(a) && nsvaluefn_isNumber(b))
-        return nsvaluefn_truth(nsvaluefn_toBinary(context, a).data.binary == nsvaluefn_toBinary(context, b).data.binary);
-    else if(nsvaluefn_isString(a) && nsvaluefn_isString(b))
+    if(ecc_value_isobject(a) || ecc_value_isobject(b))
+        return ecc_value_truth(ecc_value_isobject(a) && ecc_value_isobject(b) && a.data.object == b.data.object);
+    else if(ecc_value_isnumber(a) && ecc_value_isnumber(b))
+        return ecc_value_truth(ecc_value_tobinary(context, a).data.binary == ecc_value_tobinary(context, b).data.binary);
+    else if(ecc_value_isstring(a) && ecc_value_isstring(b))
     {
-        int32_t aLength = nsvaluefn_stringLength(&a);
-        int32_t bLength = nsvaluefn_stringLength(&b);
+        int32_t aLength = ecc_value_stringlength(&a);
+        int32_t bLength = ecc_value_stringlength(&b);
         if(aLength != bLength)
             return ECCValConstFalse;
 
-        return nsvaluefn_truth(!memcmp(nsvaluefn_stringBytes(&a), nsvaluefn_stringBytes(&b), aLength));
+        return ecc_value_truth(!memcmp(ecc_value_stringbytes(&a), ecc_value_stringbytes(&b), aLength));
     }
     else if(a.type == b.type)
         return ECCValConstTrue;
-
     return ECCValConstFalse;
 }
 
-eccvalue_t nsvaluefn_add(eccstate_t* context, eccvalue_t a, eccvalue_t b)
+eccvalue_t ecc_value_add(eccstate_t* context, eccvalue_t a, eccvalue_t b)
 {
-    if(!nsvaluefn_isNumber(a) || !nsvaluefn_isNumber(b))
+    if(!ecc_value_isnumber(a) || !ecc_value_isnumber(b))
     {
-        a = nsvaluefn_toPrimitive(context, a, ECC_VALHINT_AUTO);
+        a = ecc_value_toprimitive(context, a, ECC_VALHINT_AUTO);
         ECCNSContext.setTextIndex(context, ECC_CTXINDECTYPE_SAVEDINDEXALT);
-        b = nsvaluefn_toPrimitive(context, b, ECC_VALHINT_AUTO);
+        b = ecc_value_toprimitive(context, b, ECC_VALHINT_AUTO);
 
-        if(nsvaluefn_isString(a) || nsvaluefn_isString(b))
+        if(ecc_value_isstring(a) || ecc_value_isstring(b))
         {
             eccappendbuffer_t chars;
 
@@ -932,41 +837,41 @@ eccvalue_t nsvaluefn_add(eccstate_t* context, eccvalue_t a, eccvalue_t b)
             return ECCNSChars.endAppend(&chars);
         }
     }
-    return nsvaluefn_binary(nsvaluefn_toBinary(context, a).data.binary + nsvaluefn_toBinary(context, b).data.binary);
+    return ecc_value_binary(ecc_value_tobinary(context, a).data.binary + ecc_value_tobinary(context, b).data.binary);
 }
 
-eccvalue_t nsvaluefn_subtract(eccstate_t* context, eccvalue_t a, eccvalue_t b)
+eccvalue_t ecc_value_subtract(eccstate_t* context, eccvalue_t a, eccvalue_t b)
 {
-    return nsvaluefn_binary(nsvaluefn_toBinary(context, a).data.binary - nsvaluefn_toBinary(context, b).data.binary);
+    return ecc_value_binary(ecc_value_tobinary(context, a).data.binary - ecc_value_tobinary(context, b).data.binary);
 }
 
-static eccvalue_t eccvalue_compare(eccstate_t* context, eccvalue_t a, eccvalue_t b)
+eccvalue_t eccvalue_compare(eccstate_t* context, eccvalue_t a, eccvalue_t b)
 {
-    a = nsvaluefn_toPrimitive(context, a, ECC_VALHINT_NUMBER);
+    a = ecc_value_toprimitive(context, a, ECC_VALHINT_NUMBER);
     ECCNSContext.setTextIndex(context, ECC_CTXINDECTYPE_SAVEDINDEXALT);
-    b = nsvaluefn_toPrimitive(context, b, ECC_VALHINT_NUMBER);
+    b = ecc_value_toprimitive(context, b, ECC_VALHINT_NUMBER);
 
-    if(nsvaluefn_isString(a) && nsvaluefn_isString(b))
+    if(ecc_value_isstring(a) && ecc_value_isstring(b))
     {
-        int32_t aLength = nsvaluefn_stringLength(&a);
-        int32_t bLength = nsvaluefn_stringLength(&b);
+        int32_t aLength = ecc_value_stringlength(&a);
+        int32_t bLength = ecc_value_stringlength(&b);
 
-        if(aLength < bLength && !memcmp(nsvaluefn_stringBytes(&a), nsvaluefn_stringBytes(&b), aLength))
+        if(aLength < bLength && !memcmp(ecc_value_stringbytes(&a), ecc_value_stringbytes(&b), aLength))
             return ECCValConstTrue;
 
-        if(aLength > bLength && !memcmp(nsvaluefn_stringBytes(&a), nsvaluefn_stringBytes(&b), bLength))
+        if(aLength > bLength && !memcmp(ecc_value_stringbytes(&a), ecc_value_stringbytes(&b), bLength))
             return ECCValConstFalse;
 
-        return nsvaluefn_truth(memcmp(nsvaluefn_stringBytes(&a), nsvaluefn_stringBytes(&b), aLength) < 0);
+        return ecc_value_truth(memcmp(ecc_value_stringbytes(&a), ecc_value_stringbytes(&b), aLength) < 0);
     }
-    a = nsvaluefn_toBinary(context, a);
-    b = nsvaluefn_toBinary(context, b);
+    a = ecc_value_tobinary(context, a);
+    b = ecc_value_tobinary(context, b);
     if(isnan(a.data.binary) || isnan(b.data.binary))
         return ECCValConstUndefined;
-    return nsvaluefn_truth(a.data.binary < b.data.binary);
+    return ecc_value_truth(a.data.binary < b.data.binary);
 }
 
-eccvalue_t nsvaluefn_less(eccstate_t* context, eccvalue_t a, eccvalue_t b)
+eccvalue_t ecc_value_less(eccstate_t* context, eccvalue_t a, eccvalue_t b)
 {
     a = eccvalue_compare(context, a, b);
     if(a.type == ECC_VALTYPE_UNDEFINED)
@@ -974,7 +879,7 @@ eccvalue_t nsvaluefn_less(eccstate_t* context, eccvalue_t a, eccvalue_t b)
     return a;
 }
 
-eccvalue_t nsvaluefn_more(eccstate_t* context, eccvalue_t a, eccvalue_t b)
+eccvalue_t ecc_value_more(eccstate_t* context, eccvalue_t a, eccvalue_t b)
 {
     a = eccvalue_compare(context, b, a);
     if(a.type == ECC_VALTYPE_UNDEFINED)
@@ -982,7 +887,7 @@ eccvalue_t nsvaluefn_more(eccstate_t* context, eccvalue_t a, eccvalue_t b)
     return a;
 }
 
-eccvalue_t nsvaluefn_lessOrEqual(eccstate_t* context, eccvalue_t a, eccvalue_t b)
+eccvalue_t ecc_value_lessorequal(eccstate_t* context, eccvalue_t a, eccvalue_t b)
 {
     a = eccvalue_compare(context, b, a);
     if(a.type == ECC_VALTYPE_UNDEFINED || a.type == ECC_VALTYPE_TRUE)
@@ -990,7 +895,7 @@ eccvalue_t nsvaluefn_lessOrEqual(eccstate_t* context, eccvalue_t a, eccvalue_t b
     return ECCValConstTrue;
 }
 
-eccvalue_t nsvaluefn_moreOrEqual(eccstate_t* context, eccvalue_t a, eccvalue_t b)
+eccvalue_t ecc_value_moreorequal(eccstate_t* context, eccvalue_t a, eccvalue_t b)
 {
     a = eccvalue_compare(context, a, b);
     if(a.type == ECC_VALTYPE_UNDEFINED || a.type == ECC_VALTYPE_TRUE)
@@ -998,7 +903,7 @@ eccvalue_t nsvaluefn_moreOrEqual(eccstate_t* context, eccvalue_t a, eccvalue_t b
     return ECCValConstTrue;
 }
 
-const char* nsvaluefn_typeName(eccvaltype_t type)
+const char* ecc_value_typename(int type)
 {
     switch(type)
     {
@@ -1043,10 +948,11 @@ const char* nsvaluefn_typeName(eccvaltype_t type)
         default:
             break;
     }
-    ECCNSScript.fatal("Invalid value type : %u", type);
+    ecc_script_fatal("Invalid value type : %u", type);
+    return "unknown";
 }
 
-const char* nsvaluefn_maskName(eccvalmask_t mask)
+const char* ecc_value_maskname(int mask)
 {
     switch(mask)
     {
@@ -1063,10 +969,11 @@ const char* nsvaluefn_maskName(eccvalmask_t mask)
         default:
             break;
     }
-    ECCNSScript.fatal("Invalid value mask : %u", mask);
+    ecc_script_fatal("Invalid value mask : %u", mask);
+    return "illegal";
 }
 
-void nsvaluefn_dumpTo(eccvalue_t value, FILE* file)
+void ecc_value_dumpto(eccvalue_t value, FILE* file)
 {
     switch((eccvaltype_t)value.type)
     {
@@ -1123,7 +1030,7 @@ void nsvaluefn_dumpTo(eccvalue_t value, FILE* file)
         case ECC_VALTYPE_STRING:
         case ECC_VALTYPE_BUFFER:
         {
-            const ecctextstring_t text = nsvaluefn_textOf(&value);
+            const ecctextstring_t text = ecc_value_textof(&value);
             //putc('\'', file);
             fwrite(text.bytes, sizeof(char), text.length, file);
             //putc('\'', file);
@@ -1150,7 +1057,7 @@ void nsvaluefn_dumpTo(eccvalue_t value, FILE* file)
         case ECC_VALTYPE_REFERENCE:
         {
             fputs("-> ", file);
-            nsvaluefn_dumpTo(*value.data.reference, file);
+            ecc_value_dumpto(*value.data.reference, file);
             return;
         }
         break;

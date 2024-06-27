@@ -29,7 +29,7 @@ const struct eccpseudonschars_t ECCNSChars = {
     {}
 };
 
-static inline uint32_t eccchars_nextPowerOfTwo(uint32_t v)
+uint32_t eccchars_nextPowerOfTwo(uint32_t v)
 {
     v--;
     v |= v >> 1;
@@ -41,7 +41,7 @@ static inline uint32_t eccchars_nextPowerOfTwo(uint32_t v)
     return v;
 }
 
-static inline uint32_t eccchars_sizeForLength(uint32_t length)
+uint32_t eccchars_sizeForLength(uint32_t length)
 {
     uint32_t size = sizeof(ecccharbuffer_t) + length;
 
@@ -65,7 +65,7 @@ static ecccharbuffer_t* eccchars_reuseOrCreate(eccappendbuffer_t* chars, uint32_
         if(length < 8)
             return NULL;
 
-        self = malloc(eccchars_sizeForLength(length));
+        self = (ecccharbuffer_t*)malloc(eccchars_sizeForLength(length));
         ECCNSMemoryPool.addChars(self);
     }
 
@@ -115,7 +115,7 @@ ecccharbuffer_t* nsccharsfn_create(const char* format, ...)
 
 ecccharbuffer_t* nsccharsfn_createSized(int32_t length)
 {
-    ecccharbuffer_t* self = malloc(eccchars_sizeForLength(length));
+    ecccharbuffer_t* self = (ecccharbuffer_t*)malloc(eccchars_sizeForLength(length));
     ECCNSMemoryPool.addChars(self);
     *self = ECCNSChars.identity;
 
@@ -127,7 +127,7 @@ ecccharbuffer_t* nsccharsfn_createSized(int32_t length)
 
 ecccharbuffer_t* nsccharsfn_createWithBytes(int32_t length, const char* bytes)
 {
-    ecccharbuffer_t* self = malloc(eccchars_sizeForLength(length));
+    ecccharbuffer_t* self = (ecccharbuffer_t*)malloc(eccchars_sizeForLength(length));
     ECCNSMemoryPool.addChars(self);
     *self = ECCNSChars.identity;
 
@@ -230,7 +230,7 @@ void nsccharsfn_appendValue(eccappendbuffer_t* chars, eccstate_t* context, eccva
         case ECC_VALTYPE_STRING:
         case ECC_VALTYPE_CHARS:
         case ECC_VALTYPE_BUFFER:
-            eccchars_appendText(chars, ECCNSValue.textOf(&value));
+            eccchars_appendText(chars, ecc_value_textof(&value));
             return;
 
         case ECC_VALTYPE_NULL:
@@ -271,13 +271,13 @@ void nsccharsfn_appendValue(eccappendbuffer_t* chars, eccstate_t* context, eccva
         case ECC_VALTYPE_ERROR:
         case ECC_VALTYPE_DATE:
         case ECC_VALTYPE_HOST:
-            nsccharsfn_appendValue(chars, context, ECCNSValue.toString(context, value));
+            nsccharsfn_appendValue(chars, context, ecc_value_tostring(context, value));
             return;
 
         case ECC_VALTYPE_REFERENCE:
             break;
     }
-    ECCNSScript.fatal("Invalid value type : %u", value.type);
+    ecc_script_fatal("Invalid value type : %u", value.type);
 }
 
 static uint32_t eccchars_stripBinaryOfBytes(char* bytes, uint32_t length)
@@ -398,10 +398,10 @@ eccvalue_t nsccharsfn_endAppend(eccappendbuffer_t* chars)
     if(chars->value)
     {
         self->bytes[self->length] = '\0';
-        return ECCNSValue.chars(self);
+        return ecc_value_chars(self);
     }
     else
-        return ECCNSValue.buffer(chars->buffer, chars->units);
+        return ecc_value_buffer(chars->buffer, chars->units);
 }
 
 void nsccharsfn_destroy(ecccharbuffer_t* self)

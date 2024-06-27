@@ -7,45 +7,13 @@
 //
 #include "ecc.h"
 
-// MARK: - Private
-
-static eccscriptcontext_t* nspubapifn_create(void);
-static void nspubapifn_destroy(eccscriptcontext_t*);
-static void nspubapifn_addValue(eccscriptcontext_t*, const char* name, eccvalue_t value, eccvalflag_t);
-static void nspubapifn_addFunction(eccscriptcontext_t*, const char* name, const eccnativefuncptr_t native, int argumentCount, eccvalflag_t);
-static int nspubapifn_evalInput(eccscriptcontext_t*, eccioinput_t*, eccscriptevalflags_t);
-static void nspubapifn_evalInputWithContext(eccscriptcontext_t*, eccioinput_t*, eccstate_t* context);
-static jmp_buf* nspubapifn_pushEnv(eccscriptcontext_t*);
-static void nspubapifn_popEnv(eccscriptcontext_t*);
-static void nspubapifn_jmpEnv(eccscriptcontext_t*, eccvalue_t value) __attribute__((noreturn));
-static void nspubapifn_fatal(const char* format, ...) __attribute__((noreturn));
-static eccioinput_t* nspubapifn_findInput(eccscriptcontext_t* self, ecctextstring_t text);
-static void nspubapifn_printTextInput(eccscriptcontext_t*, ecctextstring_t text, int fullLine);
-static void nspubapifn_garbageCollect(eccscriptcontext_t*);
-const struct eccpseudonsecc_t ECCNSScript = {
-    nspubapifn_create,
-    nspubapifn_destroy,
-    nspubapifn_addValue,
-    nspubapifn_addFunction,
-    nspubapifn_evalInput,
-    nspubapifn_evalInputWithContext,
-    nspubapifn_pushEnv,
-    nspubapifn_popEnv,
-    nspubapifn_jmpEnv,
-    nspubapifn_fatal,
-    nspubapifn_findInput,
-    nspubapifn_printTextInput,
-    nspubapifn_garbageCollect,
-    {}
-};
-
 static int instanceCount = 0;
 
 // MARK: - Static Members
 
-static void eccpubapi_addInput(eccscriptcontext_t* self, eccioinput_t* input)
+void eccpubapi_addInput(eccscriptcontext_t* self, eccioinput_t* input)
 {
-    self->inputs = realloc(self->inputs, sizeof(*self->inputs) * (self->inputCount + 1));
+    self->inputs = (eccioinput_t**)realloc(self->inputs, sizeof(*self->inputs) * (self->inputCount + 1));
     self->inputs[self->inputCount++] = input;
 }
 
@@ -53,7 +21,7 @@ static void eccpubapi_addInput(eccscriptcontext_t* self, eccioinput_t* input)
 
 uint32_t io_libecc_ecc_version = (0 << 24) | (1 << 16) | (0 << 0);
 
-eccscriptcontext_t* nspubapifn_create(void)
+eccscriptcontext_t* ecc_script_create(void)
 {
     eccscriptcontext_t* self;
 
@@ -64,8 +32,9 @@ eccscriptcontext_t* nspubapifn_create(void)
         ECCNSKey.setup();
         ECCNSGlobal.setup();
     }
-    self = malloc(sizeof(*self));
-    *self = ECCNSScript.identity;
+    self = (eccscriptcontext_t*)malloc(sizeof(*self));
+    // *self = ecc_script_identity;
+    memset(self, 0, sizeof(eccscriptcontext_t));
 
     self->global = ECCNSGlobal.create();
     self->maximumCallDepth = 512;
@@ -73,7 +42,7 @@ eccscriptcontext_t* nspubapifn_create(void)
     return self;
 }
 
-void nspubapifn_destroy(eccscriptcontext_t* self)
+void ecc_script_destroy(eccscriptcontext_t* self)
 {
     assert(self);
 
@@ -93,29 +62,28 @@ void nspubapifn_destroy(eccscriptcontext_t* self)
     }
 }
 
-void nspubapifn_addFunction(eccscriptcontext_t* self, const char* name, const eccnativefuncptr_t native, int argumentCount, eccvalflag_t flags)
+void ecc_script_addfunction(eccscriptcontext_t* self, const char* name, const eccnativefuncptr_t native, int argumentCount, int flags)
 {
     assert(self);
 
     ECCNSFunction.addFunction(self->global, name, native, argumentCount, flags);
 }
 
-void nspubapifn_addValue(eccscriptcontext_t* self, const char* name, eccvalue_t value, eccvalflag_t flags)
+void ecc_script_addvalue(eccscriptcontext_t* self, const char* name, eccvalue_t value, int flags)
 {
     assert(self);
 
     ECCNSFunction.addValue(self->global, name, value, flags);
 }
 
-io_libecc_ecc_useframe int nspubapifn_evalInput(eccscriptcontext_t* self, eccioinput_t* input, eccscriptevalflags_t flags)
+int ecc_script_evalinput(eccscriptcontext_t* self, eccioinput_t* input, int flags)
 {
-    volatile int result = EXIT_SUCCESS, trap = !self->envCount || flags & ECC_SCRIPTEVAL_PRIMITIVERESULT, catch = 0;
-    eccstate_t context = {
-        .environment = &self->global->environment,
-        .thisvalue = ECCNSValue.object(&self->global->environment),
-        .ecc = self,
-        .strictMode = !(flags & ECC_SCRIPTEVAL_SLOPPYMODE),
-    };
+    int result = EXIT_SUCCESS, trap = !self->envCount || flags & ECC_SCRIPTEVAL_PRIMITIVERESULT, catchpos = 0;
+    eccstate_t context = {};
+    context.environment = &self->global->environment;
+    context.thisvalue = ecc_value_object(&self->global->environment);
+    context.ecc = self;
+    context.strictMode = !(flags & ECC_SCRIPTEVAL_SLOPPYMODE);
 
     if(!input)
         return EXIT_FAILURE;
@@ -125,13 +93,13 @@ io_libecc_ecc_useframe int nspubapifn_evalInput(eccscriptcontext_t* self, eccioi
     if(trap)
     {
         self->printLastThrow = 1;
-        catch = setjmp(*nspubapifn_pushEnv(self));
+        catchpos = setjmp(*ecc_script_pushenv(self));
     }
 
-    if(catch)
+    if(catchpos)
         result = EXIT_FAILURE;
     else
-        nspubapifn_evalInputWithContext(self, input, &context);
+        ecc_script_evalinputwithcontext(self, input, &context);
 
     if(flags & ECC_SCRIPTEVAL_PRIMITIVERESULT)
     {
@@ -139,21 +107,21 @@ io_libecc_ecc_useframe int nspubapifn_evalInput(eccscriptcontext_t* self, eccioi
         context.text = &context.ops->text;
 
         if((flags & ECC_SCRIPTEVAL_STRINGRESULT) == ECC_SCRIPTEVAL_STRINGRESULT)
-            self->result = ECCNSValue.toString(&context, self->result);
+            self->result = ecc_value_tostring(&context, self->result);
         else
-            self->result = ECCNSValue.toPrimitive(&context, self->result, ECC_VALHINT_AUTO);
+            self->result = ecc_value_toprimitive(&context, self->result, ECC_VALHINT_AUTO);
     }
 
     if(trap)
     {
-        nspubapifn_popEnv(self);
+        ecc_script_popenv(self);
         self->printLastThrow = 0;
     }
 
     return result;
 }
 
-void nspubapifn_evalInputWithContext(eccscriptcontext_t* self, eccioinput_t* input, eccstate_t* context)
+void ecc_script_evalinputwithcontext(eccscriptcontext_t* self, eccioinput_t* input, eccstate_t* context)
 {
     eccastlexer_t* lexer;
     eccastparser_t* parser;
@@ -187,26 +155,26 @@ void nspubapifn_evalInputWithContext(eccscriptcontext_t* self, eccioinput_t* inp
     context->ops->native(context);
 }
 
-jmp_buf* nspubapifn_pushEnv(eccscriptcontext_t* self)
+jmp_buf* ecc_script_pushenv(eccscriptcontext_t* self)
 {
     if(self->envCount >= self->envCapacity)
     {
         uint16_t capacity = self->envCapacity ? self->envCapacity * 2 : 8;
-        self->envList = realloc(self->envList, sizeof(*self->envList) * capacity);
+        self->envList = (jmp_buf*)realloc(self->envList, sizeof(*self->envList) * capacity);
         memset(self->envList + self->envCapacity, 0, sizeof(*self->envList) * (capacity - self->envCapacity));
         self->envCapacity = capacity;
     }
     return &self->envList[self->envCount++];
 }
 
-void nspubapifn_popEnv(eccscriptcontext_t* self)
+void ecc_script_popenv(eccscriptcontext_t* self)
 {
     assert(self->envCount);
 
     --self->envCount;
 }
 
-void nspubapifn_jmpEnv(eccscriptcontext_t* self, eccvalue_t value)
+void ecc_script_jmpenv(eccscriptcontext_t* self, eccvalue_t value)
 {
     assert(self);
     assert(self->envCount);
@@ -219,7 +187,7 @@ void nspubapifn_jmpEnv(eccscriptcontext_t* self, eccvalue_t value)
     longjmp(self->envList[self->envCount - 1], 1);
 }
 
-void nspubapifn_fatal(const char* format, ...)
+void ecc_script_fatal(const char* format, ...)
 {
     int16_t length;
     va_list ap;
@@ -241,7 +209,7 @@ void nspubapifn_fatal(const char* format, ...)
     exit(EXIT_FAILURE);
 }
 
-eccioinput_t* nspubapifn_findInput(eccscriptcontext_t* self, ecctextstring_t text)
+eccioinput_t* ecc_script_findinput(eccscriptcontext_t* self, ecctextstring_t text)
 {
     uint16_t i;
 
@@ -252,7 +220,7 @@ eccioinput_t* nspubapifn_findInput(eccscriptcontext_t* self, ecctextstring_t tex
     return NULL;
 }
 
-void nspubapifn_printTextInput(eccscriptcontext_t* self, ecctextstring_t text, int fullLine)
+void ecc_script_printtextinput(eccscriptcontext_t* self, ecctextstring_t text, int fullLine)
 {
     int32_t ofLine;
     ecctextstring_t ofText;
@@ -273,16 +241,16 @@ void nspubapifn_printTextInput(eccscriptcontext_t* self, ecctextstring_t text, i
         ofInput = NULL;
     }
 
-    ECCNSInput.printText(nspubapifn_findInput(self, text), text, ofLine, ofText, ofInput, fullLine);
+    ECCNSInput.printText(ecc_script_findinput(self, text), text, ofLine, ofText, ofInput, fullLine);
 }
 
-void nspubapifn_garbageCollect(eccscriptcontext_t* self)
+void ecc_script_garbagecollect(eccscriptcontext_t* self)
 {
     uint16_t index, count;
 
     ECCNSMemoryPool.unmarkAll();
-    ECCNSMemoryPool.markValue(ECCNSValue.object(ECC_Prototype_Arguments));
-    ECCNSMemoryPool.markValue(ECCNSValue.function(self->global));
+    ECCNSMemoryPool.markValue(ecc_value_object(ECC_Prototype_Arguments));
+    ECCNSMemoryPool.markValue(ecc_value_function(self->global));
 
     for(index = 0, count = self->inputCount; index < count; ++index)
     {

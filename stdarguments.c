@@ -29,14 +29,14 @@ const struct eccpseudonsarguments_t ECCNSArguments = {
 
 static eccvalue_t argobjfn_getLength(eccstate_t* context)
 {
-    return ECCNSValue.binary(context->thisvalue.data.object->elementCount);
+    return ecc_value_binary(context->thisvalue.data.object->elementCount);
 }
 
 static eccvalue_t argobjfn_setLength(eccstate_t* context)
 {
     double length;
 
-    length = ECCNSValue.toBinary(context, ECCNSContext.argument(context, 0)).data.binary;
+    length = ecc_value_tobinary(context, ECCNSContext.argument(context, 0)).data.binary;
     if(!isfinite(length) || length < 0 || length > UINT32_MAX || length != (uint32_t)length)
         ECCNSContext.rangeError(context, ECCNSChars.create("invalid array length"));
 

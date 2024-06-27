@@ -82,7 +82,7 @@ void nspoolfn_setup(void)
 {
     assert(!self);
 
-    self = malloc(sizeof(*self));
+    self = (eccmempool_t*)malloc(sizeof(*self));
     *self = ECCNSMemoryPool.identity;
 }
 
@@ -107,7 +107,7 @@ void nspoolfn_addFunction(eccobjfunction_t* function)
     if(self->functionCount >= self->functionCapacity)
     {
         self->functionCapacity = self->functionCapacity ? self->functionCapacity * 2 : 8;
-        self->functionList = realloc(self->functionList, self->functionCapacity * sizeof(*self->functionList));
+        self->functionList = (eccobjfunction_t**)realloc(self->functionList, self->functionCapacity * sizeof(*self->functionList));
         memset(self->functionList + self->functionCount, 0, sizeof(*self->functionList) * (self->functionCapacity - self->functionCount));
     }
 
@@ -124,7 +124,7 @@ void nspoolfn_addObject(eccobject_t* object)
     if(self->objectCount >= self->objectCapacity)
     {
         self->objectCapacity = self->objectCapacity ? self->objectCapacity * 2 : 8;
-        self->objectList = realloc(self->objectList, self->objectCapacity * sizeof(*self->objectList));
+        self->objectList = (eccobject_t**)realloc(self->objectList, self->objectCapacity * sizeof(*self->objectList));
         memset(self->objectList + self->objectCount, 0, sizeof(*self->objectList) * (self->objectCapacity - self->objectCount));
     }
 
@@ -138,7 +138,7 @@ void nspoolfn_addChars(ecccharbuffer_t* chars)
     if(self->charsCount >= self->charsCapacity)
     {
         self->charsCapacity = self->charsCapacity ? self->charsCapacity * 2 : 8;
-        self->charsList = realloc(self->charsList, self->charsCapacity * sizeof(*self->charsList));
+        self->charsList = (ecccharbuffer_t**)realloc(self->charsList, self->charsCapacity * sizeof(*self->charsList));
         memset(self->charsList + self->charsCount, 0, sizeof(*self->charsList) * (self->charsCapacity - self->charsCount));
     }
 
@@ -225,7 +225,7 @@ static void eccpool_cleanupObject(eccobject_t* object)
 static void eccpool_captureObject(eccobject_t* object)
 {
     uint32_t index, count;
-    eccobjelement_t* element;
+    ecchashitem_t* element;
     ecchashmap_t* hashmap;
 
     if(object->prototype)

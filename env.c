@@ -28,7 +28,7 @@
 static void nsenvfn_setup(void);
 static void nsenvfn_teardown(void);
 static void nsenvfn_print(const char* format, ...);
-static void nsenvfn_printColor(eccenvcolor_t color, eccenvattribute_t attribute, const char* format, ...);
+static void nsenvfn_printColor(int color, int attribute, const char* format, ...);
 static void nsenvfn_printError(int typeLength, const char* type, const char* format, ...);
 static void nsenvfn_printWarning(const char* format, ...);
 static void nsenvfn_newline(void);
@@ -85,7 +85,7 @@ void nsenvfn_teardown(void)
     nsenvfn_newline();
 }
 
-static void eccenv_textc(eccenvcolor_t c, eccenvattribute_t a)
+static void eccenv_textc(int c, int a)
 {
 #if __MSDOS__ || _WIN32
     if(a == ECC_ENVATTR_INVISIBLE)
@@ -150,7 +150,7 @@ void nsenvfn_print(const char* format, ...)
     va_end(ap);
 }
 
-void nsenvfn_printColor(eccenvcolor_t color, eccenvattribute_t attribute, const char* format, ...)
+void nsenvfn_printColor(int color, int attribute, const char* format, ...)
 {
     va_list ap;
 

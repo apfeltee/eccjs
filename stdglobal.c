@@ -42,22 +42,21 @@ static eccvalue_t globalsfn_eval(eccstate_t* context)
 {
     eccvalue_t value;
     eccioinput_t* input;
-    eccstate_t subContext = {
-        .parent = context,
-        .thisvalue = ECCNSValue.object(&context->ecc->global->environment),
-        .ecc = context->ecc,
-        .depth = context->depth + 1,
-        .environment = ECCNSContext.environmentRoot(context->parent),
-    };
+    eccstate_t subContext = {};
+    subContext.parent = context;
+    subContext.thisvalue = ecc_value_object(&context->ecc->global->environment);
+    subContext.ecc = context->ecc;
+    subContext.depth = context->depth + 1;
+    subContext.environment = ECCNSContext.environmentRoot(context->parent);
 
     value = ECCNSContext.argument(context, 0);
-    if(!ECCNSValue.isString(value) || !ECCNSValue.isPrimitive(value))
+    if(!ecc_value_isstring(value) || !ecc_value_isprimitive(value))
         return value;
 
-    input = ECCNSInput.createFromBytes(ECCNSValue.stringBytes(&value), ECCNSValue.stringLength(&value), "(eval)");
+    input = ECCNSInput.createFromBytes(ecc_value_stringbytes(&value), ecc_value_stringlength(&value), "(eval)");
 
     ECCNSContext.setTextIndex(context, ECC_CTXINDEXTYPE_NO);
-    ECCNSScript.evalInputWithContext(context->ecc, input, &subContext);
+    ecc_script_evalinputwithcontext(context->ecc, input, &subContext);
 
     return context->ecc->result;
 }
@@ -68,9 +67,9 @@ static eccvalue_t globalsfn_parseInt(eccstate_t* context)
     ecctextstring_t text;
     int32_t base;
 
-    value = ECCNSValue.toString(context, ECCNSContext.argument(context, 0));
-    base = ECCNSValue.toInteger(context, ECCNSContext.argument(context, 1)).data.integer;
-    text = ECCNSValue.textOf(&value);
+    value = ecc_value_tostring(context, ECCNSContext.argument(context, 0));
+    base = ecc_value_tointeger(context, ECCNSContext.argument(context, 1)).data.integer;
+    text = ecc_value_textof(&value);
 
     if(!base)
     {
@@ -93,8 +92,8 @@ static eccvalue_t globalsfn_parseFloat(eccstate_t* context)
     eccvalue_t value;
     ecctextstring_t text;
 
-    value = ECCNSValue.toString(context, ECCNSContext.argument(context, 0));
-    text = ECCNSValue.textOf(&value);
+    value = ecc_value_tostring(context, ECCNSContext.argument(context, 0));
+    text = ecc_value_textof(&value);
     return ECCNSLexer.scanBinary(text, ECC_LEXFLAG_SCANLAZY | (context->ecc->sloppyMode ? ECC_LEXFLAG_SCANSLOPPY : 0));
 }
 
@@ -102,85 +101,93 @@ static eccvalue_t globalsfn_isFinite(eccstate_t* context)
 {
     eccvalue_t value;
 
-    value = ECCNSValue.toBinary(context, ECCNSContext.argument(context, 0));
-    return ECCNSValue.truth(!isnan(value.data.binary) && !isinf(value.data.binary));
+    value = ecc_value_tobinary(context, ECCNSContext.argument(context, 0));
+    return ecc_value_truth(!isnan(value.data.binary) && !isinf(value.data.binary));
 }
 
 static eccvalue_t globalsfn_isNaN(eccstate_t* context)
 {
     eccvalue_t value;
 
-    value = ECCNSValue.toBinary(context, ECCNSContext.argument(context, 0));
-    return ECCNSValue.truth(isnan(value.data.binary));
+    value = ecc_value_tobinary(context, ECCNSContext.argument(context, 0));
+    return ecc_value_truth(isnan(value.data.binary));
 }
 
 static eccvalue_t eccglobals_decodeExcept(eccstate_t* context, const char* exclude)
 {
-    char buffer[5], *b;
-    eccvalue_t value;
-    const char* bytes;
-    uint16_t index = 0, count;
-    eccappendbuffer_t chars;
+    uint16_t index;
+    uint16_t count;
     uint8_t byte;
-
-    value = ECCNSValue.toString(context, ECCNSContext.argument(context, 0));
-    bytes = ECCNSValue.stringBytes(&value);
-    count = ECCNSValue.stringLength(&value);
-
+    int continuation;
+    char buffer[5];
+    char *b;
+    const char* bytes;
+    eccvalue_t value;
+    eccappendbuffer_t chars;
+    ecctextchar_t c;
+    index = 0;
+    value = ecc_value_tostring(context, ECCNSContext.argument(context, 0));
+    bytes = ecc_value_stringbytes(&value);
+    count = ecc_value_stringlength(&value);
     ECCNSChars.beginAppend(&chars);
-
     while(index < count)
     {
         byte = bytes[index++];
-
         if(byte != '%')
+        {
             ECCNSChars.append(&chars, "%c", byte);
+        }
         else if(index + 2 > count || !isxdigit(bytes[index]) || !isxdigit(bytes[index + 1]))
+        {
             goto error;
+        }
         else
         {
             byte = ECCNSLexer.uint8Hex(bytes[index], bytes[index + 1]);
             index += 2;
-
             if(byte >= 0x80)
             {
-                ecctextchar_t c;
-                int continuation = (byte & 0xf8) == 0xf0 ? 3 : (byte & 0xf0) == 0xe0 ? 2 : (byte & 0xe0) == 0xc0 ? 1 : 0;
-
+                continuation = (byte & 0xf8) == 0xf0 ? 3 : (byte & 0xf0) == 0xe0 ? 2 : (byte & 0xe0) == 0xc0 ? 1 : 0;
                 if(!continuation || index + continuation * 3 > count)
+                {
                     goto error;
-
+                }
                 b = buffer;
                 (*b++) = byte;
                 while(continuation--)
                 {
                     if(bytes[index++] != '%' || !isxdigit(bytes[index]) || !isxdigit(bytes[index + 1]))
+                    {
                         goto error;
-
+                    }
                     byte = ECCNSLexer.uint8Hex(bytes[index], bytes[index + 1]);
                     index += 2;
-
                     if((byte & 0xc0) != 0x80)
+                    {
                         goto error;
-
+                    }
                     (*b++) = byte;
                 }
                 *b = '\0';
-
                 c = ECCNSText.character(ECCNSText.make(buffer, (int32_t)(b - buffer)));
                 ECCNSChars.appendCodepoint(&chars, c.codepoint);
             }
             else if(byte && exclude && strchr(exclude, byte))
+            {
                 ECCNSChars.append(&chars, "%%%c%c", bytes[index - 2], bytes[index - 1]);
+            }
             else
+            {
                 ECCNSChars.append(&chars, "%c", byte);
+            }
         }
     }
-
     return ECCNSChars.endAppend(&chars);
-
-error:
-    ECCNSContext.uriError(context, ECCNSChars.create("malformed URI"));
+    error:
+    {
+        ECCNSContext.uriError(context, ECCNSChars.create("malformed URI"));
+    }
+    return ECCValConstUndefined;
 }
 
 static eccvalue_t globalsfn_decodeURI(eccstate_t* context)
@@ -195,26 +202,26 @@ static eccvalue_t globalsfn_decodeURIComponent(eccstate_t* context)
 
 static eccvalue_t eccglobals_encodeExpect(eccstate_t* context, const char* exclude)
 {
-    const char hex[] = "0123456789ABCDEF";
     eccvalue_t value;
     const char* bytes;
-    uint16_t offset = 0, unit, length;
+    uint16_t offset;
+    uint16_t unit;
+    uint16_t length;
+    int needPair;
     ecccharbuffer_t* chars;
     ecctextstring_t text;
     ecctextchar_t c;
-    int needPair = 0;
-
-    value = ECCNSValue.toString(context, ECCNSContext.argument(context, 0));
-    bytes = ECCNSValue.stringBytes(&value);
-    length = ECCNSValue.stringLength(&value);
+    static const char hex[] = "0123456789ABCDEF";
+    offset = 0;
+    needPair = 0;
+    value = ecc_value_tostring(context, ECCNSContext.argument(context, 0));
+    bytes = ecc_value_stringbytes(&value);
+    length = ecc_value_stringlength(&value);
     text = ECCNSText.make(bytes, length);
-
     chars = ECCNSChars.createSized(length * 3);
-
     while(text.length)
     {
         c = ECCNSText.character(text);
-
         if(c.codepoint < 0x80 && c.codepoint && strchr(exclude, c.codepoint))
             chars->bytes[offset++] = c.codepoint;
         else
@@ -222,13 +229,18 @@ static eccvalue_t eccglobals_encodeExpect(eccstate_t* context, const char* exclu
             if(c.codepoint >= 0xDC00 && c.codepoint <= 0xDFFF)
             {
                 if(!needPair)
+                {
                     goto error;
+                }
             }
             else if(needPair)
+            {
                 goto error;
+            }
             else if(c.codepoint >= 0xD800 && c.codepoint <= 0xDBFF)
+            {
                 needPair = 1;
-
+            }
             for(unit = 0; unit < c.units; ++unit)
             {
                 chars->bytes[offset++] = '%';
@@ -236,56 +248,70 @@ static eccvalue_t eccglobals_encodeExpect(eccstate_t* context, const char* exclu
                 chars->bytes[offset++] = hex[(uint8_t)text.bytes[unit] & 0xf];
             }
         }
-
         ECCNSText.advance(&text, c.units);
     }
-
     if(needPair)
+    {
         goto error;
-
+    }
     chars->length = offset;
-    return ECCNSValue.chars(chars);
-
-error:
-    ECCNSContext.uriError(context, ECCNSChars.create("malformed URI"));
+    return ecc_value_chars(chars);
+    error:
+    {
+        ECCNSContext.uriError(context, ECCNSChars.create("malformed URI"));
+    }
+    return ECCValConstUndefined;
 }
 
 static eccvalue_t globalsfn_encodeURI(eccstate_t* context)
 {
-    return eccglobals_encodeExpect(context, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.!~*'()"
-                                 ";/?:@&=+$,#");
+    static const char* encstrings = (
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        "abcdefghijklmnopqrstuvwxyz"
+        "0123456789"
+        "-_.!~*'();/?:@&=+$,#"
+    );
+    return eccglobals_encodeExpect(context, encstrings);
 }
 
 static eccvalue_t globalsfn_encodeURIComponent(eccstate_t* context)
 {
-    return eccglobals_encodeExpect(context, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.!~*'()");
+    static const char* encstrings = (
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        "abcdefghijklmnopqrstuvwxyz"
+        "0123456789"
+        "-_.!~*'()"
+    );
+    return eccglobals_encodeExpect(context, encstrings);
 }
 
 static eccvalue_t globalsfn_escape(eccstate_t* context)
 {
-    const char* exclude = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 @*_+-./";
     eccvalue_t value;
     eccappendbuffer_t chars;
     ecctextstring_t text;
     ecctextchar_t c;
-
-    value = ECCNSValue.toString(context, ECCNSContext.argument(context, 0));
-    text = ECCNSValue.textOf(&value);
-
+    static const char* exclude = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 @*_+-./";
+    value = ecc_value_tostring(context, ECCNSContext.argument(context, 0));
+    text = ecc_value_textof(&value);
     ECCNSChars.beginAppend(&chars);
-
     while(text.length)
     {
         c = ECCNSText.nextCharacter(&text);
-
         if(c.codepoint < 0x80 && c.codepoint && strchr(exclude, c.codepoint))
+        {
             ECCNSChars.append(&chars, "%c", c.codepoint);
+        }
         else
         {
             if(c.codepoint <= 0xff)
+            {
                 ECCNSChars.append(&chars, "%%%02X", c.codepoint);
+            }
             else if(c.codepoint < 0x010000)
+            {
                 ECCNSChars.append(&chars, "%%u%04X", c.codepoint);
+            }
             else
             {
                 c.codepoint -= 0x010000;
@@ -294,7 +320,6 @@ static eccvalue_t globalsfn_escape(eccstate_t* context)
             }
         }
     }
-
     return ECCNSChars.endAppend(&chars);
 }
 
@@ -305,8 +330,8 @@ static eccvalue_t globalsfn_unescape(eccstate_t* context)
     ecctextstring_t text;
     ecctextchar_t c;
 
-    value = ECCNSValue.toString(context, ECCNSContext.argument(context, 0));
-    text = ECCNSValue.textOf(&value);
+    value = ecc_value_tostring(context, ECCNSContext.argument(context, 0));
+    text = ecc_value_textof(&value);
 
     ECCNSChars.beginAppend(&chars);
 
@@ -393,8 +418,8 @@ static eccobjfunction_t* nsglobalfn_create(void)
     eccobjfunction_t* self = ECCNSFunction.create(ECC_Prototype_Object);
     self->environment.type = &ECC_Type_Global;
 
-    ECCNSFunction.addValue(self, "NaN", ECCNSValue.binary(NAN), r | h | s);
-    ECCNSFunction.addValue(self, "Infinity", ECCNSValue.binary(INFINITY), r | h | s);
+    ECCNSFunction.addValue(self, "NaN", ecc_value_binary(NAN), r | h | s);
+    ECCNSFunction.addValue(self, "Infinity", ecc_value_binary(INFINITY), r | h | s);
     ECCNSFunction.addValue(self, "undefined", ECCValConstUndefined, r | h | s);
 
     ECCNSFunction.addFunction(self, "eval", globalsfn_eval, 1, h);
@@ -408,23 +433,23 @@ static eccobjfunction_t* nsglobalfn_create(void)
     ECCNSFunction.addFunction(self, "decodeURIComponent", globalsfn_decodeURIComponent, 1, h);
     ECCNSFunction.addFunction(self, "encodeURI", globalsfn_encodeURI, 1, h);
     ECCNSFunction.addFunction(self, "encodeURIComponent", globalsfn_encodeURIComponent, 1, h);
-    ECCNSFunction.addValue(self, "Object", ECCNSValue.function(ECC_CtorFunc_Object), h);
-    ECCNSFunction.addValue(self, "Function", ECCNSValue.function(ECC_CtorFunc_Function), h);
-    ECCNSFunction.addValue(self, "Array", ECCNSValue.function(ECC_CtorFunc_Array), h);
-    ECCNSFunction.addValue(self, "String", ECCNSValue.function(ECC_CtorFunc_String), h);
-    ECCNSFunction.addValue(self, "Boolean", ECCNSValue.function(ECC_CtorFunc_Boolean), h);
-    ECCNSFunction.addValue(self, "Number", ECCNSValue.function(ECC_CtorFunc_Number), h);
-    ECCNSFunction.addValue(self, "Date", ECCNSValue.function(ECC_CtorFunc_Date), h);
-    ECCNSFunction.addValue(self, "RegExp", ECCNSValue.function(ECC_CtorFunc_Regexp), h);
-    ECCNSFunction.addValue(self, "Error", ECCNSValue.function(ECC_CtorFunc_Error), h);
-    ECCNSFunction.addValue(self, "RangeError", ECCNSValue.function(ECC_CtorFunc_ErrorRangeError), h);
-    ECCNSFunction.addValue(self, "ReferenceError", ECCNSValue.function(ECC_CtorFunc_ErrorReferenceError), h);
-    ECCNSFunction.addValue(self, "SyntaxError", ECCNSValue.function(ECC_CtorFunc_ErrorSyntaxError), h);
-    ECCNSFunction.addValue(self, "TypeError", ECCNSValue.function(ECC_CtorFunc_ErrorTypeError), h);
-    ECCNSFunction.addValue(self, "URIError", ECCNSValue.function(ECC_CtorFunc_ErrorUriError), h);
-    ECCNSFunction.addValue(self, "EvalError", ECCNSValue.function(ECC_CtorFunc_ErrorEvalError), h);
-    ECCNSFunction.addValue(self, "Math", ECCNSValue.object(ECC_Prototype_MathObject), h);
-    ECCNSFunction.addValue(self, "JSON", ECCNSValue.object(ECC_Prototype_JSONObject), h);
+    ECCNSFunction.addValue(self, "Object", ecc_value_function(ECC_CtorFunc_Object), h);
+    ECCNSFunction.addValue(self, "Function", ecc_value_function(ECC_CtorFunc_Function), h);
+    ECCNSFunction.addValue(self, "Array", ecc_value_function(ECC_CtorFunc_Array), h);
+    ECCNSFunction.addValue(self, "String", ecc_value_function(ECC_CtorFunc_String), h);
+    ECCNSFunction.addValue(self, "Boolean", ecc_value_function(ECC_CtorFunc_Boolean), h);
+    ECCNSFunction.addValue(self, "Number", ecc_value_function(ECC_CtorFunc_Number), h);
+    ECCNSFunction.addValue(self, "Date", ecc_value_function(ECC_CtorFunc_Date), h);
+    ECCNSFunction.addValue(self, "RegExp", ecc_value_function(ECC_CtorFunc_Regexp), h);
+    ECCNSFunction.addValue(self, "Error", ecc_value_function(ECC_CtorFunc_Error), h);
+    ECCNSFunction.addValue(self, "RangeError", ecc_value_function(ECC_CtorFunc_ErrorRangeError), h);
+    ECCNSFunction.addValue(self, "ReferenceError", ecc_value_function(ECC_CtorFunc_ErrorReferenceError), h);
+    ECCNSFunction.addValue(self, "SyntaxError", ecc_value_function(ECC_CtorFunc_ErrorSyntaxError), h);
+    ECCNSFunction.addValue(self, "TypeError", ecc_value_function(ECC_CtorFunc_ErrorTypeError), h);
+    ECCNSFunction.addValue(self, "URIError", ecc_value_function(ECC_CtorFunc_ErrorUriError), h);
+    ECCNSFunction.addValue(self, "EvalError", ecc_value_function(ECC_CtorFunc_ErrorEvalError), h);
+    ECCNSFunction.addValue(self, "Math", ecc_value_object(ECC_Prototype_MathObject), h);
+    ECCNSFunction.addValue(self, "JSON", ecc_value_object(ECC_Prototype_JSONObject), h);
 
     return self;
 }

@@ -36,9 +36,9 @@ static eccvalue_t objboolfn_toString(eccstate_t* context)
 
     ECCNSContext.assertThisMask(context, ECC_VALMASK_BOOLEAN);
 
-    truth = ECCNSValue.isObject(context->thisvalue) ? context->thisvalue.data.boolean->truth : ECCNSValue.isTrue(context->thisvalue);
+    truth = ecc_value_isobject(context->thisvalue) ? context->thisvalue.data.boolean->truth : ecc_value_istrue(context->thisvalue);
 
-    return ECCNSValue.text(truth ? &ECC_ConstString_True : &ECC_ConstString_False);
+    return ecc_value_text(truth ? &ECC_ConstString_True : &ECC_ConstString_False);
 }
 
 static eccvalue_t objboolfn_valueOf(eccstate_t* context)
@@ -47,20 +47,20 @@ static eccvalue_t objboolfn_valueOf(eccstate_t* context)
 
     ECCNSContext.assertThisMask(context, ECC_VALMASK_BOOLEAN);
 
-    truth = ECCNSValue.isObject(context->thisvalue) ? context->thisvalue.data.boolean->truth : ECCNSValue.isTrue(context->thisvalue);
+    truth = ecc_value_isobject(context->thisvalue) ? context->thisvalue.data.boolean->truth : ecc_value_istrue(context->thisvalue);
 
-    return ECCNSValue.truth(truth);
+    return ecc_value_truth(truth);
 }
 
 static eccvalue_t objboolfn_constructor(eccstate_t* context)
 {
     char truth;
 
-    truth = ECCNSValue.isTrue(ECCNSContext.argument(context, 0));
+    truth = ecc_value_istrue(ECCNSContext.argument(context, 0));
     if(context->construct)
-        return ECCNSValue.boolean(ECCNSBool.create(truth));
+        return ecc_value_boolean(ECCNSBool.create(truth));
     else
-        return ECCNSValue.truth(truth);
+        return ecc_value_truth(truth);
 }
 
 
@@ -68,7 +68,7 @@ static void nsboolfn_setup()
 {
     const eccvalflag_t h = ECC_VALFLAG_HIDDEN;
 
-    ECCNSFunction.setupBuiltinObject(&ECC_CtorFunc_Boolean, objboolfn_constructor, 1, &ECC_Prototype_Boolean, ECCNSValue.boolean(nsboolfn_create(0)), &ECC_Type_Boolean);
+    ECCNSFunction.setupBuiltinObject(&ECC_CtorFunc_Boolean, objboolfn_constructor, 1, &ECC_Prototype_Boolean, ecc_value_boolean(nsboolfn_create(0)), &ECC_Type_Boolean);
 
     ECCNSFunction.addToObject(ECC_Prototype_Boolean, "toString", objboolfn_toString, 0, h);
     ECCNSFunction.addToObject(ECC_Prototype_Boolean, "valueOf", objboolfn_valueOf, 0, h);
@@ -82,7 +82,7 @@ static void nsboolfn_teardown(void)
 
 static eccobjbool_t* nsboolfn_create(int truth)
 {
-    eccobjbool_t* self = malloc(sizeof(*self));
+    eccobjbool_t* self = (eccobjbool_t*)malloc(sizeof(*self));
     *self = ECCNSBool.identity;
     ECCNSMemoryPool.addObject(&self->object);
     ECCNSObject.initialize(&self->object, ECC_Prototype_Boolean);

@@ -10,9 +10,6 @@
 
 #define DUMP_REGEXP 0
 
-typedef enum eccrxopcode_t eccrxopcode_t;
-typedef struct eccrxparser_t eccrxparser_t;
-
 enum eccrxopcode_t
 {
     ECC_RXOP_OVER = 0,
@@ -41,6 +38,9 @@ enum eccrxopcode_t
     ECC_RXOP_JUMP,
     ECC_RXOP_MATCH,
 };
+
+typedef enum eccrxopcode_t eccrxopcode_t;
+typedef struct eccrxparser_t eccrxparser_t;
 
 struct eccregexnode_t
 {
@@ -84,7 +84,7 @@ static eccvalue_t objregexpfn_exec(eccstate_t *context);
 static eccvalue_t objregexpfn_test(eccstate_t *context);
 static void nsregexpfn_setup(void);
 static void nsregexpfn_teardown(void);
-static eccobjregexp_t *nsregexpfn_create(ecccharbuffer_t *s, eccobjerror_t **error, eccrxoptions_t options);
+static eccobjregexp_t *nsregexpfn_create(ecccharbuffer_t *s, eccobjerror_t **error, int options);
 static eccobjregexp_t *nsregexpfn_createWith(eccstate_t *context, eccvalue_t pattern, eccvalue_t flags);
 static int nsregexpfn_matchWithState(eccobjregexp_t *self, eccrxstate_t *state);
 
@@ -108,8 +108,8 @@ static void regextypefn_mark(eccobject_t* object)
 {
     eccobjregexp_t* self = (eccobjregexp_t*)object;
 
-    ECCNSMemoryPool.markValue(ECCNSValue.chars(self->pattern));
-    ECCNSMemoryPool.markValue(ECCNSValue.chars(self->source));
+    ECCNSMemoryPool.markValue(ecc_value_chars(self->pattern));
+    ECCNSMemoryPool.markValue(ecc_value_chars(self->source));
 }
 
 static void regextypefn_capture(eccobject_t* object)
@@ -246,11 +246,12 @@ static void printNode(eccregexnode_t* n)
 
 static eccregexnode_t* eccrx_node(eccrxopcode_t opcode, long offset, const char* bytes)
 {
-    eccregexnode_t* n = calloc(2, sizeof(*n));
+    eccregexnode_t* n;
+    n = (eccregexnode_t*)calloc(2, sizeof(*n));
 
     if(offset && bytes)
     {
-        n[0].bytes = calloc(offset + 1, 1);
+        n[0].bytes = (char*)calloc(offset + 1, 1);
         memcpy(n[0].bytes, bytes, offset);
     }
     n[0].offset = offset;
@@ -305,14 +306,14 @@ static eccregexnode_t* eccrx_join(eccregexnode_t* a, eccregexnode_t* b)
     {
         eccregexnode_t* c = a + lena - 1;
 
-        c->bytes = realloc(c->bytes, c->offset + b->offset + 1);
+        c->bytes = (char*)realloc(c->bytes, c->offset + b->offset + 1);
         memcpy(c->bytes + c->offset, b->bytes, b->offset + 1);
         c->offset += b->offset;
         free(b->bytes), b->bytes = NULL;
     }
     else
     {
-        a = realloc(a, sizeof(*a) * (lena + lenb + 1));
+        a = (eccregexnode_t*)realloc(a, sizeof(*a) * (lena + lenb + 1));
         memcpy(a + lena, b, sizeof(*a) * (lenb + 1));
     }
     free(b), b = NULL;
@@ -603,7 +604,7 @@ static eccregexnode_t* eccrx_term(eccrxparser_t* p, eccobjerror_t** error)
         eccrxopcode_t opcode;
         int16_t offset;
 
-        int not = eccrx_accept(p, '^'), length = 0, lastLength, range = -1;
+        int isnot = eccrx_accept(p, '^'), length = 0, lastLength, range = -1;
         char buffer[255];
         n = NULL;
 
@@ -618,7 +619,7 @@ static eccregexnode_t* eccrx_term(eccrxparser_t* p, eccobjerror_t** error)
                     length += offset;
                 else
                 {
-                    if(not )
+                    if(isnot )
                         n = eccrx_join(eccrx_node(ECC_RXOP_NLOOKAHEAD, 3, NULL), eccrx_join(eccrx_node(opcode, offset, NULL), eccrx_join(eccrx_node(ECC_RXOP_MATCH, 0, NULL), n)));
                     else
                         n = eccrx_join(eccrx_node(ECC_RXOP_SPLIT, 3, NULL), eccrx_join(eccrx_node(opcode, offset, NULL), eccrx_join(eccrx_node(ECC_RXOP_JUMP, eccrx_nlen(n) + 2, NULL), n)));
@@ -649,7 +650,7 @@ static eccregexnode_t* eccrx_term(eccrxparser_t* p, eccobjerror_t** error)
                         return NULL;
                     }
 
-                    if(not )
+                    if(isnot )
                         n = eccrx_join(eccrx_node(ECC_RXOP_NLOOKAHEAD, 3, NULL),
                                  eccrx_join(eccrx_node(p->ignoreCase ? ECC_RXOP_INRANGECASE : ECC_RXOP_INRANGE, length - range, buffer + range), eccrx_join(eccrx_node(ECC_RXOP_MATCH, 0, NULL), n)));
                     else
@@ -702,7 +703,7 @@ static eccregexnode_t* eccrx_term(eccrxparser_t* p, eccobjerror_t** error)
 
         buffer[length] = '\0';
         eccrx_accept(p, ']');
-        return eccrx_join(n, eccrx_node(not ? ECC_RXOP_NEITHEROF : ECC_RXOP_ONEOF, length, buffer));
+        return eccrx_join(n, eccrx_node(isnot ? ECC_RXOP_NEITHEROF : ECC_RXOP_ONEOF, length, buffer));
     }
     else if(*p->c && strchr("*+?)}|", *p->c))
         return NULL;
@@ -807,7 +808,7 @@ static eccregexnode_t* eccrx_alternative(eccrxparser_t* p, eccobjerror_t** error
                 buffer[length] = '\0';
 
                 redo = eccrx_node(ECC_RXOP_REDO, -eccrx_nlen(t), NULL);
-                redo->bytes = malloc(length + 1);
+                redo->bytes = (char*)malloc(length + 1);
                 memcpy(redo->bytes, buffer, length + 1);
 
                 t = eccrx_join(t, redo);
@@ -1167,7 +1168,7 @@ static eccvalue_t objregexpfn_constructor(eccstate_t* context)
     pattern = ECCNSContext.argument(context, 0);
     flags = ECCNSContext.argument(context, 1);
 
-    return ECCNSValue.regexp(nsregexpfn_createWith(context, pattern, flags));
+    return ecc_value_regexp(nsregexpfn_createWith(context, pattern, flags));
 }
 
 static eccvalue_t objregexpfn_toString(eccstate_t* context)
@@ -1176,7 +1177,7 @@ static eccvalue_t objregexpfn_toString(eccstate_t* context)
 
     ECCNSContext.assertThisType(context, ECC_VALTYPE_REGEXP);
 
-    return ECCNSValue.chars(self->pattern);
+    return ecc_value_chars(self->pattern);
 }
 
 static eccvalue_t objregexpfn_exec(eccstate_t* context)
@@ -1186,15 +1187,15 @@ static eccvalue_t objregexpfn_exec(eccstate_t* context)
 
     ECCNSContext.assertThisType(context, ECC_VALTYPE_REGEXP);
 
-    value = ECCNSValue.toString(context, ECCNSContext.argument(context, 0));
-    lastIndex = self->global ? ECCNSValue.toInteger(context, ECCNSObject.getMember(context, &self->object, ECC_ConstKey_lastIndex)) : ECCNSValue.integer(0);
+    value = ecc_value_tostring(context, ECCNSContext.argument(context, 0));
+    lastIndex = self->global ? ecc_value_tointeger(context, ECCNSObject.getMember(context, &self->object, ECC_ConstKey_lastIndex)) : ecc_value_integer(0);
 
-    ECCNSObject.putMember(context, &self->object, ECC_ConstKey_lastIndex, ECCNSValue.integer(0));
+    ECCNSObject.putMember(context, &self->object, ECC_ConstKey_lastIndex, ecc_value_integer(0));
 
     if(lastIndex.data.integer >= 0)
     {
-        uint16_t length = ECCNSValue.stringLength(&value);
-        const char* bytes = ECCNSValue.stringBytes(&value);
+        uint16_t length = ecc_value_stringlength(&value);
+        const char* bytes = ecc_value_stringbytes(&value);
         const char* capture[self->count * 2];
         const char* strindex[self->count * 2];
         ecccharbuffer_t* element;
@@ -1211,7 +1212,7 @@ static eccvalue_t objregexpfn_exec(eccstate_t* context)
                 if(capture[numindex * 2])
                 {
                     element = ECCNSChars.createWithBytes((int32_t)(capture[numindex * 2 + 1] - capture[numindex * 2]), capture[numindex * 2]);
-                    array->element[numindex].value = ECCNSValue.chars(element);
+                    array->element[numindex].value = ecc_value_chars(element);
                 }
                 else
                     array->element[numindex].value = ECCValConstUndefined;
@@ -1219,12 +1220,12 @@ static eccvalue_t objregexpfn_exec(eccstate_t* context)
 
             if(self->global)
                 ECCNSObject.putMember(context, &self->object, ECC_ConstKey_lastIndex,
-                                      ECCNSValue.integer(ECCNSString.unitIndex(bytes, length, (int32_t)(capture[1] - bytes))));
+                                      ecc_value_integer(ECCNSString.unitIndex(bytes, length, (int32_t)(capture[1] - bytes))));
 
-            ECCNSObject.addMember(array, ECC_ConstKey_index, ECCNSValue.integer(ECCNSString.unitIndex(bytes, length, (int32_t)(capture[0] - bytes))), 0);
+            ECCNSObject.addMember(array, ECC_ConstKey_index, ecc_value_integer(ECCNSString.unitIndex(bytes, length, (int32_t)(capture[0] - bytes))), 0);
             ECCNSObject.addMember(array, ECC_ConstKey_input, value, 0);
 
-            return ECCNSValue.object(array);
+            return ecc_value_object(array);
         }
     }
     return ECCValConstNull;
@@ -1237,15 +1238,15 @@ static eccvalue_t objregexpfn_test(eccstate_t* context)
 
     ECCNSContext.assertThisType(context, ECC_VALTYPE_REGEXP);
 
-    value = ECCNSValue.toString(context, ECCNSContext.argument(context, 0));
-    lastIndex = ECCNSValue.toInteger(context, ECCNSObject.getMember(context, &self->object, ECC_ConstKey_lastIndex));
+    value = ecc_value_tostring(context, ECCNSContext.argument(context, 0));
+    lastIndex = ecc_value_tointeger(context, ECCNSObject.getMember(context, &self->object, ECC_ConstKey_lastIndex));
 
-    ECCNSObject.putMember(context, &self->object, ECC_ConstKey_lastIndex, ECCNSValue.integer(0));
+    ECCNSObject.putMember(context, &self->object, ECC_ConstKey_lastIndex, ecc_value_integer(0));
 
     if(lastIndex.data.integer >= 0)
     {
-        uint16_t length = ECCNSValue.stringLength(&value);
-        const char* bytes = ECCNSValue.stringBytes(&value);
+        uint16_t length = ecc_value_stringlength(&value);
+        const char* bytes = ecc_value_stringbytes(&value);
         const char* capture[self->count * 2];
         const char* index[self->count * 2];
 
@@ -1255,7 +1256,7 @@ static eccvalue_t objregexpfn_test(eccstate_t* context)
         {
             if(self->global)
                 ECCNSObject.putMember(context, &self->object, ECC_ConstKey_lastIndex,
-                                      ECCNSValue.integer(ECCNSString.unitIndex(bytes, length, (int32_t)(capture[1] - bytes))));
+                                      ecc_value_integer(ECCNSString.unitIndex(bytes, length, (int32_t)(capture[1] - bytes))));
 
             return ECCValConstTrue;
         }
@@ -1271,7 +1272,7 @@ static void nsregexpfn_setup()
     const eccvalflag_t h = ECC_VALFLAG_HIDDEN;
 
     ECCNSFunction.setupBuiltinObject(&ECC_CtorFunc_Regexp, objregexpfn_constructor, 2, &ECC_Prototype_Regexp,
-                                          ECCNSValue.regexp(nsregexpfn_create(ECCNSChars.create("/(?:)/"), &error, 0)), &ECC_Type_Regexp);
+                                          ecc_value_regexp(nsregexpfn_create(ECCNSChars.create("/(?:)/"), &error, 0)), &ECC_Type_Regexp);
 
     assert(error == NULL);
 
@@ -1286,11 +1287,12 @@ static void nsregexpfn_teardown(void)
     ECC_CtorFunc_Regexp = NULL;
 }
 
-static eccobjregexp_t* nsregexpfn_create(ecccharbuffer_t* s, eccobjerror_t** error, eccrxoptions_t options)
+static eccobjregexp_t* nsregexpfn_create(ecccharbuffer_t* s, eccobjerror_t** error, int options)
 {
     eccrxparser_t p = { 0 };
 
-    eccobjregexp_t* self = malloc(sizeof(*self));
+    eccobjregexp_t* self;
+    self = (eccobjregexp_t*)malloc(sizeof(*self));
     *self = ECCNSRegExp.identity;
     ECCNSMemoryPool.addObject(&self->object);
 
@@ -1401,11 +1403,11 @@ static eccobjregexp_t* nsregexpfn_create(ecccharbuffer_t* s, eccobjerror_t** err
     {
         *error = ECCNSError.syntaxError(ECCNSText.make(p.c, 1), ECCNSChars.create("invalid character '%c'", isgraph(*p.c) ? *p.c : '?'));
     }
-    ECCNSObject.addMember(&self->object, ECC_ConstKey_source, ECCNSValue.chars(self->source), ECC_VALFLAG_READONLY | ECC_VALFLAG_HIDDEN | ECC_VALFLAG_SEALED);
-    ECCNSObject.addMember(&self->object, ECC_ConstKey_global, ECCNSValue.truth(self->global), ECC_VALFLAG_READONLY | ECC_VALFLAG_HIDDEN | ECC_VALFLAG_SEALED);
-    ECCNSObject.addMember(&self->object, ECC_ConstKey_ignoreCase, ECCNSValue.truth(self->ignoreCase), ECC_VALFLAG_READONLY | ECC_VALFLAG_HIDDEN | ECC_VALFLAG_SEALED);
-    ECCNSObject.addMember(&self->object, ECC_ConstKey_multiline, ECCNSValue.truth(self->multiline), ECC_VALFLAG_READONLY | ECC_VALFLAG_HIDDEN | ECC_VALFLAG_SEALED);
-    ECCNSObject.addMember(&self->object, ECC_ConstKey_lastIndex, ECCNSValue.integer(0), ECC_VALFLAG_HIDDEN | ECC_VALFLAG_SEALED);
+    ECCNSObject.addMember(&self->object, ECC_ConstKey_source, ecc_value_chars(self->source), ECC_VALFLAG_READONLY | ECC_VALFLAG_HIDDEN | ECC_VALFLAG_SEALED);
+    ECCNSObject.addMember(&self->object, ECC_ConstKey_global, ecc_value_truth(self->global), ECC_VALFLAG_READONLY | ECC_VALFLAG_HIDDEN | ECC_VALFLAG_SEALED);
+    ECCNSObject.addMember(&self->object, ECC_ConstKey_ignoreCase, ecc_value_truth(self->ignoreCase), ECC_VALFLAG_READONLY | ECC_VALFLAG_HIDDEN | ECC_VALFLAG_SEALED);
+    ECCNSObject.addMember(&self->object, ECC_ConstKey_multiline, ecc_value_truth(self->multiline), ECC_VALFLAG_READONLY | ECC_VALFLAG_HIDDEN | ECC_VALFLAG_SEALED);
+    ECCNSObject.addMember(&self->object, ECC_ConstKey_lastIndex, ecc_value_integer(0), ECC_VALFLAG_HIDDEN | ECC_VALFLAG_SEALED);
 
     return self;
 }
@@ -1420,7 +1422,7 @@ static eccobjregexp_t* nsregexpfn_createWith(eccstate_t* context, eccvalue_t pat
     if(pattern.type == ECC_VALTYPE_REGEXP && flags.type == ECC_VALTYPE_UNDEFINED)
     {
         if(context->construct)
-            value = ECCNSValue.chars(pattern.data.regexp->pattern);
+            value = ecc_value_chars(pattern.data.regexp->pattern);
         else
             return pattern.data.regexp;
     }
@@ -1431,10 +1433,10 @@ static eccobjregexp_t* nsregexpfn_createWith(eccstate_t* context, eccvalue_t pat
         ECCNSChars.append(&chars, "/");
 
         if(pattern.type == ECC_VALTYPE_REGEXP)
-            ECCNSChars.appendValue(&chars, context, ECCNSValue.chars(pattern.data.regexp->source));
+            ECCNSChars.appendValue(&chars, context, ecc_value_chars(pattern.data.regexp->source));
         else
         {
-            if(pattern.type == ECC_VALTYPE_UNDEFINED || (ECCNSValue.isString(pattern) && !ECCNSValue.stringLength(&pattern)))
+            if(pattern.type == ECC_VALTYPE_UNDEFINED || (ecc_value_isstring(pattern) && !ecc_value_stringlength(&pattern)))
             {
                 if(!context->ecc->sloppyMode)
                     ECCNSChars.append(&chars, "(?:)");
@@ -1450,7 +1452,7 @@ static eccobjregexp_t* nsregexpfn_createWith(eccstate_t* context, eccvalue_t pat
 
         value = ECCNSChars.endAppend(&chars);
         if(value.type != ECC_VALTYPE_CHARS)
-            value = ECCNSValue.chars(ECCNSChars.createWithBytes(ECCNSValue.stringLength(&value), ECCNSValue.stringBytes(&value)));
+            value = ecc_value_chars(ECCNSChars.createWithBytes(ecc_value_stringlength(&value), ecc_value_stringbytes(&value)));
     }
 
     assert(value.type == ECC_VALTYPE_CHARS);
@@ -1459,9 +1461,9 @@ static eccobjregexp_t* nsregexpfn_createWith(eccstate_t* context, eccvalue_t pat
     {
         ECCNSContext.setTextIndex(context, ECC_CTXINDEXTYPE_NO);
         context->ecc->ofLine = 1;
-        context->ecc->ofText = ECCNSValue.textOf(&value);
+        context->ecc->ofText = ecc_value_textof(&value);
         context->ecc->ofInput = "(ECCNSRegExp)";
-        ECCNSContext.doThrow(context, ECCNSValue.error(error));
+        ECCNSContext.doThrow(context, ecc_value_error(error));
     }
     return regexp;
 }

@@ -30,12 +30,6 @@
     #define io_libecc_ecc_noreturn
 #endif
 
-#if __GNUC__ && _WIN32 && !_MSC_VER
-    /* use ebp frame */
-    #define io_libecc_ecc_useframe __attribute__((optimize("no-omit-frame-pointer")))
-#else
-    #define io_libecc_ecc_useframe
-#endif
 
 #if(__STDC_VERSION__ < 199901L)
     #ifdef __GNUC__
@@ -64,35 +58,6 @@
 
 struct ECCNSJSON;
 struct io_libecc_Math;
-struct io_libecc_env_Internal;
-
-struct eccpseudonschars_t;
-struct eccpseudonscontext_t;
-struct eccpseudonsenv_t;
-struct eccpseudonsinput_t;
-struct eccpseudonskey_t;
-struct eccpseudonslexer_t;
-struct eccpseudonsop_t;
-struct eccpseudonsoplist_t;
-struct eccpseudonsparser_t;
-struct eccpseudonspool_t;
-struct eccpseudonsecc_t;
-struct eccpseudonsarguments_t;
-struct eccpseudonsarray_t;
-struct eccpseudonsboolean_t;
-struct eccpseudonsdate_t;
-struct eccpseudonserror_t;
-struct eccpseudonsfunction_t;
-struct eccpseudonsglobal_t;
-struct eccpseudonsjson_t;
-struct eccpseudonsmath_t;
-struct eccpseudonsnumber_t;
-struct eccpseudonsobject_t;
-struct eccpseudonsregexp_t;
-struct eccpseudonsstring_t;
-struct eccpseudonstext_t;
-struct eccpseudonsvalue_t;
-
 
 enum ecctextflags_t
 {
@@ -320,7 +285,9 @@ typedef struct eccvalue_t eccvalue_t;
 typedef struct ecctextchar_t ecctextchar_t;
 typedef struct ecctextstring_t ecctextstring_t;
 typedef struct eccastlexer_t eccastlexer_t;
+typedef struct eccastdepths_t eccastdepths_t;
 typedef struct eccastparser_t eccastparser_t;
+
 typedef struct eccscriptcontext_t eccscriptcontext_t;
 typedef struct eccoperand_t eccoperand_t;
 typedef struct eccindexkey_t eccindexkey_t;
@@ -344,7 +311,7 @@ typedef struct eccobjnumber_t eccobjnumber_t;
 typedef struct eccrxstate_t eccrxstate_t;
 
 typedef union ecchashmap_t ecchashmap_t;
-typedef union eccobjelement_t eccobjelement_t;
+typedef union ecchashitem_t ecchashitem_t;
 
 typedef enum eccastlexflags_t eccastlexflags_t;
 typedef enum eccscriptevalflags_t eccscriptevalflags_t;
@@ -430,7 +397,7 @@ struct eccpseudonskey_t
     void (*setup)(void);
     void (*teardown)(void);
     eccindexkey_t (*makeWithCString)(const char* cString);
-    eccindexkey_t (*makeWithText)(const ecctextstring_t text, eccindexflags_t flags);
+    eccindexkey_t (*makeWithText)(const ecctextstring_t text, int flags);
     eccindexkey_t (*search)(const ecctextstring_t text);
     int (*isEqual)(eccindexkey_t, eccindexkey_t);
     const ecctextstring_t* (*textOf)(eccindexkey_t);
@@ -466,58 +433,6 @@ struct eccvalue_t
     uint16_t check;
 };
 
-struct eccpseudonsvalue_t
-{
-    eccvalue_t (*truth)(int truth);
-    eccvalue_t (*integer)(int32_t integer);
-    eccvalue_t (*binary)(double binary);
-    eccvalue_t (*buffer)(const char buffer[7], uint8_t units);
-    eccvalue_t (*key)(eccindexkey_t key);
-    eccvalue_t (*text)(const ecctextstring_t* text);
-    eccvalue_t (*chars)(ecccharbuffer_t* chars);
-    eccvalue_t (*object)(eccobject_t*);
-    eccvalue_t (*error)(eccobjerror_t*);
-    eccvalue_t (*string)(eccobjstring_t*);
-    eccvalue_t (*regexp)(eccobjregexp_t*);
-    eccvalue_t (*number)(eccobjnumber_t*);
-    eccvalue_t (*boolean)(eccobjbool_t*);
-    eccvalue_t (*date)(eccobjdate_t*);
-    eccvalue_t (*function)(eccobjfunction_t*);
-    eccvalue_t (*host)(eccobject_t*);
-    eccvalue_t (*reference)(eccvalue_t*);
-    int (*isPrimitive)(eccvalue_t);
-    int (*isBoolean)(eccvalue_t);
-    int (*isNumber)(eccvalue_t);
-    int (*isString)(eccvalue_t);
-    int (*isObject)(eccvalue_t);
-    int (*isDynamic)(eccvalue_t);
-    int (*isTrue)(eccvalue_t);
-    eccvalue_t (*toPrimitive)(eccstate_t*, eccvalue_t, eccvalhint_t);
-    eccvalue_t (*toBinary)(eccstate_t*, eccvalue_t);
-    eccvalue_t (*toInteger)(eccstate_t*, eccvalue_t);
-    eccvalue_t (*binaryToString)(double binary, int base);
-    eccvalue_t (*toString)(eccstate_t*, eccvalue_t);
-    int32_t (*stringLength)(const eccvalue_t*);
-    const char* (*stringBytes)(const eccvalue_t*);
-    ecctextstring_t (*textOf)(const eccvalue_t* string);
-    eccvalue_t (*toObject)(eccstate_t*, eccvalue_t);
-    eccvalue_t (*objectValue)(eccobject_t*);
-    int (*objectIsArray)(eccobject_t*);
-    eccvalue_t (*toType)(eccvalue_t);
-    eccvalue_t (*equals)(eccstate_t*, eccvalue_t, eccvalue_t);
-    eccvalue_t (*same)(eccstate_t*, eccvalue_t, eccvalue_t);
-    eccvalue_t (*add)(eccstate_t*, eccvalue_t, eccvalue_t);
-    eccvalue_t (*subtract)(eccstate_t*, eccvalue_t, eccvalue_t);
-    eccvalue_t (*less)(eccstate_t*, eccvalue_t, eccvalue_t);
-    eccvalue_t (*more)(eccstate_t*, eccvalue_t, eccvalue_t);
-    eccvalue_t (*lessOrEqual)(eccstate_t*, eccvalue_t, eccvalue_t);
-    eccvalue_t (*moreOrEqual)(eccstate_t*, eccvalue_t, eccvalue_t);
-    const char* (*typeName)(eccvaltype_t);
-    const char* (*maskName)(eccvalmask_t);
-    void (*dumpTo)(eccvalue_t, FILE*);
-    const eccvalue_t identity;
-};
-
 
 struct eccstate_t
 {
@@ -530,7 +445,7 @@ struct eccstate_t
     const ecctextstring_t* text;
     const ecctextstring_t* textAlt;
     const ecctextstring_t* textCall;
-    eccctxindextype_t textIndex;
+    int textIndex;
     int16_t breaker;
     int16_t depth;
     int8_t construct : 1;
@@ -541,23 +456,23 @@ struct eccstate_t
 
 struct eccpseudonscontext_t
 {
-    void (*rangeError)(eccstate_t*, ecccharbuffer_t*) __attribute__((noreturn));
-    void (*referenceError)(eccstate_t*, ecccharbuffer_t*) __attribute__((noreturn));
-    void (*syntaxError)(eccstate_t*, ecccharbuffer_t*) __attribute__((noreturn));
-    void (*typeError)(eccstate_t*, ecccharbuffer_t*) __attribute__((noreturn));
-    void (*uriError)(eccstate_t*, ecccharbuffer_t*) __attribute__((noreturn));
-    void (*doThrow)(eccstate_t*, eccvalue_t) __attribute__((noreturn));
+    void (*rangeError)(eccstate_t*, ecccharbuffer_t*);
+    void (*referenceError)(eccstate_t*, ecccharbuffer_t*);
+    void (*syntaxError)(eccstate_t*, ecccharbuffer_t*);
+    void (*typeError)(eccstate_t*, ecccharbuffer_t*);
+    void (*uriError)(eccstate_t*, ecccharbuffer_t*);
+    void (*doThrow)(eccstate_t*, eccvalue_t);
     eccvalue_t (*callFunction)(eccstate_t*, eccobjfunction_t* function, eccvalue_t thisval, int argumentCount, ...);
     int (*argumentCount)(eccstate_t*);
     eccvalue_t (*argument)(eccstate_t*, int argumentIndex);
     void (*replaceArgument)(eccstate_t*, int argumentIndex, eccvalue_t value);
     eccvalue_t (*getThis)(eccstate_t*);
-    void (*assertThisType)(eccstate_t*, eccvaltype_t);
-    void (*assertThisMask)(eccstate_t*, eccvalmask_t);
+    void (*assertThisType)(eccstate_t*, int);
+    void (*assertThisMask)(eccstate_t*, int);
     void (*assertThisCoerciblePrimitive)(eccstate_t*);
     void (*setText)(eccstate_t*, const ecctextstring_t* text);
     void (*setTexts)(eccstate_t*, const ecctextstring_t* text, const ecctextstring_t* textAlt);
-    void (*setTextIndex)(eccstate_t*, eccctxindextype_t index);
+    void (*setTextIndex)(eccstate_t*, int index);
     void (*setTextIndexArgument)(eccstate_t*, int argument);
     ecctextstring_t (*textSeek)(eccstate_t*);
     void (*rewindStatement)(eccstate_t*);
@@ -610,7 +525,7 @@ struct eccobjinterntype_t
 };
 
 
-union eccobjelement_t
+union ecchashitem_t
 {
     eccvalue_t value;
 };
@@ -625,7 +540,7 @@ struct eccobject_t
 {
     eccobject_t* prototype;
     const eccobjinterntype_t* type;
-    eccobjelement_t* element;
+    ecchashitem_t* element;
     ecchashmap_t* hashmap;
     uint32_t elementCount;
     uint32_t elementCapacity;
@@ -649,18 +564,18 @@ struct eccpseudonsobject_t
     void (*destroy)(eccobject_t*);
     eccvalue_t (*getMember)(eccstate_t*, eccobject_t*, eccindexkey_t key);
     eccvalue_t (*putMember)(eccstate_t*, eccobject_t*, eccindexkey_t key, eccvalue_t);
-    eccvalue_t* (*member)(eccobject_t*, eccindexkey_t key, eccvalflag_t);
-    eccvalue_t* (*addMember)(eccobject_t*, eccindexkey_t key, eccvalue_t, eccvalflag_t);
+    eccvalue_t* (*member)(eccobject_t*, eccindexkey_t key, int);
+    eccvalue_t* (*addMember)(eccobject_t*, eccindexkey_t key, eccvalue_t, int);
     int (*deleteMember)(eccobject_t*, eccindexkey_t key);
     eccvalue_t (*getElement)(eccstate_t*, eccobject_t*, uint32_t index);
     eccvalue_t (*putElement)(eccstate_t*, eccobject_t*, uint32_t index, eccvalue_t);
-    eccvalue_t* (*element)(eccobject_t*, uint32_t index, eccvalflag_t);
-    eccvalue_t* (*addElement)(eccobject_t*, uint32_t index, eccvalue_t, eccvalflag_t);
+    eccvalue_t* (*element)(eccobject_t*, uint32_t index, int);
+    eccvalue_t* (*addElement)(eccobject_t*, uint32_t index, eccvalue_t, int);
     int (*deleteElement)(eccobject_t*, uint32_t index);
     eccvalue_t (*getProperty)(eccstate_t*, eccobject_t*, eccvalue_t primitive);
     eccvalue_t (*putProperty)(eccstate_t*, eccobject_t*, eccvalue_t primitive, eccvalue_t);
-    eccvalue_t* (*property)(eccobject_t*, eccvalue_t primitive, eccvalflag_t);
-    eccvalue_t* (*addProperty)(eccobject_t*, eccvalue_t primitive, eccvalue_t, eccvalflag_t);
+    eccvalue_t* (*property)(eccobject_t*, eccvalue_t primitive, int);
+    eccvalue_t* (*addProperty)(eccobject_t*, eccvalue_t primitive, eccvalue_t, int);
     int (*deleteProperty)(eccobject_t*, eccvalue_t primitive);
     eccvalue_t (*putValue)(eccstate_t*, eccobject_t*, eccvalue_t*, eccvalue_t);
     eccvalue_t (*getValue)(eccstate_t*, eccobject_t*, eccvalue_t*);
@@ -700,7 +615,7 @@ struct eccpseudonsregexp_t
 {
     void (*setup)(void);
     void (*teardown)(void);
-    eccobjregexp_t* (*create)(ecccharbuffer_t* pattern, eccobjerror_t**, eccrxoptions_t);
+    eccobjregexp_t* (*create)(ecccharbuffer_t* pattern, eccobjerror_t**, /*eccrxoptions_t*/int);
     eccobjregexp_t* (*createWith)(eccstate_t* context, eccvalue_t pattern, eccvalue_t flags);
     int (*matchWithState)(eccobjregexp_t*, eccrxstate_t*);
     const eccobjregexp_t identity;
@@ -794,7 +709,8 @@ struct eccobjfunction_t
     ecctextstring_t text;
     const char* name;
     int parameterCount;
-    eccobjscriptfuncflags_t flags;
+    /*eccobjscriptfuncflags_t*/
+    int flags;
 };
 
 struct eccpseudonsfunction_t
@@ -806,12 +722,12 @@ struct eccpseudonsfunction_t
     eccobjfunction_t* (*createWithNative)(const eccnativefuncptr_t native, int parameterCount);
     eccobjfunction_t* (*copy)(eccobjfunction_t* original);
     void (*destroy)(eccobjfunction_t*);
-    void (*addMember)(eccobjfunction_t*, const char* name, eccvalue_t value, eccvalflag_t);
-    void (*addValue)(eccobjfunction_t*, const char* name, eccvalue_t value, eccvalflag_t);
-    eccobjfunction_t* (*addMethod)(eccobjfunction_t*, const char* name, const eccnativefuncptr_t native, int argumentCount, eccvalflag_t);
-    eccobjfunction_t* (*addFunction)(eccobjfunction_t*, const char* name, const eccnativefuncptr_t native, int argumentCount, eccvalflag_t);
-    eccobjfunction_t* (*addToObject)(eccobject_t* object, const char* name, const eccnativefuncptr_t native, int parameterCount, eccvalflag_t);
-    void (*linkPrototype)(eccobjfunction_t*, eccvalue_t prototype, eccvalflag_t);
+    void (*addMember)(eccobjfunction_t*, const char* name, eccvalue_t value, int);
+    void (*addValue)(eccobjfunction_t*, const char* name, eccvalue_t value, int);
+    eccobjfunction_t* (*addMethod)(eccobjfunction_t*, const char* name, const eccnativefuncptr_t native, int argumentCount, int);
+    eccobjfunction_t* (*addFunction)(eccobjfunction_t*, const char* name, const eccnativefuncptr_t native, int argumentCount, int);
+    eccobjfunction_t* (*addToObject)(eccobject_t* object, const char* name, const eccnativefuncptr_t native, int parameterCount, int);
+    void (*linkPrototype)(eccobjfunction_t*, eccvalue_t prototype, int);
     void (*setupBuiltinObject)(eccobjfunction_t**, const eccnativefuncptr_t, int parameterCount, eccobject_t**, eccvalue_t prototype, const eccobjinterntype_t* type);
     eccvalue_t (*accessor)(const eccnativefuncptr_t getter, const eccnativefuncptr_t setter);
     const eccobjfunction_t identity;
@@ -880,6 +796,7 @@ struct eccpseudonsglobal_t
 
     const struct
     {
+        char unused;
     } identity;
 };
 
@@ -887,7 +804,7 @@ struct eccpseudonsglobal_t
 
 struct eccenvidentity_t
 {
-    struct io_libecc_env_Internal* internal;
+    char unused;
 };
 
 struct eccpseudonsenv_t
@@ -895,7 +812,7 @@ struct eccpseudonsenv_t
     void (*setup)(void);
     void (*teardown)(void);
     void (*print)(const char* format, ...);
-    void (*printColor)(eccenvcolor_t color, eccenvattribute_t attribute, const char* format, ...);
+    void (*printColor)(int color, int attribute, const char* format, ...);
     void (*printError)(int typeLength, const char* type, const char* format, ...);
     void (*printWarning)(const char* format, ...);
     void (*newline)(void);
@@ -949,14 +866,14 @@ struct eccpseudonsecc_t
 {
     eccscriptcontext_t* (*create)(void);
     void (*destroy)(eccscriptcontext_t*);
-    void (*addValue)(eccscriptcontext_t*, const char* name, eccvalue_t value, eccvalflag_t);
-    void (*addFunction)(eccscriptcontext_t*, const char* name, const eccnativefuncptr_t native, int argumentCount, eccvalflag_t);
-    int (*evalInput)(eccscriptcontext_t*, eccioinput_t*, eccscriptevalflags_t);
+    void (*addValue)(eccscriptcontext_t*, const char* name, eccvalue_t value, int);
+    void (*addFunction)(eccscriptcontext_t*, const char* name, const eccnativefuncptr_t native, int argumentCount, int);
+    int (*evalInput)(eccscriptcontext_t*, eccioinput_t*, int);
     void (*evalInputWithContext)(eccscriptcontext_t*, eccioinput_t*, eccstate_t* context);
     jmp_buf* (*pushEnv)(eccscriptcontext_t*);
     void (*popEnv)(eccscriptcontext_t*);
-    void (*jmpEnv)(eccscriptcontext_t*, eccvalue_t value) __attribute__((noreturn));
-    void (*fatal)(const char* format, ...) __attribute__((noreturn));
+    void (*jmpEnv)(eccscriptcontext_t*, eccvalue_t value);
+    void (*fatal)(const char* format, ...);
     eccioinput_t* (*findInput)(eccscriptcontext_t* self, ecctextstring_t text);
     void (*printTextInput)(eccscriptcontext_t*, ecctextstring_t text, int fullLine);
     void (*garbageCollect)(eccscriptcontext_t*);
@@ -980,10 +897,10 @@ struct eccpseudonslexer_t
 {
     eccastlexer_t* (*createWithInput)(eccioinput_t*);
     void (*destroy)(eccastlexer_t*);
-    eccasttoktype_t (*nextToken)(eccastlexer_t*);
-    const char* (*tokenChars)(eccasttoktype_t token, char buffer[4]);
-    eccvalue_t (*scanBinary)(ecctextstring_t text, eccastlexflags_t);
-    eccvalue_t (*scanInteger)(ecctextstring_t text, int base, eccastlexflags_t);
+    int (*nextToken)(eccastlexer_t*);
+    const char* (*tokenChars)(int token, char buffer[4]);
+    eccvalue_t (*scanBinary)(ecctextstring_t text, int);
+    eccvalue_t (*scanInteger)(ecctextstring_t text, int base, int);
     uint32_t (*scanElement)(ecctextstring_t text);
     uint8_t (*uint8Hex)(char a, char b);
     uint16_t (*uint16Hex)(char a, char b, char c, char d);
@@ -1001,8 +918,8 @@ struct eccpseudonsop_t
 {
     eccoperand_t (*make)(const eccnativefuncptr_t native, eccvalue_t value, ecctextstring_t text);
     const char* (*toChars)(const eccnativefuncptr_t native);
-    eccvalue_t (*callFunctionArguments)(eccstate_t*, eccctxoffsettype_t, eccobjfunction_t* function, eccvalue_t thisval, eccobject_t* arguments);
-    eccvalue_t (*callFunctionVA)(eccstate_t*, eccctxoffsettype_t, eccobjfunction_t* function, eccvalue_t thisval, int argumentCount, va_list ap);
+    eccvalue_t (*callFunctionArguments)(eccstate_t*, int, eccobjfunction_t* function, eccvalue_t thisval, eccobject_t* arguments);
+    eccvalue_t (*callFunctionVA)(eccstate_t*, int, eccobjfunction_t* function, eccvalue_t thisval, int argumentCount, va_list ap);
     eccvalue_t (*noop)(eccstate_t*);
     eccvalue_t (*value)(eccstate_t*);
     eccvalue_t (*valueConstRef)(eccstate_t*);
@@ -1139,18 +1056,19 @@ struct eccpseudonsoplist_t
     const eccoplist_t identity;
 };
 
+
+struct eccastdepths_t
+{
+    eccindexkey_t key;
+    char depth;
+};
+
 struct eccastparser_t
 {
     eccastlexer_t* lexer;
-    eccasttoktype_t previewToken;
+    int previewToken;
     eccobjerror_t* error;
-
-    struct
-    {
-        eccindexkey_t key;
-        char depth;
-    }* depths;
-
+    eccastdepths_t* depths;
     uint16_t depthCount;
     eccobject_t* global;
     eccobjfunction_t* function;
@@ -1327,7 +1245,6 @@ extern const eccobjinterntype_t ECC_Type_Global;
 extern const eccobjinterntype_t ECC_Type_Object;
 
 /* 'namespaces' */
-extern const struct eccpseudonsvalue_t ECCNSValue;
 extern const struct eccpseudonsecc_t ECCNSScript;
 extern const struct eccpseudonsenv_t ECCNSEnv;
 extern const struct eccpseudonstext_t ECCNSText;
@@ -1354,3 +1271,65 @@ extern const struct eccpseudonsop_t ECCNSOperand;
 extern const struct eccpseudonsoplist_t ECCNSOpList;
 extern const struct eccpseudonsparser_t ECCNSParser;
 extern const struct eccpseudonspool_t ECCNSMemoryPool;
+
+eccvalue_t ecc_value_truth(int truth);
+eccvalue_t ecc_value_integer(int32_t integer);
+eccvalue_t ecc_value_binary(double binary);
+eccvalue_t ecc_value_buffer(const char buffer[7], uint8_t units);
+eccvalue_t ecc_value_key(eccindexkey_t key);
+eccvalue_t ecc_value_text(const ecctextstring_t* text);
+eccvalue_t ecc_value_chars(ecccharbuffer_t* chars);
+eccvalue_t ecc_value_object(eccobject_t*);
+eccvalue_t ecc_value_error(eccobjerror_t*);
+eccvalue_t ecc_value_string(eccobjstring_t*);
+eccvalue_t ecc_value_regexp(eccobjregexp_t*);
+eccvalue_t ecc_value_number(eccobjnumber_t*);
+eccvalue_t ecc_value_boolean(eccobjbool_t*);
+eccvalue_t ecc_value_date(eccobjdate_t*);
+eccvalue_t ecc_value_function(eccobjfunction_t*);
+eccvalue_t ecc_value_host(eccobject_t*);
+eccvalue_t ecc_value_reference(eccvalue_t*);
+int ecc_value_isprimitive(eccvalue_t);
+int ecc_value_isboolean(eccvalue_t);
+int ecc_value_isnumber(eccvalue_t);
+int ecc_value_isstring(eccvalue_t);
+int ecc_value_isobject(eccvalue_t);
+int ecc_value_isdynamic(eccvalue_t);
+int ecc_value_istrue(eccvalue_t);
+eccvalue_t ecc_value_toprimitive(eccstate_t*, eccvalue_t, int);
+eccvalue_t ecc_value_tobinary(eccstate_t*, eccvalue_t);
+eccvalue_t ecc_value_tointeger(eccstate_t*, eccvalue_t);
+eccvalue_t ecc_value_binarytostring(double binary, int base);
+eccvalue_t ecc_value_tostring(eccstate_t*, eccvalue_t);
+int32_t ecc_value_stringlength(const eccvalue_t*);
+const char* ecc_value_stringbytes(const eccvalue_t*);
+ecctextstring_t ecc_value_textof(const eccvalue_t* string);
+eccvalue_t ecc_value_toobject(eccstate_t*, eccvalue_t);
+eccvalue_t ecc_value_objectvalue(eccobject_t*);
+int ecc_value_objectisarray(eccobject_t*);
+eccvalue_t ecc_value_totype(eccvalue_t);
+eccvalue_t ecc_value_equals(eccstate_t*, eccvalue_t, eccvalue_t);
+eccvalue_t ecc_value_same(eccstate_t*, eccvalue_t, eccvalue_t);
+eccvalue_t ecc_value_add(eccstate_t*, eccvalue_t, eccvalue_t);
+eccvalue_t ecc_value_subtract(eccstate_t*, eccvalue_t, eccvalue_t);
+eccvalue_t ecc_value_less(eccstate_t*, eccvalue_t, eccvalue_t);
+eccvalue_t ecc_value_more(eccstate_t*, eccvalue_t, eccvalue_t);
+eccvalue_t ecc_value_lessorequal(eccstate_t*, eccvalue_t, eccvalue_t);
+eccvalue_t ecc_value_moreorequal(eccstate_t*, eccvalue_t, eccvalue_t);
+const char* ecc_value_typename(int);
+const char* ecc_value_maskname(int);
+void ecc_value_dumpto(eccvalue_t, FILE*);
+
+eccscriptcontext_t* ecc_script_create(void);
+void ecc_script_destroy(eccscriptcontext_t*);
+void ecc_script_addvalue(eccscriptcontext_t*, const char* name, eccvalue_t value, int);
+void ecc_script_addfunction(eccscriptcontext_t*, const char* name, const eccnativefuncptr_t native, int argumentCount, int);
+int ecc_script_evalinput(eccscriptcontext_t*, eccioinput_t*, int);
+void ecc_script_evalinputwithcontext(eccscriptcontext_t*, eccioinput_t*, eccstate_t* context);
+jmp_buf* ecc_script_pushenv(eccscriptcontext_t*);
+void ecc_script_popenv(eccscriptcontext_t*);
+void ecc_script_jmpenv(eccscriptcontext_t*, eccvalue_t value);
+void ecc_script_fatal(const char* format, ...);
+eccioinput_t* ecc_script_findinput(eccscriptcontext_t* self, ecctextstring_t text);
+void ecc_script_printtextinput(eccscriptcontext_t*, ecctextstring_t text, int fullLine);
+void ecc_script_garbagecollect(eccscriptcontext_t*);

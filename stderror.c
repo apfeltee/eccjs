@@ -65,8 +65,8 @@ static ecccharbuffer_t* eccerror_messageValue(eccstate_t* context, eccvalue_t va
         return value.data.chars;
     else
     {
-        value = ECCNSValue.toString(context, value);
-        return ECCNSChars.create("%.*s", ECCNSValue.stringLength(&value), ECCNSValue.stringBytes(&value));
+        value = ecc_value_tostring(context, value);
+        return ECCNSChars.create("%.*s", ecc_value_stringlength(&value), ecc_value_stringbytes(&value));
     }
 }
 
@@ -83,20 +83,20 @@ static eccvalue_t eccerror_toChars(eccstate_t* context, eccvalue_t value)
 
     name = ECCNSObject.getMember(context, self, ECC_ConstKey_name);
     if(name.type == ECC_VALTYPE_UNDEFINED)
-        name = ECCNSValue.text(&ECC_ConstString_ErrorName);
+        name = ecc_value_text(&ECC_ConstString_ErrorName);
     else
-        name = ECCNSValue.toString(context, name);
+        name = ecc_value_tostring(context, name);
 
     message = ECCNSObject.getMember(context, self, ECC_ConstKey_message);
     if(message.type == ECC_VALTYPE_UNDEFINED)
-        message = ECCNSValue.text(&ECC_ConstString_Empty);
+        message = ecc_value_text(&ECC_ConstString_Empty);
     else
-        message = ECCNSValue.toString(context, message);
+        message = ecc_value_tostring(context, message);
 
     ECCNSChars.beginAppend(&chars);
     ECCNSChars.appendValue(&chars, context, name);
 
-    if(ECCNSValue.stringLength(&name) && ECCNSValue.stringLength(&message))
+    if(ecc_value_stringlength(&name) && ecc_value_stringlength(&message))
         ECCNSChars.append(&chars, ": ");
 
     ECCNSChars.appendValue(&chars, context, message);
@@ -106,7 +106,7 @@ static eccvalue_t eccerror_toChars(eccstate_t* context, eccvalue_t value)
 
 static eccobjerror_t* eccerror_create(eccobject_t* errorPrototype, ecctextstring_t text, ecccharbuffer_t* message)
 {
-    eccobjerror_t* self = malloc(sizeof(*self));
+    eccobjerror_t* self = (eccobjerror_t*)malloc(sizeof(*self));
     ECCNSMemoryPool.addObject(&self->object);
 
     *self = ECCNSError.identity;
@@ -117,7 +117,7 @@ static eccobjerror_t* eccerror_create(eccobject_t* errorPrototype, ecctextstring
 
     if(message)
     {
-        ECCNSObject.addMember(&self->object, ECC_ConstKey_message, ECCNSValue.chars(message), ECC_VALFLAG_HIDDEN);
+        ECCNSObject.addMember(&self->object, ECC_ConstKey_message, ecc_value_chars(message), ECC_VALFLAG_HIDDEN);
         ++message->referenceCount;
     }
 
@@ -137,7 +137,7 @@ static eccvalue_t objerrorfn_ctorError(eccstate_t* context)
 
     message = eccerror_messageValue(context, ECCNSContext.argument(context, 0));
     ECCNSContext.setTextIndex(context, ECC_CTXINDEXTYPE_CALL);
-    return ECCNSValue.error(nserrorfn_error(ECCNSContext.textSeek(context), message));
+    return ecc_value_error(nserrorfn_error(ECCNSContext.textSeek(context), message));
 }
 
 static eccvalue_t objerrorfn_ctorRangeError(eccstate_t* context)
@@ -146,7 +146,7 @@ static eccvalue_t objerrorfn_ctorRangeError(eccstate_t* context)
 
     message = eccerror_messageValue(context, ECCNSContext.argument(context, 0));
     ECCNSContext.setTextIndex(context, ECC_CTXINDEXTYPE_CALL);
-    return ECCNSValue.error(nserrorfn_rangeError(ECCNSContext.textSeek(context), message));
+    return ecc_value_error(nserrorfn_rangeError(ECCNSContext.textSeek(context), message));
 }
 
 static eccvalue_t objerrorfn_ctorReferenceError(eccstate_t* context)
@@ -155,7 +155,7 @@ static eccvalue_t objerrorfn_ctorReferenceError(eccstate_t* context)
 
     message = eccerror_messageValue(context, ECCNSContext.argument(context, 0));
     ECCNSContext.setTextIndex(context, ECC_CTXINDEXTYPE_CALL);
-    return ECCNSValue.error(nserrorfn_referenceError(ECCNSContext.textSeek(context), message));
+    return ecc_value_error(nserrorfn_referenceError(ECCNSContext.textSeek(context), message));
 }
 
 static eccvalue_t objerrorfn_ctorSyntaxError(eccstate_t* context)
@@ -164,7 +164,7 @@ static eccvalue_t objerrorfn_ctorSyntaxError(eccstate_t* context)
 
     message = eccerror_messageValue(context, ECCNSContext.argument(context, 0));
     ECCNSContext.setTextIndex(context, ECC_CTXINDEXTYPE_CALL);
-    return ECCNSValue.error(nserrorfn_syntaxError(ECCNSContext.textSeek(context), message));
+    return ecc_value_error(nserrorfn_syntaxError(ECCNSContext.textSeek(context), message));
 }
 
 static eccvalue_t objerrorfn_ctorTypeError(eccstate_t* context)
@@ -173,7 +173,7 @@ static eccvalue_t objerrorfn_ctorTypeError(eccstate_t* context)
 
     message = eccerror_messageValue(context, ECCNSContext.argument(context, 0));
     ECCNSContext.setTextIndex(context, ECC_CTXINDEXTYPE_CALL);
-    return ECCNSValue.error(nserrorfn_typeError(ECCNSContext.textSeek(context), message));
+    return ecc_value_error(nserrorfn_typeError(ECCNSContext.textSeek(context), message));
 }
 
 static eccvalue_t objerrorfn_ctorUriError(eccstate_t* context)
@@ -182,7 +182,7 @@ static eccvalue_t objerrorfn_ctorUriError(eccstate_t* context)
 
     message = eccerror_messageValue(context, ECCNSContext.argument(context, 0));
     ECCNSContext.setTextIndex(context, ECC_CTXINDEXTYPE_CALL);
-    return ECCNSValue.error(nserrorfn_uriError(ECCNSContext.textSeek(context), message));
+    return ecc_value_error(nserrorfn_uriError(ECCNSContext.textSeek(context), message));
 }
 
 static eccvalue_t objerrorfn_ctorEvalError(eccstate_t* context)
@@ -191,16 +191,16 @@ static eccvalue_t objerrorfn_ctorEvalError(eccstate_t* context)
 
     message = eccerror_messageValue(context, ECCNSContext.argument(context, 0));
     ECCNSContext.setTextIndex(context, ECC_CTXINDEXTYPE_CALL);
-    return ECCNSValue.error(eccerror_evalError(ECCNSContext.textSeek(context), message));
+    return ecc_value_error(eccerror_evalError(ECCNSContext.textSeek(context), message));
 }
 
 static void
 eccerror_setupbo(eccobjfunction_t** pctor, const eccnativefuncptr_t native, int paramcnt, eccobject_t** prototype, const ecctextstring_t* name)
 {
     (void)paramcnt;
-    ECCNSFunction.setupBuiltinObject(pctor, native, 1, prototype, ECCNSValue.error(nserrorfn_error(*name, NULL)), &ECC_Type_Error);
+    ECCNSFunction.setupBuiltinObject(pctor, native, 1, prototype, ecc_value_error(nserrorfn_error(*name, NULL)), &ECC_Type_Error);
 
-    ECCNSObject.addMember(*prototype, ECC_ConstKey_name, ECCNSValue.text(name), ECC_VALFLAG_HIDDEN);
+    ECCNSObject.addMember(*prototype, ECC_ConstKey_name, ecc_value_text(name), ECC_VALFLAG_HIDDEN);
 }
 
 // MARK: - Methods
@@ -219,7 +219,7 @@ static void nserrorfn_setup(void)
 
     ECCNSFunction.addToObject(ECC_Prototype_Error, "toString", objerrorfn_toString, 0, h);
 
-    ECCNSObject.addMember(ECC_Prototype_Error, ECC_ConstKey_message, ECCNSValue.text(&ECC_ConstString_Empty), h);
+    ECCNSObject.addMember(ECC_Prototype_Error, ECC_ConstKey_message, ecc_value_text(&ECC_ConstString_Empty), h);
 }
 
 static void nserrorfn_teardown(void)

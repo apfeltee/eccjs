@@ -15,7 +15,7 @@ static int testCount = 0;
 static double testTime = 0;
 
 
-io_libecc_ecc_useframe static void actuallyruntest(const char* func, int line, const char* test, const char* expect, const char* text)
+static void actuallyruntest(const char* func, int line, const char* test, const char* expect, const char* text)
 {
     uint16_t length;
     clock_t start;
@@ -24,19 +24,19 @@ io_libecc_ecc_useframe static void actuallyruntest(const char* func, int line, c
     const char* bytes;
     const char* end;
     start = clock();
-    if(testVerbosity > 0 || !setjmp(*ECCNSScript.pushEnv(ecc)))
+    if(testVerbosity > 0 || !setjmp(*ecc_script_pushenv(ecc)))
     {
-        ECCNSScript.evalInput(ecc, ECCNSInput.createFromBytes(test, (uint32_t)strlen(test), "%s:%d", func, line), ECC_SCRIPTEVAL_STRINGRESULT);
+        ecc_script_evalinput(ecc, ECCNSInput.createFromBytes(test, (uint32_t)strlen(test), "%s:%d", func, line), ECC_SCRIPTEVAL_STRINGRESULT);
     }
     if(testVerbosity <= 0)
     {
-        ECCNSScript.popEnv(ecc);
+        ecc_script_popenv(ecc);
     }
     testTime += (double)(clock() - start) / CLOCKS_PER_SEC;
     ++testCount;
-    assert(ECCNSValue.isString(ecc->result));
-    bytes = ECCNSValue.stringBytes(&ecc->result);
-    length = ECCNSValue.stringLength(&ecc->result);
+    assert(ecc_value_isstring(ecc->result));
+    bytes = ecc_value_stringbytes(&ecc->result);
+    length = ecc_value_stringlength(&ecc->result);
     if(length != strlen(expect) || memcmp(expect, bytes, length))
     {
         ++testErrorCount;
@@ -51,7 +51,7 @@ io_libecc_ecc_useframe static void actuallyruntest(const char* func, int line, c
         end = strrchr(text, '~');
         textStart = strchr(text, '^') - text;
         textLength = (end ? end - text - textStart : 0) + 1;
-        eccioinput_t* input = ECCNSScript.findInput(ecc, ecc->text);
+        eccioinput_t* input = ecc_script_findinput(ecc, ecc->text);
         if(ecc->text.bytes >= ecc->ofText.bytes && ecc->text.bytes < ecc->ofText.bytes + ecc->ofText.length)
         {
             bytes = ecc->ofText.bytes;
@@ -88,7 +88,7 @@ io_libecc_ecc_useframe static void actuallyruntest(const char* func, int line, c
         #endif
     }
 error:
-    ECCNSScript.garbageCollect(ecc);
+    ecc_script_garbagecollect(ecc);
 }
 
 #include "testcode.inc"
@@ -157,7 +157,7 @@ static eccvalue_t printhelper(eccstate_t* context, FILE* file, bool space, bool 
             //putc(' ', file);
         }
         value = ECCNSContext.argument(context, index);
-        ECCNSValue.dumpTo(ECCNSValue.toString(context, value), file);
+        ecc_value_dumpto(ecc_value_tostring(context, value), file);
     }
     if(linefeed)
     {
@@ -184,10 +184,10 @@ static eccvalue_t cfn_println(eccstate_t* context)
 int main(int argc, const char* argv[])
 {
     int result;
-    ecc = ECCNSScript.create();
-    ECCNSScript.addFunction(ecc, "alert", cfn_alert, -1, 0);
-    ECCNSScript.addFunction(ecc, "print", cfn_print, -1, 0);
-    ECCNSScript.addFunction(ecc, "println", cfn_println, -1, 0);
+    ecc = ecc_script_create();
+    ecc_script_addfunction(ecc, "alert", cfn_alert, -1, 0);
+    ecc_script_addfunction(ecc, "print", cfn_print, -1, 0);
+    ecc_script_addfunction(ecc, "println", cfn_println, -1, 0);
     if(argc <= 1 || !strcmp(argv[1], "--help"))
     {
         result = alertUsage();
@@ -207,9 +207,9 @@ int main(int argc, const char* argv[])
     else
     {
         eccobject_t* arguments = ECCNSArguments.createWithCList(argc - 2, &argv[2]);
-        ECCNSScript.addValue(ecc, "arguments", ECCNSValue.object(arguments), 0);
-        result = ECCNSScript.evalInput(ecc, ECCNSInput.createFromFile(argv[1]), ECC_SCRIPTEVAL_SLOPPYMODE);
+        ecc_script_addvalue(ecc, "arguments", ecc_value_object(arguments), 0);
+        result = ecc_script_evalinput(ecc, ECCNSInput.createFromFile(argv[1]), ECC_SCRIPTEVAL_SLOPPYMODE);
     }
-    ECCNSScript.destroy(ecc), ecc = NULL;
+    ecc_script_destroy(ecc), ecc = NULL;
     return result;
 }

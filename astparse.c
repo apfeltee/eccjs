@@ -11,17 +11,17 @@
 
 // MARK: - Static Members
 
-static eccoplist_t* eccprs_new(eccastparser_t*);
-static eccoplist_t* eccprs_assignment(eccastparser_t*, int noIn);
-static eccoplist_t* eccprs_expression(eccastparser_t*, int noIn);
-static eccoplist_t* eccprs_statement(eccastparser_t*);
-static eccoplist_t* eccprs_function(eccastparser_t*, int isDeclaration, int isGetter, int isSetter);
-static eccoplist_t* eccprs_sourceElements(eccastparser_t*);
+eccoplist_t* eccprs_new(eccastparser_t*);
+eccoplist_t* eccprs_assignment(eccastparser_t*, int noIn);
+eccoplist_t* eccprs_expression(eccastparser_t*, int noIn);
+eccoplist_t* eccprs_statement(eccastparser_t*);
+eccoplist_t* eccprs_function(eccastparser_t*, int isDeclaration, int isGetter, int isSetter);
+eccoplist_t* eccprs_sourceElements(eccastparser_t*);
 
 
-static eccastparser_t* nsparsrfn_createWithLexer(eccastlexer_t*);
-static void nsparsrfn_destroy(eccastparser_t*);
-static eccobjfunction_t* nsparsrfn_parseWithEnvironment(eccastparser_t* const, eccobject_t* environment, eccobject_t* global);
+eccastparser_t* nsparsrfn_createWithLexer(eccastlexer_t*);
+void nsparsrfn_destroy(eccastparser_t*);
+eccobjfunction_t* nsparsrfn_parseWithEnvironment(eccastparser_t* const, eccobject_t* environment, eccobject_t* global);
 const struct eccpseudonsparser_t ECCNSParser = {
     nsparsrfn_createWithLexer,
     nsparsrfn_destroy,
@@ -29,12 +29,12 @@ const struct eccpseudonsparser_t ECCNSParser = {
     {}
 };
 
-static inline eccasttoktype_t eccprs_previewToken(eccastparser_t* self)
+int eccprs_previewToken(eccastparser_t* self)
 {
     return self->previewToken;
 }
 
-static inline eccasttoktype_t eccprs_nextToken(eccastparser_t* self)
+int eccprs_nextToken(eccastparser_t* self)
 {
     if(self->previewToken != ECC_TOK_ERROR)
     {
@@ -46,7 +46,7 @@ static inline eccasttoktype_t eccprs_nextToken(eccastparser_t* self)
     return self->previewToken;
 }
 
-static void eccprs_parseError(eccastparser_t* self, eccobjerror_t* error)
+void eccprs_parseError(eccastparser_t* self, eccobjerror_t* error)
 {
     if(!self->error)
     {
@@ -55,17 +55,17 @@ static void eccprs_parseError(eccastparser_t* self, eccobjerror_t* error)
     }
 }
 
-static void eccprs_syntaxError(eccastparser_t* self, ecctextstring_t text, ecccharbuffer_t* message)
+void eccprs_syntaxError(eccastparser_t* self, ecctextstring_t text, ecccharbuffer_t* message)
 {
     eccprs_parseError(self, ECCNSError.syntaxError(text, message));
 }
 
-static void eccprs_referenceError(eccastparser_t* self, ecctextstring_t text, ecccharbuffer_t* message)
+void eccprs_referenceError(eccastparser_t* self, ecctextstring_t text, ecccharbuffer_t* message)
 {
     eccprs_parseError(self, ECCNSError.referenceError(text, message));
 }
 
-static eccoplist_t* eccprs_tokenError(eccastparser_t* self, const char* t)
+eccoplist_t* eccprs_tokenError(eccastparser_t* self, const char* t)
 {
     char b[4];
 
@@ -77,7 +77,7 @@ static eccoplist_t* eccprs_tokenError(eccastparser_t* self, const char* t)
     return NULL;
 }
 
-static inline int eccprs_acceptToken(eccastparser_t* self, eccasttoktype_t token)
+int eccprs_acceptToken(eccastparser_t* self, int token)
 {
     if(eccprs_previewToken(self) != token)
         return 0;
@@ -86,7 +86,7 @@ static inline int eccprs_acceptToken(eccastparser_t* self, eccasttoktype_t token
     return 1;
 }
 
-static inline int eccprs_expectToken(eccastparser_t* self, eccasttoktype_t token)
+int eccprs_expectToken(eccastparser_t* self, int token)
 {
     if(eccprs_previewToken(self) != token)
     {
@@ -102,54 +102,63 @@ static inline int eccprs_expectToken(eccastparser_t* self, eccasttoktype_t token
 
 // MARK: Depth
 
-static void eccprs_pushDepth(eccastparser_t* self, eccindexkey_t key, char depth)
+void eccprs_pushDepth(eccastparser_t* self, eccindexkey_t key, char depth)
 {
-    self->depths = realloc(self->depths, (self->depthCount + 1) * sizeof(*self->depths));
+    self->depths = (eccastdepths_t*)realloc(self->depths, (self->depthCount + 1) * sizeof(*self->depths));
     self->depths[self->depthCount].key = key;
     self->depths[self->depthCount].depth = depth;
     ++self->depthCount;
 }
 
-static void eccprs_popDepth(eccastparser_t* self)
+void eccprs_popDepth(eccastparser_t* self)
 {
     --self->depthCount;
 }
 
 // MARK: Expression
 
-static eccoplist_t* eccprs_foldConstant(eccastparser_t* self, eccoplist_t* oplist)
+eccoplist_t* eccprs_foldConstant(eccastparser_t* self, eccoplist_t* oplist)
 {
-    eccscriptcontext_t ecc = { .sloppyMode = self->lexer->allowUnicodeOutsideLiteral };
-    eccstate_t context = { oplist->ops, .ecc = &ecc };
+    eccscriptcontext_t ecc = {};
+    ecc.sloppyMode = self->lexer->allowUnicodeOutsideLiteral;
+    eccstate_t context = {};
+    context.ops = oplist->ops;
+    context.ecc = &ecc;
     eccvalue_t value = context.ops->native(&context);
     ecctextstring_t text = ECCNSOpList.text(oplist);
     ECCNSOpList.destroy(oplist);
     return ECCNSOpList.create(ECCNSOperand.value, value, text);
 }
 
-static eccoplist_t* eccprs_useBinary(eccastparser_t* self, eccoplist_t* oplist, int add)
+eccoplist_t* eccprs_useBinary(eccastparser_t* self, eccoplist_t* oplist, int add)
 {
-    if(oplist && oplist->ops[0].native == ECCNSOperand.value && (ECCNSValue.isNumber(oplist->ops[0].value) || !add))
+    eccstate_t context = {};
+    eccscriptcontext_t ecc = {};
+    if(oplist && oplist->ops[0].native == ECCNSOperand.value && (ecc_value_isnumber(oplist->ops[0].value) || !add))
     {
-        eccscriptcontext_t ecc = { .sloppyMode = self->lexer->allowUnicodeOutsideLiteral };
-        eccstate_t context = { oplist->ops, .ecc = &ecc };
-        oplist->ops[0].value = ECCNSValue.toBinary(&context, oplist->ops[0].value);
+        ecc.sloppyMode = self->lexer->allowUnicodeOutsideLiteral;
+        context.ops = oplist->ops;
+        context.ecc = &ecc;
+        oplist->ops[0].value = ecc_value_tobinary(&context, oplist->ops[0].value);
     }
     return oplist;
 }
 
-static eccoplist_t* eccprs_useInteger(eccastparser_t* self, eccoplist_t* oplist)
+eccoplist_t* eccprs_useInteger(eccastparser_t* self, eccoplist_t* oplist)
 {
+    eccstate_t context = {};
+    eccscriptcontext_t ecc = {};
     if(oplist && oplist->ops[0].native == ECCNSOperand.value)
     {
-        eccscriptcontext_t ecc = { .sloppyMode = self->lexer->allowUnicodeOutsideLiteral };
-        eccstate_t context = { oplist->ops, .ecc = &ecc };
-        oplist->ops[0].value = ECCNSValue.toInteger(&context, oplist->ops[0].value);
+        ecc.sloppyMode = self->lexer->allowUnicodeOutsideLiteral;
+        context.ops = oplist->ops;
+        context.ecc = &ecc;
+        oplist->ops[0].value = ecc_value_tointeger(&context, oplist->ops[0].value);
     }
     return oplist;
 }
 
-static eccoplist_t* eccprs_expressionRef(eccastparser_t* self, eccoplist_t* oplist, const char* name)
+eccoplist_t* eccprs_expressionRef(eccastparser_t* self, eccoplist_t* oplist, const char* name)
 {
     if(!oplist)
         return NULL;
@@ -176,7 +185,7 @@ static eccoplist_t* eccprs_expressionRef(eccastparser_t* self, eccoplist_t* opli
     return oplist;
 }
 
-static void eccprs_semicolon(eccastparser_t* self)
+void eccprs_semicolon(eccastparser_t* self)
 {
     if(eccprs_previewToken(self) == ';')
     {
@@ -189,7 +198,7 @@ static void eccprs_semicolon(eccastparser_t* self)
     eccprs_syntaxError(self, self->lexer->text, ECCNSChars.create("missing ; before statement"));
 }
 
-static eccoperand_t eccprs_identifier(eccastparser_t* self)
+eccoperand_t eccprs_identifier(eccastparser_t* self)
 {
     eccvalue_t value = self->lexer->value;
     ecctextstring_t text = self->lexer->text;
@@ -199,7 +208,7 @@ static eccoperand_t eccprs_identifier(eccastparser_t* self)
     return ECCNSOperand.make(ECCNSOperand.value, value, text);
 }
 
-static eccoplist_t* eccprs_array(eccastparser_t* self)
+eccoplist_t* eccprs_array(eccastparser_t* self)
 {
     eccoplist_t* oplist = NULL;
     uint32_t count = 0;
@@ -226,10 +235,10 @@ static eccoplist_t* eccprs_array(eccastparser_t* self)
     text = ECCNSText.join(text, self->lexer->text);
     eccprs_expectToken(self, ']');
 
-    return ECCNSOpList.unshift(ECCNSOperand.make(ECCNSOperand.array, ECCNSValue.integer(count), text), oplist);
+    return ECCNSOpList.unshift(ECCNSOperand.make(ECCNSOperand.array, ecc_value_integer(count), text), oplist);
 }
 
-static eccoplist_t* eccprs_propertyAssignment(eccastparser_t* self)
+eccoplist_t* eccprs_propertyAssignment(eccastparser_t* self)
 {
     eccoplist_t* oplist = NULL;
     int isGetter = 0, isSetter = 0;
@@ -241,7 +250,7 @@ static eccoplist_t* eccprs_propertyAssignment(eccastparser_t* self)
             eccprs_nextToken(self);
             if(eccprs_previewToken(self) == ':')
             {
-                oplist = ECCNSOpList.create(ECCNSOperand.value, ECCNSValue.key(ECC_ConstKey_get), self->lexer->text);
+                oplist = ECCNSOpList.create(ECCNSOperand.value, ecc_value_key(ECC_ConstKey_get), self->lexer->text);
                 goto skipProperty;
             }
             else
@@ -252,7 +261,7 @@ static eccoplist_t* eccprs_propertyAssignment(eccastparser_t* self)
             eccprs_nextToken(self);
             if(eccprs_previewToken(self) == ':')
             {
-                oplist = ECCNSOpList.create(ECCNSOperand.value, ECCNSValue.key(ECC_ConstKey_set), self->lexer->text);
+                oplist = ECCNSOpList.create(ECCNSOperand.value, ecc_value_key(ECC_ConstKey_set), self->lexer->text);
                 goto skipProperty;
             }
             else
@@ -263,14 +272,14 @@ static eccoplist_t* eccprs_propertyAssignment(eccastparser_t* self)
     if(eccprs_previewToken(self) == ECC_TOK_INTEGER)
         oplist = ECCNSOpList.create(ECCNSOperand.value, self->lexer->value, self->lexer->text);
     else if(eccprs_previewToken(self) == ECC_TOK_BINARY)
-        oplist = ECCNSOpList.create(ECCNSOperand.value, ECCNSValue.key(ECCNSKey.makeWithText(self->lexer->text, 0)), self->lexer->text);
+        oplist = ECCNSOpList.create(ECCNSOperand.value, ecc_value_key(ECCNSKey.makeWithText(self->lexer->text, 0)), self->lexer->text);
     else if(eccprs_previewToken(self) == ECC_TOK_STRING)
     {
         uint32_t element = ECCNSLexer.scanElement(self->lexer->text);
         if(element < UINT32_MAX)
-            oplist = ECCNSOpList.create(ECCNSOperand.value, ECCNSValue.integer(element), self->lexer->text);
+            oplist = ECCNSOpList.create(ECCNSOperand.value, ecc_value_integer(element), self->lexer->text);
         else
-            oplist = ECCNSOpList.create(ECCNSOperand.value, ECCNSValue.key(ECCNSKey.makeWithText(self->lexer->text, 0)), self->lexer->text);
+            oplist = ECCNSOpList.create(ECCNSOperand.value, ecc_value_key(ECCNSKey.makeWithText(self->lexer->text, 0)), self->lexer->text);
     }
     else if(eccprs_previewToken(self) == ECC_TOK_ESCAPEDSTRING)
     {
@@ -294,7 +303,7 @@ static eccoplist_t* eccprs_propertyAssignment(eccastparser_t* self)
         element = ECCNSLexer.scanElement(text);
         if(element < UINT32_MAX)
         {
-            oplist = ECCNSOpList.create(ECCNSOperand.value, ECCNSValue.integer(element), self->lexer->text);
+            oplist = ECCNSOpList.create(ECCNSOperand.value, ecc_value_integer(element), self->lexer->text);
         }
         else
         {
@@ -303,7 +312,7 @@ static eccoplist_t* eccprs_propertyAssignment(eccastparser_t* self)
             #else
                 kkey = ECCNSKey.makeWithCString(bufp);
             #endif
-            kval = ECCNSValue.key(kkey);
+            kval = ecc_value_key(kkey);
             oplist = ECCNSOpList.create(ECCNSOperand.value, kval, self->lexer->text);
         }
     }
@@ -327,7 +336,7 @@ skipProperty:
     return ECCNSOpList.join(oplist, eccprs_assignment(self, 0));
 }
 
-static eccoplist_t* eccprs_object(eccastparser_t* self)
+eccoplist_t* eccprs_object(eccastparser_t* self)
 {
     eccoplist_t* oplist = NULL;
     uint32_t count = 0;
@@ -349,10 +358,10 @@ static eccoplist_t* eccprs_object(eccastparser_t* self)
     text = ECCNSText.join(text, self->lexer->text);
     eccprs_expectToken(self, '}');
 
-    return ECCNSOpList.unshift(ECCNSOperand.make(ECCNSOperand.object, ECCNSValue.integer(count), text), oplist);
+    return ECCNSOpList.unshift(ECCNSOperand.make(ECCNSOperand.object, ecc_value_integer(count), text), oplist);
 }
 
-static eccoplist_t* eccprs_primary(eccastparser_t* self)
+eccoplist_t* eccprs_primary(eccastparser_t* self)
 {
     eccoplist_t* oplist = NULL;
 
@@ -374,16 +383,16 @@ static eccoplist_t* eccprs_primary(eccastparser_t* self)
         if(self->preferInteger)
             oplist = ECCNSOpList.create(ECCNSOperand.value, self->lexer->value, self->lexer->text);
         else
-            oplist = ECCNSOpList.create(ECCNSOperand.value, ECCNSValue.binary(self->lexer->value.data.integer), self->lexer->text);
+            oplist = ECCNSOpList.create(ECCNSOperand.value, ecc_value_binary(self->lexer->value.data.integer), self->lexer->text);
     }
     else if(eccprs_previewToken(self) == ECC_TOK_THIS)
         oplist = ECCNSOpList.create(ECCNSOperand.getThis, ECCValConstUndefined, self->lexer->text);
     else if(eccprs_previewToken(self) == ECC_TOK_NULL)
         oplist = ECCNSOpList.create(ECCNSOperand.value, ECCValConstNull, self->lexer->text);
     else if(eccprs_previewToken(self) == ECC_TOK_TRUE)
-        oplist = ECCNSOpList.create(ECCNSOperand.value, ECCNSValue.truth(1), self->lexer->text);
+        oplist = ECCNSOpList.create(ECCNSOperand.value, ecc_value_truth(1), self->lexer->text);
     else if(eccprs_previewToken(self) == ECC_TOK_FALSE)
-        oplist = ECCNSOpList.create(ECCNSOperand.value, ECCNSValue.truth(0), self->lexer->text);
+        oplist = ECCNSOpList.create(ECCNSOperand.value, ecc_value_truth(0), self->lexer->text);
     else if(eccprs_previewToken(self) == '{')
         return eccprs_object(self);
     else if(eccprs_previewToken(self) == '[')
@@ -418,7 +427,7 @@ static eccoplist_t* eccprs_primary(eccastparser_t* self)
     return oplist;
 }
 
-static eccoplist_t* eccprs_arguments(eccastparser_t* self, int* count)
+eccoplist_t* eccprs_arguments(eccastparser_t* self, int* count)
 {
     eccoplist_t *oplist = NULL, *argumentOps;
     *count = 0;
@@ -436,7 +445,7 @@ static eccoplist_t* eccprs_arguments(eccastparser_t* self, int* count)
     return oplist;
 }
 
-static eccoplist_t* eccprs_member(eccastparser_t* self)
+eccoplist_t* eccprs_member(eccastparser_t* self)
 {
     eccoplist_t* oplist = eccprs_new(self);
     ecctextstring_t text;
@@ -472,7 +481,7 @@ static eccoplist_t* eccprs_member(eccastparser_t* self)
     return oplist;
 }
 
-static eccoplist_t* eccprs_new(eccastparser_t* self)
+eccoplist_t* eccprs_new(eccastparser_t* self)
 {
     eccoplist_t* oplist = NULL;
     ecctextstring_t text = self->lexer->text;
@@ -488,7 +497,7 @@ static eccoplist_t* eccprs_new(eccastparser_t* self)
             text = ECCNSText.join(text, self->lexer->text);
             eccprs_expectToken(self, ')');
         }
-        return ECCNSOpList.unshift(ECCNSOperand.make(ECCNSOperand.construct, ECCNSValue.integer(count), text), oplist);
+        return ECCNSOpList.unshift(ECCNSOperand.make(ECCNSOperand.construct, ecc_value_integer(count), text), oplist);
     }
     else if(eccprs_previewToken(self) == ECC_TOK_FUNCTION)
         return eccprs_function(self, 0, 0, 0);
@@ -496,7 +505,7 @@ static eccoplist_t* eccprs_new(eccastparser_t* self)
         return eccprs_primary(self);
 }
 
-static eccoplist_t* eccprs_leftHandSide(eccastparser_t* self)
+eccoplist_t* eccprs_leftHandSide(eccastparser_t* self)
 {
     eccoplist_t* oplist = eccprs_new(self);
     ecctextstring_t text = ECCNSOpList.text(oplist);
@@ -547,13 +556,13 @@ static eccoplist_t* eccprs_leftHandSide(eccastparser_t* self)
             text = ECCNSText.join(ECCNSText.join(text, ECCNSOpList.text(oplist)), self->lexer->text);
 
             if(isEval)
-                oplist = ECCNSOpList.unshift(ECCNSOperand.make(ECCNSOperand.eval, ECCNSValue.integer(count), text), oplist);
+                oplist = ECCNSOpList.unshift(ECCNSOperand.make(ECCNSOperand.eval, ecc_value_integer(count), text), oplist);
             else if(oplist->ops->native == ECCNSOperand.getMember)
-                oplist = ECCNSOpList.unshift(ECCNSOperand.make(ECCNSOperand.callMember, ECCNSValue.integer(count), text), oplist);
+                oplist = ECCNSOpList.unshift(ECCNSOperand.make(ECCNSOperand.callMember, ecc_value_integer(count), text), oplist);
             else if(oplist->ops->native == ECCNSOperand.getProperty)
-                oplist = ECCNSOpList.unshift(ECCNSOperand.make(ECCNSOperand.callProperty, ECCNSValue.integer(count), text), oplist);
+                oplist = ECCNSOpList.unshift(ECCNSOperand.make(ECCNSOperand.callProperty, ecc_value_integer(count), text), oplist);
             else
-                oplist = ECCNSOpList.unshift(ECCNSOperand.make(ECCNSOperand.call, ECCNSValue.integer(count), text), oplist);
+                oplist = ECCNSOpList.unshift(ECCNSOperand.make(ECCNSOperand.call, ecc_value_integer(count), text), oplist);
 
             if(!eccprs_expectToken(self, ')'))
                 break;
@@ -564,7 +573,7 @@ static eccoplist_t* eccprs_leftHandSide(eccastparser_t* self)
     return oplist;
 }
 
-static eccoplist_t* eccprs_postfix(eccastparser_t* self)
+eccoplist_t* eccprs_postfix(eccastparser_t* self)
 {
     eccoplist_t* oplist = eccprs_leftHandSide(self);
     ecctextstring_t text = self->lexer->text;
@@ -579,7 +588,7 @@ static eccoplist_t* eccprs_postfix(eccastparser_t* self)
     return oplist;
 }
 
-static eccoplist_t* eccprs_unary(eccastparser_t* self)
+eccoplist_t* eccprs_unary(eccastparser_t* self)
 {
     eccoplist_t *oplist, *alt;
     ecctextstring_t text = self->lexer->text;
@@ -643,7 +652,7 @@ static eccoplist_t* eccprs_unary(eccastparser_t* self)
         return oplist;
 }
 
-static eccoplist_t* eccprs_multiplicative(eccastparser_t* self)
+eccoplist_t* eccprs_multiplicative(eccastparser_t* self)
 {
     eccoplist_t *oplist = eccprs_unary(self), *alt;
 
@@ -679,7 +688,7 @@ static eccoplist_t* eccprs_multiplicative(eccastparser_t* self)
     }
 }
 
-static eccoplist_t* eccprs_additive(eccastparser_t* self)
+eccoplist_t* eccprs_additive(eccastparser_t* self)
 {
     eccoplist_t *oplist = eccprs_multiplicative(self), *alt;
     while(1)
@@ -712,7 +721,7 @@ static eccoplist_t* eccprs_additive(eccastparser_t* self)
     }
 }
 
-static eccoplist_t* eccprs_shift(eccastparser_t* self)
+eccoplist_t* eccprs_shift(eccastparser_t* self)
 {
     eccoplist_t *oplist = eccprs_additive(self), *alt;
     while(1)
@@ -747,7 +756,7 @@ static eccoplist_t* eccprs_shift(eccastparser_t* self)
     }
 }
 
-static eccoplist_t* eccprs_relational(eccastparser_t* self, int noIn)
+eccoplist_t* eccprs_relational(eccastparser_t* self, int noIn)
 {
     eccoplist_t *oplist = eccprs_shift(self), *alt;
     while(1)
@@ -785,7 +794,7 @@ static eccoplist_t* eccprs_relational(eccastparser_t* self, int noIn)
     }
 }
 
-static eccoplist_t* eccprs_equality(eccastparser_t* self, int noIn)
+eccoplist_t* eccprs_equality(eccastparser_t* self, int noIn)
 {
     eccoplist_t *oplist = eccprs_relational(self, noIn), *alt;
     while(1)
@@ -819,7 +828,7 @@ static eccoplist_t* eccprs_equality(eccastparser_t* self, int noIn)
     }
 }
 
-static eccoplist_t* eccprs_bitwiseAnd(eccastparser_t* self, int noIn)
+eccoplist_t* eccprs_bitwiseAnd(eccastparser_t* self, int noIn)
 {
     eccoplist_t *oplist = eccprs_equality(self, noIn), *alt;
     while(eccprs_previewToken(self) == '&')
@@ -841,7 +850,7 @@ static eccoplist_t* eccprs_bitwiseAnd(eccastparser_t* self, int noIn)
     return oplist;
 }
 
-static eccoplist_t* eccprs_bitwiseXor(eccastparser_t* self, int noIn)
+eccoplist_t* eccprs_bitwiseXor(eccastparser_t* self, int noIn)
 {
     eccoplist_t *oplist = eccprs_bitwiseAnd(self, noIn), *alt;
     while(eccprs_previewToken(self) == '^')
@@ -863,7 +872,7 @@ static eccoplist_t* eccprs_bitwiseXor(eccastparser_t* self, int noIn)
     return oplist;
 }
 
-static eccoplist_t* eccprs_bitwiseOr(eccastparser_t* self, int noIn)
+eccoplist_t* eccprs_bitwiseOr(eccastparser_t* self, int noIn)
 {
     eccoplist_t *oplist = eccprs_bitwiseXor(self, noIn), *alt;
     while(eccprs_previewToken(self) == '|')
@@ -885,7 +894,7 @@ static eccoplist_t* eccprs_bitwiseOr(eccastparser_t* self, int noIn)
     return oplist;
 }
 
-static eccoplist_t* eccprs_logicalAnd(eccastparser_t* self, int noIn)
+eccoplist_t* eccprs_logicalAnd(eccastparser_t* self, int noIn)
 {
     int32_t opCount;
     eccoplist_t *oplist = eccprs_bitwiseOr(self, noIn), *nextOp = NULL;
@@ -894,7 +903,7 @@ static eccoplist_t* eccprs_logicalAnd(eccastparser_t* self, int noIn)
         if(oplist && (nextOp = eccprs_bitwiseOr(self, noIn)))
         {
             opCount = nextOp->count;
-            oplist = ECCNSOpList.unshiftJoin(ECCNSOperand.make(ECCNSOperand.logicalAnd, ECCNSValue.integer(opCount), ECCNSOpList.text(oplist)), oplist, nextOp);
+            oplist = ECCNSOpList.unshiftJoin(ECCNSOperand.make(ECCNSOperand.logicalAnd, ecc_value_integer(opCount), ECCNSOpList.text(oplist)), oplist, nextOp);
         }
         else
             eccprs_tokenError(self, "expression");
@@ -902,7 +911,7 @@ static eccoplist_t* eccprs_logicalAnd(eccastparser_t* self, int noIn)
     return oplist;
 }
 
-static eccoplist_t* eccprs_logicalOr(eccastparser_t* self, int noIn)
+eccoplist_t* eccprs_logicalOr(eccastparser_t* self, int noIn)
 {
     int32_t opCount;
     eccoplist_t *oplist = eccprs_logicalAnd(self, noIn), *nextOp = NULL;
@@ -911,7 +920,7 @@ static eccoplist_t* eccprs_logicalOr(eccastparser_t* self, int noIn)
         if(oplist && (nextOp = eccprs_logicalAnd(self, noIn)))
         {
             opCount = nextOp->count;
-            oplist = ECCNSOpList.unshiftJoin(ECCNSOperand.make(ECCNSOperand.logicalOr, ECCNSValue.integer(opCount), ECCNSOpList.text(oplist)), oplist, nextOp);
+            oplist = ECCNSOpList.unshiftJoin(ECCNSOperand.make(ECCNSOperand.logicalOr, ecc_value_integer(opCount), ECCNSOpList.text(oplist)), oplist, nextOp);
         }
         else
             eccprs_tokenError(self, "expression");
@@ -919,7 +928,7 @@ static eccoplist_t* eccprs_logicalOr(eccastparser_t* self, int noIn)
     return oplist;
 }
 
-static eccoplist_t* eccprs_conditional(eccastparser_t* self, int noIn)
+eccoplist_t* eccprs_conditional(eccastparser_t* self, int noIn)
 {
     eccoplist_t* oplist = eccprs_logicalOr(self, noIn);
 
@@ -935,8 +944,8 @@ static eccoplist_t* eccprs_conditional(eccastparser_t* self, int noIn)
 
             falseOps = eccprs_assignment(self, noIn);
 
-            trueOps = ECCNSOpList.append(trueOps, ECCNSOperand.make(ECCNSOperand.jump, ECCNSValue.integer(falseOps->count), ECCNSOpList.text(trueOps)));
-            oplist = ECCNSOpList.unshift(ECCNSOperand.make(ECCNSOperand.jumpIfNot, ECCNSValue.integer(trueOps->count), ECCNSOpList.text(oplist)), oplist);
+            trueOps = ECCNSOpList.append(trueOps, ECCNSOperand.make(ECCNSOperand.jump, ecc_value_integer(falseOps->count), ECCNSOpList.text(trueOps)));
+            oplist = ECCNSOpList.unshift(ECCNSOperand.make(ECCNSOperand.jumpIfNot, ecc_value_integer(trueOps->count), ECCNSOpList.text(oplist)), oplist);
             oplist = ECCNSOpList.join3(oplist, trueOps, falseOps);
 
             return oplist;
@@ -947,7 +956,7 @@ static eccoplist_t* eccprs_conditional(eccastparser_t* self, int noIn)
     return oplist;
 }
 
-static eccoplist_t* eccprs_assignment(eccastparser_t* self, int noIn)
+eccoplist_t* eccprs_assignment(eccastparser_t* self, int noIn)
 {
     eccoplist_t *oplist = eccprs_conditional(self, noIn), *opassign = NULL;
     ecctextstring_t text = self->lexer->text;
@@ -1028,7 +1037,7 @@ static eccoplist_t* eccprs_assignment(eccastparser_t* self, int noIn)
     return NULL;
 }
 
-static eccoplist_t* eccprs_expression(eccastparser_t* self, int noIn)
+eccoplist_t* eccprs_expression(eccastparser_t* self, int noIn)
 {
     eccoplist_t* oplist = eccprs_assignment(self, noIn);
     while(eccprs_acceptToken(self, ','))
@@ -1039,7 +1048,7 @@ static eccoplist_t* eccprs_expression(eccastparser_t* self, int noIn)
 
 // MARK: Statements
 
-static eccoplist_t* eccprs_statementList(eccastparser_t* self)
+eccoplist_t* eccprs_statementList(eccastparser_t* self)
 {
     eccoplist_t *oplist = NULL, *statementOps = NULL, *discardOps = NULL;
     uint16_t discardCount = 0;
@@ -1086,7 +1095,7 @@ static eccoplist_t* eccprs_statementList(eccastparser_t* self)
     return oplist;
 }
 
-static eccoplist_t* eccprs_block(eccastparser_t* self)
+eccoplist_t* eccprs_block(eccastparser_t* self)
 {
     eccoplist_t* oplist = NULL;
     eccprs_expectToken(self, '{');
@@ -1099,7 +1108,7 @@ static eccoplist_t* eccprs_block(eccastparser_t* self)
     return oplist;
 }
 
-static eccoplist_t* eccprs_variableDeclaration(eccastparser_t* self, int noIn)
+eccoplist_t* eccprs_variableDeclaration(eccastparser_t* self, int noIn)
 {
     eccvalue_t value = self->lexer->value;
     ecctextstring_t text = self->lexer->text;
@@ -1133,7 +1142,7 @@ static eccoplist_t* eccprs_variableDeclaration(eccastparser_t* self, int noIn)
         return ECCNSOpList.create(ECCNSOperand.next, value, text);
 }
 
-static eccoplist_t* eccprs_variableDeclarationList(eccastparser_t* self, int noIn)
+eccoplist_t* eccprs_variableDeclarationList(eccastparser_t* self, int noIn)
 {
     eccoplist_t *oplist = NULL, *varOps;
     do
@@ -1149,7 +1158,7 @@ static eccoplist_t* eccprs_variableDeclarationList(eccastparser_t* self, int noI
     return oplist;
 }
 
-static eccoplist_t* eccprs_ifStatement(eccastparser_t* self)
+eccoplist_t* eccprs_ifStatement(eccastparser_t* self)
 {
     eccoplist_t *oplist = NULL, *trueOps = NULL, *falseOps = NULL;
     eccprs_expectToken(self, '(');
@@ -1163,14 +1172,14 @@ static eccoplist_t* eccprs_ifStatement(eccastparser_t* self)
     {
         falseOps = eccprs_statement(self);
         if(falseOps)
-            trueOps = ECCNSOpList.append(trueOps, ECCNSOperand.make(ECCNSOperand.jump, ECCNSValue.integer(falseOps->count), ECCNSOpList.text(trueOps)));
+            trueOps = ECCNSOpList.append(trueOps, ECCNSOperand.make(ECCNSOperand.jump, ecc_value_integer(falseOps->count), ECCNSOpList.text(trueOps)));
     }
-    oplist = ECCNSOpList.unshiftJoin3(ECCNSOperand.make(ECCNSOperand.jumpIfNot, ECCNSValue.integer(trueOps->count), ECCNSOpList.text(oplist)), oplist,
+    oplist = ECCNSOpList.unshiftJoin3(ECCNSOperand.make(ECCNSOperand.jumpIfNot, ecc_value_integer(trueOps->count), ECCNSOpList.text(oplist)), oplist,
                                            trueOps, falseOps);
     return oplist;
 }
 
-static eccoplist_t* eccprs_doStatement(eccastparser_t* self)
+eccoplist_t* eccprs_doStatement(eccastparser_t* self)
 {
     eccoplist_t *oplist, *condition;
 
@@ -1187,7 +1196,7 @@ static eccoplist_t* eccprs_doStatement(eccastparser_t* self)
     return ECCNSOpList.createLoop(NULL, condition, NULL, oplist, 1);
 }
 
-static eccoplist_t* eccprs_whileStatement(eccastparser_t* self)
+eccoplist_t* eccprs_whileStatement(eccastparser_t* self)
 {
     eccoplist_t *oplist, *condition;
 
@@ -1202,7 +1211,7 @@ static eccoplist_t* eccprs_whileStatement(eccastparser_t* self)
     return ECCNSOpList.createLoop(NULL, condition, NULL, oplist, 0);
 }
 
-static eccoplist_t* eccprs_forStatement(eccastparser_t* self)
+eccoplist_t* eccprs_forStatement(eccastparser_t* self)
 {
     eccoplist_t *oplist = NULL, *condition = NULL, *increment = NULL, *body = NULL;
 
@@ -1249,7 +1258,7 @@ static eccoplist_t* eccprs_forStatement(eccastparser_t* self)
         eccprs_popDepth(self);
 
         body = ECCNSOpList.appendNoop(body);
-        return ECCNSOpList.join(ECCNSOpList.append(oplist, ECCNSOperand.make(ECCNSOperand.value, ECCNSValue.integer(body->count), self->lexer->text)), body);
+        return ECCNSOpList.join(ECCNSOpList.append(oplist, ECCNSOperand.make(ECCNSOperand.value, ecc_value_integer(body->count), self->lexer->text)), body);
     }
     else
     {
@@ -1273,7 +1282,7 @@ static eccoplist_t* eccprs_forStatement(eccastparser_t* self)
     }
 }
 
-static eccoplist_t* eccprs_continueStatement(eccastparser_t* self, ecctextstring_t text)
+eccoplist_t* eccprs_continueStatement(eccastparser_t* self, ecctextstring_t text)
 {
     eccoplist_t* oplist = NULL;
     eccindexkey_t label = ECC_ConstKey_none;
@@ -1300,13 +1309,13 @@ static eccoplist_t* eccprs_continueStatement(eccastparser_t* self, ecctextstring
 
         if(lastestDepth == 2)
             if(ECCNSKey.isEqual(label, ECC_ConstKey_none) || ECCNSKey.isEqual(label, self->depths[depth].key))
-                return ECCNSOpList.create(ECCNSOperand.breaker, ECCNSValue.integer(breaker - 1), self->lexer->text);
+                return ECCNSOpList.create(ECCNSOperand.breaker, ecc_value_integer(breaker - 1), self->lexer->text);
     }
     eccprs_syntaxError(self, labelText, ECCNSChars.create("label not found"));
     return oplist;
 }
 
-static eccoplist_t* eccprs_breakStatement(eccastparser_t* self, ecctextstring_t text)
+eccoplist_t* eccprs_breakStatement(eccastparser_t* self, ecctextstring_t text)
 {
     eccoplist_t* oplist = NULL;
     eccindexkey_t label = ECC_ConstKey_none;
@@ -1328,13 +1337,13 @@ static eccoplist_t* eccprs_breakStatement(eccastparser_t* self, ecctextstring_t 
     {
         breaker += self->depths[depth].depth;
         if(ECCNSKey.isEqual(label, ECC_ConstKey_none) || ECCNSKey.isEqual(label, self->depths[depth].key))
-            return ECCNSOpList.create(ECCNSOperand.breaker, ECCNSValue.integer(breaker), self->lexer->text);
+            return ECCNSOpList.create(ECCNSOperand.breaker, ecc_value_integer(breaker), self->lexer->text);
     }
     eccprs_syntaxError(self, labelText, ECCNSChars.create("label not found"));
     return oplist;
 }
 
-static eccoplist_t* eccprs_returnStatement(eccastparser_t* self, ecctextstring_t text)
+eccoplist_t* eccprs_returnStatement(eccastparser_t* self, ecctextstring_t text)
 {
     eccoplist_t* oplist = NULL;
 
@@ -1353,7 +1362,7 @@ static eccoplist_t* eccprs_returnStatement(eccastparser_t* self, ecctextstring_t
     return oplist;
 }
 
-static eccoplist_t* eccprs_switchStatement(eccastparser_t* self)
+eccoplist_t* eccprs_switchStatement(eccastparser_t* self)
 {
     eccoplist_t *oplist = NULL, *conditionOps = NULL, *defaultOps = NULL;
     ecctextstring_t text = ECC_ConstString_Empty;
@@ -1373,7 +1382,7 @@ static eccoplist_t* eccprs_switchStatement(eccastparser_t* self)
         {
             conditionOps = ECCNSOpList.join(conditionOps, eccprs_expression(self, 0));
             conditionOps
-            = ECCNSOpList.append(conditionOps, ECCNSOperand.make(ECCNSOperand.value, ECCNSValue.integer(2 + (oplist ? oplist->count : 0)), ECC_ConstString_Empty));
+            = ECCNSOpList.append(conditionOps, ECCNSOperand.make(ECCNSOperand.value, ecc_value_integer(2 + (oplist ? oplist->count : 0)), ECC_ConstString_Empty));
             ++conditionCount;
             eccprs_expectToken(self, ':');
             oplist = ECCNSOpList.join(oplist, eccprs_statementList(self));
@@ -1382,7 +1391,7 @@ static eccoplist_t* eccprs_switchStatement(eccastparser_t* self)
         {
             if(!defaultOps)
             {
-                defaultOps = ECCNSOpList.create(ECCNSOperand.jump, ECCNSValue.integer(1 + (oplist ? oplist->count : 0)), text);
+                defaultOps = ECCNSOpList.create(ECCNSOperand.jump, ecc_value_integer(1 + (oplist ? oplist->count : 0)), text);
                 eccprs_expectToken(self, ':');
                 oplist = ECCNSOpList.join(oplist, eccprs_statementList(self));
             }
@@ -1397,9 +1406,9 @@ static eccoplist_t* eccprs_switchStatement(eccastparser_t* self)
         defaultOps = ECCNSOpList.create(ECCNSOperand.noop, ECCValConstNone, ECC_ConstString_Empty);
 
     oplist = ECCNSOpList.appendNoop(oplist);
-    defaultOps = ECCNSOpList.append(defaultOps, ECCNSOperand.make(ECCNSOperand.jump, ECCNSValue.integer(oplist ? oplist->count : 0), ECC_ConstString_Empty));
+    defaultOps = ECCNSOpList.append(defaultOps, ECCNSOperand.make(ECCNSOperand.jump, ecc_value_integer(oplist ? oplist->count : 0), ECC_ConstString_Empty));
     conditionOps = ECCNSOpList.unshiftJoin(
-    ECCNSOperand.make(ECCNSOperand.switchOp, ECCNSValue.integer(conditionOps ? conditionOps->count : 0), ECC_ConstString_Empty), conditionOps, defaultOps);
+    ECCNSOperand.make(ECCNSOperand.switchOp, ecc_value_integer(conditionOps ? conditionOps->count : 0), ECC_ConstString_Empty), conditionOps, defaultOps);
     oplist = ECCNSOpList.join(conditionOps, oplist);
 
     eccprs_popDepth(self);
@@ -1407,7 +1416,7 @@ static eccoplist_t* eccprs_switchStatement(eccastparser_t* self)
     return oplist;
 }
 
-static eccoplist_t* eccprs_allStatement(eccastparser_t* self)
+eccoplist_t* eccprs_allStatement(eccastparser_t* self)
 {
     eccoplist_t* oplist = NULL;
     ecctextstring_t text = self->lexer->text;
@@ -1446,7 +1455,7 @@ static eccoplist_t* eccprs_allStatement(eccastparser_t* self)
             eccprs_tokenError(self, "expression");
 
         oplist = ECCNSOpList.join(oplist, ECCNSOpList.appendNoop(eccprs_statement(self)));
-        oplist = ECCNSOpList.unshift(ECCNSOperand.make(ECCNSOperand.with, ECCNSValue.integer(oplist->count), ECC_ConstString_Empty), oplist);
+        oplist = ECCNSOpList.unshift(ECCNSOperand.make(ECCNSOperand.with, ecc_value_integer(oplist->count), ECC_ConstString_Empty), oplist);
 
         return oplist;
     }
@@ -1466,7 +1475,7 @@ static eccoplist_t* eccprs_allStatement(eccastparser_t* self)
     else if(eccprs_acceptToken(self, ECC_TOK_TRY))
     {
         oplist = ECCNSOpList.appendNoop(eccprs_block(self));
-        oplist = ECCNSOpList.unshift(ECCNSOperand.make(ECCNSOperand.doTry, ECCNSValue.integer(oplist->count), text), oplist);
+        oplist = ECCNSOpList.unshift(ECCNSOperand.make(ECCNSOperand.doTry, ecc_value_integer(oplist->count), text), oplist);
 
         if(eccprs_previewToken(self) != ECC_TOK_CATCH && eccprs_previewToken(self) != ECC_TOK_FINALLY)
             eccprs_tokenError(self, "catch or finally");
@@ -1484,13 +1493,13 @@ static eccoplist_t* eccprs_allStatement(eccastparser_t* self)
             eccprs_expectToken(self, ')');
 
             catchOps = eccprs_block(self);
-            catchOps = ECCNSOpList.unshift(ECCNSOperand.make(ECCNSOperand.pushEnvironment, ECCNSValue.key(identiferOp.value.data.key), text), catchOps);
+            catchOps = ECCNSOpList.unshift(ECCNSOperand.make(ECCNSOperand.pushEnvironment, ecc_value_key(identiferOp.value.data.key), text), catchOps);
             catchOps = ECCNSOpList.append(catchOps, ECCNSOperand.make(ECCNSOperand.popEnvironment, ECCValConstUndefined, text));
-            catchOps = ECCNSOpList.unshift(ECCNSOperand.make(ECCNSOperand.jump, ECCNSValue.integer(catchOps->count), text), catchOps);
+            catchOps = ECCNSOpList.unshift(ECCNSOperand.make(ECCNSOperand.jump, ecc_value_integer(catchOps->count), text), catchOps);
             oplist = ECCNSOpList.join(oplist, catchOps);
         }
         else
-            oplist = ECCNSOpList.append(ECCNSOpList.append(oplist, ECCNSOperand.make(ECCNSOperand.jump, ECCNSValue.integer(1), text)),
+            oplist = ECCNSOpList.append(ECCNSOpList.append(oplist, ECCNSOperand.make(ECCNSOperand.jump, ecc_value_integer(1), text)),
                                              ECCNSOperand.make(ECCNSOperand.noop, ECCValConstUndefined, text));
 
         if(eccprs_acceptToken(self, ECC_TOK_FINALLY))
@@ -1534,7 +1543,7 @@ static eccoplist_t* eccprs_allStatement(eccastparser_t* self)
     }
 }
 
-static eccoplist_t* eccprs_statement(eccastparser_t* self)
+eccoplist_t* eccprs_statement(eccastparser_t* self)
 {
     eccoplist_t* oplist = eccprs_allStatement(self);
     if(oplist && oplist->count > 1)
@@ -1545,7 +1554,7 @@ static eccoplist_t* eccprs_statement(eccastparser_t* self)
 
 // MARK: ECCNSFunction
 
-static eccoplist_t* eccprs_parameters(eccastparser_t* self, int* count)
+eccoplist_t* eccprs_parameters(eccastparser_t* self, int* count)
 {
     eccoperand_t op;
     *count = 0;
@@ -1570,7 +1579,7 @@ static eccoplist_t* eccprs_parameters(eccastparser_t* self, int* count)
     return NULL;
 }
 
-static eccoplist_t* eccprs_function(eccastparser_t* self, int isDeclaration, int isGetter, int isSetter)
+eccoplist_t* eccprs_function(eccastparser_t* self, int isDeclaration, int isGetter, int isSetter)
 {
     eccvalue_t value;
     ecctextstring_t text, textParameter;
@@ -1643,9 +1652,9 @@ static eccoplist_t* eccprs_function(eccastparser_t* self, int isDeclaration, int
     function->text = text;
     function->parameterCount = parameterCount;
 
-    ECCNSObject.addMember(&function->object, ECC_ConstKey_length, ECCNSValue.integer(parameterCount), ECC_VALFLAG_READONLY | ECC_VALFLAG_HIDDEN | ECC_VALFLAG_SEALED);
+    ECCNSObject.addMember(&function->object, ECC_ConstKey_length, ecc_value_integer(parameterCount), ECC_VALFLAG_READONLY | ECC_VALFLAG_HIDDEN | ECC_VALFLAG_SEALED);
 
-    value = ECCNSValue.function(function);
+    value = ecc_value_function(function);
 
     if(isDeclaration)
     {
@@ -1674,7 +1683,7 @@ static eccoplist_t* eccprs_function(eccastparser_t* self, int isDeclaration, int
 
 // MARK: Source
 
-static eccoplist_t* eccprs_sourceElements(eccastparser_t* self)
+eccoplist_t* eccprs_sourceElements(eccastparser_t* self)
 {
     eccoplist_t* oplist = NULL;
 
@@ -1712,7 +1721,7 @@ static eccoplist_t* eccprs_sourceElements(eccastparser_t* self)
 
 eccastparser_t* nsparsrfn_createWithLexer(eccastlexer_t* lexer)
 {
-    eccastparser_t* self = malloc(sizeof(*self));
+    eccastparser_t* self = (eccastparser_t*)malloc(sizeof(*self));
     *self = ECCNSParser.identity;
 
     self->lexer = lexer;
@@ -1753,13 +1762,13 @@ eccobjfunction_t* nsparsrfn_parseWithEnvironment(eccastparser_t* const self, ecc
     {
         eccoperand_t errorOps[] = {
             { ECCNSOperand.doThrow, ECCValConstUndefined, self->error->text },
-            { ECCNSOperand.value, ECCNSValue.error(self->error), {} },
+            { ECCNSOperand.value, ecc_value_error(self->error), {} },
         };
         errorOps->text.flags |= ECC_TEXTFLAG_BREAKFLAG;
 
         ECCNSOpList.destroy(oplist), oplist = NULL;
-        oplist = malloc(sizeof(*oplist));
-        oplist->ops = malloc(sizeof(errorOps));
+        oplist = (eccoplist_t*)malloc(sizeof(*oplist));
+        oplist->ops = (eccoperand_t*)malloc(sizeof(errorOps));
         oplist->count = sizeof(errorOps) / sizeof(*errorOps);
         memcpy(oplist->ops, errorOps, sizeof(errorOps));
     }

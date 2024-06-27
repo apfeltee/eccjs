@@ -25,12 +25,12 @@ const struct eccpseudonsinput_t ECCNSInput = {
 eccioinput_t* eccinput_create(void)
 {
     size_t linesBytes;
-    eccioinput_t* self = malloc(sizeof(*self));
+    eccioinput_t* self = (eccioinput_t*)malloc(sizeof(*self));
     *self = ECCNSInput.identity;
     self->lineCapacity = 8;
     self->lineCount = 1;
     linesBytes = sizeof(*self->lines) * self->lineCapacity;
-    self->lines = malloc(linesBytes);
+    self->lines = (uint32_t*)malloc(linesBytes);
     memset(self->lines, 0, linesBytes);
     return self;
 }
@@ -73,7 +73,7 @@ eccioinput_t* nsinputfn_createFromFile(const char* filename)
     self = eccinput_create();
 
     strncat(self->name, filename, sizeof(self->name) - 1);
-    self->bytes = malloc(size + 1);
+    self->bytes = (char*)malloc(size + 1);
     self->length = (uint32_t)fread(self->bytes, sizeof(char), size, file);
     fclose(file), file = NULL;
     self->bytes[size] = '\0';
@@ -101,7 +101,7 @@ eccioinput_t* nsinputfn_createFromBytes(const char* bytes, uint32_t length, cons
         va_end(ap);
     }
     self->length = length;
-    self->bytes = malloc(length + 1);
+    self->bytes = (char*)malloc(length + 1);
     memcpy(self->bytes, bytes, length);
     self->bytes[length] = '\0';
 
@@ -120,10 +120,16 @@ void nsinputfn_destroy(eccioinput_t* self)
 
 void nsinputfn_printText(eccioinput_t* self, ecctextstring_t text, int32_t ofLine, ecctextstring_t ofText, const char* ofInput, int fullLine)
 {
-    int32_t line = -1;
-    const char* bytes = NULL;
-    uint16_t length = 0;
-
+    int32_t line;
+    uint32_t start;
+    uint16_t length;
+    long index;
+    long marked;
+    char* mark;
+    const char* bytes;
+    line = -1;
+    bytes = NULL;
+    length = 0;
     if(ofText.length)
     {
         bytes = ofText.bytes;
@@ -131,31 +137,33 @@ void nsinputfn_printText(eccioinput_t* self, ecctextstring_t text, int32_t ofLin
         eccinput_printInput(ofInput ? ofInput : "native code", ofLine ? ofLine : 1);
     }
     else if(!self)
+    {
         eccinput_printInput(ofInput ? ofInput : "(unknown input)", 0);
+    }
     else
     {
         line = nsinputfn_findLine(self, text);
         eccinput_printInput(ofInput ? ofInput : self->name, line > 0 ? line : 0);
-
         if(line > 0)
         {
-            uint32_t start = self->lines[line];
-
+            start = self->lines[line];
             bytes = self->bytes + start;
             do
             {
                 if(!isblank(bytes[length]) && !isgraph(bytes[length]) && bytes[length] >= 0)
+                {
                     break;
-
+                }
                 ++length;
             } while(start + length < self->length);
         }
     }
-
     if(!fullLine)
     {
         if(text.length)
+        {
             ECCNSEnv.printColor(0, 0, " `%.*s`", text.length, text.bytes);
+        }
     }
     else if(!length)
     {
@@ -170,15 +178,21 @@ void nsinputfn_printText(eccioinput_t* self, ecctextstring_t text, int32_t ofLin
 
         if(length >= text.bytes - bytes)
         {
-            char mark[length + 2];
-            long index = 0, marked = 0;
-
+            //char mark[length + 2];
+            index = 0;
+            marked = 0;
+            mark = (char*)calloc(length+2, sizeof(char));
             for(; index < text.bytes - bytes; ++index)
+            {
                 if(isprint(bytes[index]))
+                {
                     mark[index] = ' ';
+                }
                 else
+                {
                     mark[index] = bytes[index];
-
+                }
+            }
             if((signed char)bytes[index] >= 0)
             {
                 mark[index] = '^';
@@ -193,22 +207,29 @@ void nsinputfn_printText(eccioinput_t* self, ecctextstring_t text, int32_t ofLin
                     marked = 1;
                 }
             }
-
             while(++index < text.bytes - bytes + text.length && index <= length)
+            {
                 if(isprint(bytes[index]) || isspace(bytes[index]))
+                {
                     mark[index] = '~';
+                }
                 else
+                {
                     mark[index] = bytes[index];
-
+                }
+            }
             if(!marked)
+            {
                 mark[index++] = '<';
-
+            }
             mark[index] = '\0';
 
             if((text.bytes - bytes) > 0)
+            {
                 ECCNSEnv.printColor(0, ECC_ENVATTR_INVISIBLE, "%.*s", (text.bytes - bytes), mark);
-
+            }
             ECCNSEnv.printColor(ECC_COLOR_GREEN, ECC_ENVATTR_BOLD, "%s", mark + (text.bytes - bytes));
+            free(mark);
         }
     }
 
@@ -230,7 +251,7 @@ eccvalue_t nsinputfn_attachValue(eccioinput_t* self, eccvalue_t value)
     if(value.type == ECC_VALTYPE_CHARS)
         value.data.chars->referenceCount++;
 
-    self->attached = realloc(self->attached, sizeof(*self->attached) * (self->attachedCount + 1));
+    self->attached = (eccvalue_t*)realloc(self->attached, sizeof(*self->attached) * (self->attachedCount + 1));
     self->attached[self->attachedCount] = value;
     return value;
 }

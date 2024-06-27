@@ -10,6 +10,17 @@
 // MARK: - Private
 #define eccmac_stringandlen(str) str, sizeof(str) - 1
 
+eccastlexer_t* nslexerfn_createWithInput(eccioinput_t*);
+void nslexerfn_destroy(eccastlexer_t*);
+int nslexerfn_nextToken(eccastlexer_t*);
+const char* nslexerfn_tokenChars(int token, char buffer[4]);
+eccvalue_t nslexerfn_scanBinary(ecctextstring_t text, int);
+eccvalue_t nslexerfn_scanInteger(ecctextstring_t text, int base, int);
+uint32_t nslexerfn_scanElement(ecctextstring_t text);
+uint8_t nslexerfn_uint8Hex(char a, char b);
+uint16_t nslexerfn_uint16Hex(char a, char b, char c, char d);
+
+
 static const struct
 {
     const char* name;
@@ -60,33 +71,90 @@ static const struct
     { eccmac_stringandlen("package") }, { eccmac_stringandlen("protected") }, { eccmac_stringandlen("static") },  { eccmac_stringandlen("yield") },
 };
 
-// MARK: - Static Members
 
-static eccastlexer_t* nslexerfn_createWithInput(eccioinput_t*);
-static void nslexerfn_destroy(eccastlexer_t*);
-static eccasttoktype_t nslexerfn_nextToken(eccastlexer_t*);
-static const char* nslexerfn_tokenChars(eccasttoktype_t token, char buffer[4]);
-static eccvalue_t nslexerfn_scanBinary(ecctextstring_t text, eccastlexflags_t);
-static eccvalue_t nslexerfn_scanInteger(ecctextstring_t text, int base, eccastlexflags_t);
-static uint32_t nslexerfn_scanElement(ecctextstring_t text);
-static uint8_t nslexerfn_uint8Hex(char a, char b);
-static uint16_t nslexerfn_uint16Hex(char a, char b, char c, char d);
 const struct eccpseudonslexer_t ECCNSLexer = {
-    nslexerfn_createWithInput, nslexerfn_destroy, nslexerfn_nextToken, nslexerfn_tokenChars, nslexerfn_scanBinary, nslexerfn_scanInteger, nslexerfn_scanElement, nslexerfn_uint8Hex, nslexerfn_uint16Hex,
+    nslexerfn_createWithInput,
+    nslexerfn_destroy,
+    nslexerfn_nextToken,
+    nslexerfn_tokenChars,
+    nslexerfn_scanBinary,
+    nslexerfn_scanInteger,
+    nslexerfn_scanElement,
+    nslexerfn_uint8Hex,
+    nslexerfn_uint16Hex,
     {}
 };
 
-static void ecclex_addLine(eccastlexer_t* self, uint32_t offset)
+
+int8_t ecclex_hexhigit(int c)
+{
+    if(c >= 'a' && c <= 'f')
+    {
+        return c - 'a' + 10;
+    }
+    else if(c >= 'A' && c <= 'F')
+    {
+        return c - 'A' + 10;
+    }
+    return c - '0';
+}
+
+uint8_t nslexerfn_uint8Hex(char a, char b)
+{
+    return ecclex_hexhigit(a) << 4 | ecclex_hexhigit(b);
+}
+
+uint16_t nslexerfn_uint16Hex(char a, char b, char c, char d)
+{
+    return ecclex_hexhigit(a) << 12 | ecclex_hexhigit(b) << 8 | ecclex_hexhigit(c) << 4 | ecclex_hexhigit(d);
+}
+
+double ecclex_strtolHexFallback(ecctextstring_t text)
+{
+    double binary = 0;
+    int sign = 1;
+    int offset = 0;
+    int c;
+    if(text.bytes[offset] == '-')
+    {
+        sign = -1;
+        ++offset;
+    }
+    if(text.length - offset > 1 && text.bytes[offset] == '0' && tolower(text.bytes[offset + 1]) == 'x')
+    {
+        offset += 2;
+        while(text.length - offset >= 1)
+        {
+            c = text.bytes[offset++];
+            binary *= 16;
+            if(isdigit(c))
+            {
+                binary += c - '0';
+            }
+            else if(isxdigit(c))
+            {
+                binary += tolower(c) - ('a' - 10);
+            }
+            else
+            {
+                return NAN;
+            }
+        }
+    }
+    return binary * sign;
+}
+
+void ecclex_addLine(eccastlexer_t* self, uint32_t offset)
 {
     if(self->input->lineCount + 1 >= self->input->lineCapacity)
     {
         self->input->lineCapacity *= 2;
-        self->input->lines = realloc(self->input->lines, sizeof(*self->input->lines) * self->input->lineCapacity);
+        self->input->lines = (uint32_t*)realloc(self->input->lines, sizeof(*self->input->lines) * self->input->lineCapacity);
     }
     self->input->lines[++self->input->lineCount] = offset;
 }
 
-static unsigned char ecclex_previewChar(eccastlexer_t* self)
+unsigned char ecclex_previewChar(eccastlexer_t* self)
 {
     if(self->offset < self->input->length)
         return self->input->bytes[self->offset];
@@ -94,7 +162,7 @@ static unsigned char ecclex_previewChar(eccastlexer_t* self)
         return 0;
 }
 
-static uint32_t ecclex_nextChar(eccastlexer_t* self)
+uint32_t ecclex_nextChar(eccastlexer_t* self)
 {
     if(self->offset < self->input->length)
     {
@@ -118,7 +186,7 @@ static uint32_t ecclex_nextChar(eccastlexer_t* self)
         return 0;
 }
 
-static int ecclex_acceptChar(eccastlexer_t* self, char c)
+int ecclex_acceptChar(eccastlexer_t* self, char c)
 {
     if(ecclex_previewChar(self) == c)
     {
@@ -129,15 +197,15 @@ static int ecclex_acceptChar(eccastlexer_t* self, char c)
         return 0;
 }
 
-static char ecclex_eof(eccastlexer_t* self)
+char ecclex_eof(eccastlexer_t* self)
 {
     return self->offset >= self->input->length;
 }
 
-static eccasttoktype_t ecclex_syntaxError(eccastlexer_t* self, ecccharbuffer_t* message)
+int ecclex_syntaxError(eccastlexer_t* self, ecccharbuffer_t* message)
 {
     eccobjerror_t* error = ECCNSError.syntaxError(self->text, message);
-    self->value = ECCNSValue.error(error);
+    self->value = ecc_value_error(error);
     return ECC_TOK_ERROR;
 }
 
@@ -145,7 +213,7 @@ static eccasttoktype_t ecclex_syntaxError(eccastlexer_t* self, ecccharbuffer_t* 
 
 eccastlexer_t* nslexerfn_createWithInput(eccioinput_t* input)
 {
-    eccastlexer_t* self = malloc(sizeof(*self));
+    eccastlexer_t* self = (eccastlexer_t*)malloc(sizeof(*self));
     *self = ECCNSLexer.identity;
 
     assert(input);
@@ -162,7 +230,7 @@ void nslexerfn_destroy(eccastlexer_t* self)
     free(self), self = NULL;
 }
 
-eccasttoktype_t nslexerfn_nextToken(eccastlexer_t* self)
+int nslexerfn_nextToken(eccastlexer_t* self)
 {
     uint32_t c;
     assert(self);
@@ -638,7 +706,7 @@ retry:
                                 ECCNSChars.appendCodepoint(&chars, c);
                             }
                             value = ECCNSInput.attachValue(self->input, ECCNSChars.endAppend(&chars));
-                            self->value = ECCNSValue.key(ECCNSKey.makeWithText(ECCNSValue.textOf(&value), value.type != ECC_VALTYPE_CHARS));
+                            self->value = ecc_value_key(ECCNSKey.makeWithText(ecc_value_textof(&value), value.type != ECC_VALTYPE_CHARS));
                             return ECC_TOK_IDENTIFIER;
                         }
                         if(!self->disallowKeyword)
@@ -658,7 +726,7 @@ retry:
                                 }
                             }
                         }
-                        self->value = ECCNSValue.key(ECCNSKey.makeWithText(self->text, 0));
+                        self->value = ecc_value_key(ECCNSKey.makeWithText(self->text, 0));
                         return ECC_TOK_IDENTIFIER;
                     }
                     else
@@ -684,7 +752,7 @@ retry:
     return ECC_TOK_NO;
 }
 
-const char* nslexerfn_tokenChars(eccasttoktype_t token, char buffer[4])
+const char* nslexerfn_tokenChars(int token, char buffer[4])
 {
     int index;
     static const struct
@@ -775,131 +843,130 @@ const char* nslexerfn_tokenChars(eccasttoktype_t token, char buffer[4])
     return "unknown";
 }
 
-eccvalue_t nslexerfn_scanBinary(ecctextstring_t text, eccastlexflags_t flags)
+eccvalue_t nslexerfn_scanBinary(ecctextstring_t text, int flags)
 {
-    int lazy = flags & ECC_LEXFLAG_SCANLAZY;
-    char buffer[text.length + 1];
-    char* end = buffer;
-    double binary = NAN;
-
+    int lazy;
+    double binary;
+    char* end;
+    char* buffer;
+    buffer = (char*)calloc(text.length+1, sizeof(char));
+    lazy = flags & ECC_LEXFLAG_SCANLAZY;
+    end = buffer;
+    binary = NAN;
     if(flags & ECC_LEXFLAG_SCANSLOPPY)
     {
         ecctextstring_t tail = ECCNSText.make(text.bytes + text.length, text.length);
-
         while(tail.length && ECCNSText.isSpace(ECCNSText.prevCharacter(&tail)))
+        {
             text.length = tail.length;
-
+        }
         while(text.length && ECCNSText.isSpace(ECCNSText.character(text)))
+        {
             ECCNSText.nextCharacter(&text);
+        }
     }
     else
+    {
         while(text.length && isspace(*text.bytes))
+        {
             ECCNSText.advance(&text, 1);
-
+        }
+    }
     memcpy(buffer, text.bytes, text.length);
     buffer[text.length] = '\0';
-
     if(text.length)
     {
         if(lazy && text.length >= 2 && buffer[0] == '0' && buffer[1] == 'x')
-            return ECCNSValue.binary(0);
-
-        if(text.length >= ECC_ConstString_Infinity.length && !memcmp(buffer, ECC_ConstString_Infinity.bytes, ECC_ConstString_Infinity.length))
-            binary = INFINITY, end += ECC_ConstString_Infinity.length;
-        else if(text.length >= ECC_ConstString_NegativeInfinity.length
-                && !memcmp(buffer, ECC_ConstString_NegativeInfinity.bytes, ECC_ConstString_NegativeInfinity.length))
-            binary = -INFINITY, end += ECC_ConstString_NegativeInfinity.length;
-        else if(!isalpha(buffer[0]))
-            binary = strtod(buffer, &end);
-
-        if((!lazy && *end && !isspace(*end)) || (lazy && end == buffer))
-            binary = NAN;
-    }
-    else if(!lazy)
-        binary = 0;
-
-    return ECCNSValue.binary(binary);
-}
-
-static double ecclex_strtolHexFallback(ecctextstring_t text)
-{
-    double binary = 0;
-    int sign = 1;
-    int offset = 0;
-    int c;
-
-    if(text.bytes[offset] == '-')
-        sign = -1, ++offset;
-
-    if(text.length - offset > 1 && text.bytes[offset] == '0' && tolower(text.bytes[offset + 1]) == 'x')
-    {
-        offset += 2;
-
-        while(text.length - offset >= 1)
         {
-            c = text.bytes[offset++];
-
-            binary *= 16;
-
-            if(isdigit(c))
-                binary += c - '0';
-            else if(isxdigit(c))
-                binary += tolower(c) - ('a' - 10);
-            else
-                return NAN;
+            free(buffer);
+            return ecc_value_binary(0);
+        }
+        if(text.length >= ECC_ConstString_Infinity.length && !memcmp(buffer, ECC_ConstString_Infinity.bytes, ECC_ConstString_Infinity.length))
+        {
+            binary = INFINITY;
+            end += ECC_ConstString_Infinity.length;
+        }
+        else if(text.length >= ECC_ConstString_NegativeInfinity.length && !memcmp(buffer, ECC_ConstString_NegativeInfinity.bytes, ECC_ConstString_NegativeInfinity.length))
+        {
+            binary = -INFINITY;
+            end += ECC_ConstString_NegativeInfinity.length;
+        }
+        else if(!isalpha(buffer[0]))
+        {
+            binary = strtod(buffer, &end);
+        }
+        if((!lazy && *end && !isspace(*end)) || (lazy && end == buffer))
+        {
+            binary = NAN;
         }
     }
-
-    return binary * sign;
+    else if(!lazy)
+    {
+        binary = 0;
+    }
+    free(buffer);
+    return ecc_value_binary(binary);
 }
 
-eccvalue_t nslexerfn_scanInteger(ecctextstring_t text, int base, eccastlexflags_t flags)
-{
-    int lazy = flags & ECC_LEXFLAG_SCANLAZY;
-    long integer;
-    char buffer[text.length + 1];
-    char* end;
 
+eccvalue_t nslexerfn_scanInteger(ecctextstring_t text, int base, int flags)
+{
+    int lazy;
+    long integer;
+    char* end;
+    char* buffer;
+    buffer = (char*)calloc(text.length + 1, sizeof(char));
+    lazy = flags & ECC_LEXFLAG_SCANLAZY;
     if(flags & ECC_LEXFLAG_SCANSLOPPY)
     {
         ecctextstring_t tail = ECCNSText.make(text.bytes + text.length, text.length);
-
         while(tail.length && ECCNSText.isSpace(ECCNSText.prevCharacter(&tail)))
+        {
             text.length = tail.length;
-
+        }        
         while(text.length && ECCNSText.isSpace(ECCNSText.character(text)))
+        {
             ECCNSText.nextCharacter(&text);
+        }
     }
     else
+    {
         while(text.length && isspace(*text.bytes))
+        {
             ECCNSText.advance(&text, 1);
-
+        }
+    }
     memcpy(buffer, text.bytes, text.length);
     buffer[text.length] = '\0';
-
     errno = 0;
     integer = strtol(buffer, &end, base);
-
     if((lazy && end == buffer) || (!lazy && *end && !isspace(*end)))
-        return ECCNSValue.binary(NAN);
+    {
+        free(buffer);
+        return ecc_value_binary(NAN);
+    }
     else if(errno == ERANGE)
     {
         if(!base || base == 10 || base == 16)
         {
             double binary = strtod(buffer, NULL);
             if(!binary && (!base || base == 16))
+            {
                 binary = ecclex_strtolHexFallback(text);
-
-            return ECCNSValue.binary(binary);
+            }
+            free(buffer);
+            return ecc_value_binary(binary);
         }
-
+        free(buffer);
         ECCNSEnv.printWarning("`parseInt('%.*s', %d)` out of bounds; only long int are supported by radices other than 10 or 16", text.length, text.bytes, base);
-        return ECCNSValue.binary(NAN);
+        return ecc_value_binary(NAN);
     }
-    else if(integer < INT32_MIN || integer > INT32_MAX)
-        return ECCNSValue.binary(integer);
-    else
-        return ECCNSValue.integer((int32_t)integer);
+    free(buffer);
+    if(integer < INT32_MIN || integer > INT32_MAX)
+    {
+        return ecc_value_binary(integer);
+    }
+    return ecc_value_integer((int32_t)integer);
 }
 
 uint32_t nslexerfn_scanElement(ecctextstring_t text)
@@ -924,22 +991,3 @@ uint32_t nslexerfn_scanElement(ecctextstring_t text)
         return UINT32_MAX;
 }
 
-static inline int8_t ecclex_hexhigit(int c)
-{
-    if(c >= 'a' && c <= 'f')
-        return c - 'a' + 10;
-    else if(c >= 'A' && c <= 'F')
-        return c - 'A' + 10;
-    else
-        return c - '0';
-}
-
-uint8_t nslexerfn_uint8Hex(char a, char b)
-{
-    return ecclex_hexhigit(a) << 4 | ecclex_hexhigit(b);
-}
-
-uint16_t nslexerfn_uint16Hex(char a, char b, char c, char d)
-{
-    return ecclex_hexhigit(a) << 12 | ecclex_hexhigit(b) << 8 | ecclex_hexhigit(c) << 4 | ecclex_hexhigit(d);
-}

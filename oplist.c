@@ -48,8 +48,8 @@ const struct eccpseudonsoplist_t ECCNSOpList = {
 
 eccoplist_t* nsoplistfn_create(const eccnativefuncptr_t native, eccvalue_t value, ecctextstring_t text)
 {
-    eccoplist_t* self = malloc(sizeof(*self));
-    self->ops = malloc(sizeof(*self->ops) * 1);
+    eccoplist_t* self = (eccoplist_t*)malloc(sizeof(*self));
+    self->ops = (eccoperand_t*)malloc(sizeof(*self->ops) * 1);
     self->ops[0] = ECCNSOperand.make(native, value, text);
     self->count = 1;
     return self;
@@ -70,7 +70,7 @@ eccoplist_t* nsoplistfn_join(eccoplist_t* self, eccoplist_t* with)
     else if(!with)
         return self;
 
-    self->ops = realloc(self->ops, sizeof(*self->ops) * (self->count + with->count));
+    self->ops = (eccoperand_t*)realloc(self->ops, sizeof(*self->ops) * (self->count + with->count));
     memcpy(self->ops + self->count, with->ops, sizeof(*self->ops) * with->count);
     self->count += with->count;
 
@@ -88,7 +88,7 @@ eccoplist_t* nsoplistfn_join3(eccoplist_t* self, eccoplist_t* a, eccoplist_t* b)
     else if(!b)
         return nsoplistfn_join(self, a);
 
-    self->ops = realloc(self->ops, sizeof(*self->ops) * (self->count + a->count + b->count));
+    self->ops = (eccoperand_t*)realloc(self->ops, sizeof(*self->ops) * (self->count + a->count + b->count));
     memcpy(self->ops + self->count, a->ops, sizeof(*self->ops) * a->count);
     memcpy(self->ops + self->count + a->count, b->ops, sizeof(*self->ops) * b->count);
     self->count += a->count + b->count;
@@ -103,14 +103,14 @@ eccoplist_t* nsoplistfn_joinDiscarded(eccoplist_t* self, uint16_t n, eccoplist_t
 {
     while(n > 16)
     {
-        self = ECCNSOpList.append(self, ECCNSOperand.make(ECCNSOperand.discardN, ECCNSValue.integer(16), ECC_ConstString_Empty));
+        self = ECCNSOpList.append(self, ECCNSOperand.make(ECCNSOperand.discardN, ecc_value_integer(16), ECC_ConstString_Empty));
         n -= 16;
     }
 
     if(n == 1)
         self = ECCNSOpList.append(self, ECCNSOperand.make(ECCNSOperand.discard, ECCValConstUndefined, ECC_ConstString_Empty));
     else
-        self = ECCNSOpList.append(self, ECCNSOperand.make(ECCNSOperand.discardN, ECCNSValue.integer(n), ECC_ConstString_Empty));
+        self = ECCNSOpList.append(self, ECCNSOperand.make(ECCNSOperand.discardN, ecc_value_integer(n), ECC_ConstString_Empty));
 
     return nsoplistfn_join(self, with);
 }
@@ -120,7 +120,7 @@ eccoplist_t* nsoplistfn_unshift(eccoperand_t op, eccoplist_t* self)
     if(!self)
         return nsoplistfn_create(op.native, op.value, op.text);
 
-    self->ops = realloc(self->ops, sizeof(*self->ops) * (self->count + 1));
+    self->ops = (eccoperand_t*)realloc(self->ops, sizeof(*self->ops) * (self->count + 1));
     memmove(self->ops + 1, self->ops, sizeof(*self->ops) * self->count++);
     self->ops[0] = op;
     return self;
@@ -133,7 +133,7 @@ eccoplist_t* nsoplistfn_unshiftJoin(eccoperand_t op, eccoplist_t* self, eccoplis
     else if(!with)
         return nsoplistfn_unshift(op, self);
 
-    self->ops = realloc(self->ops, sizeof(*self->ops) * (self->count + with->count + 1));
+    self->ops = (eccoperand_t*)realloc(self->ops, sizeof(*self->ops) * (self->count + with->count + 1));
     memmove(self->ops + 1, self->ops, sizeof(*self->ops) * self->count);
     memcpy(self->ops + self->count + 1, with->ops, sizeof(*self->ops) * with->count);
     self->ops[0] = op;
@@ -158,7 +158,7 @@ eccoplist_t* nsoplistfn_unshiftJoin3(eccoperand_t op, eccoplist_t* self, eccopli
     {
         return nsoplistfn_unshiftJoin(op, self, a);
     }
-    self->ops = realloc(self->ops, sizeof(*self->ops) * (self->count + a->count + b->count + 1));
+    self->ops = (eccoperand_t*)realloc(self->ops, sizeof(*self->ops) * (self->count + a->count + b->count + 1));
     memmove(self->ops + 1, self->ops, sizeof(*self->ops) * self->count);
     memcpy(self->ops + self->count + 1, a->ops, sizeof(*self->ops) * a->count);
     memcpy(self->ops + self->count + a->count + 1, b->ops, sizeof(*self->ops) * b->count);
@@ -183,7 +183,7 @@ eccoplist_t* nsoplistfn_append(eccoplist_t* self, eccoperand_t op)
     {
         return nsoplistfn_create(op.native, op.value, op.text);
     }
-    self->ops = realloc(self->ops, sizeof(*self->ops) * (self->count + 1));
+    self->ops = (eccoperand_t*)realloc(self->ops, sizeof(*self->ops) * (self->count + 1));
     self->ops[self->count++] = op;
     return self;
 }
@@ -203,7 +203,7 @@ eccoplist_t* nsoplistfn_createLoop(eccoplist_t* initial, eccoplist_t* condition,
                 eccvalue_t stepValue;
                 if(step->count == 2 && (step->ops[0].native == ECCNSOperand.incrementRef || step->ops[0].native == ECCNSOperand.postIncrementRef))
                 {
-                    stepValue = ECCNSValue.integer(1);
+                    stepValue = ecc_value_integer(1);
                 }
                 else if(step->count == 3 && step->ops[0].native == ECCNSOperand.addAssignRef && step->ops[2].native == ECCNSOperand.value
                         && step->ops[2].value.type == ECC_VALTYPE_INTEGER && step->ops[2].value.data.integer > 0)
@@ -236,7 +236,7 @@ eccoplist_t* nsoplistfn_createLoop(eccoplist_t* initial, eccoplist_t* condition,
                 body = ECCNSOpList.unshift(
                     ECCNSOperand.make(
                         (condition->ops[0].native == ECCNSOperand.less ? ECCNSOperand.iterateLessRef : ECCNSOperand.iterateLessOrEqualRef),
-                        ECCNSValue.integer(body->count),
+                        ecc_value_integer(body->count),
                         condition->ops[0].text
                     ), body
                 );
@@ -251,7 +251,7 @@ eccoplist_t* nsoplistfn_createLoop(eccoplist_t* initial, eccoplist_t* condition,
                 eccvalue_t stepValue;
                 if(step->count == 2 && (step->ops[0].native == ECCNSOperand.decrementRef || step->ops[0].native == ECCNSOperand.postDecrementRef))
                 {
-                    stepValue = ECCNSValue.integer(1);
+                    stepValue = ecc_value_integer(1);
                 }
                 else if(step->count == 3 && step->ops[0].native == ECCNSOperand.minusAssignRef && step->ops[2].native == ECCNSOperand.value
                         && step->ops[2].value.type == ECC_VALTYPE_INTEGER && step->ops[2].value.data.integer > 0)
@@ -278,7 +278,7 @@ eccoplist_t* nsoplistfn_createLoop(eccoplist_t* initial, eccoplist_t* condition,
                 ECCNSOpList.unshift(ECCNSOperand.make(ECCNSOperand.getLocalRef, condition->ops[1].value, condition->ops[1].text), body));
                 body = ECCNSOpList.unshift(ECCNSOperand.make(ECCNSOperand.value, stepValue, condition->ops[0].text), body);
                 body = ECCNSOpList.unshift(ECCNSOperand.make(condition->ops[0].native == ECCNSOperand.more ? ECCNSOperand.iterateMoreRef : ECCNSOperand.iterateMoreOrEqualRef,
-                                                                  ECCNSValue.integer(body->count), condition->ops[0].text),
+                                                                  ecc_value_integer(body->count), condition->ops[0].text),
                                                 body);
                 ECCNSOpList.destroy(condition), condition = NULL;
                 ECCNSOpList.destroy(step), step = NULL;
@@ -291,7 +291,7 @@ eccoplist_t* nsoplistfn_createLoop(eccoplist_t* initial, eccoplist_t* condition,
 
         if(!condition)
         {
-            condition = ECCNSOpList.create(ECCNSOperand.value, ECCNSValue.truth(1), ECC_ConstString_Empty);
+            condition = ECCNSOpList.create(ECCNSOperand.value, ecc_value_truth(1), ECC_ConstString_Empty);
         }
         if(step)
         {
@@ -306,12 +306,12 @@ eccoplist_t* nsoplistfn_createLoop(eccoplist_t* initial, eccoplist_t* condition,
         if(reverseCondition)
         {
             skipOpCount += condition->count + body->count;
-            body = ECCNSOpList.append(body, ECCNSOperand.make(ECCNSOperand.value, ECCNSValue.truth(1), ECC_ConstString_Empty));
-            body = ECCNSOpList.append(body, ECCNSOperand.make(ECCNSOperand.jump, ECCNSValue.integer(-body->count - 1), ECC_ConstString_Empty));
+            body = ECCNSOpList.append(body, ECCNSOperand.make(ECCNSOperand.value, ecc_value_truth(1), ECC_ConstString_Empty));
+            body = ECCNSOpList.append(body, ECCNSOperand.make(ECCNSOperand.jump, ecc_value_integer(-body->count - 1), ECC_ConstString_Empty));
         }
         body = ECCNSOpList.join(ECCNSOpList.join(step, condition), body);
-        body = ECCNSOpList.unshift(ECCNSOperand.make(ECCNSOperand.jump, ECCNSValue.integer(body->count), ECC_ConstString_Empty), body);
-        initial = ECCNSOpList.append(initial, ECCNSOperand.make(ECCNSOperand.iterate, ECCNSValue.integer(skipOpCount), ECC_ConstString_Empty));
+        body = ECCNSOpList.unshift(ECCNSOperand.make(ECCNSOperand.jump, ecc_value_integer(body->count), ECC_ConstString_Empty), body);
+        initial = ECCNSOpList.append(initial, ECCNSOperand.make(ECCNSOperand.iterate, ecc_value_integer(skipOpCount), ECC_ConstString_Empty));
         return ECCNSOpList.join(initial, body);
     }
 }
@@ -389,7 +389,7 @@ void nsoplistfn_optimizeWithEnvironment(eccoplist_t* self, eccobject_t* environm
                                     self->ops[index].native == ECCNSOperand.deleteLocal       ? ECCNSOperand.deleteLocalSlot :
                                     NULL
                                     ,
-                                    ECCNSValue.integer(slot), self->ops[index].text);
+                                    ecc_value_integer(slot), self->ops[index].text);
                             }
                             else if(slot <= INT16_MAX && level <= INT16_MAX)
                             {
@@ -402,7 +402,7 @@ void nsoplistfn_optimizeWithEnvironment(eccoplist_t* self, eccobject_t* environm
                                     self->ops[index].native == ECCNSOperand.deleteLocal       ? ECCNSOperand.deleteParentSlot :
                                     NULL
                                     ,
-                                    ECCNSValue.integer((level << 16) | slot), self->ops[index].text);
+                                    ecc_value_integer((level << 16) | slot), self->ops[index].text);
                             }
                             else
                             {
@@ -414,7 +414,7 @@ void nsoplistfn_optimizeWithEnvironment(eccoplist_t* self, eccobject_t* environm
                                 if(op.native == ECCNSOperand.call && self->ops[index - 2].native == ECCNSOperand.result)
                                 {
                                     self->ops[index - 1] = ECCNSOperand.make(ECCNSOperand.repopulate, op.value, op.text);
-                                    self->ops[index] = ECCNSOperand.make(ECCNSOperand.value, ECCNSValue.integer(-index - 1), self->ops[index].text);
+                                    self->ops[index] = ECCNSOperand.make(ECCNSOperand.value, ecc_value_integer(-index - 1), self->ops[index].text);
                                 }
                             }
                             goto found;
@@ -461,7 +461,7 @@ void nsoplistfn_dumpTo(eccoplist_t* self, FILE* file)
         else if(self->ops[i].native == ECCNSOperand.getParentSlot || self->ops[i].native == ECCNSOperand.getParentSlotRef || self->ops[i].native == ECCNSOperand.setParentSlot)
             fprintf(file, "[-%hu] %hu", (uint16_t)(self->ops[i].value.data.integer >> 16), (uint16_t)(self->ops[i].value.data.integer & 0xffff));
         else if(self->ops[i].value.type != ECC_VALTYPE_UNDEFINED || self->ops[i].native == ECCNSOperand.value || self->ops[i].native == ECCNSOperand.exchange)
-            ECCNSValue.dumpTo(self->ops[i].value, file);
+            ecc_value_dumpto(self->ops[i].value, file);
 
         if(self->ops[i].native == ECCNSOperand.text)
             fprintf(file, "'%.*s'", (int)self->ops[i].text.length, self->ops[i].text.bytes);

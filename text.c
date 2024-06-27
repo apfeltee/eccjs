@@ -55,7 +55,7 @@ _textMake(ECC_ConstString_EvalErrorName, "EvalError");
 // MARK: - Static Members
 
 /* clang-format off */
-static const char lowers[] =
+static const unsigned char g_textchars_lowers[] =
 {
     0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x6b, 0x6c, 0x6d, 0x6e, 0x6f, 
     0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7a, 0xC2, 0xB5, 0xC3, 0xA0, 
@@ -249,7 +249,7 @@ static const char lowers[] =
     0x96, 0xEF, 0xBD, 0x97, 0xEF, 0xBD, 0x98, 0xEF, 0xBD, 0x99, 0xEF, 0xBD, 0x9A, 0   , 
 };
 
-static const char uppers[]=
+static const unsigned char g_textchars_uppers[]=
 {
     0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e, 0x4f, 
     0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5a, 0xCE, 0x9C, 0xC3, 0x80, 
@@ -659,12 +659,12 @@ char* nstextfn_toLower(ecctextstring_t i, char* o /* length x 2 */)
 
         if(c.units > 1 || isupper(*p))
         {
-            p = strstr(uppers, p);
+            p = strstr((const char*)g_textchars_uppers, p);
             if(p)
             {
                 while(p[c.units] == (char)255)
                     ++c.units;
-                p = lowers + (p - uppers);
+                p = ((const char*)g_textchars_lowers) + (p - ((const char*)g_textchars_uppers));
                 while(p[c.units - 1] == (char)255)
                     --c.units;
             }
@@ -695,12 +695,12 @@ char* nstextfn_toUpper(ecctextstring_t i, char* o /* length x 3 */)
 
         if(c.units > 1 || islower(*p))
         {
-            p = strstr(lowers, p);
+            p = strstr((const char*)g_textchars_lowers, p);
             if(p)
             {
                 while(p[c.units] == (char)255)
                     ++c.units;
-                p = uppers + (p - lowers);
+                p = ((const char*)g_textchars_uppers) + (p - ((const char*)g_textchars_lowers));
                 while(p[c.units - 1] == (char)255)
                     --c.units;
             }

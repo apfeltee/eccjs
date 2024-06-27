@@ -69,7 +69,7 @@ const struct eccpseudonsjson_t ECCNSJSON = {
 
 static eccvalue_t eccjson_error(eccjsonparser_t* parse, int length, ecccharbuffer_t* chars)
 {
-    return ECCNSValue.error(ECCNSError.syntaxError(ECCNSText.make(parse->text.bytes + (length < 0 ? length : 0), abs(length)), chars));
+    return ecc_value_error(ECCNSError.syntaxError(ECCNSText.make(parse->text.bytes + (length < 0 ? length : 0), abs(length)), chars));
 }
 
 static ecctextstring_t eccjson_errorOfLine(eccjsonparser_t* parse)
@@ -215,7 +215,7 @@ static eccvalue_t eccjson_parseliteral(eccjsonparser_t* parse)
         case '"':
         {
             ecctextstring_t text = eccjson_parsestring(parse);
-            return ECCNSValue.chars(ECCNSChars.createWithBytes(text.length, text.bytes));
+            return ecc_value_chars(ECCNSChars.createWithBytes(text.length, text.bytes));
             break;
         }
 
@@ -266,7 +266,7 @@ static eccvalue_t eccjson_parseobject(eccjsonparser_t* parse)
                 return eccjson_error(parse, -c.units, ECCNSChars.create("unexpected '%.*s'", c.units, parse->text.bytes - c.units));
         }
 
-    return ECCNSValue.object(object);
+    return ecc_value_object(object);
 }
 
 static eccvalue_t eccjson_parsearray(eccjsonparser_t* parse)
@@ -293,7 +293,7 @@ static eccvalue_t eccjson_parsearray(eccjsonparser_t* parse)
 
         return eccjson_error(parse, -c.units, ECCNSChars.create("unexpected '%.*s'", c.units, parse->text.bytes - c.units));
     }
-    return ECCNSValue.object(object);
+    return ecc_value_object(object);
 }
 
 static eccvalue_t eccjson_runparser(eccjsonparser_t* parse)
@@ -353,7 +353,7 @@ static eccvalue_t eccjson_itermore(eccjsonparser_t* parse, eccvalue_t thisval, e
     uint32_t index, count;
     eccappendbuffer_t chars;
 
-    if(ECCNSValue.isObject(value))
+    if(ecc_value_isobject(value))
     {
         eccobject_t* object = value.data.object;
 
@@ -370,7 +370,7 @@ static eccvalue_t eccjson_itermore(eccjsonparser_t* parse, eccvalue_t thisval, e
         for(index = 2; index < object->hashmapCount; ++index)
         {
             if(object->hashmap[index].value.check == 1)
-                object->hashmap[index].value = eccjson_itermore(parse, thisval, ECCNSValue.key(object->hashmap[index].value.key), object->hashmap[index].value);
+                object->hashmap[index].value = eccjson_itermore(parse, thisval, ecc_value_key(object->hashmap[index].value.key), object->hashmap[index].value);
         }
     }
     return eccjson_revive(parse, thisval, property, value);
@@ -379,32 +379,24 @@ static eccvalue_t eccjson_itermore(eccjsonparser_t* parse, eccvalue_t thisval, e
 static eccvalue_t objjsonfn_parse(eccstate_t* context)
 {
     eccvalue_t value, reviver, result;
-    eccjsonparser_t parse = {
-		.context = {
-			.parent = context,
-			.ecc = context->ecc,
-			.depth = context->depth + 1,
-			.textIndex = ECC_CTXINDEXTYPE_CALL,
-		},
-	};
-
-    value = ECCNSValue.toString(context, ECCNSContext.argument(context, 0));
+    eccjsonparser_t parse = {};
+    parse.context.parent = context;
+    parse.context.ecc = context->ecc;
+    parse.context.depth = context->depth + 1;
+    parse.context.textIndex = ECC_CTXINDEXTYPE_CALL;
+    value = ecc_value_tostring(context, ECCNSContext.argument(context, 0));
     reviver = ECCNSContext.argument(context, 1);
-
-    parse.text = ECCNSText.make(ECCNSValue.stringBytes(&value), ECCNSValue.stringLength(&value));
+    parse.text = ECCNSText.make(ecc_value_stringbytes(&value), ecc_value_stringlength(&value));
     parse.start = parse.text.bytes;
     parse.line = 1;
     parse.function = reviver.type == ECC_VALTYPE_FUNCTION ? reviver.data.function : NULL;
     parse.ops = parse.function ? parse.function->oplist->ops : NULL;
-
     result = eccjson_runparser(&parse);
-
     if(result.type != ECC_VALTYPE_ERROR && parse.text.length)
     {
         ecctextchar_t c = ECCNSText.character(parse.text);
         result = eccjson_error(&parse, c.units, ECCNSChars.create("unexpected '%.*s'", c.units, parse.text.bytes));
     }
-
     if(result.type == ECC_VALTYPE_ERROR)
     {
         ECCNSContext.setTextIndex(context, ECC_CTXINDEXTYPE_NO);
@@ -417,32 +409,26 @@ static eccvalue_t objjsonfn_parse(eccstate_t* context)
     if(parse.function && parse.function->flags & ECC_SCRIPTFUNCFLAG_NEEDHEAP)
     {
         eccobject_t* environment = ECCNSObject.copy(&parse.function->environment);
-
         parse.context.environment = environment;
         parse.arguments = ECCNSArguments.createSized(2);
         ++parse.arguments->referenceCount;
-
-        environment->hashmap[2].value = ECCNSValue.object(parse.arguments);
-
-        result = eccjson_itermore(&parse, result, ECCNSValue.text(&ECC_ConstString_Empty), result);
+        environment->hashmap[2].value = ecc_value_object(parse.arguments);
+        result = eccjson_itermore(&parse, result, ecc_value_text(&ECC_ConstString_Empty), result);
     }
     else if(parse.function)
     {
         eccobject_t environment = parse.function->environment;
         eccobject_t arguments = ECCNSObject.identity;
         ecchashmap_t hashmap[parse.function->environment.hashmapCapacity];
-        eccobjelement_t element[2];
-
+        ecchashitem_t element[2];
         memcpy(hashmap, parse.function->environment.hashmap, sizeof(hashmap));
         parse.context.environment = &environment;
         parse.arguments = &arguments;
-
         arguments.element = element;
         arguments.elementCount = 2;
         environment.hashmap = hashmap;
-        environment.hashmap[2].value = ECCNSValue.object(&arguments);
-
-        result = eccjson_itermore(&parse, result, ECCNSValue.text(&ECC_ConstString_Empty), result);
+        environment.hashmap[2].value = ecc_value_object(&arguments);
+        result = eccjson_itermore(&parse, result, ecc_value_text(&ECC_ConstString_Empty), result);
     }
     return result;
 }
@@ -507,7 +493,7 @@ static int eccjson_stringify(eccjsonstringify_t* stringify, eccvalue_t thisval, 
             {
                 if(object->element[index].value.check == 1)
                 {
-                    if(ECCNSValue.isTrue(ECCNSValue.equals(&stringify->context, property, object->element[index].value)))
+                    if(ecc_value_istrue(ecc_value_equals(&stringify->context, property, object->element[index].value)))
                     {
                         found = 1;
                         break;
@@ -527,15 +513,15 @@ static int eccjson_stringify(eccjsonstringify_t* stringify, eccvalue_t thisval, 
         ECCNSChars.append(&stringify->chars, "%s", stringify->spaces);
 
     if(!isArray)
-        ECCNSChars.append(&stringify->chars, "\"%.*s\":%s", ECCNSValue.stringLength(&property), ECCNSValue.stringBytes(&property),
+        ECCNSChars.append(&stringify->chars, "\"%.*s\":%s", ecc_value_stringlength(&property), ecc_value_stringbytes(&property),
                                strlen(stringify->spaces) ? " " : "");
 
     if(value.type == ECC_VALTYPE_FUNCTION || value.type == ECC_VALTYPE_UNDEFINED)
         ECCNSChars.append(&stringify->chars, "null");
-    else if(ECCNSValue.isObject(value))
+    else if(ecc_value_isobject(value))
     {
         eccobject_t* object = value.data.object;
-        int subisarr = ECCNSValue.objectIsArray(object);
+        int subisarr = ecc_value_objectisarray(object);
         eccappendbuffer_t chars;
         const ecctextstring_t* strprop;
         int hasValue = 0;
@@ -560,7 +546,7 @@ static int eccjson_stringify(eccjsonstringify_t* stringify, eccvalue_t thisval, 
                 if(object->hashmap[index].value.check == 1)
                 {
                     strprop = ECCNSKey.textOf(object->hashmap[index].value.key);
-                    hasValue |= eccjson_stringify(stringify, value, ECCNSValue.text(strprop), object->hashmap[index].value, subisarr, hasValue);
+                    hasValue |= eccjson_stringify(stringify, value, ecc_value_text(strprop), object->hashmap[index].value, subisarr, hasValue);
                 }
             }
         }
@@ -582,15 +568,12 @@ static int eccjson_stringify(eccjsonstringify_t* stringify, eccvalue_t thisval, 
 static eccvalue_t objjsonfn_stringify(eccstate_t* context)
 {
     eccvalue_t value, replacer, space;
-    eccjsonstringify_t stringify = {
-		.context = {
-			.parent = context,
-			.ecc = context->ecc,
-			.depth = context->depth + 1,
-			.textIndex = ECC_CTXINDEXTYPE_CALL,
-		},
-		.spaces = { 0 },
-	};
+    eccjsonstringify_t stringify = {};
+    stringify.context.parent = context;
+    stringify.context.ecc = context->ecc;
+    stringify.context.depth = context->depth + 1;
+    stringify.context.textIndex = ECC_CTXINDEXTYPE_CALL;
+    memset(stringify.spaces, 0, sizeof(stringify.spaces ));
 
     value = ECCNSContext.argument(context, 0);
     replacer = ECCNSContext.argument(context, 1);
@@ -600,11 +583,11 @@ static eccvalue_t objjsonfn_stringify(eccstate_t* context)
     stringify.function = replacer.type == ECC_VALTYPE_FUNCTION ? replacer.data.function : NULL;
     stringify.ops = stringify.function ? stringify.function->oplist->ops : NULL;
 
-    if(ECCNSValue.isString(space))
-        snprintf(stringify.spaces, sizeof(stringify.spaces), "%.*s", (int)ECCNSValue.stringLength(&space), ECCNSValue.stringBytes(&space));
-    else if(ECCNSValue.isNumber(space))
+    if(ecc_value_isstring(space))
+        snprintf(stringify.spaces, sizeof(stringify.spaces), "%.*s", (int)ecc_value_stringlength(&space), ecc_value_stringbytes(&space));
+    else if(ecc_value_isnumber(space))
     {
-        int i = ECCNSValue.toInteger(context, space).data.integer;
+        int i = ecc_value_tointeger(context, space).data.integer;
 
         if(i < 0)
             i = 0;
@@ -626,16 +609,16 @@ static eccvalue_t objjsonfn_stringify(eccstate_t* context)
         stringify.arguments = ECCNSArguments.createSized(2);
         ++stringify.arguments->referenceCount;
 
-        environment->hashmap[2].value = ECCNSValue.object(stringify.arguments);
+        environment->hashmap[2].value = ecc_value_object(stringify.arguments);
 
-        eccjson_stringify(&stringify, value, ECCNSValue.text(&ECC_ConstString_Empty), value, 1, 0);
+        eccjson_stringify(&stringify, value, ecc_value_text(&ECC_ConstString_Empty), value, 1, 0);
     }
     else if(stringify.function)
     {
         eccobject_t environment = stringify.function->environment;
         eccobject_t arguments = ECCNSObject.identity;
         ecchashmap_t hashmap[stringify.function->environment.hashmapCapacity];
-        eccobjelement_t element[2];
+        ecchashitem_t element[2];
 
         memcpy(hashmap, stringify.function->environment.hashmap, sizeof(hashmap));
         stringify.context.environment = &environment;
@@ -644,12 +627,12 @@ static eccvalue_t objjsonfn_stringify(eccstate_t* context)
         arguments.element = element;
         arguments.elementCount = 2;
         environment.hashmap = hashmap;
-        environment.hashmap[2].value = ECCNSValue.object(&arguments);
+        environment.hashmap[2].value = ecc_value_object(&arguments);
 
-        eccjson_stringify(&stringify, value, ECCNSValue.text(&ECC_ConstString_Empty), value, 1, 0);
+        eccjson_stringify(&stringify, value, ecc_value_text(&ECC_ConstString_Empty), value, 1, 0);
     }
     else
-        eccjson_stringify(&stringify, value, ECCNSValue.text(&ECC_ConstString_Empty), value, 1, 0);
+        eccjson_stringify(&stringify, value, ecc_value_text(&ECC_ConstString_Empty), value, 1, 0);
 
     return ECCNSChars.endAppend(&stringify.chars);
 }
