@@ -8,9 +8,9 @@
 #include "ecc.h"
 
 /* stdbool.c */
-static eccvalue_t objboolfn_toString(eccstate_t *context);
-static eccvalue_t objboolfn_valueOf(eccstate_t *context);
-static eccvalue_t objboolfn_constructor(eccstate_t *context);
+static eccvalue_t objboolfn_toString(ecccontext_t *context);
+static eccvalue_t objboolfn_valueOf(ecccontext_t *context);
+static eccvalue_t objboolfn_constructor(ecccontext_t *context);
 void ecc_bool_setup(void);
 void ecc_bool_teardown(void);
 eccobjbool_t *ecc_bool_create(int truth);
@@ -24,7 +24,7 @@ const eccobjinterntype_t ECC_Type_Boolean = {
 };
 
 
-static eccvalue_t objboolfn_toString(eccstate_t* context)
+static eccvalue_t objboolfn_toString(ecccontext_t* context)
 {
     int truth;
 
@@ -32,10 +32,10 @@ static eccvalue_t objboolfn_toString(eccstate_t* context)
 
     truth = ecc_value_isobject(context->thisvalue) ? context->thisvalue.data.boolean->truth : ecc_value_istrue(context->thisvalue);
 
-    return ecc_value_text(truth ? &ECC_ConstString_True : &ECC_ConstString_False);
+    return ecc_value_fromtext(truth ? &ECC_ConstString_True : &ECC_ConstString_False);
 }
 
-static eccvalue_t objboolfn_valueOf(eccstate_t* context)
+static eccvalue_t objboolfn_valueOf(ecccontext_t* context)
 {
     int truth;
 
@@ -46,7 +46,7 @@ static eccvalue_t objboolfn_valueOf(eccstate_t* context)
     return ecc_value_truth(truth);
 }
 
-static eccvalue_t objboolfn_constructor(eccstate_t* context)
+static eccvalue_t objboolfn_constructor(ecccontext_t* context)
 {
     char truth;
 

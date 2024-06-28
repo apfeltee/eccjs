@@ -22,18 +22,18 @@ void ecc_mempool_markobject(eccobject_t* object)
         ecc_mempool_markobject(object->prototype);
 
     for(index = 0, count = object->elementCount; index < count; ++index)
-        if(object->element[index].value.check == 1)
-            ecc_mempool_markvalue(object->element[index].value);
+        if(object->element[index].hmapitemvalue.check == 1)
+            ecc_mempool_markvalue(object->element[index].hmapitemvalue);
 
     for(index = 2, count = object->hashmapCount; index < count; ++index)
-        if(object->hashmap[index].value.check == 1)
-            ecc_mempool_markvalue(object->hashmap[index].value);
+        if(object->hashmap[index].hmapmapvalue.check == 1)
+            ecc_mempool_markvalue(object->hashmap[index].hmapmapvalue);
 
     if(object->type->mark)
         object->type->mark(object);
 }
 
-void ecc_mempool_markchars(ecccharbuffer_t* chars)
+void ecc_mempool_markchars(eccstrbuffer_t* chars)
 {
     if(chars->flags & ECC_CHARBUFFLAG_MARK)
         return;
@@ -57,9 +57,9 @@ void ecc_mempool_teardown(void)
     ecc_mempool_unmarkall();
     ecc_mempool_collectunmarked();
 
-    free(self->functionList), self->functionList = NULL;
-    free(self->objectList), self->objectList = NULL;
-    free(self->charsList), self->charsList = NULL;
+    free(self->funclistvals), self->funclistvals = NULL;
+    free(self->objlistvals), self->objlistvals = NULL;
+    free(self->sbuflistvals), self->sbuflistvals = NULL;
 
     free(self), self = NULL;
 }
@@ -68,62 +68,62 @@ void ecc_mempool_addfunction(eccobjfunction_t* function)
 {
     assert(function);
 
-    if(self->functionCount >= self->functionCapacity)
+    if(self->funclistcount >= self->funclistcapacity)
     {
-        self->functionCapacity = self->functionCapacity ? self->functionCapacity * 2 : 8;
-        self->functionList = (eccobjfunction_t**)realloc(self->functionList, self->functionCapacity * sizeof(*self->functionList));
-        memset(self->functionList + self->functionCount, 0, sizeof(*self->functionList) * (self->functionCapacity - self->functionCount));
+        self->funclistcapacity = self->funclistcapacity ? self->funclistcapacity * 2 : 8;
+        self->funclistvals = (eccobjfunction_t**)realloc(self->funclistvals, self->funclistcapacity * sizeof(*self->funclistvals));
+        memset(self->funclistvals + self->funclistcount, 0, sizeof(*self->funclistvals) * (self->funclistcapacity - self->funclistcount));
     }
 
-    self->functionList[self->functionCount++] = function;
+    self->funclistvals[self->funclistcount++] = function;
 }
 
 void ecc_mempool_addobject(eccobject_t* object)
 {
     assert(object);
 
-    //	fprintf(stderr, " > add %p %u\n", object, self->objectCount);
+    //	fprintf(stderr, " > add %p %u\n", object, self->objlistcount);
     //	ecc_object_dumpto(object, stderr);
 
-    if(self->objectCount >= self->objectCapacity)
+    if(self->objlistcount >= self->objlistcapacity)
     {
-        self->objectCapacity = self->objectCapacity ? self->objectCapacity * 2 : 8;
-        self->objectList = (eccobject_t**)realloc(self->objectList, self->objectCapacity * sizeof(*self->objectList));
-        memset(self->objectList + self->objectCount, 0, sizeof(*self->objectList) * (self->objectCapacity - self->objectCount));
+        self->objlistcapacity = self->objlistcapacity ? self->objlistcapacity * 2 : 8;
+        self->objlistvals = (eccobject_t**)realloc(self->objlistvals, self->objlistcapacity * sizeof(*self->objlistvals));
+        memset(self->objlistvals + self->objlistcount, 0, sizeof(*self->objlistvals) * (self->objlistcapacity - self->objlistcount));
     }
 
-    self->objectList[self->objectCount++] = object;
+    self->objlistvals[self->objlistcount++] = object;
 }
 
-void ecc_mempool_addchars(ecccharbuffer_t* chars)
+void ecc_mempool_addchars(eccstrbuffer_t* chars)
 {
     assert(chars);
 
-    if(self->charsCount >= self->charsCapacity)
+    if(self->sbuflistcount >= self->sbuflistcapacity)
     {
-        self->charsCapacity = self->charsCapacity ? self->charsCapacity * 2 : 8;
-        self->charsList = (ecccharbuffer_t**)realloc(self->charsList, self->charsCapacity * sizeof(*self->charsList));
-        memset(self->charsList + self->charsCount, 0, sizeof(*self->charsList) * (self->charsCapacity - self->charsCount));
+        self->sbuflistcapacity = self->sbuflistcapacity ? self->sbuflistcapacity * 2 : 8;
+        self->sbuflistvals = (eccstrbuffer_t**)realloc(self->sbuflistvals, self->sbuflistcapacity * sizeof(*self->sbuflistvals));
+        memset(self->sbuflistvals + self->sbuflistcount, 0, sizeof(*self->sbuflistvals) * (self->sbuflistcapacity - self->sbuflistcount));
     }
 
-    self->charsList[self->charsCount++] = chars;
+    self->sbuflistvals[self->sbuflistcount++] = chars;
 }
 
 void ecc_mempool_unmarkall(void)
 {
     uint32_t index, count;
 
-    for(index = 0, count = self->functionCount; index < count; ++index)
+    for(index = 0, count = self->funclistcount; index < count; ++index)
     {
-        self->functionList[index]->object.flags &= ~ECC_OBJFLAG_MARK;
-        self->functionList[index]->environment.flags &= ~ECC_OBJFLAG_MARK;
+        self->funclistvals[index]->object.flags &= ~ECC_OBJFLAG_MARK;
+        self->funclistvals[index]->environment.flags &= ~ECC_OBJFLAG_MARK;
     }
 
-    for(index = 0, count = self->objectCount; index < count; ++index)
-        self->objectList[index]->flags &= ~ECC_OBJFLAG_MARK;
+    for(index = 0, count = self->objlistcount; index < count; ++index)
+        self->objlistvals[index]->flags &= ~ECC_OBJFLAG_MARK;
 
-    for(index = 0, count = self->charsCount; index < count; ++index)
-        self->charsList[index]->flags &= ~ECC_CHARBUFFLAG_MARK;
+    for(index = 0, count = self->sbuflistcount; index < count; ++index)
+        self->sbuflistvals[index]->flags &= ~ECC_CHARBUFFLAG_MARK;
 }
 
 void ecc_mempool_markvalue(eccvalue_t value)
@@ -136,14 +136,14 @@ void ecc_mempool_markvalue(eccvalue_t value)
 
 void ecc_mempool_releaseobject(eccobject_t* object)
 {
-    if(object->referenceCount > 0 && !--object->referenceCount)
+    if(object->refcount > 0 && !--object->refcount)
         ecc_mempool_cleanupobject(object);
 }
 
 eccvalue_t ecc_mempool_releasevalue(eccvalue_t value)
 {
     if(value.type == ECC_VALTYPE_CHARS)
-        --value.data.chars->referenceCount;
+        --value.data.chars->refcount;
     if(value.type >= ECC_VALTYPE_OBJECT)
         ecc_mempool_releaseobject(value.data.object);
 
@@ -153,10 +153,10 @@ eccvalue_t ecc_mempool_releasevalue(eccvalue_t value)
 eccvalue_t ecc_mempool_retainvalue(eccvalue_t value)
 {
     if(value.type == ECC_VALTYPE_CHARS)
-        ++value.data.chars->referenceCount;
+        ++value.data.chars->refcount;
     if(value.type >= ECC_VALTYPE_OBJECT)
     {
-        ++value.data.object->referenceCount;
+        ++value.data.object->refcount;
         if(!(value.data.object->flags & ECC_OBJFLAG_MARK))
         {
             value.data.object->flags |= ECC_OBJFLAG_MARK;
@@ -170,17 +170,17 @@ void ecc_mempool_cleanupobject(eccobject_t* object)
 {
     eccvalue_t value;
 
-    if(object->prototype && object->prototype->referenceCount)
-        --object->prototype->referenceCount;
+    if(object->prototype && object->prototype->refcount)
+        --object->prototype->refcount;
 
     if(object->elementCount)
         while(object->elementCount--)
-            if((value = object->element[object->elementCount].value).check == 1)
+            if((value = object->element[object->elementCount].hmapitemvalue).check == 1)
                 ecc_mempool_releasevalue(value);
 
     if(object->hashmapCount)
         while(object->hashmapCount--)
-            if((value = object->hashmap[object->hashmapCount].value).check == 1)
+            if((value = object->hashmap[object->hashmapCount].hmapmapvalue).check == 1)
                 ecc_mempool_releasevalue(value);
 }
 
@@ -192,7 +192,7 @@ void ecc_mempool_captureobject(eccobject_t* object)
 
     if(object->prototype)
     {
-        ++object->prototype->referenceCount;
+        ++object->prototype->refcount;
         if(!(object->prototype->flags & ECC_OBJFLAG_MARK))
         {
             object->prototype->flags |= ECC_OBJFLAG_MARK;
@@ -204,16 +204,16 @@ void ecc_mempool_captureobject(eccobject_t* object)
     for(index = 0; index < count; ++index)
     {
         element = object->element + index;
-        if(element->value.check == 1)
-            ecc_mempool_retainvalue(element->value);
+        if(element->hmapitemvalue.check == 1)
+            ecc_mempool_retainvalue(element->hmapitemvalue);
     }
 
     count = object->hashmapCount;
     for(index = 2; index < count; ++index)
     {
         hashmap = object->hashmap + index;
-        if(hashmap->value.check == 1)
-            ecc_mempool_retainvalue(hashmap->value);
+        if(hashmap->hmapmapvalue.check == 1)
+            ecc_mempool_retainvalue(hashmap->hmapmapvalue);
     }
 
     if(object->type->capture)
@@ -226,29 +226,29 @@ void ecc_mempool_collectunmarked(void)
 
     // finalize & destroy
 
-    index = self->functionCount;
+    index = self->funclistcount;
     while(index--)
-        if(!(self->functionList[index]->object.flags & ECC_OBJFLAG_MARK) && !(self->functionList[index]->environment.flags & ECC_OBJFLAG_MARK))
+        if(!(self->funclistvals[index]->object.flags & ECC_OBJFLAG_MARK) && !(self->funclistvals[index]->environment.flags & ECC_OBJFLAG_MARK))
         {
-            ecc_function_destroy(self->functionList[index]);
-            self->functionList[index] = self->functionList[--self->functionCount];
+            ecc_function_destroy(self->funclistvals[index]);
+            self->funclistvals[index] = self->funclistvals[--self->funclistcount];
         }
 
-    index = self->objectCount;
+    index = self->objlistcount;
     while(index--)
-        if(!(self->objectList[index]->flags & ECC_OBJFLAG_MARK))
+        if(!(self->objlistvals[index]->flags & ECC_OBJFLAG_MARK))
         {
-            ecc_object_finalize(self->objectList[index]);
-            ecc_object_destroy(self->objectList[index]);
-            self->objectList[index] = self->objectList[--self->objectCount];
+            ecc_object_finalize(self->objlistvals[index]);
+            ecc_object_destroy(self->objlistvals[index]);
+            self->objlistvals[index] = self->objlistvals[--self->objlistcount];
         }
 
-    index = self->charsCount;
+    index = self->sbuflistcount;
     while(index--)
-        if(!(self->charsList[index]->flags & ECC_CHARBUFFLAG_MARK))
+        if(!(self->sbuflistvals[index]->flags & ECC_CHARBUFFLAG_MARK))
         {
-            ecc_charbuf_destroy(self->charsList[index]);
-            self->charsList[index] = self->charsList[--self->charsCount];
+            ecc_strbuf_destroy(self->sbuflistvals[index]);
+            self->sbuflistvals[index] = self->sbuflistvals[--self->sbuflistcount];
         }
 }
 
@@ -258,44 +258,44 @@ void ecc_mempool_collectunreferencedfromindices(uint32_t indices[3])
 
     // prepare
 
-    index = self->objectCount;
+    index = self->objlistcount;
     while(index-- > indices[1])
-        if(self->objectList[index]->referenceCount <= 0)
-            ecc_mempool_cleanupobject(self->objectList[index]);
+        if(self->objlistvals[index]->refcount <= 0)
+            ecc_mempool_cleanupobject(self->objlistvals[index]);
 
-    index = self->objectCount;
+    index = self->objlistcount;
     while(index-- > indices[1])
-        if(self->objectList[index]->referenceCount > 0 && !(self->objectList[index]->flags & ECC_OBJFLAG_MARK))
+        if(self->objlistvals[index]->refcount > 0 && !(self->objlistvals[index]->flags & ECC_OBJFLAG_MARK))
         {
-            self->objectList[index]->flags |= ECC_OBJFLAG_MARK;
-            ecc_mempool_captureobject(self->objectList[index]);
+            self->objlistvals[index]->flags |= ECC_OBJFLAG_MARK;
+            ecc_mempool_captureobject(self->objlistvals[index]);
         }
 
     // destroy
 
-    index = self->functionCount;
+    index = self->funclistcount;
     while(index-- > indices[0])
-        if(!self->functionList[index]->object.referenceCount && !self->functionList[index]->environment.referenceCount)
+        if(!self->funclistvals[index]->object.refcount && !self->funclistvals[index]->environment.refcount)
         {
-            ecc_function_destroy(self->functionList[index]);
-            self->functionList[index] = self->functionList[--self->functionCount];
+            ecc_function_destroy(self->funclistvals[index]);
+            self->funclistvals[index] = self->funclistvals[--self->funclistcount];
         }
 
-    index = self->objectCount;
+    index = self->objlistcount;
     while(index-- > indices[1])
-        if(self->objectList[index]->referenceCount <= 0)
+        if(self->objlistvals[index]->refcount <= 0)
         {
-            ecc_object_finalize(self->objectList[index]);
-            ecc_object_destroy(self->objectList[index]);
-            self->objectList[index] = self->objectList[--self->objectCount];
+            ecc_object_finalize(self->objlistvals[index]);
+            ecc_object_destroy(self->objlistvals[index]);
+            self->objlistvals[index] = self->objlistvals[--self->objlistcount];
         }
 
-    index = self->charsCount;
+    index = self->sbuflistcount;
     while(index-- > indices[2])
-        if(self->charsList[index]->referenceCount <= 0)
+        if(self->sbuflistvals[index]->refcount <= 0)
         {
-            ecc_charbuf_destroy(self->charsList[index]);
-            self->charsList[index] = self->charsList[--self->charsCount];
+            ecc_strbuf_destroy(self->sbuflistvals[index]);
+            self->sbuflistvals[index] = self->sbuflistvals[--self->sbuflistcount];
         }
 }
 
@@ -303,25 +303,25 @@ void ecc_mempool_unreferencefromindices(uint32_t indices[3])
 {
     uint32_t index;
 
-    index = self->functionCount;
+    index = self->funclistcount;
     while(index-- > indices[0])
     {
-        --self->functionList[index]->object.referenceCount;
-        --self->functionList[index]->environment.referenceCount;
+        --self->funclistvals[index]->object.refcount;
+        --self->funclistvals[index]->environment.refcount;
     }
 
-    index = self->objectCount;
+    index = self->objlistcount;
     while(index-- > indices[1])
-        --self->objectList[index]->referenceCount;
+        --self->objlistvals[index]->refcount;
 
-    index = self->charsCount;
+    index = self->sbuflistcount;
     while(index-- > indices[2])
-        --self->charsList[index]->referenceCount;
+        --self->sbuflistvals[index]->refcount;
 }
 
 void ecc_mempool_getindices(uint32_t indices[3])
 {
-    indices[0] = self->functionCount;
-    indices[1] = self->objectCount;
-    indices[2] = self->charsCount;
+    indices[0] = self->funclistcount;
+    indices[1] = self->objlistcount;
+    indices[2] = self->sbuflistcount;
 }

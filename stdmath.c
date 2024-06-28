@@ -7,30 +7,30 @@
 //
 #include "ecc.h"
 
-static eccvalue_t mathobjfn_mathAbs(eccstate_t *context);
-static eccvalue_t mathobjfn_mathACos(eccstate_t *context);
-static eccvalue_t mathobjfn_mathASin(eccstate_t *context);
-static eccvalue_t mathobjfn_mathATan(eccstate_t *context);
-static eccvalue_t mathobjfn_mathATan2(eccstate_t *context);
-static eccvalue_t mathobjfn_mathCeil(eccstate_t *context);
-static eccvalue_t mathobjfn_mathCos(eccstate_t *context);
-static eccvalue_t mathobjfn_mathExp(eccstate_t *context);
-static eccvalue_t mathobjfn_mathFloor(eccstate_t *context);
-static eccvalue_t mathobjfn_mathLog(eccstate_t *context);
-static eccvalue_t mathobjfn_mathMax(eccstate_t *context);
-static eccvalue_t mathobjfn_mathMin(eccstate_t *context);
-static eccvalue_t mathobjfn_mathPow(eccstate_t *context);
-static eccvalue_t mathobjfn_mathRandom(eccstate_t *context);
-static eccvalue_t mathobjfn_mathRound(eccstate_t *context);
-static eccvalue_t mathobjfn_mathSin(eccstate_t *context);
-static eccvalue_t mathobjfn_mathSqrt(eccstate_t *context);
-static eccvalue_t mathobjfn_mathTan(eccstate_t *context);
+static eccvalue_t mathobjfn_mathAbs(ecccontext_t *context);
+static eccvalue_t mathobjfn_mathACos(ecccontext_t *context);
+static eccvalue_t mathobjfn_mathASin(ecccontext_t *context);
+static eccvalue_t mathobjfn_mathATan(ecccontext_t *context);
+static eccvalue_t mathobjfn_mathATan2(ecccontext_t *context);
+static eccvalue_t mathobjfn_mathCeil(ecccontext_t *context);
+static eccvalue_t mathobjfn_mathCos(ecccontext_t *context);
+static eccvalue_t mathobjfn_mathExp(ecccontext_t *context);
+static eccvalue_t mathobjfn_mathFloor(ecccontext_t *context);
+static eccvalue_t mathobjfn_mathLog(ecccontext_t *context);
+static eccvalue_t mathobjfn_mathMax(ecccontext_t *context);
+static eccvalue_t mathobjfn_mathMin(ecccontext_t *context);
+static eccvalue_t mathobjfn_mathPow(ecccontext_t *context);
+static eccvalue_t mathobjfn_mathRandom(ecccontext_t *context);
+static eccvalue_t mathobjfn_mathRound(ecccontext_t *context);
+static eccvalue_t mathobjfn_mathSin(ecccontext_t *context);
+static eccvalue_t mathobjfn_mathSqrt(ecccontext_t *context);
+static eccvalue_t mathobjfn_mathTan(ecccontext_t *context);
 
 const eccobjinterntype_t ECC_Type_Math = {
     .text = &ECC_ConstString_MathType,
 };
 
-static eccvalue_t mathobjfn_mathAbs(eccstate_t* context)
+static eccvalue_t mathobjfn_mathAbs(ecccontext_t* context)
 {
     eccvalue_t value;
 
@@ -38,10 +38,10 @@ static eccvalue_t mathobjfn_mathAbs(eccstate_t* context)
     if(value.type != ECC_VALTYPE_BINARY)
         value = ecc_value_tobinary(context, value);
 
-    return ecc_value_binary(fabs(value.data.binary));
+    return ecc_value_fromfloat(fabs(value.data.binary));
 }
 
-static eccvalue_t mathobjfn_mathACos(eccstate_t* context)
+static eccvalue_t mathobjfn_mathACos(ecccontext_t* context)
 {
     eccvalue_t value;
 
@@ -49,10 +49,10 @@ static eccvalue_t mathobjfn_mathACos(eccstate_t* context)
     if(value.type != ECC_VALTYPE_BINARY)
         value = ecc_value_tobinary(context, value);
 
-    return ecc_value_binary(acos(value.data.binary));
+    return ecc_value_fromfloat(acos(value.data.binary));
 }
 
-static eccvalue_t mathobjfn_mathASin(eccstate_t* context)
+static eccvalue_t mathobjfn_mathASin(ecccontext_t* context)
 {
     eccvalue_t value;
 
@@ -60,10 +60,10 @@ static eccvalue_t mathobjfn_mathASin(eccstate_t* context)
     if(value.type != ECC_VALTYPE_BINARY)
         value = ecc_value_tobinary(context, value);
 
-    return ecc_value_binary(asin(value.data.binary));
+    return ecc_value_fromfloat(asin(value.data.binary));
 }
 
-static eccvalue_t mathobjfn_mathATan(eccstate_t* context)
+static eccvalue_t mathobjfn_mathATan(ecccontext_t* context)
 {
     eccvalue_t value;
 
@@ -71,10 +71,10 @@ static eccvalue_t mathobjfn_mathATan(eccstate_t* context)
     if(value.type != ECC_VALTYPE_BINARY)
         value = ecc_value_tobinary(context, value);
 
-    return ecc_value_binary(atan(value.data.binary));
+    return ecc_value_fromfloat(atan(value.data.binary));
 }
 
-static eccvalue_t mathobjfn_mathATan2(eccstate_t* context)
+static eccvalue_t mathobjfn_mathATan2(ecccontext_t* context)
 {
     eccvalue_t x, y;
 
@@ -86,10 +86,10 @@ static eccvalue_t mathobjfn_mathATan2(eccstate_t* context)
     if(y.type != ECC_VALTYPE_BINARY)
         y = ecc_value_tobinary(context, y);
 
-    return ecc_value_binary(atan2(x.data.binary, y.data.binary));
+    return ecc_value_fromfloat(atan2(x.data.binary, y.data.binary));
 }
 
-static eccvalue_t mathobjfn_mathCeil(eccstate_t* context)
+static eccvalue_t mathobjfn_mathCeil(ecccontext_t* context)
 {
     eccvalue_t value;
 
@@ -97,10 +97,10 @@ static eccvalue_t mathobjfn_mathCeil(eccstate_t* context)
     if(value.type != ECC_VALTYPE_BINARY)
         value = ecc_value_tobinary(context, value);
 
-    return ecc_value_binary(ceil(value.data.binary));
+    return ecc_value_fromfloat(ceil(value.data.binary));
 }
 
-static eccvalue_t mathobjfn_mathCos(eccstate_t* context)
+static eccvalue_t mathobjfn_mathCos(ecccontext_t* context)
 {
     eccvalue_t value;
 
@@ -108,10 +108,10 @@ static eccvalue_t mathobjfn_mathCos(eccstate_t* context)
     if(value.type != ECC_VALTYPE_BINARY)
         value = ecc_value_tobinary(context, value);
 
-    return ecc_value_binary(cos(value.data.binary));
+    return ecc_value_fromfloat(cos(value.data.binary));
 }
 
-static eccvalue_t mathobjfn_mathExp(eccstate_t* context)
+static eccvalue_t mathobjfn_mathExp(ecccontext_t* context)
 {
     eccvalue_t value;
 
@@ -119,10 +119,10 @@ static eccvalue_t mathobjfn_mathExp(eccstate_t* context)
     if(value.type != ECC_VALTYPE_BINARY)
         value = ecc_value_tobinary(context, value);
 
-    return ecc_value_binary(exp(value.data.binary));
+    return ecc_value_fromfloat(exp(value.data.binary));
 }
 
-static eccvalue_t mathobjfn_mathFloor(eccstate_t* context)
+static eccvalue_t mathobjfn_mathFloor(ecccontext_t* context)
 {
     eccvalue_t value;
 
@@ -130,10 +130,10 @@ static eccvalue_t mathobjfn_mathFloor(eccstate_t* context)
     if(value.type != ECC_VALTYPE_BINARY)
         value = ecc_value_tobinary(context, value);
 
-    return ecc_value_binary(floor(value.data.binary));
+    return ecc_value_fromfloat(floor(value.data.binary));
 }
 
-static eccvalue_t mathobjfn_mathLog(eccstate_t* context)
+static eccvalue_t mathobjfn_mathLog(ecccontext_t* context)
 {
     eccvalue_t value;
 
@@ -141,54 +141,54 @@ static eccvalue_t mathobjfn_mathLog(eccstate_t* context)
     if(value.type != ECC_VALTYPE_BINARY)
         value = ecc_value_tobinary(context, value);
 
-    return ecc_value_binary(log(value.data.binary));
+    return ecc_value_fromfloat(log(value.data.binary));
 }
 
-static eccvalue_t mathobjfn_mathMax(eccstate_t* context)
+static eccvalue_t mathobjfn_mathMax(ecccontext_t* context)
 {
     double result = -INFINITY, value;
     int index, count;
 
     count = ecc_context_argumentcount(context);
     if(!count)
-        return ecc_value_binary(-INFINITY);
+        return ecc_value_fromfloat(-INFINITY);
 
     for(index = 0; index < count; ++index)
     {
         value = ecc_value_tobinary(context, ecc_context_argument(context, index)).data.binary;
         if(isnan(value))
-            return ecc_value_binary(NAN);
+            return ecc_value_fromfloat(NAN);
 
         if(result < value)
             result = value;
     }
 
-    return ecc_value_binary(result);
+    return ecc_value_fromfloat(result);
 }
 
-static eccvalue_t mathobjfn_mathMin(eccstate_t* context)
+static eccvalue_t mathobjfn_mathMin(ecccontext_t* context)
 {
     double result = INFINITY, value;
     int index, count;
 
     count = ecc_context_argumentcount(context);
     if(!count)
-        return ecc_value_binary(INFINITY);
+        return ecc_value_fromfloat(INFINITY);
 
     for(index = 0; index < count; ++index)
     {
         value = ecc_value_tobinary(context, ecc_context_argument(context, index)).data.binary;
         if(isnan(value))
-            return ecc_value_binary(NAN);
+            return ecc_value_fromfloat(NAN);
 
         if(result > value)
             result = value;
     }
 
-    return ecc_value_binary(result);
+    return ecc_value_fromfloat(result);
 }
 
-static eccvalue_t mathobjfn_mathPow(eccstate_t* context)
+static eccvalue_t mathobjfn_mathPow(ecccontext_t* context)
 {
     eccvalue_t x, y;
 
@@ -196,18 +196,18 @@ static eccvalue_t mathobjfn_mathPow(eccstate_t* context)
     y = ecc_value_tobinary(context, ecc_context_argument(context, 1));
 
     if(fabs(x.data.binary) == 1 && !isfinite(y.data.binary))
-        return ecc_value_binary(NAN);
+        return ecc_value_fromfloat(NAN);
 
-    return ecc_value_binary(pow(x.data.binary, y.data.binary));
+    return ecc_value_fromfloat(pow(x.data.binary, y.data.binary));
 }
 
-static eccvalue_t mathobjfn_mathRandom(eccstate_t* context)
+static eccvalue_t mathobjfn_mathRandom(ecccontext_t* context)
 {
     (void)context;
-    return ecc_value_binary((double)rand() / (double)RAND_MAX);
+    return ecc_value_fromfloat((double)rand() / (double)RAND_MAX);
 }
 
-static eccvalue_t mathobjfn_mathRound(eccstate_t* context)
+static eccvalue_t mathobjfn_mathRound(ecccontext_t* context)
 {
     eccvalue_t value;
 
@@ -216,12 +216,12 @@ static eccvalue_t mathobjfn_mathRound(eccstate_t* context)
         value = ecc_value_tobinary(context, value);
 
     if(value.data.binary < 0)
-        return ecc_value_binary(1.0 - ceil(0.5 - value.data.binary));
+        return ecc_value_fromfloat(1.0 - ceil(0.5 - value.data.binary));
     else
-        return ecc_value_binary(floor(0.5 + value.data.binary));
+        return ecc_value_fromfloat(floor(0.5 + value.data.binary));
 }
 
-static eccvalue_t mathobjfn_mathSin(eccstate_t* context)
+static eccvalue_t mathobjfn_mathSin(ecccontext_t* context)
 {
     eccvalue_t value;
 
@@ -229,10 +229,10 @@ static eccvalue_t mathobjfn_mathSin(eccstate_t* context)
     if(value.type != ECC_VALTYPE_BINARY)
         value = ecc_value_tobinary(context, value);
 
-    return ecc_value_binary(sin(value.data.binary));
+    return ecc_value_fromfloat(sin(value.data.binary));
 }
 
-static eccvalue_t mathobjfn_mathSqrt(eccstate_t* context)
+static eccvalue_t mathobjfn_mathSqrt(ecccontext_t* context)
 {
     eccvalue_t value;
 
@@ -240,10 +240,10 @@ static eccvalue_t mathobjfn_mathSqrt(eccstate_t* context)
     if(value.type != ECC_VALTYPE_BINARY)
         value = ecc_value_tobinary(context, value);
 
-    return ecc_value_binary(sqrt(value.data.binary));
+    return ecc_value_fromfloat(sqrt(value.data.binary));
 }
 
-static eccvalue_t mathobjfn_mathTan(eccstate_t* context)
+static eccvalue_t mathobjfn_mathTan(ecccontext_t* context)
 {
     eccvalue_t value;
 
@@ -251,7 +251,7 @@ static eccvalue_t mathobjfn_mathTan(eccstate_t* context)
     if(value.type != ECC_VALTYPE_BINARY)
         value = ecc_value_tobinary(context, value);
 
-    return ecc_value_binary(tan(value.data.binary));
+    return ecc_value_fromfloat(tan(value.data.binary));
 }
 
 // MARK: - Public
@@ -266,14 +266,14 @@ void ecc_libmath_setup()
 
     ECC_Prototype_MathObject = ecc_object_createtyped(&ECC_Type_Math);
 
-    ecc_object_addmember(ECC_Prototype_MathObject, ecc_keyidx_makewithcstring("E"), ecc_value_binary(2.71828182845904523536), r | h | s);
-    ecc_object_addmember(ECC_Prototype_MathObject, ecc_keyidx_makewithcstring("LN10"), ecc_value_binary(2.30258509299404568402), r | h | s);
-    ecc_object_addmember(ECC_Prototype_MathObject, ecc_keyidx_makewithcstring("LN2"), ecc_value_binary(0.693147180559945309417), r | h | s);
-    ecc_object_addmember(ECC_Prototype_MathObject, ecc_keyidx_makewithcstring("LOG2E"), ecc_value_binary(1.44269504088896340736), r | h | s);
-    ecc_object_addmember(ECC_Prototype_MathObject, ecc_keyidx_makewithcstring("LOG10E"), ecc_value_binary(0.434294481903251827651), r | h | s);
-    ecc_object_addmember(ECC_Prototype_MathObject, ecc_keyidx_makewithcstring("PI"), ecc_value_binary(3.14159265358979323846), r | h | s);
-    ecc_object_addmember(ECC_Prototype_MathObject, ecc_keyidx_makewithcstring("SQRT1_2"), ecc_value_binary(0.707106781186547524401), r | h | s);
-    ecc_object_addmember(ECC_Prototype_MathObject, ecc_keyidx_makewithcstring("SQRT2"), ecc_value_binary(1.41421356237309504880), r | h | s);
+    ecc_object_addmember(ECC_Prototype_MathObject, ecc_keyidx_makewithcstring("E"), ecc_value_fromfloat(2.71828182845904523536), r | h | s);
+    ecc_object_addmember(ECC_Prototype_MathObject, ecc_keyidx_makewithcstring("LN10"), ecc_value_fromfloat(2.30258509299404568402), r | h | s);
+    ecc_object_addmember(ECC_Prototype_MathObject, ecc_keyidx_makewithcstring("LN2"), ecc_value_fromfloat(0.693147180559945309417), r | h | s);
+    ecc_object_addmember(ECC_Prototype_MathObject, ecc_keyidx_makewithcstring("LOG2E"), ecc_value_fromfloat(1.44269504088896340736), r | h | s);
+    ecc_object_addmember(ECC_Prototype_MathObject, ecc_keyidx_makewithcstring("LOG10E"), ecc_value_fromfloat(0.434294481903251827651), r | h | s);
+    ecc_object_addmember(ECC_Prototype_MathObject, ecc_keyidx_makewithcstring("PI"), ecc_value_fromfloat(3.14159265358979323846), r | h | s);
+    ecc_object_addmember(ECC_Prototype_MathObject, ecc_keyidx_makewithcstring("SQRT1_2"), ecc_value_fromfloat(0.707106781186547524401), r | h | s);
+    ecc_object_addmember(ECC_Prototype_MathObject, ecc_keyidx_makewithcstring("SQRT2"), ecc_value_fromfloat(1.41421356237309504880), r | h | s);
 
     ecc_function_addto(ECC_Prototype_MathObject, "abs", mathobjfn_mathAbs, 1, h);
     ecc_function_addto(ECC_Prototype_MathObject, "acos", mathobjfn_mathACos, 1, h);

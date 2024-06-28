@@ -14,39 +14,39 @@ const eccobjinterntype_t ECC_Type_Arguments = {
 };
 
 
-eccvalue_t argobjfn_getLength(eccstate_t* context)
+eccvalue_t argobjfn_getLength(ecccontext_t* context)
 {
-    return ecc_value_binary(context->thisvalue.data.object->elementCount);
+    return ecc_value_fromfloat(context->thisvalue.data.object->elementCount);
 }
 
-eccvalue_t argobjfn_setLength(eccstate_t* context)
+eccvalue_t argobjfn_setLength(ecccontext_t* context)
 {
     double length;
 
     length = ecc_value_tobinary(context, ecc_context_argument(context, 0)).data.binary;
     if(!isfinite(length) || length < 0 || length > UINT32_MAX || length != (uint32_t)length)
-        ecc_context_rangeerror(context, ecc_charbuf_create("invalid array length"));
+        ecc_context_rangeerror(context, ecc_strbuf_create("invalid array length"));
 
     if(ecc_object_resizeelement(context->thisvalue.data.object, length) && context->strictMode)
     {
-        ecc_context_typeerror(context, ecc_charbuf_create("'%u' is non-configurable", context->thisvalue.data.object->elementCount));
+        ecc_context_typeerror(context, ecc_strbuf_create("'%u' is non-configurable", context->thisvalue.data.object->elementCount));
     }
 
     return ECCValConstUndefined;
 }
 
-eccvalue_t argobjfn_getCallee(eccstate_t* context)
+eccvalue_t argobjfn_getCallee(ecccontext_t* context)
 {
     ecc_context_rewindstatement(context->parent);
-    ecc_context_typeerror(context, ecc_charbuf_create("'callee' cannot be accessed in this context"));
+    ecc_context_typeerror(context, ecc_strbuf_create("'callee' cannot be accessed in this context"));
 
     return ECCValConstUndefined;
 }
 
-eccvalue_t argobjfn_setCallee(eccstate_t* context)
+eccvalue_t argobjfn_setCallee(ecccontext_t* context)
 {
     ecc_context_rewindstatement(context->parent);
-    ecc_context_typeerror(context, ecc_charbuf_create("'callee' cannot be accessed in this context"));
+    ecc_context_typeerror(context, ecc_strbuf_create("'callee' cannot be accessed in this context"));
 
     return ECCValConstUndefined;
 }

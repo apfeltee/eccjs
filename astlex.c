@@ -62,7 +62,7 @@ static const struct
     { eccmac_stringandlen("package") }, { eccmac_stringandlen("protected") }, { eccmac_stringandlen("static") },  { eccmac_stringandlen("yield") },
 };
 
-int8_t ecclex_hexhigit(int c)
+int8_t ecc_astlex_hexhigit(int c)
 {
     if(c >= 'a' && c <= 'f')
     {
@@ -77,15 +77,15 @@ int8_t ecclex_hexhigit(int c)
 
 uint8_t ecc_astlex_uint8hex(char a, char b)
 {
-    return ecclex_hexhigit(a) << 4 | ecclex_hexhigit(b);
+    return ecc_astlex_hexhigit(a) << 4 | ecc_astlex_hexhigit(b);
 }
 
 uint16_t ecc_astlex_uint16hex(char a, char b, char c, char d)
 {
-    return ecclex_hexhigit(a) << 12 | ecclex_hexhigit(b) << 8 | ecclex_hexhigit(c) << 4 | ecclex_hexhigit(d);
+    return ecc_astlex_hexhigit(a) << 12 | ecc_astlex_hexhigit(b) << 8 | ecc_astlex_hexhigit(c) << 4 | ecc_astlex_hexhigit(d);
 }
 
-double ecclex_strtolHexFallback(ecctextstring_t text)
+double ecc_astlex_strtolhexfallback(ecctextstring_t text)
 {
     double binary = 0;
     int sign = 1;
@@ -120,17 +120,29 @@ double ecclex_strtolHexFallback(ecctextstring_t text)
     return binary * sign;
 }
 
-void ecclex_addLine(eccastlexer_t* self, uint32_t offset)
+void ecc_astlex_addline(eccastlexer_t* self, uint32_t offset)
 {
+    size_t needed;
+    uint32_t* tmp;
     if(self->input->lineCount + 1 >= self->input->lineCapacity)
     {
         self->input->lineCapacity *= 2;
-        self->input->lines = (uint32_t*)realloc(self->input->lines, sizeof(*self->input->lines) * self->input->lineCapacity);
+        needed = sizeof(*self->input->lines) * self->input->lineCapacity;
+        if(needed == 0)
+        {
+            needed += 8;
+        }
+        tmp = (uint32_t*)realloc(self->input->lines, needed);
+        if(tmp == NULL)
+        {
+            fprintf(stderr, "in addline: failed to reallocate for %ld bytes\n", needed);
+        }
+        self->input->lines = tmp;
     }
     self->input->lines[++self->input->lineCount] = offset;
 }
 
-unsigned char ecclex_previewChar(eccastlexer_t* self)
+unsigned char ecc_astlex_previewchar(eccastlexer_t* self)
 {
     if(self->offset < self->input->length)
         return self->input->bytes[self->offset];
@@ -138,7 +150,7 @@ unsigned char ecclex_previewChar(eccastlexer_t* self)
         return 0;
 }
 
-uint32_t ecclex_nextChar(eccastlexer_t* self)
+uint32_t ecc_astlex_nextchar(eccastlexer_t* self)
 {
     if(self->offset < self->input->length)
     {
@@ -146,10 +158,10 @@ uint32_t ecclex_nextChar(eccastlexer_t* self)
 
         self->offset += c.units;
 
-        if((self->allowUnicodeOutsideLiteral && ecc_textbuf_islinefeed(c)) || (c.codepoint == '\r' && ecclex_previewChar(self) != '\n') || c.codepoint == '\n')
+        if((self->allowUnicodeOutsideLiteral && ecc_textbuf_islinefeed(c)) || (c.codepoint == '\r' && ecc_astlex_previewchar(self) != '\n') || c.codepoint == '\n')
         {
             self->didLineBreak = 1;
-            ecclex_addLine(self, self->offset);
+            ecc_astlex_addline(self, self->offset);
             c.codepoint = '\n';
         }
         else if(self->allowUnicodeOutsideLiteral && ecc_textbuf_isspace(c))
@@ -162,26 +174,26 @@ uint32_t ecclex_nextChar(eccastlexer_t* self)
         return 0;
 }
 
-int ecclex_acceptChar(eccastlexer_t* self, char c)
+int ecc_astlex_acceptchar(eccastlexer_t* self, char c)
 {
-    if(ecclex_previewChar(self) == c)
+    if(ecc_astlex_previewchar(self) == c)
     {
-        ecclex_nextChar(self);
+        ecc_astlex_nextchar(self);
         return 1;
     }
     else
         return 0;
 }
 
-char ecclex_eof(eccastlexer_t* self)
+char ecc_astlex_eof(eccastlexer_t* self)
 {
     return self->offset >= self->input->length;
 }
 
-int ecclex_syntaxError(eccastlexer_t* self, ecccharbuffer_t* message)
+int ecc_astlex_syntaxerror(eccastlexer_t* self, eccstrbuffer_t* message)
 {
     eccobjerror_t* error = ecc_error_syntaxerror(self->text, message);
-    self->value = ecc_value_error(error);
+    self->tokenvalue = ecc_value_error(error);
     return ECC_TOK_ERROR;
 }
 
@@ -211,14 +223,14 @@ int ecc_astlex_nexttoken(eccastlexer_t* self)
     uint32_t c;
     assert(self);
 
-    self->value = ECCValConstUndefined;
+    self->tokenvalue = ECCValConstUndefined;
     self->didLineBreak = 0;
 
 retry:
     self->text.bytes = self->input->bytes + self->offset;
     self->text.length = 0;
 
-    while((c = ecclex_nextChar(self)))
+    while((c = ecc_astlex_nextchar(self)))
     {
         switch(c)
         {
@@ -231,17 +243,17 @@ retry:
                 goto retry;
             case '/':
             {
-                if(ecclex_acceptChar(self, '*'))
+                if(ecc_astlex_acceptchar(self, '*'))
                 {
-                    while(!ecclex_eof(self))
-                        if(ecclex_nextChar(self) == '*' && ecclex_acceptChar(self, '/'))
+                    while(!ecc_astlex_eof(self))
+                        if(ecc_astlex_nextchar(self) == '*' && ecc_astlex_acceptchar(self, '/'))
                             goto retry;
 
-                    return ecclex_syntaxError(self, ecc_charbuf_create("unterminated comment"));
+                    return ecc_astlex_syntaxerror(self, ecc_strbuf_create("unterminated comment"));
                 }
-                else if(ecclex_previewChar(self) == '/')
+                else if(ecc_astlex_previewchar(self) == '/')
                 {
-                    while((c = ecclex_nextChar(self)))
+                    while((c = ecc_astlex_nextchar(self)))
                         if(c == '\r' || c == '\n')
                             goto retry;
 
@@ -249,16 +261,16 @@ retry:
                 }
                 else if(self->allowRegex)
                 {
-                    while(!ecclex_eof(self))
+                    while(!ecc_astlex_eof(self))
                     {
-                        int rxclit = ecclex_nextChar(self);
+                        int rxclit = ecc_astlex_nextchar(self);
 
                         if(rxclit == '\\')
-                            rxclit = ecclex_nextChar(self);
+                            rxclit = ecc_astlex_nextchar(self);
                         else if(rxclit == '/')
                         {
-                            while(isalnum(ecclex_previewChar(self)) || ecclex_previewChar(self) == '\\')
-                                ecclex_nextChar(self);
+                            while(isalnum(ecc_astlex_previewchar(self)) || ecc_astlex_previewchar(self) == '\\')
+                                ecc_astlex_nextchar(self);
 
                             return ECC_TOK_REGEXP;
                         }
@@ -266,9 +278,9 @@ retry:
                         if(rxclit == '\n')
                             break;
                     }
-                    return ecclex_syntaxError(self, ecc_charbuf_create("unterminated regexp literal"));
+                    return ecc_astlex_syntaxerror(self, ecc_strbuf_create("unterminated regexp literal"));
                 }
-                else if(ecclex_acceptChar(self, '='))
+                else if(ecc_astlex_acceptchar(self, '='))
                     return ECC_TOK_DIVIDEASSIGN;
                 else
                     return '/';
@@ -280,12 +292,12 @@ retry:
                     int haveesc = 0;
                     int didLineBreak = self->didLineBreak;
 
-                    while((c = ecclex_nextChar(self)))
+                    while((c = ecc_astlex_nextchar(self)))
                     {
                         if(c == '\\')
                         {
                             haveesc = 1;
-                            ecclex_nextChar(self);
+                            ecc_astlex_nextchar(self);
                             self->didLineBreak = didLineBreak;
                         }
                         else if(c == (uint32_t)end)
@@ -300,7 +312,7 @@ retry:
 
                                 ++bytes;
                                 --length;
-                                ecc_charbuf_beginappend(&chars);
+                                ecc_strbuf_beginappend(&chars);
 
                                 for(index = 0; index <= length; ++index)
                                     if(bytes[index] == '\\' && bytes[++index] != '\\')
@@ -308,47 +320,47 @@ retry:
                                         switch(bytes[index])
                                         {
                                             case '0':
-                                                ecc_charbuf_appendcodepoint(&chars, '\0');
+                                                ecc_strbuf_appendcodepoint(&chars, '\0');
                                                 break;
                                             case 'b':
-                                                ecc_charbuf_appendcodepoint(&chars, '\b');
+                                                ecc_strbuf_appendcodepoint(&chars, '\b');
                                                 break;
                                             case 'f':
-                                                ecc_charbuf_appendcodepoint(&chars, '\f');
+                                                ecc_strbuf_appendcodepoint(&chars, '\f');
                                                 break;
                                             case 'n':
-                                                ecc_charbuf_appendcodepoint(&chars, '\n');
+                                                ecc_strbuf_appendcodepoint(&chars, '\n');
                                                 break;
                                             case 'r':
-                                                ecc_charbuf_appendcodepoint(&chars, '\r');
+                                                ecc_strbuf_appendcodepoint(&chars, '\r');
                                                 break;
                                             case 't':
-                                                ecc_charbuf_appendcodepoint(&chars, '\t');
+                                                ecc_strbuf_appendcodepoint(&chars, '\t');
                                                 break;
                                             case 'v':
-                                                ecc_charbuf_appendcodepoint(&chars, '\v');
+                                                ecc_strbuf_appendcodepoint(&chars, '\v');
                                                 break;
                                             case 'x':
                                                 {
                                                     if(isxdigit(bytes[index + 1]) && isxdigit(bytes[index + 2]))
                                                     {
-                                                        ecc_charbuf_appendcodepoint(&chars, ecc_astlex_uint8hex(bytes[index + 1], bytes[index + 2]));
+                                                        ecc_strbuf_appendcodepoint(&chars, ecc_astlex_uint8hex(bytes[index + 1], bytes[index + 2]));
                                                         index += 2;
                                                         break;
                                                     }
                                                     self->text = ecc_textbuf_make(self->text.bytes + index - 1, 4);
-                                                    return ecclex_syntaxError(self, ecc_charbuf_create("malformed hexadecimal character escape sequence"));
+                                                    return ecc_astlex_syntaxerror(self, ecc_strbuf_create("malformed hexadecimal character escape sequence"));
                                                 }
                                             case 'u':
                                                 {
                                                     if(isxdigit(bytes[index + 1]) && isxdigit(bytes[index + 2]) && isxdigit(bytes[index + 3]) && isxdigit(bytes[index + 4]))
                                                     {
-                                                        ecc_charbuf_appendcodepoint(&chars, ecc_astlex_uint16hex(bytes[index + 1], bytes[index + 2], bytes[index + 3], bytes[index + 4]));
+                                                        ecc_strbuf_appendcodepoint(&chars, ecc_astlex_uint16hex(bytes[index + 1], bytes[index + 2], bytes[index + 3], bytes[index + 4]));
                                                         index += 4;
                                                         break;
                                                     }
                                                     self->text = ecc_textbuf_make(self->text.bytes + index - 1, 6);
-                                                    return ecclex_syntaxError(self, ecc_charbuf_create("malformed Unicode character escape sequence"));
+                                                    return ecc_astlex_syntaxerror(self, ecc_strbuf_create("malformed Unicode character escape sequence"));
                                                 }
                                             case '\r':
                                                 {
@@ -363,14 +375,14 @@ retry:
                                                 continue;
                                             default:
                                                 {
-                                                    ecc_charbuf_append(&chars, "%c", bytes[index]);
+                                                    ecc_strbuf_append(&chars, "%c", bytes[index]);
                                                 }
                                         }
                                     }
                                     else
-                                        ecc_charbuf_append(&chars, "%c", bytes[index]);
+                                        ecc_strbuf_append(&chars, "%c", bytes[index]);
 
-                                self->value = ecc_ioinput_attachvalue(self->input, ecc_charbuf_endappend(&chars));
+                                self->tokenvalue = ecc_ioinput_attachvalue(self->input, ecc_strbuf_endappend(&chars));
                                 return ECC_TOK_ESCAPEDSTRING;
                             }
 
@@ -379,12 +391,12 @@ retry:
                         else if(c == '\r' || c == '\n')
                             break;
                     }
-                    return ecclex_syntaxError(self, ecc_charbuf_create("unterminated string literal"));
+                    return ecc_astlex_syntaxerror(self, ecc_strbuf_create("unterminated string literal"));
                 }
 
             case '.':
                 {
-                    if(!isdigit(ecclex_previewChar(self)))
+                    if(!isdigit(ecc_astlex_previewchar(self)))
                     {
                         return c;
                     }
@@ -402,13 +414,13 @@ retry:
             case '9':
                 {
                     int binary = 0;
-                    if(c == '0' && (ecclex_acceptChar(self, 'x') || ecclex_acceptChar(self, 'X')))
+                    if(c == '0' && (ecc_astlex_acceptchar(self, 'x') || ecc_astlex_acceptchar(self, 'X')))
                     {
-                        while((c = ecclex_previewChar(self)))
+                        while((c = ecc_astlex_previewchar(self)))
                         {
                             if(isxdigit(c))
                             {
-                                ecclex_nextChar(self);
+                                ecc_astlex_nextchar(self);
                             }
                             else
                             {
@@ -417,55 +429,55 @@ retry:
                         }
                         if(self->text.length <= 2)
                         {
-                            return ecclex_syntaxError(self, ecc_charbuf_create("missing hexadecimal digits after '0x'"));
+                            return ecc_astlex_syntaxerror(self, ecc_strbuf_create("missing hexadecimal digits after '0x'"));
                         }
                     }
                     else
                     {
-                        while(isdigit(ecclex_previewChar(self)))
+                        while(isdigit(ecc_astlex_previewchar(self)))
                         {
-                            ecclex_nextChar(self);
+                            ecc_astlex_nextchar(self);
                         }
-                        if(c == '.' || ecclex_acceptChar(self, '.'))
+                        if(c == '.' || ecc_astlex_acceptchar(self, '.'))
                         {
                             binary = 1;
                         }
-                        while(isdigit(ecclex_previewChar(self)))
+                        while(isdigit(ecc_astlex_previewchar(self)))
                         {
-                            ecclex_nextChar(self);
+                            ecc_astlex_nextchar(self);
                         }
-                        if(ecclex_acceptChar(self, 'e') || ecclex_acceptChar(self, 'E'))
+                        if(ecc_astlex_acceptchar(self, 'e') || ecc_astlex_acceptchar(self, 'E'))
                         {
                             binary = 1;
-                            if(!ecclex_acceptChar(self, '+'))
+                            if(!ecc_astlex_acceptchar(self, '+'))
                             {
-                                ecclex_acceptChar(self, '-');
+                                ecc_astlex_acceptchar(self, '-');
                             }
-                            if(!isdigit(ecclex_previewChar(self)))
+                            if(!isdigit(ecc_astlex_previewchar(self)))
                             {
-                                return ecclex_syntaxError(self, ecc_charbuf_create("missing exponent"));
+                                return ecc_astlex_syntaxerror(self, ecc_strbuf_create("missing exponent"));
                             }
-                            while(isdigit(ecclex_previewChar(self)))
+                            while(isdigit(ecc_astlex_previewchar(self)))
                             {
-                                ecclex_nextChar(self);
+                                ecc_astlex_nextchar(self);
                             }
                         }
                     }
-                    if(isalpha(ecclex_previewChar(self)))
+                    if(isalpha(ecc_astlex_previewchar(self)))
                     {
                         self->text.bytes += self->text.length;
                         self->text.length = 1;
-                        return ecclex_syntaxError(self, ecc_charbuf_create("identifier starts immediately after numeric literal"));
+                        return ecc_astlex_syntaxerror(self, ecc_strbuf_create("identifier starts immediately after numeric literal"));
                     }
                     if(binary)
                     {
-                        self->value = ecc_astlex_scanbinary(self->text, 0);
+                        self->tokenvalue = ecc_astlex_scanbinary(self->text, 0);
                         return ECC_TOK_BINARY;
                     }
                     else
                     {
-                        self->value = ecc_astlex_scaninteger(self->text, 0, 0);
-                        if(self->value.type == ECC_VALTYPE_INTEGER)
+                        self->tokenvalue = ecc_astlex_scaninteger(self->text, 0, 0);
+                        if(self->tokenvalue.type == ECC_VALTYPE_INTEGER)
                         {
                             return ECC_TOK_INTEGER;
                         }
@@ -491,30 +503,30 @@ retry:
                 }
             case '^':
                 {
-                    if(ecclex_acceptChar(self, '='))
+                    if(ecc_astlex_acceptchar(self, '='))
                         return ECC_TOK_XORASSIGN;
                     else
                         return c;
                 }
             case '%':
                 {
-                    if(ecclex_acceptChar(self, '='))
+                    if(ecc_astlex_acceptchar(self, '='))
                         return ECC_TOK_MODULOASSIGN;
                     else
                         return c;
                 }
             case '*':
                 {
-                    if(ecclex_acceptChar(self, '='))
+                    if(ecc_astlex_acceptchar(self, '='))
                         return ECC_TOK_MULTIPLYASSIGN;
                     else
                         return c;
                 }
             case '=':
                 {
-                    if(ecclex_acceptChar(self, '='))
+                    if(ecc_astlex_acceptchar(self, '='))
                     {
-                        if(ecclex_acceptChar(self, '='))
+                        if(ecc_astlex_acceptchar(self, '='))
                             return ECC_TOK_IDENTICAL;
                         else
                             return ECC_TOK_EQUAL;
@@ -524,9 +536,9 @@ retry:
                 }
             case '!':
                 {
-                    if(ecclex_acceptChar(self, '='))
+                    if(ecc_astlex_acceptchar(self, '='))
                     {
-                        if(ecclex_acceptChar(self, '='))
+                        if(ecc_astlex_acceptchar(self, '='))
                             return ECC_TOK_NOTIDENTICAL;
                         else
                             return ECC_TOK_NOTEQUAL;
@@ -536,50 +548,50 @@ retry:
                 }
             case '+':
                 {
-                    if(ecclex_acceptChar(self, '+'))
+                    if(ecc_astlex_acceptchar(self, '+'))
                         return ECC_TOK_INCREMENT;
-                    else if(ecclex_acceptChar(self, '='))
+                    else if(ecc_astlex_acceptchar(self, '='))
                         return ECC_TOK_ADDASSIGN;
                     else
                         return c;
                 }
             case '-':
                 {
-                    if(ecclex_acceptChar(self, '-'))
+                    if(ecc_astlex_acceptchar(self, '-'))
                         return ECC_TOK_DECREMENT;
-                    else if(ecclex_acceptChar(self, '='))
+                    else if(ecc_astlex_acceptchar(self, '='))
                         return ECC_TOK_MINUSASSIGN;
                     else
                         return c;
                 }
             case '&':
                 {
-                    if(ecclex_acceptChar(self, '&'))
+                    if(ecc_astlex_acceptchar(self, '&'))
                         return ECC_TOK_LOGICALAND;
-                    else if(ecclex_acceptChar(self, '='))
+                    else if(ecc_astlex_acceptchar(self, '='))
                         return ECC_TOK_ANDASSIGN;
                     else
                         return c;
                 }
             case '|':
                 {
-                    if(ecclex_acceptChar(self, '|'))
+                    if(ecc_astlex_acceptchar(self, '|'))
                         return ECC_TOK_LOGICALOR;
-                    else if(ecclex_acceptChar(self, '='))
+                    else if(ecc_astlex_acceptchar(self, '='))
                         return ECC_TOK_ORASSIGN;
                     else
                         return c;
                 }
             case '<':
                 {            
-                    if(ecclex_acceptChar(self, '<'))
+                    if(ecc_astlex_acceptchar(self, '<'))
                     {
-                        if(ecclex_acceptChar(self, '='))
+                        if(ecc_astlex_acceptchar(self, '='))
                             return ECC_TOK_LEFTSHIFTASSIGN;
                         else
                             return ECC_TOK_LEFTSHIFT;
                     }
-                    else if(ecclex_acceptChar(self, '='))
+                    else if(ecc_astlex_acceptchar(self, '='))
                         return ECC_TOK_LESSOREQUAL;
                     else
                         return c;
@@ -587,11 +599,11 @@ retry:
 
             case '>':
                 {
-                    if(ecclex_acceptChar(self, '>'))
+                    if(ecc_astlex_acceptchar(self, '>'))
                     {
-                        if(ecclex_acceptChar(self, '>'))
+                        if(ecc_astlex_acceptchar(self, '>'))
                         {
-                            if(ecclex_acceptChar(self, '='))
+                            if(ecc_astlex_acceptchar(self, '='))
                             {
                                 return ECC_TOK_UNSIGNEDRIGHTSHIFTASSIGN;
                             }
@@ -600,7 +612,7 @@ retry:
                                 return ECC_TOK_UNSIGNEDRIGHTSHIFT;
                             }
                         }
-                        else if(ecclex_acceptChar(self, '='))
+                        else if(ecc_astlex_acceptchar(self, '='))
                         {
                             return ECC_TOK_RIGHTSHIFTASSIGN;
                         }
@@ -609,7 +621,7 @@ retry:
                             return ECC_TOK_RIGHTSHIFT;
                         }
                     }
-                    else if(ecclex_acceptChar(self, '='))
+                    else if(ecc_astlex_acceptchar(self, '='))
                     {
                         return ECC_TOK_MOREOREQUAL;
                     }
@@ -630,7 +642,7 @@ retry:
                         {
                             if(c == '\\')
                             {
-                                char uu = ecclex_nextChar(self), u1 = ecclex_nextChar(self), u2 = ecclex_nextChar(self), u3 = ecclex_nextChar(self), u4 = ecclex_nextChar(self);
+                                char uu = ecc_astlex_nextchar(self), u1 = ecc_astlex_nextchar(self), u2 = ecc_astlex_nextchar(self), u3 = ecc_astlex_nextchar(self), u4 = ecc_astlex_nextchar(self);
                                 if(uu == 'u' && isxdigit(u1) && isxdigit(u2) && isxdigit(u3) && isxdigit(u4))
                                 {
                                     c = ecc_astlex_uint16hex(u1, u2, u3, u4);
@@ -638,7 +650,7 @@ retry:
                                 }
                                 else
                                 {
-                                    return ecclex_syntaxError(self, ecc_charbuf_create("incomplete unicode escape"));
+                                    return ecc_astlex_syntaxerror(self, ecc_strbuf_create("incomplete unicode escape"));
                                 }
                             }
 
@@ -647,7 +659,7 @@ retry:
                                 break;
                             }
                             text = self->text;
-                            c = ecclex_nextChar(self);
+                            c = ecc_astlex_nextchar(self);
                         } while(isalnum(c) || c == '$' || c == '_' || (self->allowUnicodeOutsideLiteral && (c == '\\' || c >= 0x80)));
                         self->text = text;
                         self->offset = (uint32_t)(text.bytes + text.length - self->input->bytes);
@@ -656,7 +668,7 @@ retry:
                             ecctextstring_t subtext = self->text;
                             eccappendbuffer_t chars;
                             eccvalue_t value;
-                            ecc_charbuf_beginappend(&chars);
+                            ecc_strbuf_beginappend(&chars);
                             while(subtext.length)
                             {
                                 c = ecc_textbuf_nextcharacter(&subtext).codepoint;
@@ -679,10 +691,10 @@ retry:
                                         ecc_textbuf_advance(&subtext, -5);
                                     }
                                 }
-                                ecc_charbuf_appendcodepoint(&chars, c);
+                                ecc_strbuf_appendcodepoint(&chars, c);
                             }
-                            value = ecc_ioinput_attachvalue(self->input, ecc_charbuf_endappend(&chars));
-                            self->value = ecc_value_key(ecc_keyidx_makewithtext(ecc_value_textof(&value), value.type != ECC_VALTYPE_CHARS));
+                            value = ecc_ioinput_attachvalue(self->input, ecc_strbuf_endappend(&chars));
+                            self->tokenvalue = ecc_value_fromkey(ecc_keyidx_makewithtext(ecc_value_textof(&value), value.type != ECC_VALTYPE_CHARS));
                             return ECC_TOK_IDENTIFIER;
                         }
                         if(!self->disallowKeyword)
@@ -698,33 +710,33 @@ retry:
                             {
                                 if(self->text.length == (int)reservedKeywords[k].length && memcmp(self->text.bytes, reservedKeywords[k].name, reservedKeywords[k].length) == 0)
                                 {
-                                    return ecclex_syntaxError(self, ecc_charbuf_create("'%s' is a reserved identifier", reservedKeywords[k]));
+                                    return ecc_astlex_syntaxerror(self, ecc_strbuf_create("'%s' is a reserved identifier", reservedKeywords[k]));
                                 }
                             }
                         }
-                        self->value = ecc_value_key(ecc_keyidx_makewithtext(self->text, 0));
+                        self->tokenvalue = ecc_value_fromkey(ecc_keyidx_makewithtext(self->text, 0));
                         return ECC_TOK_IDENTIFIER;
                     }
                     else
                     {
                         if(c >= 0x80)
                         {
-                            return ecclex_syntaxError(self, ecc_charbuf_create("invalid character '%.*s'", self->text.length, self->text.bytes));
+                            return ecc_astlex_syntaxerror(self, ecc_strbuf_create("invalid character '%.*s'", self->text.length, self->text.bytes));
                         }
                         else if(isprint(c))
                         {
-                            return ecclex_syntaxError(self, ecc_charbuf_create("invalid character '%c'", c));
+                            return ecc_astlex_syntaxerror(self, ecc_strbuf_create("invalid character '%c'", c));
                         }
                         else
                         {
-                            return ecclex_syntaxError(self, ecc_charbuf_create("invalid character '\\%d'", c & 0xff));
+                            return ecc_astlex_syntaxerror(self, ecc_strbuf_create("invalid character '\\%d'", c & 0xff));
                         }
                     }
                 }
         }
     }
 
-    ecclex_addLine(self, self->offset);
+    ecc_astlex_addline(self, self->offset);
     return ECC_TOK_NO;
 }
 
@@ -855,7 +867,7 @@ eccvalue_t ecc_astlex_scanbinary(ecctextstring_t text, int flags)
         if(lazy && text.length >= 2 && buffer[0] == '0' && buffer[1] == 'x')
         {
             free(buffer);
-            return ecc_value_binary(0);
+            return ecc_value_fromfloat(0);
         }
         if(text.length >= ECC_ConstString_Infinity.length && !memcmp(buffer, ECC_ConstString_Infinity.bytes, ECC_ConstString_Infinity.length))
         {
@@ -881,7 +893,7 @@ eccvalue_t ecc_astlex_scanbinary(ecctextstring_t text, int flags)
         binary = 0;
     }
     free(buffer);
-    return ecc_value_binary(binary);
+    return ecc_value_fromfloat(binary);
 }
 
 
@@ -919,7 +931,7 @@ eccvalue_t ecc_astlex_scaninteger(ecctextstring_t text, int base, int flags)
     if((lazy && end == buffer) || (!lazy && *end && !isspace(*end)))
     {
         free(buffer);
-        return ecc_value_binary(NAN);
+        return ecc_value_fromfloat(NAN);
     }
     else if(errno == ERANGE)
     {
@@ -928,21 +940,21 @@ eccvalue_t ecc_astlex_scaninteger(ecctextstring_t text, int base, int flags)
             double binary = strtod(buffer, NULL);
             if(!binary && (!base || base == 16))
             {
-                binary = ecclex_strtolHexFallback(text);
+                binary = ecc_astlex_strtolhexfallback(text);
             }
             free(buffer);
-            return ecc_value_binary(binary);
+            return ecc_value_fromfloat(binary);
         }
         free(buffer);
         ecc_env_printwarning("`parseInt('%.*s', %d)` out of bounds; only long int are supported by radices other than 10 or 16", text.length, text.bytes, base);
-        return ecc_value_binary(NAN);
+        return ecc_value_fromfloat(NAN);
     }
     free(buffer);
     if(integer < INT32_MIN || integer > INT32_MAX)
     {
-        return ecc_value_binary(integer);
+        return ecc_value_fromfloat(integer);
     }
-    return ecc_value_integer((int32_t)integer);
+    return ecc_value_fromint((int32_t)integer);
 }
 
 uint32_t ecc_astlex_scanelement(ecctextstring_t text)

@@ -22,10 +22,10 @@ void eccfunction_capture(eccobject_t* object)
     eccobjfunction_t* self = (eccobjfunction_t*)object;
 
     if(self->refObject)
-        ++self->refObject->referenceCount;
+        ++self->refObject->refcount;
 
     if(self->pair)
-        ++self->pair->object.referenceCount;
+        ++self->pair->object.refcount;
 }
 
 void eccfunction_mark(eccobject_t* object)
@@ -43,7 +43,7 @@ void eccfunction_mark(eccobject_t* object)
 
 // MARK: - Static Members
 
-eccvalue_t eccfunction_toChars(eccstate_t* context, eccvalue_t value)
+eccvalue_t eccfunction_toChars(ecccontext_t* context, eccvalue_t value)
 {
     eccobjfunction_t* self;
     eccappendbuffer_t chars;
@@ -52,26 +52,26 @@ eccvalue_t eccfunction_toChars(eccstate_t* context, eccvalue_t value)
     assert(value.data.function);
 
     self = value.data.function;
-    ecc_charbuf_beginappend(&chars);
+    ecc_strbuf_beginappend(&chars);
 
-    ecc_charbuf_append(&chars, "function %s", self->name ? self->name : "anonymous");
+    ecc_strbuf_append(&chars, "function %s", self->name ? self->name : "anonymous");
 
     if(self->text.bytes == ECC_ConstString_NativeCode.bytes)
-        ecc_charbuf_append(&chars, "() [native code]");
+        ecc_strbuf_append(&chars, "() [native code]");
     else
-        ecc_charbuf_append(&chars, "%.*s", self->text.length, self->text.bytes);
+        ecc_strbuf_append(&chars, "%.*s", self->text.length, self->text.bytes);
 
-    return ecc_charbuf_endappend(&chars);
+    return ecc_strbuf_endappend(&chars);
 }
 
-eccvalue_t objfunctionfn_toString(eccstate_t* context)
+eccvalue_t objfunctionfn_toString(ecccontext_t* context)
 {
     ecc_context_assertthistype(context, ECC_VALTYPE_FUNCTION);
 
     return eccfunction_toChars(context, context->thisvalue);
 }
 
-eccvalue_t objfunctionfn_apply(eccstate_t* context)
+eccvalue_t objfunctionfn_apply(ecccontext_t* context)
 {
     eccvalue_t thisval, arguments;
 
@@ -90,13 +90,13 @@ eccvalue_t objfunctionfn_apply(eccstate_t* context)
     else
     {
         if(!ecc_value_isobject(arguments))
-            ecc_context_typeerror(context, ecc_charbuf_create("arguments is not an object"));
+            ecc_context_typeerror(context, ecc_strbuf_create("arguments is not an object"));
 
         return ecc_oper_callfunctionarguments(context, ECC_CTXOFFSET_APPLY, context->thisvalue.data.function, thisval, arguments.data.object);
     }
 }
 
-eccvalue_t objfunctionfn_call(eccstate_t* context)
+eccvalue_t objfunctionfn_call(ecccontext_t* context)
 {
     eccobject_t arguments;
 
@@ -104,7 +104,7 @@ eccvalue_t objfunctionfn_call(eccstate_t* context)
 
     context->strictMode = context->parent->strictMode;
 
-    arguments = *context->environment->hashmap[2].value.data.object;
+    arguments = *context->environment->hashmap[2].hmapmapvalue.data.object;
 
     if(arguments.elementCount)
     {
@@ -127,7 +127,7 @@ eccvalue_t objfunctionfn_call(eccstate_t* context)
         return ecc_oper_callfunctionva(context, ECC_CTXOFFSET_CALL, context->thisvalue.data.function, ECCValConstUndefined, 0, empty_ap);
 }
 
-eccvalue_t objfunctionfn_bindCall(eccstate_t* context)
+eccvalue_t objfunctionfn_bindCall(ecccontext_t* context)
 {
     eccobjfunction_t* function;
     eccobject_t* arguments;
@@ -144,13 +144,13 @@ eccvalue_t objfunctionfn_bindCall(eccstate_t* context)
     arguments = ecc_array_createsized(length);
 
     memcpy(arguments->element, function->environment.element + 1, sizeof(*arguments->element) * (function->environment.elementCount - 1));
-    memcpy(arguments->element + (function->environment.elementCount - 1), context->environment->hashmap[2].value.data.object->element,
-           sizeof(*arguments->element) * (context->environment->hashmap[2].value.data.object->elementCount));
+    memcpy(arguments->element + (function->environment.elementCount - 1), context->environment->hashmap[2].hmapmapvalue.data.object->element,
+           sizeof(*arguments->element) * (context->environment->hashmap[2].hmapmapvalue.data.object->elementCount));
 
-    return ecc_oper_callfunctionarguments(context, 0, context->thisvalue.data.function->pair, function->environment.element[0].value, arguments);
+    return ecc_oper_callfunctionarguments(context, 0, context->thisvalue.data.function->pair, function->environment.element[0].hmapitemvalue, arguments);
 }
 
-eccvalue_t objfunctionfn_bind(eccstate_t* context)
+eccvalue_t objfunctionfn_bind(ecccontext_t* context)
 {
     eccobjfunction_t* function;
     uint16_t index, count;
@@ -165,9 +165,9 @@ eccvalue_t objfunctionfn_bind(eccstate_t* context)
     ecc_object_resizeelement(&function->environment, count ? count : 1);
     if(count)
         for(index = 0; index < count; ++index)
-            function->environment.element[index].value = ecc_context_argument(context, index);
+            function->environment.element[index].hmapitemvalue = ecc_context_argument(context, index);
     else
-        function->environment.element[0].value = ECCValConstUndefined;
+        function->environment.element[0].hmapitemvalue = ECCValConstUndefined;
 
     function->pair = context->thisvalue.data.function;
     function->boundThis = ecc_value_function(function);
@@ -176,13 +176,13 @@ eccvalue_t objfunctionfn_bind(eccstate_t* context)
     return ecc_value_function(function);
 }
 
-eccvalue_t objfunctionfn_prototypeConstructor(eccstate_t* context)
+eccvalue_t objfunctionfn_prototypeConstructor(ecccontext_t* context)
 {
     (void)context;
     return ECCValConstUndefined;
 }
 
-eccvalue_t objfunctionfn_constructor(eccstate_t* context)
+eccvalue_t objfunctionfn_constructor(ecccontext_t* context)
 {
     int argumentCount;
 
@@ -193,33 +193,33 @@ eccvalue_t objfunctionfn_constructor(eccstate_t* context)
         eccvalue_t value;
         eccappendbuffer_t chars;
         eccioinput_t* input;
-        eccstate_t subContext = {};
+        ecccontext_t subContext = {};
         subContext.parent = context;
         subContext.thisvalue = ecc_value_object(&context->ecc->global->environment);
         subContext.ecc = context->ecc;
         subContext.depth = context->depth + 1;
         subContext.environment = ecc_context_environmentroot(context->parent);
 
-        ecc_charbuf_beginappend(&chars);
-        ecc_charbuf_append(&chars, "(function (");
+        ecc_strbuf_beginappend(&chars);
+        ecc_strbuf_append(&chars, "(function (");
         if(argumentCount)
             for(index = 0; index < argumentCount; ++index)
             {
                 if(index == argumentCount - 1)
-                    ecc_charbuf_append(&chars, "){");
+                    ecc_strbuf_append(&chars, "){");
 
                 value = ecc_value_tostring(context, ecc_context_argument(context, index));
-                ecc_charbuf_append(&chars, "%.*s", ecc_value_stringlength(&value), ecc_value_stringbytes(&value));
+                ecc_strbuf_append(&chars, "%.*s", ecc_value_stringlength(&value), ecc_value_stringbytes(&value));
 
                 if(index < argumentCount - 2)
-                    ecc_charbuf_append(&chars, ",");
+                    ecc_strbuf_append(&chars, ",");
             }
         else
-            ecc_charbuf_append(&chars, "){");
+            ecc_strbuf_append(&chars, "){");
 
-        ecc_charbuf_append(&chars, "})");
+        ecc_strbuf_append(&chars, "})");
 
-        value = ecc_charbuf_endappend(&chars);
+        value = ecc_strbuf_endappend(&chars);
         input = ecc_ioinput_createfrombytes(ecc_value_stringbytes(&value), ecc_value_stringlength(&value), "(Function)");
         ecc_context_settextindex(context, ECC_CTXINDEXTYPE_NO);
         ecc_script_evalinputwithcontext(context->ecc, input, &subContext);
@@ -286,7 +286,7 @@ eccobjfunction_t* ecc_function_createwithnative(const eccnativefuncptr_t native,
     self->oplist = ecc_oplist_create(native, ECCValConstUndefined, ECC_ConstString_NativeCode);
     self->text = ECC_ConstString_NativeCode;
 
-    ecc_object_addmember(&self->object, ECC_ConstKey_length, ecc_value_integer(abs(parameterCount)), ECC_VALFLAG_READONLY | ECC_VALFLAG_HIDDEN | ECC_VALFLAG_SEALED);
+    ecc_object_addmember(&self->object, ECC_ConstKey_length, ecc_value_fromint(abs(parameterCount)), ECC_VALFLAG_READONLY | ECC_VALFLAG_HIDDEN | ECC_VALFLAG_SEALED);
 
     return self;
 }

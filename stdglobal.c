@@ -7,19 +7,19 @@
 //
 #include "ecc.h"
 
-static eccvalue_t globalsfn_eval(eccstate_t *context);
-static eccvalue_t globalsfn_parseInt(eccstate_t *context);
-static eccvalue_t globalsfn_parseFloat(eccstate_t *context);
-static eccvalue_t globalsfn_isFinite(eccstate_t *context);
-static eccvalue_t globalsfn_isNaN(eccstate_t *context);
-static eccvalue_t eccglobals_decodeExcept(eccstate_t *context, const char *exclude);
-static eccvalue_t globalsfn_decodeURI(eccstate_t *context);
-static eccvalue_t globalsfn_decodeURIComponent(eccstate_t *context);
-static eccvalue_t eccglobals_encodeExpect(eccstate_t *context, const char *exclude);
-static eccvalue_t globalsfn_encodeURI(eccstate_t *context);
-static eccvalue_t globalsfn_encodeURIComponent(eccstate_t *context);
-static eccvalue_t globalsfn_escape(eccstate_t *context);
-static eccvalue_t globalsfn_unescape(eccstate_t *context);
+static eccvalue_t globalsfn_eval(ecccontext_t *context);
+static eccvalue_t globalsfn_parseInt(ecccontext_t *context);
+static eccvalue_t globalsfn_parseFloat(ecccontext_t *context);
+static eccvalue_t globalsfn_isFinite(ecccontext_t *context);
+static eccvalue_t globalsfn_isNaN(ecccontext_t *context);
+static eccvalue_t eccglobals_decodeExcept(ecccontext_t *context, const char *exclude);
+static eccvalue_t globalsfn_decodeURI(ecccontext_t *context);
+static eccvalue_t globalsfn_decodeURIComponent(ecccontext_t *context);
+static eccvalue_t eccglobals_encodeExpect(ecccontext_t *context, const char *exclude);
+static eccvalue_t globalsfn_encodeURI(ecccontext_t *context);
+static eccvalue_t globalsfn_encodeURIComponent(ecccontext_t *context);
+static eccvalue_t globalsfn_escape(ecccontext_t *context);
+static eccvalue_t globalsfn_unescape(ecccontext_t *context);
 
 const eccobjinterntype_t ECC_Type_Global = {
     .text = &ECC_ConstString_GlobalType,
@@ -27,11 +27,11 @@ const eccobjinterntype_t ECC_Type_Global = {
 
 // MARK: - Static Members
 
-static eccvalue_t globalsfn_eval(eccstate_t* context)
+static eccvalue_t globalsfn_eval(ecccontext_t* context)
 {
     eccvalue_t value;
     eccioinput_t* input;
-    eccstate_t subContext = {};
+    ecccontext_t subContext = {};
     subContext.parent = context;
     subContext.thisvalue = ecc_value_object(&context->ecc->global->environment);
     subContext.ecc = context->ecc;
@@ -50,7 +50,7 @@ static eccvalue_t globalsfn_eval(eccstate_t* context)
     return context->ecc->result;
 }
 
-static eccvalue_t globalsfn_parseInt(eccstate_t* context)
+static eccvalue_t globalsfn_parseInt(ecccontext_t* context)
 {
     eccvalue_t value;
     ecctextstring_t text;
@@ -76,7 +76,7 @@ static eccvalue_t globalsfn_parseInt(eccstate_t* context)
     return ecc_astlex_scaninteger(text, base, ECC_LEXFLAG_SCANLAZY | (context->ecc->sloppyMode ? ECC_LEXFLAG_SCANSLOPPY : 0));
 }
 
-static eccvalue_t globalsfn_parseFloat(eccstate_t* context)
+static eccvalue_t globalsfn_parseFloat(ecccontext_t* context)
 {
     eccvalue_t value;
     ecctextstring_t text;
@@ -86,7 +86,7 @@ static eccvalue_t globalsfn_parseFloat(eccstate_t* context)
     return ecc_astlex_scanbinary(text, ECC_LEXFLAG_SCANLAZY | (context->ecc->sloppyMode ? ECC_LEXFLAG_SCANSLOPPY : 0));
 }
 
-static eccvalue_t globalsfn_isFinite(eccstate_t* context)
+static eccvalue_t globalsfn_isFinite(ecccontext_t* context)
 {
     eccvalue_t value;
 
@@ -94,7 +94,7 @@ static eccvalue_t globalsfn_isFinite(eccstate_t* context)
     return ecc_value_truth(!isnan(value.data.binary) && !isinf(value.data.binary));
 }
 
-static eccvalue_t globalsfn_isNaN(eccstate_t* context)
+static eccvalue_t globalsfn_isNaN(ecccontext_t* context)
 {
     eccvalue_t value;
 
@@ -102,7 +102,7 @@ static eccvalue_t globalsfn_isNaN(eccstate_t* context)
     return ecc_value_truth(isnan(value.data.binary));
 }
 
-static eccvalue_t eccglobals_decodeExcept(eccstate_t* context, const char* exclude)
+static eccvalue_t eccglobals_decodeExcept(ecccontext_t* context, const char* exclude)
 {
     uint16_t index;
     uint16_t count;
@@ -118,13 +118,13 @@ static eccvalue_t eccglobals_decodeExcept(eccstate_t* context, const char* exclu
     value = ecc_value_tostring(context, ecc_context_argument(context, 0));
     bytes = ecc_value_stringbytes(&value);
     count = ecc_value_stringlength(&value);
-    ecc_charbuf_beginappend(&chars);
+    ecc_strbuf_beginappend(&chars);
     while(index < count)
     {
         byte = bytes[index++];
         if(byte != '%')
         {
-            ecc_charbuf_append(&chars, "%c", byte);
+            ecc_strbuf_append(&chars, "%c", byte);
         }
         else if(index + 2 > count || !isxdigit(bytes[index]) || !isxdigit(bytes[index + 1]))
         {
@@ -159,37 +159,37 @@ static eccvalue_t eccglobals_decodeExcept(eccstate_t* context, const char* exclu
                 }
                 *b = '\0';
                 c = ecc_textbuf_character(ecc_textbuf_make(buffer, (int32_t)(b - buffer)));
-                ecc_charbuf_appendcodepoint(&chars, c.codepoint);
+                ecc_strbuf_appendcodepoint(&chars, c.codepoint);
             }
             else if(byte && exclude && strchr(exclude, byte))
             {
-                ecc_charbuf_append(&chars, "%%%c%c", bytes[index - 2], bytes[index - 1]);
+                ecc_strbuf_append(&chars, "%%%c%c", bytes[index - 2], bytes[index - 1]);
             }
             else
             {
-                ecc_charbuf_append(&chars, "%c", byte);
+                ecc_strbuf_append(&chars, "%c", byte);
             }
         }
     }
-    return ecc_charbuf_endappend(&chars);
+    return ecc_strbuf_endappend(&chars);
     error:
     {
-        ecc_context_urierror(context, ecc_charbuf_create("malformed URI"));
+        ecc_context_urierror(context, ecc_strbuf_create("malformed URI"));
     }
     return ECCValConstUndefined;
 }
 
-static eccvalue_t globalsfn_decodeURI(eccstate_t* context)
+static eccvalue_t globalsfn_decodeURI(ecccontext_t* context)
 {
     return eccglobals_decodeExcept(context, ";/?:@&=+$,#");
 }
 
-static eccvalue_t globalsfn_decodeURIComponent(eccstate_t* context)
+static eccvalue_t globalsfn_decodeURIComponent(ecccontext_t* context)
 {
     return eccglobals_decodeExcept(context, NULL);
 }
 
-static eccvalue_t eccglobals_encodeExpect(eccstate_t* context, const char* exclude)
+static eccvalue_t eccglobals_encodeExpect(ecccontext_t* context, const char* exclude)
 {
     eccvalue_t value;
     const char* bytes;
@@ -197,7 +197,7 @@ static eccvalue_t eccglobals_encodeExpect(eccstate_t* context, const char* exclu
     uint16_t unit;
     uint16_t length;
     int needPair;
-    ecccharbuffer_t* chars;
+    eccstrbuffer_t* chars;
     ecctextstring_t text;
     ecctextchar_t c;
     static const char hex[] = "0123456789ABCDEF";
@@ -207,7 +207,7 @@ static eccvalue_t eccglobals_encodeExpect(eccstate_t* context, const char* exclu
     bytes = ecc_value_stringbytes(&value);
     length = ecc_value_stringlength(&value);
     text = ecc_textbuf_make(bytes, length);
-    chars = ecc_charbuf_createsized(length * 3);
+    chars = ecc_strbuf_createsized(length * 3);
     while(text.length)
     {
         c = ecc_textbuf_character(text);
@@ -244,15 +244,15 @@ static eccvalue_t eccglobals_encodeExpect(eccstate_t* context, const char* exclu
         goto error;
     }
     chars->length = offset;
-    return ecc_value_chars(chars);
+    return ecc_value_fromchars(chars);
     error:
     {
-        ecc_context_urierror(context, ecc_charbuf_create("malformed URI"));
+        ecc_context_urierror(context, ecc_strbuf_create("malformed URI"));
     }
     return ECCValConstUndefined;
 }
 
-static eccvalue_t globalsfn_encodeURI(eccstate_t* context)
+static eccvalue_t globalsfn_encodeURI(ecccontext_t* context)
 {
     static const char* encstrings = (
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -263,7 +263,7 @@ static eccvalue_t globalsfn_encodeURI(eccstate_t* context)
     return eccglobals_encodeExpect(context, encstrings);
 }
 
-static eccvalue_t globalsfn_encodeURIComponent(eccstate_t* context)
+static eccvalue_t globalsfn_encodeURIComponent(ecccontext_t* context)
 {
     static const char* encstrings = (
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -274,7 +274,7 @@ static eccvalue_t globalsfn_encodeURIComponent(eccstate_t* context)
     return eccglobals_encodeExpect(context, encstrings);
 }
 
-static eccvalue_t globalsfn_escape(eccstate_t* context)
+static eccvalue_t globalsfn_escape(ecccontext_t* context)
 {
     eccvalue_t value;
     eccappendbuffer_t chars;
@@ -283,36 +283,36 @@ static eccvalue_t globalsfn_escape(eccstate_t* context)
     static const char* exclude = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 @*_+-./";
     value = ecc_value_tostring(context, ecc_context_argument(context, 0));
     text = ecc_value_textof(&value);
-    ecc_charbuf_beginappend(&chars);
+    ecc_strbuf_beginappend(&chars);
     while(text.length)
     {
         c = ecc_textbuf_nextcharacter(&text);
         if(c.codepoint < 0x80 && c.codepoint && strchr(exclude, c.codepoint))
         {
-            ecc_charbuf_append(&chars, "%c", c.codepoint);
+            ecc_strbuf_append(&chars, "%c", c.codepoint);
         }
         else
         {
             if(c.codepoint <= 0xff)
             {
-                ecc_charbuf_append(&chars, "%%%02X", c.codepoint);
+                ecc_strbuf_append(&chars, "%%%02X", c.codepoint);
             }
             else if(c.codepoint < 0x010000)
             {
-                ecc_charbuf_append(&chars, "%%u%04X", c.codepoint);
+                ecc_strbuf_append(&chars, "%%u%04X", c.codepoint);
             }
             else
             {
                 c.codepoint -= 0x010000;
-                ecc_charbuf_append(&chars, "%%u%04X", ((c.codepoint >> 10) & 0x3ff) + 0xd800);
-                ecc_charbuf_append(&chars, "%%u%04X", ((c.codepoint >> 0) & 0x3ff) + 0xdc00);
+                ecc_strbuf_append(&chars, "%%u%04X", ((c.codepoint >> 10) & 0x3ff) + 0xd800);
+                ecc_strbuf_append(&chars, "%%u%04X", ((c.codepoint >> 0) & 0x3ff) + 0xdc00);
             }
         }
     }
-    return ecc_charbuf_endappend(&chars);
+    return ecc_strbuf_endappend(&chars);
 }
 
-static eccvalue_t globalsfn_unescape(eccstate_t* context)
+static eccvalue_t globalsfn_unescape(ecccontext_t* context)
 {
     eccvalue_t value;
     eccappendbuffer_t chars;
@@ -322,7 +322,7 @@ static eccvalue_t globalsfn_unescape(eccstate_t* context)
     value = ecc_value_tostring(context, ecc_context_argument(context, 0));
     text = ecc_value_textof(&value);
 
-    ecc_charbuf_beginappend(&chars);
+    ecc_strbuf_beginappend(&chars);
 
     while(text.length)
     {
@@ -333,14 +333,14 @@ static eccvalue_t globalsfn_unescape(eccstate_t* context)
             switch(ecc_textbuf_character(text).codepoint)
             {
                 case '%':
-                    ecc_charbuf_append(&chars, "%%");
+                    ecc_strbuf_append(&chars, "%%");
                     break;
 
                 case 'u':
                 {
                     uint32_t cp = ecc_astlex_uint16hex(text.bytes[1], text.bytes[2], text.bytes[3], text.bytes[4]);
 
-                    ecc_charbuf_appendcodepoint(&chars, cp);
+                    ecc_strbuf_appendcodepoint(&chars, cp);
                     ecc_textbuf_advance(&text, 5);
                     break;
                 }
@@ -349,17 +349,17 @@ static eccvalue_t globalsfn_unescape(eccstate_t* context)
                 {
                     uint32_t cp = ecc_astlex_uint8hex(text.bytes[0], text.bytes[1]);
 
-                    ecc_charbuf_appendcodepoint(&chars, cp);
+                    ecc_strbuf_appendcodepoint(&chars, cp);
                     ecc_textbuf_advance(&text, 2);
                     break;
                 }
             }
         }
         else
-            ecc_charbuf_append(&chars, "%c", c.codepoint);
+            ecc_strbuf_append(&chars, "%c", c.codepoint);
     }
 
-    return ecc_charbuf_endappend(&chars);
+    return ecc_strbuf_endappend(&chars);
 }
 
 // MARK: - Methods
@@ -407,8 +407,8 @@ eccobjfunction_t* ecc_globals_create(void)
     eccobjfunction_t* self = ecc_function_create(ECC_Prototype_Object);
     self->environment.type = &ECC_Type_Global;
 
-    ecc_function_addvalue(self, "NaN", ecc_value_binary(NAN), r | h | s);
-    ecc_function_addvalue(self, "Infinity", ecc_value_binary(INFINITY), r | h | s);
+    ecc_function_addvalue(self, "NaN", ecc_value_fromfloat(NAN), r | h | s);
+    ecc_function_addvalue(self, "Infinity", ecc_value_fromfloat(INFINITY), r | h | s);
     ecc_function_addvalue(self, "undefined", ECCValConstUndefined, r | h | s);
 
     ecc_function_addfunction(self, "eval", globalsfn_eval, 1, h);

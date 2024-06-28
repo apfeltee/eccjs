@@ -275,34 +275,39 @@ enum eccastlexflags_t
     ECC_LEXFLAG_SCANSLOPPY = 1 << 1,
 };
 
-typedef struct /**/ecccontext_t ecccontext_t;
-typedef struct /**/eccobject_t eccobject_t;
-typedef struct /**/eccvalue_t eccvalue_t;
-typedef struct /**/ecctextchar_t ecctextchar_t;
-typedef struct /**/ecctextstring_t ecctextstring_t;
-typedef struct /**/eccastlexer_t eccastlexer_t;
-typedef struct /**/eccastdepths_t eccastdepths_t;
-typedef struct /**/eccastparser_t eccastparser_t;
+typedef struct eccstate_t eccstate_t;
+typedef struct eccobject_t eccobject_t;
+typedef struct eccvalue_t eccvalue_t;
+typedef struct ecctextchar_t ecctextchar_t;
+typedef struct ecctextstring_t ecctextstring_t;
+typedef struct eccastlexer_t eccastlexer_t;
+typedef struct eccastdepths_t eccastdepths_t;
+typedef struct eccastparser_t eccastparser_t;
 
-typedef struct /**/eccstate_t eccstate_t;
-typedef struct /**/eccoperand_t eccoperand_t;
-typedef struct /**/eccindexkey_t eccindexkey_t;
-typedef struct /**/eccmempool_t eccmempool_t;
-typedef struct /**/eccappendbuffer_t eccappendbuffer_t;
-typedef struct /**/eccoplist_t eccoplist_t;
-typedef struct /**/eccregexnode_t eccregexnode_t;
-typedef struct /**/eccstrbuffer_t eccstrbuffer_t;
-typedef struct /**/eccobjinterntype_t eccobjinterntype_t;
-typedef struct /**/eccobjbool_t eccobjbool_t;
-typedef struct /**/eccobjstring_t eccobjstring_t;
-typedef struct /**/eccobjfunction_t eccobjfunction_t;
-typedef struct /**/eccobjdate_t eccobjdate_t;
-typedef struct /**/eccobjerror_t eccobjerror_t;
-typedef struct /**/eccobjregexp_t eccobjregexp_t;
-typedef struct /**/eccobjnumber_t eccobjnumber_t;
-typedef struct /**/eccrxstate_t eccrxstate_t;
-typedef union /**/ecchashmap_t ecchashmap_t;
-typedef union /**/ecchashitem_t ecchashitem_t;
+typedef struct eccscriptcontext_t eccscriptcontext_t;
+typedef struct eccoperand_t eccoperand_t;
+typedef struct eccindexkey_t eccindexkey_t;
+typedef struct eccmempool_t eccmempool_t;
+typedef struct eccappendbuffer_t eccappendbuffer_t;
+
+typedef struct eccoplist_t eccoplist_t;
+
+typedef struct eccregexnode_t eccregexnode_t;
+
+typedef struct ecccharbuffer_t ecccharbuffer_t;
+typedef struct eccobjinterntype_t eccobjinterntype_t;
+typedef struct eccobjbool_t eccobjbool_t;
+typedef struct eccobjstring_t eccobjstring_t;
+typedef struct eccobjfunction_t eccobjfunction_t;
+typedef struct eccobjdate_t eccobjdate_t;
+typedef struct eccobjerror_t eccobjerror_t;
+typedef struct eccobjregexp_t eccobjregexp_t;
+typedef struct eccobjnumber_t eccobjnumber_t;
+
+typedef struct eccrxstate_t eccrxstate_t;
+
+typedef union ecchashmap_t ecchashmap_t;
+typedef union ecchashitem_t ecchashitem_t;
 
 typedef enum eccastlexflags_t eccastlexflags_t;
 typedef enum eccscriptevalflags_t eccscriptevalflags_t;
@@ -322,16 +327,16 @@ typedef enum eccvalflag_t eccvalflag_t;
 typedef enum eccvalmask_t eccvalmask_t;
 typedef enum eccvalhint_t eccvalhint_t;
 
-typedef struct /**/eccioinput_t eccioinput_t;
+typedef struct eccioinput_t eccioinput_t;
 
-typedef eccvalue_t (*eccnativefuncptr_t)(ecccontext_t* context);
+typedef eccvalue_t (*eccnativefuncptr_t)(eccstate_t* context);
 typedef void (*ecctypefnmark_t)(eccobject_t*);
 typedef void (*ecctypefncapture_t)(eccobject_t*);
 typedef void (*ecctypefnfinalize_t)(eccobject_t*);
 typedef int (*eccoperfncompareint_t)(int32_t, int32_t);
 typedef int (*eccoperfnwontoverflow_t)(int32_t, int32_t);
-typedef eccvalue_t (*eccoperfncomparevalue_t)(ecccontext_t *, eccvalue_t, eccvalue_t);
-typedef eccvalue_t (*eccoperfnvaluestep_t)(ecccontext_t *, eccvalue_t, eccvalue_t);
+typedef eccvalue_t (*eccoperfncomparevalue_t)(eccstate_t *, eccvalue_t, eccvalue_t);
+typedef eccvalue_t (*eccoperfnvaluestep_t)(eccstate_t *, eccvalue_t, eccvalue_t);
 
 
 struct ecctextchar_t
@@ -366,7 +371,7 @@ struct eccvalue_t
         char buffer[8];
         eccindexkey_t key;
         const ecctextstring_t* text;
-        eccstrbuffer_t* chars;
+        ecccharbuffer_t* chars;
         eccobject_t* object;
         eccobjerror_t* error;
         eccobjstring_t* string;
@@ -385,13 +390,13 @@ struct eccvalue_t
 };
 
 
-struct ecccontext_t
+struct eccstate_t
 {
     const eccoperand_t* ops;
     eccobject_t* refObject;
     eccobject_t* environment;
-    ecccontext_t* parent;
-    eccstate_t* ecc;
+    eccstate_t* parent;
+    eccscriptcontext_t* ecc;
     eccvalue_t thisvalue;
     const ecctextstring_t* text;
     const ecctextstring_t* textAlt;
@@ -407,15 +412,15 @@ struct ecccontext_t
 
 struct eccappendbuffer_t
 {
-    eccstrbuffer_t* sbufvalue;
+    ecccharbuffer_t* value;
     char buffer[9];
     uint8_t units;
 };
 
-struct eccstrbuffer_t
+struct ecccharbuffer_t
 {
     int32_t length;
-    int16_t refcount;
+    int16_t referenceCount;
     uint8_t flags;
     char bytes[1];
 };
@@ -430,14 +435,15 @@ struct eccobjinterntype_t
 
 };
 
+
 union ecchashitem_t
 {
-    eccvalue_t hmapitemvalue;
+    eccvalue_t value;
 };
 
 union ecchashmap_t
 {
-    eccvalue_t hmapmapvalue;
+    eccvalue_t value;
     uint16_t slot[16];
 };
 
@@ -451,7 +457,7 @@ struct eccobject_t
     uint32_t elementCapacity;
     uint16_t hashmapCount;
     uint16_t hashmapCapacity;
-    int16_t refcount;
+    int16_t referenceCount;
     uint8_t flags;
 };
 
@@ -469,8 +475,8 @@ struct eccrxstate_t
 struct eccobjregexp_t
 {
     eccobject_t object;
-    eccstrbuffer_t* pattern;
-    eccstrbuffer_t* source;
+    ecccharbuffer_t* pattern;
+    ecccharbuffer_t* source;
     eccregexnode_t* program;
     uint8_t count;
     uint8_t global : 1;
@@ -532,7 +538,7 @@ struct eccobjnumber_t
 struct eccobjstring_t
 {
     eccobject_t object;
-    eccstrbuffer_t* value;
+    ecccharbuffer_t* value;
 };
 
 struct eccenvidentity_t
@@ -552,7 +558,8 @@ struct eccioinput_t
     uint16_t attachedCount;
 };
 
-struct eccstate_t
+
+struct eccscriptcontext_t
 {
     jmp_buf* envList;
     uint16_t envCount;
@@ -570,17 +577,19 @@ struct eccstate_t
     unsigned sloppyMode : 1;
 };
 
+
 struct eccastlexer_t
 {
     eccioinput_t* input;
     uint32_t offset;
-    eccvalue_t tokenvalue;
+    eccvalue_t value;
     ecctextstring_t text;
     int didLineBreak;
     int allowRegex;
     int allowUnicodeOutsideLiteral;
     int disallowKeyword;
 };
+
 
 struct eccoperand_t
 {
@@ -589,11 +598,13 @@ struct eccoperand_t
     ecctextstring_t text;
 };
 
+
 struct eccoplist_t
 {
     uint32_t count;
     eccoperand_t* ops;
 };
+
 
 struct eccastdepths_t
 {
@@ -604,13 +615,13 @@ struct eccastdepths_t
 struct eccastparser_t
 {
     eccastlexer_t* lexer;
-    int currenttoken;
+    int previewToken;
     eccobjerror_t* error;
-    eccastdepths_t* depthlistvals;
-    uint16_t depthlistcount;
+    eccastdepths_t* depths;
+    uint16_t depthCount;
     eccobject_t* global;
     eccobjfunction_t* function;
-    uint16_t sourcedepth;
+    uint16_t sourceDepth;
     int preferInteger;
     int strictMode;
     int reserveGlobalSlots;
@@ -618,15 +629,15 @@ struct eccastparser_t
 
 struct eccmempool_t
 {
-    eccobjfunction_t** funclistvals;
-    uint32_t funclistcount;
-    uint32_t funclistcapacity;
-    eccobject_t** objlistvals;
-    uint32_t objlistcount;
-    uint32_t objlistcapacity;
-    eccstrbuffer_t** sbuflistvals;
-    uint32_t sbuflistcount;
-    uint32_t sbuflistcapacity;
+    eccobjfunction_t** functionList;
+    uint32_t functionCount;
+    uint32_t functionCapacity;
+    eccobject_t** objectList;
+    uint32_t objectCount;
+    uint32_t objectCapacity;
+    ecccharbuffer_t** charsList;
+    uint32_t charsCount;
+    uint32_t charsCapacity;
 };
 
 extern const int io_libecc_env_print_max;
@@ -785,12 +796,12 @@ void ecc_libmath_setup(void);
 
 
 eccvalue_t ecc_value_truth(int truth);
-eccvalue_t ecc_value_fromint(int32_t integer);
-eccvalue_t ecc_value_fromfloat(double binary);
+eccvalue_t ecc_value_integer(int32_t integer);
+eccvalue_t ecc_value_binary(double binary);
 eccvalue_t ecc_value_buffer(const char buffer[7], uint8_t units);
-eccvalue_t ecc_value_fromkey(eccindexkey_t key);
-eccvalue_t ecc_value_fromtext(const ecctextstring_t* text);
-eccvalue_t ecc_value_fromchars(eccstrbuffer_t* chars);
+eccvalue_t ecc_value_key(eccindexkey_t key);
+eccvalue_t ecc_value_text(const ecctextstring_t* text);
+eccvalue_t ecc_value_chars(ecccharbuffer_t* chars);
 eccvalue_t ecc_value_object(eccobject_t*);
 eccvalue_t ecc_value_error(eccobjerror_t*);
 eccvalue_t ecc_value_string(eccobjstring_t*);
@@ -808,43 +819,43 @@ int ecc_value_isstring(eccvalue_t);
 int ecc_value_isobject(eccvalue_t);
 int ecc_value_isdynamic(eccvalue_t);
 int ecc_value_istrue(eccvalue_t);
-eccvalue_t ecc_value_toprimitive(ecccontext_t*, eccvalue_t, int);
-eccvalue_t ecc_value_tobinary(ecccontext_t*, eccvalue_t);
-eccvalue_t ecc_value_tointeger(ecccontext_t*, eccvalue_t);
+eccvalue_t ecc_value_toprimitive(eccstate_t*, eccvalue_t, int);
+eccvalue_t ecc_value_tobinary(eccstate_t*, eccvalue_t);
+eccvalue_t ecc_value_tointeger(eccstate_t*, eccvalue_t);
 eccvalue_t ecc_value_binarytostring(double binary, int base);
-eccvalue_t ecc_value_tostring(ecccontext_t*, eccvalue_t);
+eccvalue_t ecc_value_tostring(eccstate_t*, eccvalue_t);
 int32_t ecc_value_stringlength(const eccvalue_t*);
 const char* ecc_value_stringbytes(const eccvalue_t*);
 ecctextstring_t ecc_value_textof(const eccvalue_t* string);
-eccvalue_t ecc_value_toobject(ecccontext_t*, eccvalue_t);
+eccvalue_t ecc_value_toobject(eccstate_t*, eccvalue_t);
 eccvalue_t ecc_value_objectvalue(eccobject_t*);
 int ecc_value_objectisarray(eccobject_t*);
 eccvalue_t ecc_value_totype(eccvalue_t);
-eccvalue_t ecc_value_equals(ecccontext_t*, eccvalue_t, eccvalue_t);
-eccvalue_t ecc_value_same(ecccontext_t*, eccvalue_t, eccvalue_t);
-eccvalue_t ecc_value_add(ecccontext_t*, eccvalue_t, eccvalue_t);
-eccvalue_t ecc_value_subtract(ecccontext_t*, eccvalue_t, eccvalue_t);
-eccvalue_t ecc_value_less(ecccontext_t*, eccvalue_t, eccvalue_t);
-eccvalue_t ecc_value_more(ecccontext_t*, eccvalue_t, eccvalue_t);
-eccvalue_t ecc_value_lessorequal(ecccontext_t*, eccvalue_t, eccvalue_t);
-eccvalue_t ecc_value_moreorequal(ecccontext_t*, eccvalue_t, eccvalue_t);
+eccvalue_t ecc_value_equals(eccstate_t*, eccvalue_t, eccvalue_t);
+eccvalue_t ecc_value_same(eccstate_t*, eccvalue_t, eccvalue_t);
+eccvalue_t ecc_value_add(eccstate_t*, eccvalue_t, eccvalue_t);
+eccvalue_t ecc_value_subtract(eccstate_t*, eccvalue_t, eccvalue_t);
+eccvalue_t ecc_value_less(eccstate_t*, eccvalue_t, eccvalue_t);
+eccvalue_t ecc_value_more(eccstate_t*, eccvalue_t, eccvalue_t);
+eccvalue_t ecc_value_lessorequal(eccstate_t*, eccvalue_t, eccvalue_t);
+eccvalue_t ecc_value_moreorequal(eccstate_t*, eccvalue_t, eccvalue_t);
 const char* ecc_value_typename(int);
 const char* ecc_value_maskname(int);
 void ecc_value_dumpto(eccvalue_t, FILE*);
 
-eccstate_t* ecc_script_create(void);
-void ecc_script_destroy(eccstate_t*);
-void ecc_script_addvalue(eccstate_t*, const char* name, eccvalue_t value, int);
-void ecc_script_addfunction(eccstate_t*, const char* name, const eccnativefuncptr_t native, int argumentCount, int);
-int ecc_script_evalinput(eccstate_t*, eccioinput_t*, int);
-void ecc_script_evalinputwithcontext(eccstate_t*, eccioinput_t*, ecccontext_t* context);
-jmp_buf* ecc_script_pushenv(eccstate_t*);
-void ecc_script_popenv(eccstate_t*);
-void ecc_script_jmpenv(eccstate_t*, eccvalue_t value);
+eccscriptcontext_t* ecc_script_create(void);
+void ecc_script_destroy(eccscriptcontext_t*);
+void ecc_script_addvalue(eccscriptcontext_t*, const char* name, eccvalue_t value, int);
+void ecc_script_addfunction(eccscriptcontext_t*, const char* name, const eccnativefuncptr_t native, int argumentCount, int);
+int ecc_script_evalinput(eccscriptcontext_t*, eccioinput_t*, int);
+void ecc_script_evalinputwithcontext(eccscriptcontext_t*, eccioinput_t*, eccstate_t* context);
+jmp_buf* ecc_script_pushenv(eccscriptcontext_t*);
+void ecc_script_popenv(eccscriptcontext_t*);
+void ecc_script_jmpenv(eccscriptcontext_t*, eccvalue_t value);
 void ecc_script_fatal(const char* format, ...);
-eccioinput_t* ecc_script_findinput(eccstate_t* self, ecctextstring_t text);
-void ecc_script_printtextinput(eccstate_t*, ecctextstring_t text, int fullLine);
-void ecc_script_garbagecollect(eccstate_t*);
+eccioinput_t* ecc_script_findinput(eccscriptcontext_t* self, ecctextstring_t text);
+void ecc_script_printtextinput(eccscriptcontext_t*, ecctextstring_t text, int fullLine);
+void ecc_script_garbagecollect(eccscriptcontext_t*);
 
 void ecc_globals_setup(void);
 void ecc_globals_teardown(void);
@@ -853,13 +864,13 @@ eccobjfunction_t *ecc_globals_create(void);
 
 int ecc_array_valueisarray(eccvalue_t value);
 uint32_t ecc_array_getlengtharrayval(eccvalue_t value);
-uint32_t ecc_array_getlength(ecccontext_t *context, eccobject_t *object);
-void ecc_array_objectresize(ecccontext_t *context, eccobject_t *object, uint32_t length);
-void ecc_array_valueappendfromelement(ecccontext_t *context, eccvalue_t value, eccobject_t *object, uint32_t *element);
-eccvalue_t ecc_array_tochars(ecccontext_t *context, eccvalue_t thisval, ecctextstring_t separator);
+uint32_t ecc_array_getlength(eccstate_t *context, eccobject_t *object);
+void ecc_array_objectresize(eccstate_t *context, eccobject_t *object, uint32_t length);
+void ecc_array_valueappendfromelement(eccstate_t *context, eccvalue_t value, eccobject_t *object, uint32_t *element);
+eccvalue_t ecc_array_tochars(eccstate_t *context, eccvalue_t thisval, ecctextstring_t separator);
 int ecc_array_gcd(int m, int n);
-void ecc_array_rotate(eccobject_t *object, ecccontext_t *context, uint32_t first, uint32_t half, uint32_t last);
-void ecc_array_sortinplace(ecccontext_t *context, eccobject_t *object, eccobjfunction_t *function, int first, int last);
+void ecc_array_rotate(eccobject_t *object, eccstate_t *context, uint32_t first, uint32_t half, uint32_t last);
+void ecc_array_sortinplace(eccstate_t *context, eccobject_t *object, eccobjfunction_t *function, int first, int last);
 void ecc_array_setup(void);
 void ecc_array_teardown(void);
 eccobject_t *ecc_array_create(void);
@@ -867,7 +878,7 @@ eccobject_t *ecc_array_createsized(uint32_t size);
 
 void ecc_string_setup(void);
 void ecc_string_teardown(void);
-eccobjstring_t *ecc_string_create(eccstrbuffer_t *chars);
+eccobjstring_t *ecc_string_create(ecccharbuffer_t *chars);
 eccvalue_t ecc_string_valueatindex(eccobjstring_t *self, int32_t index);
 ecctextstring_t ecc_string_textatindex(const char *chars, int32_t length, int32_t position, int enableReverse);
 int32_t ecc_string_unitindex(const char *chars, int32_t max, int32_t unit);
@@ -875,11 +886,11 @@ int32_t ecc_string_unitindex(const char *chars, int32_t max, int32_t unit);
 
 void ecc_regexp_setup(void);
 void ecc_regexp_teardown(void);
-eccobjregexp_t *ecc_regexp_create(eccstrbuffer_t *s, eccobjerror_t **error, int options);
-eccobjregexp_t *ecc_regexp_createwith(ecccontext_t *context, eccvalue_t pattern, eccvalue_t flags);
+eccobjregexp_t *ecc_regexp_create(ecccharbuffer_t *s, eccobjerror_t **error, int options);
+eccobjregexp_t *ecc_regexp_createwith(eccstate_t *context, eccvalue_t pattern, eccvalue_t flags);
 int ecc_regexp_matchwithstate(eccobjregexp_t *self, eccrxstate_t *state);
 
-eccvalue_t ecc_oper_dotrapop(ecccontext_t *context, int offset);
+eccvalue_t ecc_oper_dotrapop(eccstate_t *context, int offset);
 eccvalue_t ecc_oper_retain(eccvalue_t value);
 eccvalue_t ecc_oper_release(eccvalue_t value);
 int ecc_oper_intlessthan(int32_t a, int32_t b);
@@ -890,132 +901,132 @@ int ecc_oper_testintegerwontofpos(int32_t a, int32_t positive);
 int ecc_oper_testintwontofneg(int32_t a, int32_t negative);
 eccoperand_t ecc_oper_make(const eccnativefuncptr_t native, eccvalue_t value, ecctextstring_t text);
 const char *ecc_oper_tochars(const eccnativefuncptr_t native);
-eccvalue_t ecc_oper_nextopvalue(ecccontext_t *context);
+eccvalue_t ecc_oper_nextopvalue(eccstate_t *context);
 eccvalue_t ecc_oper_replacerefvalue(eccvalue_t *ref, eccvalue_t value);
-eccvalue_t ecc_oper_callops(ecccontext_t *context, eccobject_t *environment);
-eccvalue_t ecc_oper_callvalue(ecccontext_t *context, eccvalue_t value, eccvalue_t thisval, int32_t argumentCount, int construct, const ecctextstring_t *textCall);
-eccvalue_t ecc_oper_callopsrelease(ecccontext_t *context, eccobject_t *environment);
+eccvalue_t ecc_oper_callops(eccstate_t *context, eccobject_t *environment);
+eccvalue_t ecc_oper_callvalue(eccstate_t *context, eccvalue_t value, eccvalue_t thisval, int32_t argumentCount, int construct, const ecctextstring_t *textCall);
+eccvalue_t ecc_oper_callopsrelease(eccstate_t *context, eccobject_t *environment);
 void ecc_oper_makeenvwithargs(eccobject_t *environment, eccobject_t *arguments, int32_t parameterCount);
 void ecc_oper_makeenvandargswithva(eccobject_t *environment, int32_t parameterCount, int32_t argumentCount, va_list ap);
 void ecc_oper_populateenvwithva(eccobject_t *environment, int32_t parameterCount, int32_t argumentCount, va_list ap);
-void ecc_oper_makestackenvandargswithops(ecccontext_t *context, eccobject_t *environment, eccobject_t *arguments, int32_t parameterCount, int32_t argumentCount);
-void ecc_oper_makeenvandargswithops(ecccontext_t *context, eccobject_t *environment, eccobject_t *arguments, int32_t parameterCount, int32_t argumentCount);
-void ecc_oper_populateenvwithops(ecccontext_t *context, eccobject_t *environment, int32_t parameterCount, int32_t argumentCount);
-eccvalue_t ecc_oper_callfunctionarguments(ecccontext_t *context, int offset, eccobjfunction_t *function, eccvalue_t thisval, eccobject_t *arguments);
-eccvalue_t ecc_oper_callfunctionva(ecccontext_t *context, int offset, eccobjfunction_t *function, eccvalue_t thisval, int argumentCount, va_list ap);
-eccvalue_t ecc_oper_callfunction(ecccontext_t *context, eccobjfunction_t *const function, eccvalue_t thisval, int32_t argumentCount, int construct);
-eccvalue_t ecc_oper_construct(ecccontext_t *context);
-eccvalue_t ecc_oper_call(ecccontext_t *context);
-eccvalue_t ecc_oper_eval(ecccontext_t *context);
-eccvalue_t ecc_oper_noop(ecccontext_t *context);
-eccvalue_t ecc_oper_value(ecccontext_t *context);
-eccvalue_t ecc_oper_valueconstref(ecccontext_t *context);
-eccvalue_t ecc_oper_text(ecccontext_t *context);
-eccvalue_t ecc_oper_regexp(ecccontext_t *context);
-eccvalue_t ecc_oper_function(ecccontext_t *context);
-eccvalue_t ecc_oper_object(ecccontext_t *context);
-eccvalue_t ecc_oper_array(ecccontext_t *context);
-eccvalue_t ecc_oper_getthis(ecccontext_t *context);
-eccvalue_t *ecc_oper_localref(ecccontext_t *context, eccindexkey_t key, const ecctextstring_t *text, int required);
-eccvalue_t ecc_oper_createlocalref(ecccontext_t *context);
-eccvalue_t ecc_oper_getlocalrefornull(ecccontext_t *context);
-eccvalue_t ecc_oper_getlocalref(ecccontext_t *context);
-eccvalue_t ecc_oper_getlocal(ecccontext_t *context);
-eccvalue_t ecc_oper_setlocal(ecccontext_t *context);
-eccvalue_t ecc_oper_deletelocal(ecccontext_t *context);
-eccvalue_t ecc_oper_getlocalslotref(ecccontext_t *context);
-eccvalue_t ecc_oper_getlocalslot(ecccontext_t *context);
-eccvalue_t ecc_oper_setlocalslot(ecccontext_t *context);
-eccvalue_t ecc_oper_deletelocalslot(ecccontext_t *context);
-eccvalue_t ecc_oper_getparentslotref(ecccontext_t *context);
-eccvalue_t ecc_oper_getparentslot(ecccontext_t *context);
-eccvalue_t ecc_oper_setparentslot(ecccontext_t *context);
-eccvalue_t ecc_oper_deleteparentslot(ecccontext_t *context);
-void ecc_oper_prepareobject(ecccontext_t *context, eccvalue_t *object);
-eccvalue_t ecc_oper_getmemberref(ecccontext_t *context);
-eccvalue_t ecc_oper_getmember(ecccontext_t *context);
-eccvalue_t ecc_oper_setmember(ecccontext_t *context);
-eccvalue_t ecc_oper_callmember(ecccontext_t *context);
-eccvalue_t ecc_oper_deletemember(ecccontext_t *context);
-void ecc_oper_prepareobjectproperty(ecccontext_t *context, eccvalue_t *object, eccvalue_t *property);
-eccvalue_t ecc_oper_getpropertyref(ecccontext_t *context);
-eccvalue_t ecc_oper_getproperty(ecccontext_t *context);
-eccvalue_t ecc_oper_setproperty(ecccontext_t *context);
-eccvalue_t ecc_oper_callproperty(ecccontext_t *context);
-eccvalue_t ecc_oper_deleteproperty(ecccontext_t *context);
-eccvalue_t ecc_oper_pushenvironment(ecccontext_t *context);
-eccvalue_t ecc_oper_popenvironment(ecccontext_t *context);
-eccvalue_t ecc_oper_exchange(ecccontext_t *context);
-eccvalue_t ecc_oper_typeof(ecccontext_t *context);
-eccvalue_t ecc_oper_equal(ecccontext_t *context);
-eccvalue_t ecc_oper_notequal(ecccontext_t *context);
-eccvalue_t ecc_oper_identical(ecccontext_t *context);
-eccvalue_t ecc_oper_notidentical(ecccontext_t *context);
-eccvalue_t ecc_oper_less(ecccontext_t *context);
-eccvalue_t ecc_oper_lessorequal(ecccontext_t *context);
-eccvalue_t ecc_oper_more(ecccontext_t *context);
-eccvalue_t ecc_oper_moreorequal(ecccontext_t *context);
-eccvalue_t ecc_oper_instanceof(ecccontext_t *context);
-eccvalue_t ecc_oper_in(ecccontext_t *context);
-eccvalue_t ecc_oper_add(ecccontext_t *context);
-eccvalue_t ecc_oper_minus(ecccontext_t *context);
-eccvalue_t ecc_oper_multiply(ecccontext_t *context);
-eccvalue_t ecc_oper_divide(ecccontext_t *context);
-eccvalue_t ecc_oper_modulo(ecccontext_t *context);
-eccvalue_t ecc_oper_leftshift(ecccontext_t *context);
-eccvalue_t ecc_oper_rightshift(ecccontext_t *context);
-eccvalue_t ecc_oper_unsignedrightshift(ecccontext_t *context);
-eccvalue_t ecc_oper_bitwiseand(ecccontext_t *context);
-eccvalue_t ecc_oper_bitwisexor(ecccontext_t *context);
-eccvalue_t ecc_oper_bitwiseor(ecccontext_t *context);
-eccvalue_t ecc_oper_logicaland(ecccontext_t *context);
-eccvalue_t ecc_oper_logicalor(ecccontext_t *context);
-eccvalue_t ecc_oper_positive(ecccontext_t *context);
-eccvalue_t ecc_oper_negative(ecccontext_t *context);
-eccvalue_t ecc_oper_invert(ecccontext_t *context);
-eccvalue_t ecc_oper_logicalnot(ecccontext_t *context);
-eccvalue_t ecc_oper_incrementref(ecccontext_t *context);
-eccvalue_t ecc_oper_decrementref(ecccontext_t *context);
-eccvalue_t ecc_oper_postincrementref(ecccontext_t *context);
-eccvalue_t ecc_oper_postdecrementref(ecccontext_t *context);
-eccvalue_t ecc_oper_addassignref(ecccontext_t *context);
-eccvalue_t ecc_oper_minusassignref(ecccontext_t *context);
-eccvalue_t ecc_oper_multiplyassignref(ecccontext_t *context);
-eccvalue_t ecc_oper_divideassignref(ecccontext_t *context);
-eccvalue_t ecc_oper_moduloassignref(ecccontext_t *context);
-eccvalue_t ecc_oper_leftshiftassignref(ecccontext_t *context);
-eccvalue_t ecc_oper_rightshiftassignref(ecccontext_t *context);
-eccvalue_t ecc_oper_unsignedrightshiftassignref(ecccontext_t *context);
-eccvalue_t ecc_oper_bitandassignref(ecccontext_t *context);
-eccvalue_t ecc_oper_bitxorassignref(ecccontext_t *context);
-eccvalue_t ecc_oper_bitorassignref(ecccontext_t *context);
-eccvalue_t ecc_oper_debugger(ecccontext_t *context);
-eccvalue_t ecc_oper_try(ecccontext_t *context);
-eccvalue_t ecc_oper_throw(ecccontext_t *context);
-eccvalue_t ecc_oper_with(ecccontext_t *context);
-eccvalue_t ecc_oper_next(ecccontext_t *context);
-eccvalue_t ecc_oper_nextif(ecccontext_t *context);
-eccvalue_t ecc_oper_autoreleaseexpression(ecccontext_t *context);
-eccvalue_t ecc_oper_autoreleasediscard(ecccontext_t *context);
-eccvalue_t ecc_oper_expression(ecccontext_t *context);
-eccvalue_t ecc_oper_discard(ecccontext_t *context);
-eccvalue_t ecc_oper_discardn(ecccontext_t *context);
-eccvalue_t ecc_oper_jump(ecccontext_t *context);
-eccvalue_t ecc_oper_jumpif(ecccontext_t *context);
-eccvalue_t ecc_oper_jumpifnot(ecccontext_t *context);
-eccvalue_t ecc_oper_result(ecccontext_t *context);
-eccvalue_t ecc_oper_repopulate(ecccontext_t *context);
-eccvalue_t ecc_oper_resultvoid(ecccontext_t *context);
-eccvalue_t ecc_oper_switchop(ecccontext_t *context);
-eccvalue_t ecc_oper_breaker(ecccontext_t *context);
-eccvalue_t ecc_oper_iterate(ecccontext_t *context);
+void ecc_oper_makestackenvandargswithops(eccstate_t *context, eccobject_t *environment, eccobject_t *arguments, int32_t parameterCount, int32_t argumentCount);
+void ecc_oper_makeenvandargswithops(eccstate_t *context, eccobject_t *environment, eccobject_t *arguments, int32_t parameterCount, int32_t argumentCount);
+void ecc_oper_populateenvwithops(eccstate_t *context, eccobject_t *environment, int32_t parameterCount, int32_t argumentCount);
+eccvalue_t ecc_oper_callfunctionarguments(eccstate_t *context, int offset, eccobjfunction_t *function, eccvalue_t thisval, eccobject_t *arguments);
+eccvalue_t ecc_oper_callfunctionva(eccstate_t *context, int offset, eccobjfunction_t *function, eccvalue_t thisval, int argumentCount, va_list ap);
+eccvalue_t ecc_oper_callfunction(eccstate_t *context, eccobjfunction_t *const function, eccvalue_t thisval, int32_t argumentCount, int construct);
+eccvalue_t ecc_oper_construct(eccstate_t *context);
+eccvalue_t ecc_oper_call(eccstate_t *context);
+eccvalue_t ecc_oper_eval(eccstate_t *context);
+eccvalue_t ecc_oper_noop(eccstate_t *context);
+eccvalue_t ecc_oper_value(eccstate_t *context);
+eccvalue_t ecc_oper_valueconstref(eccstate_t *context);
+eccvalue_t ecc_oper_text(eccstate_t *context);
+eccvalue_t ecc_oper_regexp(eccstate_t *context);
+eccvalue_t ecc_oper_function(eccstate_t *context);
+eccvalue_t ecc_oper_object(eccstate_t *context);
+eccvalue_t ecc_oper_array(eccstate_t *context);
+eccvalue_t ecc_oper_getthis(eccstate_t *context);
+eccvalue_t *ecc_oper_localref(eccstate_t *context, eccindexkey_t key, const ecctextstring_t *text, int required);
+eccvalue_t ecc_oper_createlocalref(eccstate_t *context);
+eccvalue_t ecc_oper_getlocalrefornull(eccstate_t *context);
+eccvalue_t ecc_oper_getlocalref(eccstate_t *context);
+eccvalue_t ecc_oper_getlocal(eccstate_t *context);
+eccvalue_t ecc_oper_setlocal(eccstate_t *context);
+eccvalue_t ecc_oper_deletelocal(eccstate_t *context);
+eccvalue_t ecc_oper_getlocalslotref(eccstate_t *context);
+eccvalue_t ecc_oper_getlocalslot(eccstate_t *context);
+eccvalue_t ecc_oper_setlocalslot(eccstate_t *context);
+eccvalue_t ecc_oper_deletelocalslot(eccstate_t *context);
+eccvalue_t ecc_oper_getparentslotref(eccstate_t *context);
+eccvalue_t ecc_oper_getparentslot(eccstate_t *context);
+eccvalue_t ecc_oper_setparentslot(eccstate_t *context);
+eccvalue_t ecc_oper_deleteparentslot(eccstate_t *context);
+void ecc_oper_prepareobject(eccstate_t *context, eccvalue_t *object);
+eccvalue_t ecc_oper_getmemberref(eccstate_t *context);
+eccvalue_t ecc_oper_getmember(eccstate_t *context);
+eccvalue_t ecc_oper_setmember(eccstate_t *context);
+eccvalue_t ecc_oper_callmember(eccstate_t *context);
+eccvalue_t ecc_oper_deletemember(eccstate_t *context);
+void ecc_oper_prepareobjectproperty(eccstate_t *context, eccvalue_t *object, eccvalue_t *property);
+eccvalue_t ecc_oper_getpropertyref(eccstate_t *context);
+eccvalue_t ecc_oper_getproperty(eccstate_t *context);
+eccvalue_t ecc_oper_setproperty(eccstate_t *context);
+eccvalue_t ecc_oper_callproperty(eccstate_t *context);
+eccvalue_t ecc_oper_deleteproperty(eccstate_t *context);
+eccvalue_t ecc_oper_pushenvironment(eccstate_t *context);
+eccvalue_t ecc_oper_popenvironment(eccstate_t *context);
+eccvalue_t ecc_oper_exchange(eccstate_t *context);
+eccvalue_t ecc_oper_typeof(eccstate_t *context);
+eccvalue_t ecc_oper_equal(eccstate_t *context);
+eccvalue_t ecc_oper_notequal(eccstate_t *context);
+eccvalue_t ecc_oper_identical(eccstate_t *context);
+eccvalue_t ecc_oper_notidentical(eccstate_t *context);
+eccvalue_t ecc_oper_less(eccstate_t *context);
+eccvalue_t ecc_oper_lessorequal(eccstate_t *context);
+eccvalue_t ecc_oper_more(eccstate_t *context);
+eccvalue_t ecc_oper_moreorequal(eccstate_t *context);
+eccvalue_t ecc_oper_instanceof(eccstate_t *context);
+eccvalue_t ecc_oper_in(eccstate_t *context);
+eccvalue_t ecc_oper_add(eccstate_t *context);
+eccvalue_t ecc_oper_minus(eccstate_t *context);
+eccvalue_t ecc_oper_multiply(eccstate_t *context);
+eccvalue_t ecc_oper_divide(eccstate_t *context);
+eccvalue_t ecc_oper_modulo(eccstate_t *context);
+eccvalue_t ecc_oper_leftshift(eccstate_t *context);
+eccvalue_t ecc_oper_rightshift(eccstate_t *context);
+eccvalue_t ecc_oper_unsignedrightshift(eccstate_t *context);
+eccvalue_t ecc_oper_bitwiseand(eccstate_t *context);
+eccvalue_t ecc_oper_bitwisexor(eccstate_t *context);
+eccvalue_t ecc_oper_bitwiseor(eccstate_t *context);
+eccvalue_t ecc_oper_logicaland(eccstate_t *context);
+eccvalue_t ecc_oper_logicalor(eccstate_t *context);
+eccvalue_t ecc_oper_positive(eccstate_t *context);
+eccvalue_t ecc_oper_negative(eccstate_t *context);
+eccvalue_t ecc_oper_invert(eccstate_t *context);
+eccvalue_t ecc_oper_logicalnot(eccstate_t *context);
+eccvalue_t ecc_oper_incrementref(eccstate_t *context);
+eccvalue_t ecc_oper_decrementref(eccstate_t *context);
+eccvalue_t ecc_oper_postincrementref(eccstate_t *context);
+eccvalue_t ecc_oper_postdecrementref(eccstate_t *context);
+eccvalue_t ecc_oper_addassignref(eccstate_t *context);
+eccvalue_t ecc_oper_minusassignref(eccstate_t *context);
+eccvalue_t ecc_oper_multiplyassignref(eccstate_t *context);
+eccvalue_t ecc_oper_divideassignref(eccstate_t *context);
+eccvalue_t ecc_oper_moduloassignref(eccstate_t *context);
+eccvalue_t ecc_oper_leftshiftassignref(eccstate_t *context);
+eccvalue_t ecc_oper_rightshiftassignref(eccstate_t *context);
+eccvalue_t ecc_oper_unsignedrightshiftassignref(eccstate_t *context);
+eccvalue_t ecc_oper_bitandassignref(eccstate_t *context);
+eccvalue_t ecc_oper_bitxorassignref(eccstate_t *context);
+eccvalue_t ecc_oper_bitorassignref(eccstate_t *context);
+eccvalue_t ecc_oper_debugger(eccstate_t *context);
+eccvalue_t ecc_oper_try(eccstate_t *context);
+eccvalue_t ecc_oper_throw(eccstate_t *context);
+eccvalue_t ecc_oper_with(eccstate_t *context);
+eccvalue_t ecc_oper_next(eccstate_t *context);
+eccvalue_t ecc_oper_nextif(eccstate_t *context);
+eccvalue_t ecc_oper_autoreleaseexpression(eccstate_t *context);
+eccvalue_t ecc_oper_autoreleasediscard(eccstate_t *context);
+eccvalue_t ecc_oper_expression(eccstate_t *context);
+eccvalue_t ecc_oper_discard(eccstate_t *context);
+eccvalue_t ecc_oper_discardn(eccstate_t *context);
+eccvalue_t ecc_oper_jump(eccstate_t *context);
+eccvalue_t ecc_oper_jumpif(eccstate_t *context);
+eccvalue_t ecc_oper_jumpifnot(eccstate_t *context);
+eccvalue_t ecc_oper_result(eccstate_t *context);
+eccvalue_t ecc_oper_repopulate(eccstate_t *context);
+eccvalue_t ecc_oper_resultvoid(eccstate_t *context);
+eccvalue_t ecc_oper_switchop(eccstate_t *context);
+eccvalue_t ecc_oper_breaker(eccstate_t *context);
+eccvalue_t ecc_oper_iterate(eccstate_t *context);
 
-eccvalue_t ecc_oper_iterateintegerref(ecccontext_t *context, eccoperfncompareint_t, eccoperfnwontoverflow_t wontOverflow, eccoperfncomparevalue_t compareValue, eccoperfnvaluestep_t valueStep);
-eccvalue_t ecc_oper_iteratelessref(ecccontext_t *context);
-eccvalue_t ecc_oper_iteratelessorequalref(ecccontext_t *context);
-eccvalue_t ecc_oper_iteratemoreref(ecccontext_t *context);
-eccvalue_t ecc_oper_iteratemoreorequalref(ecccontext_t *context);
-eccvalue_t ecc_oper_iterateinref(ecccontext_t *context);
+eccvalue_t ecc_oper_iterateintegerref(eccstate_t *context, eccoperfncompareint_t, eccoperfnwontoverflow_t wontOverflow, eccoperfncomparevalue_t compareValue, eccoperfnvaluestep_t valueStep);
+eccvalue_t ecc_oper_iteratelessref(eccstate_t *context);
+eccvalue_t ecc_oper_iteratelessorequalref(eccstate_t *context);
+eccvalue_t ecc_oper_iteratemoreref(eccstate_t *context);
+eccvalue_t ecc_oper_iteratemoreorequalref(eccstate_t *context);
+eccvalue_t ecc_oper_iterateinref(eccstate_t *context);
 
 eccastlexer_t* ecc_astlex_createwithinput(eccioinput_t*);
 void ecc_astlex_destroy(eccastlexer_t*);
@@ -1040,45 +1051,51 @@ void ecc_astparse_destroy(eccastparser_t*);
 eccobjfunction_t* ecc_astparse_parsewithenvironment(eccastparser_t* const, eccobject_t* environment, eccobject_t* global);
 
 
-void ecc_context_rangeerror(ecccontext_t *self, eccstrbuffer_t *chars);
-void ecc_context_referenceerror(ecccontext_t *self, eccstrbuffer_t *chars);
-void ecc_context_syntaxerror(ecccontext_t *self, eccstrbuffer_t *chars);
-void ecc_context_typeerror(ecccontext_t *self, eccstrbuffer_t *chars);
-void ecc_context_urierror(ecccontext_t *self, eccstrbuffer_t *chars);
-void ecc_context_throw(ecccontext_t *self, eccvalue_t value);
-eccvalue_t ecc_context_callfunction(ecccontext_t *self, eccobjfunction_t *function, eccvalue_t thisval, int argumentCount, ...);
-int ecc_context_argumentcount(ecccontext_t *self);
-eccvalue_t ecc_context_argument(ecccontext_t *self, int argumentIndex);
-void ecc_context_replaceargument(ecccontext_t *self, int argumentIndex, eccvalue_t value);
-eccvalue_t ecc_context_this(ecccontext_t *self);
-void ecc_context_assertthistype(ecccontext_t *self, int type);
-void ecc_context_assertthismask(ecccontext_t *self, int mask);
-void ecc_context_assertthiscoercibleprimitive(ecccontext_t *self);
-void ecc_context_settext(ecccontext_t *self, const ecctextstring_t *text);
-void ecc_context_settexts(ecccontext_t *self, const ecctextstring_t *text, const ecctextstring_t *textAlt);
-void ecc_context_settextindex(ecccontext_t *self, int index);
-void ecc_context_settextindexargument(ecccontext_t *self, int argument);
-ecctextstring_t ecc_context_textseek(ecccontext_t *self);
-void ecc_context_rewindstatement(ecccontext_t *context);
-void ecc_context_printbacktrace(ecccontext_t *context);
-eccobject_t *ecc_context_environmentroot(ecccontext_t *context);
+/* ../context.c */
+static __inline __uint16_t __bswap_16(__uint16_t __bsx);
+static __inline __uint32_t __bswap_32(__uint32_t __bsx);
+static __inline __uint16_t __uint16_identity(__uint16_t __x);
+static __inline __uint32_t __uint32_identity(__uint32_t __x);
+static __inline __uint64_t __uint64_identity(__uint64_t __x);
+void ecc_context_rangeerror(eccstate_t *self, ecccharbuffer_t *chars);
+void ecc_context_referenceerror(eccstate_t *self, ecccharbuffer_t *chars);
+void ecc_context_syntaxerror(eccstate_t *self, ecccharbuffer_t *chars);
+void ecc_context_typeerror(eccstate_t *self, ecccharbuffer_t *chars);
+void ecc_context_urierror(eccstate_t *self, ecccharbuffer_t *chars);
+void ecc_context_throw(eccstate_t *self, eccvalue_t value);
+eccvalue_t ecc_context_callfunction(eccstate_t *self, eccobjfunction_t *function, eccvalue_t thisval, int argumentCount, ...);
+int ecc_context_argumentcount(eccstate_t *self);
+eccvalue_t ecc_context_argument(eccstate_t *self, int argumentIndex);
+void ecc_context_replaceargument(eccstate_t *self, int argumentIndex, eccvalue_t value);
+eccvalue_t ecc_context_this(eccstate_t *self);
+void ecc_context_assertthistype(eccstate_t *self, int type);
+void ecc_context_assertthismask(eccstate_t *self, int mask);
+void ecc_context_assertthiscoercibleprimitive(eccstate_t *self);
+void ecc_context_settext(eccstate_t *self, const ecctextstring_t *text);
+void ecc_context_settexts(eccstate_t *self, const ecctextstring_t *text, const ecctextstring_t *textAlt);
+void ecc_context_settextindex(eccstate_t *self, int index);
+void ecc_context_settextindexargument(eccstate_t *self, int argument);
+ecctextstring_t ecc_context_textseek(eccstate_t *self);
+void ecc_context_rewindstatement(eccstate_t *context);
+void ecc_context_printbacktrace(eccstate_t *context);
+eccobject_t *ecc_context_environmentroot(eccstate_t *context);
 
 
 
-eccstrbuffer_t* ecc_strbuf_createva(int32_t length, const char* format, va_list ap);
-eccstrbuffer_t* ecc_strbuf_create(const char* format, ...);
-eccstrbuffer_t* ecc_strbuf_createsized(int32_t length);
-eccstrbuffer_t* ecc_strbuf_createwithbytes(int32_t length, const char* bytes);
-void ecc_strbuf_beginappend(eccappendbuffer_t*);
-void ecc_strbuf_append(eccappendbuffer_t*, const char* format, ...);
-void ecc_strbuf_appendcodepoint(eccappendbuffer_t*, uint32_t cp);
-void ecc_strbuf_appendvalue(eccappendbuffer_t*, ecccontext_t* context, eccvalue_t value);
-void ecc_strbuf_appendbinary(eccappendbuffer_t*, double binary, int base);
-void ecc_strbuf_normalizebinary(eccappendbuffer_t*);
-eccvalue_t ecc_strbuf_endappend(eccappendbuffer_t*);
-void ecc_strbuf_destroy(eccstrbuffer_t*);
-uint8_t ecc_strbuf_codepointlength(uint32_t cp);
-uint8_t ecc_strbuf_writecodepoint(char*, uint32_t cp);
+ecccharbuffer_t* ecc_charbuf_createva(int32_t length, const char* format, va_list ap);
+ecccharbuffer_t* ecc_charbuf_create(const char* format, ...);
+ecccharbuffer_t* ecc_charbuf_createsized(int32_t length);
+ecccharbuffer_t* ecc_charbuf_createwithbytes(int32_t length, const char* bytes);
+void ecc_charbuf_beginappend(eccappendbuffer_t*);
+void ecc_charbuf_append(eccappendbuffer_t*, const char* format, ...);
+void ecc_charbuf_appendcodepoint(eccappendbuffer_t*, uint32_t cp);
+void ecc_charbuf_appendvalue(eccappendbuffer_t*, eccstate_t* context, eccvalue_t value);
+void ecc_charbuf_appendbinary(eccappendbuffer_t*, double binary, int base);
+void ecc_charbuf_normalizebinary(eccappendbuffer_t*);
+eccvalue_t ecc_charbuf_endappend(eccappendbuffer_t*);
+void ecc_charbuf_destroy(ecccharbuffer_t*);
+uint8_t ecc_charbuf_codepointlength(uint32_t cp);
+uint8_t ecc_charbuf_writecodepoint(char*, uint32_t cp);
 
 
 
@@ -1109,29 +1126,29 @@ eccobject_t* ecc_object_initializesized(eccobject_t*, eccobject_t* prototype, ui
 eccobject_t* ecc_object_finalize(eccobject_t*);
 eccobject_t* ecc_object_copy(const eccobject_t* original);
 void ecc_object_destroy(eccobject_t*);
-eccvalue_t ecc_object_getmember(ecccontext_t*, eccobject_t*, eccindexkey_t key);
-eccvalue_t ecc_object_putmember(ecccontext_t*, eccobject_t*, eccindexkey_t key, eccvalue_t);
+eccvalue_t ecc_object_getmember(eccstate_t*, eccobject_t*, eccindexkey_t key);
+eccvalue_t ecc_object_putmember(eccstate_t*, eccobject_t*, eccindexkey_t key, eccvalue_t);
 eccvalue_t* ecc_object_member(eccobject_t*, eccindexkey_t key, int);
 eccvalue_t* ecc_object_addmember(eccobject_t*, eccindexkey_t key, eccvalue_t, int);
 int ecc_object_deletemember(eccobject_t*, eccindexkey_t key);
-eccvalue_t ecc_object_getelement(ecccontext_t*, eccobject_t*, uint32_t index);
-eccvalue_t ecc_object_putelement(ecccontext_t*, eccobject_t*, uint32_t index, eccvalue_t);
+eccvalue_t ecc_object_getelement(eccstate_t*, eccobject_t*, uint32_t index);
+eccvalue_t ecc_object_putelement(eccstate_t*, eccobject_t*, uint32_t index, eccvalue_t);
 eccvalue_t* ecc_object_element(eccobject_t*, uint32_t index, int);
 eccvalue_t* ecc_object_addelement(eccobject_t*, uint32_t index, eccvalue_t, int);
 int ecc_object_deleteelement(eccobject_t*, uint32_t index);
-eccvalue_t ecc_object_getproperty(ecccontext_t*, eccobject_t*, eccvalue_t primitive);
-eccvalue_t ecc_object_putproperty(ecccontext_t*, eccobject_t*, eccvalue_t primitive, eccvalue_t);
+eccvalue_t ecc_object_getproperty(eccstate_t*, eccobject_t*, eccvalue_t primitive);
+eccvalue_t ecc_object_putproperty(eccstate_t*, eccobject_t*, eccvalue_t primitive, eccvalue_t);
 eccvalue_t* ecc_object_property(eccobject_t*, eccvalue_t primitive, int);
 eccvalue_t* ecc_object_addproperty(eccobject_t*, eccvalue_t primitive, eccvalue_t, int);
 int ecc_object_deleteproperty(eccobject_t*, eccvalue_t primitive);
-eccvalue_t ecc_object_putvalue(ecccontext_t*, eccobject_t*, eccvalue_t*, eccvalue_t);
-eccvalue_t ecc_object_getvalue(ecccontext_t*, eccobject_t*, eccvalue_t*);
+eccvalue_t ecc_object_putvalue(eccstate_t*, eccobject_t*, eccvalue_t*, eccvalue_t);
+eccvalue_t ecc_object_getvalue(eccstate_t*, eccobject_t*, eccvalue_t*);
 void ecc_object_packvalue(eccobject_t*);
 void ecc_object_stripmap(eccobject_t*);
 void ecc_object_reserveslots(eccobject_t*, uint16_t slots);
 int ecc_object_resizeelement(eccobject_t*, uint32_t size);
 void ecc_object_populateelementwithclist(eccobject_t*, uint32_t count, const char* list[]);
-eccvalue_t ecc_object_tostringfn(ecccontext_t*);
+eccvalue_t ecc_object_tostringfn(eccstate_t*);
 void ecc_object_dumpto(eccobject_t*, FILE* file);
 
 
@@ -1156,7 +1173,7 @@ ecctextstring_t ecc_oplist_text(eccoplist_t* oplist);
 
 void eccfunction_capture(eccobject_t *object);
 void eccfunction_mark(eccobject_t *object);
-eccvalue_t eccfunction_toChars(ecccontext_t *context, eccvalue_t value);
+eccvalue_t eccfunction_toChars(eccstate_t *context, eccvalue_t value);
 void ecc_function_setup(void);
 void ecc_function_teardown(void);
 eccobjfunction_t *ecc_function_create(eccobject_t *environment);
@@ -1184,12 +1201,12 @@ const ecctextstring_t* ecc_keyidx_textof(eccindexkey_t);
 void ecc_keyidx_dumpto(eccindexkey_t, FILE*);
 
 void ecc_mempool_markobject(eccobject_t *object);
-void ecc_mempool_markchars(eccstrbuffer_t *chars);
+void ecc_mempool_markchars(ecccharbuffer_t *chars);
 void ecc_mempool_setup(void);
 void ecc_mempool_teardown(void);
 void ecc_mempool_addfunction(eccobjfunction_t *function);
 void ecc_mempool_addobject(eccobject_t *object);
-void ecc_mempool_addchars(eccstrbuffer_t *chars);
+void ecc_mempool_addchars(ecccharbuffer_t *chars);
 void ecc_mempool_unmarkall(void);
 void ecc_mempool_markvalue(eccvalue_t value);
 void ecc_mempool_releaseobject(eccobject_t *object);
@@ -1216,19 +1233,19 @@ void ecc_env_newline(void);
 double ecc_env_currenttime(void);
 
 
-eccstrbuffer_t *ecc_error_messagevalue(ecccontext_t *context, eccvalue_t value);
-eccvalue_t ecc_error_tochars(ecccontext_t *context, eccvalue_t value);
-eccobjerror_t *ecc_error_create(eccobject_t *errorPrototype, ecctextstring_t text, eccstrbuffer_t *message);
+ecccharbuffer_t *ecc_error_messagevalue(eccstate_t *context, eccvalue_t value);
+eccvalue_t ecc_error_tochars(eccstate_t *context, eccvalue_t value);
+eccobjerror_t *ecc_error_create(eccobject_t *errorPrototype, ecctextstring_t text, ecccharbuffer_t *message);
 void ecc_error_setupbo(eccobjfunction_t **pctor, const eccnativefuncptr_t native, int paramcnt, eccobject_t **prototype, const ecctextstring_t *name);
 void ecc_error_setup(void);
 void ecc_error_teardown(void);
-eccobjerror_t *ecc_error_error(ecctextstring_t text, eccstrbuffer_t *message);
-eccobjerror_t *ecc_error_rangeerror(ecctextstring_t text, eccstrbuffer_t *message);
-eccobjerror_t *ecc_error_referenceerror(ecctextstring_t text, eccstrbuffer_t *message);
-eccobjerror_t *ecc_error_syntaxerror(ecctextstring_t text, eccstrbuffer_t *message);
-eccobjerror_t *ecc_error_typeerror(ecctextstring_t text, eccstrbuffer_t *message);
-eccobjerror_t *ecc_error_urierror(ecctextstring_t text, eccstrbuffer_t *message);
-eccobjerror_t *ecc_error_evalerror(ecctextstring_t text, eccstrbuffer_t *message);
+eccobjerror_t *ecc_error_error(ecctextstring_t text, ecccharbuffer_t *message);
+eccobjerror_t *ecc_error_rangeerror(ecctextstring_t text, ecccharbuffer_t *message);
+eccobjerror_t *ecc_error_referenceerror(ecctextstring_t text, ecccharbuffer_t *message);
+eccobjerror_t *ecc_error_syntaxerror(ecctextstring_t text, ecccharbuffer_t *message);
+eccobjerror_t *ecc_error_typeerror(ecctextstring_t text, ecccharbuffer_t *message);
+eccobjerror_t *ecc_error_urierror(ecctextstring_t text, ecccharbuffer_t *message);
+eccobjerror_t *ecc_error_evalerror(ecctextstring_t text, ecccharbuffer_t *message);
 void ecc_error_destroy(eccobjerror_t *self);
 
 

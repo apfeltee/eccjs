@@ -8,7 +8,7 @@
 
 #include "ecc.h"
 
-static eccscriptcontext_t* ecc;
+static eccstate_t* ecc;
 static int testVerbosity = 0;
 static int testErrorCount = 0;
 static int testCount = 0;
@@ -145,7 +145,7 @@ static int alertUsage(void)
     return EXIT_FAILURE;
 }
 
-static eccvalue_t printhelper(eccstate_t* context, FILE* file, bool space, bool linefeed)
+static eccvalue_t printhelper(ecccontext_t* context, FILE* file, bool space, bool linefeed)
 {
     int index;
     int count;
@@ -166,17 +166,17 @@ static eccvalue_t printhelper(eccstate_t* context, FILE* file, bool space, bool 
     return ECCValConstUndefined;
 }
 
-static eccvalue_t cfn_alert(eccstate_t* context)
+static eccvalue_t cfn_alert(ecccontext_t* context)
 {
     return printhelper(context, stderr, true, true);
 }
 
-static eccvalue_t cfn_print(eccstate_t* context)
+static eccvalue_t cfn_print(ecccontext_t* context)
 {
     return printhelper(context, stdout, false, false);
 }
 
-static eccvalue_t cfn_println(eccstate_t* context)
+static eccvalue_t cfn_println(ecccontext_t* context)
 {
     return printhelper(context, stdout, false, true);
 }

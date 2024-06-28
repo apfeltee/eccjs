@@ -8,14 +8,14 @@
 #include "ecc.h"
 
 
-eccvalue_t objerrorfn_toString(eccstate_t *context);
-eccvalue_t objerrorfn_ctorError(eccstate_t *context);
-eccvalue_t objerrorfn_ctorRangeError(eccstate_t *context);
-eccvalue_t objerrorfn_ctorReferenceError(eccstate_t *context);
-eccvalue_t objerrorfn_ctorSyntaxError(eccstate_t *context);
-eccvalue_t objerrorfn_ctorTypeError(eccstate_t *context);
-eccvalue_t objerrorfn_ctorUriError(eccstate_t *context);
-eccvalue_t objerrorfn_ctorEvalError(eccstate_t *context);
+eccvalue_t objerrorfn_toString(ecccontext_t *context);
+eccvalue_t objerrorfn_ctorError(ecccontext_t *context);
+eccvalue_t objerrorfn_ctorRangeError(ecccontext_t *context);
+eccvalue_t objerrorfn_ctorReferenceError(ecccontext_t *context);
+eccvalue_t objerrorfn_ctorSyntaxError(ecccontext_t *context);
+eccvalue_t objerrorfn_ctorTypeError(ecccontext_t *context);
+eccvalue_t objerrorfn_ctorUriError(ecccontext_t *context);
+eccvalue_t objerrorfn_ctorEvalError(ecccontext_t *context);
 
 
 eccobject_t* ECC_Prototype_Error = NULL;
@@ -39,7 +39,7 @@ const eccobjinterntype_t ECC_Type_Error = {
 };
 
 
-ecccharbuffer_t* ecc_error_messagevalue(eccstate_t* context, eccvalue_t value)
+eccstrbuffer_t* ecc_error_messagevalue(ecccontext_t* context, eccvalue_t value)
 {
     if(value.type == ECC_VALTYPE_UNDEFINED)
         return NULL;
@@ -48,11 +48,11 @@ ecccharbuffer_t* ecc_error_messagevalue(eccstate_t* context, eccvalue_t value)
     else
     {
         value = ecc_value_tostring(context, value);
-        return ecc_charbuf_create("%.*s", ecc_value_stringlength(&value), ecc_value_stringbytes(&value));
+        return ecc_strbuf_create("%.*s", ecc_value_stringlength(&value), ecc_value_stringbytes(&value));
     }
 }
 
-eccvalue_t ecc_error_tochars(eccstate_t* context, eccvalue_t value)
+eccvalue_t ecc_error_tochars(ecccontext_t* context, eccvalue_t value)
 {
     eccvalue_t name, message;
     eccobject_t* self;
@@ -65,28 +65,28 @@ eccvalue_t ecc_error_tochars(eccstate_t* context, eccvalue_t value)
 
     name = ecc_object_getmember(context, self, ECC_ConstKey_name);
     if(name.type == ECC_VALTYPE_UNDEFINED)
-        name = ecc_value_text(&ECC_ConstString_ErrorName);
+        name = ecc_value_fromtext(&ECC_ConstString_ErrorName);
     else
         name = ecc_value_tostring(context, name);
 
     message = ecc_object_getmember(context, self, ECC_ConstKey_message);
     if(message.type == ECC_VALTYPE_UNDEFINED)
-        message = ecc_value_text(&ECC_ConstString_Empty);
+        message = ecc_value_fromtext(&ECC_ConstString_Empty);
     else
         message = ecc_value_tostring(context, message);
 
-    ecc_charbuf_beginappend(&chars);
-    ecc_charbuf_appendvalue(&chars, context, name);
+    ecc_strbuf_beginappend(&chars);
+    ecc_strbuf_appendvalue(&chars, context, name);
 
     if(ecc_value_stringlength(&name) && ecc_value_stringlength(&message))
-        ecc_charbuf_append(&chars, ": ");
+        ecc_strbuf_append(&chars, ": ");
 
-    ecc_charbuf_appendvalue(&chars, context, message);
+    ecc_strbuf_appendvalue(&chars, context, message);
 
-    return ecc_charbuf_endappend(&chars);
+    return ecc_strbuf_endappend(&chars);
 }
 
-eccobjerror_t* ecc_error_create(eccobject_t* errorPrototype, ecctextstring_t text, ecccharbuffer_t* message)
+eccobjerror_t* ecc_error_create(eccobject_t* errorPrototype, ecctextstring_t text, eccstrbuffer_t* message)
 {
     eccobjerror_t* self = (eccobjerror_t*)malloc(sizeof(*self));
     ecc_mempool_addobject(&self->object);
@@ -98,77 +98,77 @@ eccobjerror_t* ecc_error_create(eccobject_t* errorPrototype, ecctextstring_t tex
 
     if(message)
     {
-        ecc_object_addmember(&self->object, ECC_ConstKey_message, ecc_value_chars(message), ECC_VALFLAG_HIDDEN);
-        ++message->referenceCount;
+        ecc_object_addmember(&self->object, ECC_ConstKey_message, ecc_value_fromchars(message), ECC_VALFLAG_HIDDEN);
+        ++message->refcount;
     }
 
     return self;
 }
 
-eccvalue_t objerrorfn_toString(eccstate_t* context)
+eccvalue_t objerrorfn_toString(ecccontext_t* context)
 {
     ecc_context_assertthismask(context, ECC_VALMASK_OBJECT);
 
     return ecc_error_tochars(context, context->thisvalue);
 }
 
-eccvalue_t objerrorfn_ctorError(eccstate_t* context)
+eccvalue_t objerrorfn_ctorError(ecccontext_t* context)
 {
-    ecccharbuffer_t* message;
+    eccstrbuffer_t* message;
 
     message = ecc_error_messagevalue(context, ecc_context_argument(context, 0));
     ecc_context_settextindex(context, ECC_CTXINDEXTYPE_CALL);
     return ecc_value_error(ecc_error_error(ecc_context_textseek(context), message));
 }
 
-eccvalue_t objerrorfn_ctorRangeError(eccstate_t* context)
+eccvalue_t objerrorfn_ctorRangeError(ecccontext_t* context)
 {
-    ecccharbuffer_t* message;
+    eccstrbuffer_t* message;
 
     message = ecc_error_messagevalue(context, ecc_context_argument(context, 0));
     ecc_context_settextindex(context, ECC_CTXINDEXTYPE_CALL);
     return ecc_value_error(ecc_error_rangeerror(ecc_context_textseek(context), message));
 }
 
-eccvalue_t objerrorfn_ctorReferenceError(eccstate_t* context)
+eccvalue_t objerrorfn_ctorReferenceError(ecccontext_t* context)
 {
-    ecccharbuffer_t* message;
+    eccstrbuffer_t* message;
 
     message = ecc_error_messagevalue(context, ecc_context_argument(context, 0));
     ecc_context_settextindex(context, ECC_CTXINDEXTYPE_CALL);
     return ecc_value_error(ecc_error_referenceerror(ecc_context_textseek(context), message));
 }
 
-eccvalue_t objerrorfn_ctorSyntaxError(eccstate_t* context)
+eccvalue_t objerrorfn_ctorSyntaxError(ecccontext_t* context)
 {
-    ecccharbuffer_t* message;
+    eccstrbuffer_t* message;
 
     message = ecc_error_messagevalue(context, ecc_context_argument(context, 0));
     ecc_context_settextindex(context, ECC_CTXINDEXTYPE_CALL);
     return ecc_value_error(ecc_error_syntaxerror(ecc_context_textseek(context), message));
 }
 
-eccvalue_t objerrorfn_ctorTypeError(eccstate_t* context)
+eccvalue_t objerrorfn_ctorTypeError(ecccontext_t* context)
 {
-    ecccharbuffer_t* message;
+    eccstrbuffer_t* message;
 
     message = ecc_error_messagevalue(context, ecc_context_argument(context, 0));
     ecc_context_settextindex(context, ECC_CTXINDEXTYPE_CALL);
     return ecc_value_error(ecc_error_typeerror(ecc_context_textseek(context), message));
 }
 
-eccvalue_t objerrorfn_ctorUriError(eccstate_t* context)
+eccvalue_t objerrorfn_ctorUriError(ecccontext_t* context)
 {
-    ecccharbuffer_t* message;
+    eccstrbuffer_t* message;
 
     message = ecc_error_messagevalue(context, ecc_context_argument(context, 0));
     ecc_context_settextindex(context, ECC_CTXINDEXTYPE_CALL);
     return ecc_value_error(ecc_error_urierror(ecc_context_textseek(context), message));
 }
 
-eccvalue_t objerrorfn_ctorEvalError(eccstate_t* context)
+eccvalue_t objerrorfn_ctorEvalError(ecccontext_t* context)
 {
-    ecccharbuffer_t* message;
+    eccstrbuffer_t* message;
 
     message = ecc_error_messagevalue(context, ecc_context_argument(context, 0));
     ecc_context_settextindex(context, ECC_CTXINDEXTYPE_CALL);
@@ -181,7 +181,7 @@ ecc_error_setupbo(eccobjfunction_t** pctor, const eccnativefuncptr_t native, int
     (void)paramcnt;
     ecc_function_setupbuiltinobject(pctor, native, 1, prototype, ecc_value_error(ecc_error_error(*name, NULL)), &ECC_Type_Error);
 
-    ecc_object_addmember(*prototype, ECC_ConstKey_name, ecc_value_text(name), ECC_VALFLAG_HIDDEN);
+    ecc_object_addmember(*prototype, ECC_ConstKey_name, ecc_value_fromtext(name), ECC_VALFLAG_HIDDEN);
 }
 
 // MARK: - Methods
@@ -200,7 +200,7 @@ void ecc_error_setup(void)
 
     ecc_function_addto(ECC_Prototype_Error, "toString", objerrorfn_toString, 0, h);
 
-    ecc_object_addmember(ECC_Prototype_Error, ECC_ConstKey_message, ecc_value_text(&ECC_ConstString_Empty), h);
+    ecc_object_addmember(ECC_Prototype_Error, ECC_ConstKey_message, ecc_value_fromtext(&ECC_ConstString_Empty), h);
 }
 
 void ecc_error_teardown(void)
@@ -224,37 +224,37 @@ void ecc_error_teardown(void)
     ECC_CtorFunc_ErrorUriError = NULL;
 }
 
-eccobjerror_t* ecc_error_error(ecctextstring_t text, ecccharbuffer_t* message)
+eccobjerror_t* ecc_error_error(ecctextstring_t text, eccstrbuffer_t* message)
 {
     return ecc_error_create(ECC_Prototype_Error, text, message);
 }
 
-eccobjerror_t* ecc_error_rangeerror(ecctextstring_t text, ecccharbuffer_t* message)
+eccobjerror_t* ecc_error_rangeerror(ecctextstring_t text, eccstrbuffer_t* message)
 {
     return ecc_error_create(ECC_Prototype_ErrorRangeError, text, message);
 }
 
-eccobjerror_t* ecc_error_referenceerror(ecctextstring_t text, ecccharbuffer_t* message)
+eccobjerror_t* ecc_error_referenceerror(ecctextstring_t text, eccstrbuffer_t* message)
 {
     return ecc_error_create(ECC_Prototype_ErrorReferenceError, text, message);
 }
 
-eccobjerror_t* ecc_error_syntaxerror(ecctextstring_t text, ecccharbuffer_t* message)
+eccobjerror_t* ecc_error_syntaxerror(ecctextstring_t text, eccstrbuffer_t* message)
 {
     return ecc_error_create(ECC_Prototype_ErrorSyntaxError, text, message);
 }
 
-eccobjerror_t* ecc_error_typeerror(ecctextstring_t text, ecccharbuffer_t* message)
+eccobjerror_t* ecc_error_typeerror(ecctextstring_t text, eccstrbuffer_t* message)
 {
     return ecc_error_create(ECC_Prototype_ErrorTypeError, text, message);
 }
 
-eccobjerror_t* ecc_error_urierror(ecctextstring_t text, ecccharbuffer_t* message)
+eccobjerror_t* ecc_error_urierror(ecctextstring_t text, eccstrbuffer_t* message)
 {
     return ecc_error_create(ECC_Prototype_ErrorUriError, text, message);
 }
 
-eccobjerror_t* ecc_error_evalerror(ecctextstring_t text, ecccharbuffer_t* message)
+eccobjerror_t* ecc_error_evalerror(ecctextstring_t text, eccstrbuffer_t* message)
 {
     return ecc_error_create(ECC_Prototype_ErrorEvalError, text, message);
 }

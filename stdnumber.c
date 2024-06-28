@@ -7,12 +7,12 @@
 //
 #include "ecc.h"
 
-static eccvalue_t objnumberfn_toExponential(eccstate_t *context);
-static eccvalue_t objnumberfn_toFixed(eccstate_t *context);
-static eccvalue_t objnumberfn_toPrecision(eccstate_t *context);
-static eccvalue_t objnumberfn_toString(eccstate_t *context);
-static eccvalue_t objnumberfn_valueOf(eccstate_t *context);
-static eccvalue_t objnumberfn_constructor(eccstate_t *context);
+static eccvalue_t objnumberfn_toExponential(ecccontext_t *context);
+static eccvalue_t objnumberfn_toFixed(ecccontext_t *context);
+static eccvalue_t objnumberfn_toPrecision(ecccontext_t *context);
+static eccvalue_t objnumberfn_toString(ecccontext_t *context);
+static eccvalue_t objnumberfn_valueOf(ecccontext_t *context);
+static eccvalue_t objnumberfn_constructor(ecccontext_t *context);
 
 
 
@@ -23,7 +23,7 @@ const eccobjinterntype_t ECC_Type_Number = {
     .text = &ECC_ConstString_NumberType,
 };
 
-static eccvalue_t objnumberfn_toExponential(eccstate_t* context)
+static eccvalue_t objnumberfn_toExponential(ecccontext_t* context)
 {
     eccappendbuffer_t chars;
     eccvalue_t value;
@@ -37,31 +37,31 @@ static eccvalue_t objnumberfn_toExponential(eccstate_t* context)
     {
         precision = ecc_value_tobinary(context, value).data.binary;
         if(precision <= -1 || precision >= 21)
-            ecc_context_rangeerror(context, ecc_charbuf_create("precision '%.0f' out of range", precision));
+            ecc_context_rangeerror(context, ecc_strbuf_create("precision '%.0f' out of range", precision));
 
         if(isnan(precision))
             precision = 0;
     }
 
     if(isnan(binary))
-        return ecc_value_text(&ECC_ConstString_Nan);
+        return ecc_value_fromtext(&ECC_ConstString_Nan);
     else if(binary == INFINITY)
-        return ecc_value_text(&ECC_ConstString_Infinity);
+        return ecc_value_fromtext(&ECC_ConstString_Infinity);
     else if(binary == -INFINITY)
-        return ecc_value_text(&ECC_ConstString_NegativeInfinity);
+        return ecc_value_fromtext(&ECC_ConstString_NegativeInfinity);
 
-    ecc_charbuf_beginappend(&chars);
+    ecc_strbuf_beginappend(&chars);
 
     if(value.type != ECC_VALTYPE_UNDEFINED)
-        ecc_charbuf_append(&chars, "%.*e", (int32_t)precision, binary);
+        ecc_strbuf_append(&chars, "%.*e", (int32_t)precision, binary);
     else
-        ecc_charbuf_append(&chars, "%e", binary);
+        ecc_strbuf_append(&chars, "%e", binary);
 
-    ecc_charbuf_normalizebinary(&chars);
-    return ecc_charbuf_endappend(&chars);
+    ecc_strbuf_normalizebinary(&chars);
+    return ecc_strbuf_endappend(&chars);
 }
 
-static eccvalue_t objnumberfn_toFixed(eccstate_t* context)
+static eccvalue_t objnumberfn_toFixed(ecccontext_t* context)
 {
     eccappendbuffer_t chars;
     eccvalue_t value;
@@ -75,30 +75,30 @@ static eccvalue_t objnumberfn_toFixed(eccstate_t* context)
     {
         precision = ecc_value_tobinary(context, value).data.binary;
         if(precision <= -1 || precision >= 21)
-            ecc_context_rangeerror(context, ecc_charbuf_create("precision '%.0f' out of range", precision));
+            ecc_context_rangeerror(context, ecc_strbuf_create("precision '%.0f' out of range", precision));
 
         if(isnan(precision))
             precision = 0;
     }
 
     if(isnan(binary))
-        return ecc_value_text(&ECC_ConstString_Nan);
+        return ecc_value_fromtext(&ECC_ConstString_Nan);
     else if(binary == INFINITY)
-        return ecc_value_text(&ECC_ConstString_Infinity);
+        return ecc_value_fromtext(&ECC_ConstString_Infinity);
     else if(binary == -INFINITY)
-        return ecc_value_text(&ECC_ConstString_NegativeInfinity);
+        return ecc_value_fromtext(&ECC_ConstString_NegativeInfinity);
 
-    ecc_charbuf_beginappend(&chars);
+    ecc_strbuf_beginappend(&chars);
 
     if(binary <= -1e+21 || binary >= 1e+21)
-        ecc_charbuf_appendbinary(&chars, binary, 10);
+        ecc_strbuf_appendbinary(&chars, binary, 10);
     else
-        ecc_charbuf_append(&chars, "%.*f", (int32_t)precision, binary);
+        ecc_strbuf_append(&chars, "%.*f", (int32_t)precision, binary);
 
-    return ecc_charbuf_endappend(&chars);
+    return ecc_strbuf_endappend(&chars);
 }
 
-static eccvalue_t objnumberfn_toPrecision(eccstate_t* context)
+static eccvalue_t objnumberfn_toPrecision(ecccontext_t* context)
 {
     eccappendbuffer_t chars;
     eccvalue_t value;
@@ -113,7 +113,7 @@ static eccvalue_t objnumberfn_toPrecision(eccstate_t* context)
         precision = ecc_value_tobinary(context, value).data.binary;
         if(precision <= -1 || precision >= 101)
         {
-            ecc_context_rangeerror(context, ecc_charbuf_create("precision '%.0f' out of range", precision));
+            ecc_context_rangeerror(context, ecc_strbuf_create("precision '%.0f' out of range", precision));
         }
         if(isnan(precision))
         {
@@ -122,30 +122,30 @@ static eccvalue_t objnumberfn_toPrecision(eccstate_t* context)
     }
     if(isnan(binary))
     {
-        return ecc_value_text(&ECC_ConstString_Nan);
+        return ecc_value_fromtext(&ECC_ConstString_Nan);
     }
     else if(binary == INFINITY)
     {
-        return ecc_value_text(&ECC_ConstString_Infinity);
+        return ecc_value_fromtext(&ECC_ConstString_Infinity);
     }
     else if(binary == -INFINITY)
     {
-        return ecc_value_text(&ECC_ConstString_NegativeInfinity);
+        return ecc_value_fromtext(&ECC_ConstString_NegativeInfinity);
     }
-    ecc_charbuf_beginappend(&chars);
+    ecc_strbuf_beginappend(&chars);
 
     if(value.type != ECC_VALTYPE_UNDEFINED)
     {
-        ecc_charbuf_append(&chars, "%.*g", (int32_t)precision, binary);
-        ecc_charbuf_normalizebinary(&chars);
+        ecc_strbuf_append(&chars, "%.*g", (int32_t)precision, binary);
+        ecc_strbuf_normalizebinary(&chars);
     }
     else
-        ecc_charbuf_appendbinary(&chars, binary, 10);
+        ecc_strbuf_appendbinary(&chars, binary, 10);
 
-    return ecc_charbuf_endappend(&chars);
+    return ecc_strbuf_endappend(&chars);
 }
 
-static eccvalue_t objnumberfn_toString(eccstate_t* context)
+static eccvalue_t objnumberfn_toString(ecccontext_t* context)
 {
     eccvalue_t value;
     int32_t radix = 10;
@@ -158,7 +158,7 @@ static eccvalue_t objnumberfn_toString(eccstate_t* context)
         radix = ecc_value_tointeger(context, value).data.integer;
         if(radix < 2 || radix > 36)
         {
-            ecc_context_rangeerror(context, ecc_charbuf_create("radix must be an integer at least 2 and no greater than 36"));
+            ecc_context_rangeerror(context, ecc_strbuf_create("radix must be an integer at least 2 and no greater than 36"));
         }
         if(radix != 10 && ((binary < (double)LONG_MIN) || (binary > (double)LONG_MAX)))
         {
@@ -168,20 +168,20 @@ static eccvalue_t objnumberfn_toString(eccstate_t* context)
     return ecc_value_binarytostring(binary, radix);
 }
 
-static eccvalue_t objnumberfn_valueOf(eccstate_t* context)
+static eccvalue_t objnumberfn_valueOf(ecccontext_t* context)
 {
     ecc_context_assertthistype(context, ECC_VALTYPE_NUMBER);
 
-    return ecc_value_binary(context->thisvalue.data.number->value);
+    return ecc_value_fromfloat(context->thisvalue.data.number->value);
 }
 
-static eccvalue_t objnumberfn_constructor(eccstate_t* context)
+static eccvalue_t objnumberfn_constructor(ecccontext_t* context)
 {
     eccvalue_t value;
 
     value = ecc_context_argument(context, 0);
     if(value.type == ECC_VALTYPE_UNDEFINED)
-        value = ecc_value_binary(value.check == 1 ? NAN : 0);
+        value = ecc_value_fromfloat(value.check == 1 ? NAN : 0);
     else
         value = ecc_value_tobinary(context, value);
 
@@ -201,11 +201,11 @@ void ecc_number_setup()
 
     ecc_function_setupbuiltinobject(&ECC_CtorFunc_Number, objnumberfn_constructor, 1, &ECC_Prototype_Number, ecc_value_number(ecc_number_create(0)), &ECC_Type_Number);
 
-    ecc_function_addmember(ECC_CtorFunc_Number, "MAX_VALUE", ecc_value_binary(DBL_MAX), r | h | s);
-    ecc_function_addmember(ECC_CtorFunc_Number, "MIN_VALUE", ecc_value_binary(DBL_MIN * DBL_EPSILON), r | h | s);
-    ecc_function_addmember(ECC_CtorFunc_Number, "NaN", ecc_value_binary(NAN), r | h | s);
-    ecc_function_addmember(ECC_CtorFunc_Number, "NEGATIVE_INFINITY", ecc_value_binary(-INFINITY), r | h | s);
-    ecc_function_addmember(ECC_CtorFunc_Number, "POSITIVE_INFINITY", ecc_value_binary(INFINITY), r | h | s);
+    ecc_function_addmember(ECC_CtorFunc_Number, "MAX_VALUE", ecc_value_fromfloat(DBL_MAX), r | h | s);
+    ecc_function_addmember(ECC_CtorFunc_Number, "MIN_VALUE", ecc_value_fromfloat(DBL_MIN * DBL_EPSILON), r | h | s);
+    ecc_function_addmember(ECC_CtorFunc_Number, "NaN", ecc_value_fromfloat(NAN), r | h | s);
+    ecc_function_addmember(ECC_CtorFunc_Number, "NEGATIVE_INFINITY", ecc_value_fromfloat(-INFINITY), r | h | s);
+    ecc_function_addmember(ECC_CtorFunc_Number, "POSITIVE_INFINITY", ecc_value_fromfloat(INFINITY), r | h | s);
 
     ecc_function_addto(ECC_Prototype_Number, "toString", objnumberfn_toString, 1, h);
     ecc_function_addto(ECC_Prototype_Number, "toLocaleString", objnumberfn_toString, 1, h);

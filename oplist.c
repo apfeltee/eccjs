@@ -20,7 +20,6 @@ eccoplist_t* ecc_oplist_create(const eccnativefuncptr_t native, eccvalue_t value
 void ecc_oplist_destroy(eccoplist_t* self)
 {
     assert(self);
-
     free(self->ops), self->ops = NULL;
     free(self), self = NULL;
 }
@@ -28,10 +27,13 @@ void ecc_oplist_destroy(eccoplist_t* self)
 eccoplist_t* ecc_oplist_join(eccoplist_t* self, eccoplist_t* with)
 {
     if(!self)
+    {
         return with;
+    }
     else if(!with)
+    {
         return self;
-
+    }
     self->ops = (eccoperand_t*)realloc(self->ops, sizeof(*self->ops) * (self->count + with->count));
     memcpy(self->ops + self->count, with->ops, sizeof(*self->ops) * with->count);
     self->count += with->count;
@@ -65,14 +67,14 @@ eccoplist_t* ecc_oplist_joindiscarded(eccoplist_t* self, uint16_t n, eccoplist_t
 {
     while(n > 16)
     {
-        self = ecc_oplist_append(self, ecc_oper_make(ecc_oper_discardn, ecc_value_integer(16), ECC_ConstString_Empty));
+        self = ecc_oplist_append(self, ecc_oper_make(ecc_oper_discardn, ecc_value_fromint(16), ECC_ConstString_Empty));
         n -= 16;
     }
 
     if(n == 1)
         self = ecc_oplist_append(self, ecc_oper_make(ecc_oper_discard, ECCValConstUndefined, ECC_ConstString_Empty));
     else
-        self = ecc_oplist_append(self, ecc_oper_make(ecc_oper_discardn, ecc_value_integer(n), ECC_ConstString_Empty));
+        self = ecc_oplist_append(self, ecc_oper_make(ecc_oper_discardn, ecc_value_fromint(n), ECC_ConstString_Empty));
 
     return ecc_oplist_join(self, with);
 }
@@ -165,7 +167,7 @@ eccoplist_t* ecc_oplist_createloop(eccoplist_t* initial, eccoplist_t* condition,
                 eccvalue_t stepValue;
                 if(step->count == 2 && (step->ops[0].native == ecc_oper_incrementref || step->ops[0].native == ecc_oper_postincrementref))
                 {
-                    stepValue = ecc_value_integer(1);
+                    stepValue = ecc_value_fromint(1);
                 }
                 else if(step->count == 3 && step->ops[0].native == ecc_oper_addassignref && step->ops[2].native == ecc_oper_value
                         && step->ops[2].value.type == ECC_VALTYPE_INTEGER && step->ops[2].value.data.integer > 0)
@@ -198,7 +200,7 @@ eccoplist_t* ecc_oplist_createloop(eccoplist_t* initial, eccoplist_t* condition,
                 body = ecc_oplist_unshift(
                     ecc_oper_make(
                         (condition->ops[0].native == ecc_oper_less ? ecc_oper_iteratelessref : ecc_oper_iteratelessorequalref),
-                        ecc_value_integer(body->count),
+                        ecc_value_fromint(body->count),
                         condition->ops[0].text
                     ), body
                 );
@@ -213,7 +215,7 @@ eccoplist_t* ecc_oplist_createloop(eccoplist_t* initial, eccoplist_t* condition,
                 eccvalue_t stepValue;
                 if(step->count == 2 && (step->ops[0].native == ecc_oper_decrementref || step->ops[0].native == ecc_oper_postdecrementref))
                 {
-                    stepValue = ecc_value_integer(1);
+                    stepValue = ecc_value_fromint(1);
                 }
                 else if(step->count == 3 && step->ops[0].native == ecc_oper_minusassignref && step->ops[2].native == ecc_oper_value
                         && step->ops[2].value.type == ECC_VALTYPE_INTEGER && step->ops[2].value.data.integer > 0)
@@ -240,7 +242,7 @@ eccoplist_t* ecc_oplist_createloop(eccoplist_t* initial, eccoplist_t* condition,
                 ecc_oplist_unshift(ecc_oper_make(ecc_oper_getlocalref, condition->ops[1].value, condition->ops[1].text), body));
                 body = ecc_oplist_unshift(ecc_oper_make(ecc_oper_value, stepValue, condition->ops[0].text), body);
                 body = ecc_oplist_unshift(ecc_oper_make(condition->ops[0].native == ecc_oper_more ? ecc_oper_iteratemoreref : ecc_oper_iteratemoreorequalref,
-                                                                  ecc_value_integer(body->count), condition->ops[0].text),
+                                                                  ecc_value_fromint(body->count), condition->ops[0].text),
                                                 body);
                 ecc_oplist_destroy(condition), condition = NULL;
                 ecc_oplist_destroy(step), step = NULL;
@@ -269,11 +271,11 @@ eccoplist_t* ecc_oplist_createloop(eccoplist_t* initial, eccoplist_t* condition,
         {
             skipOpCount += condition->count + body->count;
             body = ecc_oplist_append(body, ecc_oper_make(ecc_oper_value, ecc_value_truth(1), ECC_ConstString_Empty));
-            body = ecc_oplist_append(body, ecc_oper_make(ecc_oper_jump, ecc_value_integer(-body->count - 1), ECC_ConstString_Empty));
+            body = ecc_oplist_append(body, ecc_oper_make(ecc_oper_jump, ecc_value_fromint(-body->count - 1), ECC_ConstString_Empty));
         }
         body = ecc_oplist_join(ecc_oplist_join(step, condition), body);
-        body = ecc_oplist_unshift(ecc_oper_make(ecc_oper_jump, ecc_value_integer(body->count), ECC_ConstString_Empty), body);
-        initial = ecc_oplist_append(initial, ecc_oper_make(ecc_oper_iterate, ecc_value_integer(skipOpCount), ECC_ConstString_Empty));
+        body = ecc_oplist_unshift(ecc_oper_make(ecc_oper_jump, ecc_value_fromint(body->count), ECC_ConstString_Empty), body);
+        initial = ecc_oplist_append(initial, ecc_oper_make(ecc_oper_iterate, ecc_value_fromint(skipOpCount), ECC_ConstString_Empty));
         return ecc_oplist_join(initial, body);
     }
 }
@@ -336,9 +338,9 @@ void ecc_oplist_optimizewithenvironment(eccoplist_t* self, eccobject_t* environm
             {
                 for(slot = searchenv->hashmapCount; slot--;)
                 {
-                    if(searchenv->hashmap[slot].value.check == 1)
+                    if(searchenv->hashmap[slot].hmapmapvalue.check == 1)
                     {
-                        if(ecc_keyidx_isequal(searchenv->hashmap[slot].value.key, self->ops[index].value.data.key))
+                        if(ecc_keyidx_isequal(searchenv->hashmap[slot].hmapmapvalue.key, self->ops[index].value.data.key))
                         {
                             if(!level)
                             {
@@ -351,7 +353,7 @@ void ecc_oplist_optimizewithenvironment(eccoplist_t* self, eccobject_t* environm
                                     self->ops[index].native == ecc_oper_deletelocal       ? ecc_oper_deletelocalslot :
                                     NULL
                                     ,
-                                    ecc_value_integer(slot), self->ops[index].text);
+                                    ecc_value_fromint(slot), self->ops[index].text);
                             }
                             else if(slot <= INT16_MAX && level <= INT16_MAX)
                             {
@@ -364,7 +366,7 @@ void ecc_oplist_optimizewithenvironment(eccoplist_t* self, eccobject_t* environm
                                     self->ops[index].native == ecc_oper_deletelocal       ? ecc_oper_deleteparentslot :
                                     NULL
                                     ,
-                                    ecc_value_integer((level << 16) | slot), self->ops[index].text);
+                                    ecc_value_fromint((level << 16) | slot), self->ops[index].text);
                             }
                             else
                             {
@@ -376,7 +378,7 @@ void ecc_oplist_optimizewithenvironment(eccoplist_t* self, eccobject_t* environm
                                 if(op.native == ecc_oper_call && self->ops[index - 2].native == ecc_oper_result)
                                 {
                                     self->ops[index - 1] = ecc_oper_make(ecc_oper_repopulate, op.value, op.text);
-                                    self->ops[index] = ecc_oper_make(ecc_oper_value, ecc_value_integer(-index - 1), self->ops[index].text);
+                                    self->ops[index] = ecc_oper_make(ecc_oper_value, ecc_value_fromint(-index - 1), self->ops[index].text);
                                 }
                             }
                             goto found;

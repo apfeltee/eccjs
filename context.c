@@ -9,32 +9,32 @@
 
 
 
-void ecc_context_rangeerror(eccstate_t* self, ecccharbuffer_t* chars)
+void ecc_context_rangeerror(ecccontext_t* self, eccstrbuffer_t* chars)
 {
     ecc_context_throw(self, ecc_value_error(ecc_error_rangeerror(ecc_context_textseek(self), chars)));
 }
 
-void ecc_context_referenceerror(eccstate_t* self, ecccharbuffer_t* chars)
+void ecc_context_referenceerror(ecccontext_t* self, eccstrbuffer_t* chars)
 {
     ecc_context_throw(self, ecc_value_error(ecc_error_referenceerror(ecc_context_textseek(self), chars)));
 }
 
-void ecc_context_syntaxerror(eccstate_t* self, ecccharbuffer_t* chars)
+void ecc_context_syntaxerror(ecccontext_t* self, eccstrbuffer_t* chars)
 {
     ecc_context_throw(self, ecc_value_error(ecc_error_syntaxerror(ecc_context_textseek(self), chars)));
 }
 
-void ecc_context_typeerror(eccstate_t* self, ecccharbuffer_t* chars)
+void ecc_context_typeerror(ecccontext_t* self, eccstrbuffer_t* chars)
 {
     ecc_context_throw(self, ecc_value_error(ecc_error_typeerror(ecc_context_textseek(self), chars)));
 }
 
-void ecc_context_urierror(eccstate_t* self, ecccharbuffer_t* chars)
+void ecc_context_urierror(ecccontext_t* self, eccstrbuffer_t* chars)
 {
     ecc_context_throw(self, ecc_value_error(ecc_error_urierror(ecc_context_textseek(self), chars)));
 }
 
-void ecc_context_throw(eccstate_t * self, eccvalue_t value)
+void ecc_context_throw(ecccontext_t * self, eccvalue_t value)
 {
     if(value.type == ECC_VALTYPE_ERROR)
         self->ecc->text = value.data.error->text;
@@ -53,7 +53,7 @@ void ecc_context_throw(eccstate_t * self, eccvalue_t value)
             message = ecc_value_tostring(self, value);
 
         if(name.type == ECC_VALTYPE_UNDEFINED)
-            name = ecc_value_text(&ECC_ConstString_ErrorName);
+            name = ecc_value_fromtext(&ECC_ConstString_ErrorName);
 
         ecc_env_newline();
         ecc_env_printerror(ecc_value_stringlength(&name), ecc_value_stringbytes(&name), "%.*s", ecc_value_stringlength(&message), ecc_value_stringbytes(&message));
@@ -64,7 +64,7 @@ void ecc_context_throw(eccstate_t * self, eccvalue_t value)
     ecc_script_jmpenv(self->ecc, value);
 }
 
-eccvalue_t ecc_context_callfunction(eccstate_t* self, eccobjfunction_t* function, eccvalue_t thisval, int argumentCount, ...)
+eccvalue_t ecc_context_callfunction(ecccontext_t* self, eccobjfunction_t* function, eccvalue_t thisval, int argumentCount, ...)
 {
     eccvalue_t result;
     va_list ap;
@@ -82,100 +82,100 @@ eccvalue_t ecc_context_callfunction(eccstate_t* self, eccobjfunction_t* function
     return result;
 }
 
-int ecc_context_argumentcount(eccstate_t* self)
+int ecc_context_argumentcount(ecccontext_t* self)
 {
-    if(self->environment->hashmap[2].value.type == ECC_VALTYPE_OBJECT)
-        return self->environment->hashmap[2].value.data.object->elementCount;
+    if(self->environment->hashmap[2].hmapmapvalue.type == ECC_VALTYPE_OBJECT)
+        return self->environment->hashmap[2].hmapmapvalue.data.object->elementCount;
     else
         return self->environment->hashmapCount - 3;
 }
 
-eccvalue_t ecc_context_argument(eccstate_t* self, int argumentIndex)
+eccvalue_t ecc_context_argument(ecccontext_t* self, int argumentIndex)
 {
     self->textIndex = argumentIndex + 4;
 
-    if(self->environment->hashmap[2].value.type == ECC_VALTYPE_OBJECT)
+    if(self->environment->hashmap[2].hmapmapvalue.type == ECC_VALTYPE_OBJECT)
     {
-        if(argumentIndex < (int)self->environment->hashmap[2].value.data.object->elementCount)
-            return self->environment->hashmap[2].value.data.object->element[argumentIndex].value;
+        if(argumentIndex < (int)self->environment->hashmap[2].hmapmapvalue.data.object->elementCount)
+            return self->environment->hashmap[2].hmapmapvalue.data.object->element[argumentIndex].hmapitemvalue;
     }
     else if(argumentIndex < (self->environment->hashmapCount - 3))
-        return self->environment->hashmap[argumentIndex + 3].value;
+        return self->environment->hashmap[argumentIndex + 3].hmapmapvalue;
 
     return ECCValConstNone;
 }
 
-void ecc_context_replaceargument(eccstate_t* self, int argumentIndex, eccvalue_t value)
+void ecc_context_replaceargument(ecccontext_t* self, int argumentIndex, eccvalue_t value)
 {
-    if(self->environment->hashmap[2].value.type == ECC_VALTYPE_OBJECT)
+    if(self->environment->hashmap[2].hmapmapvalue.type == ECC_VALTYPE_OBJECT)
     {
-        if(argumentIndex < (int)self->environment->hashmap[2].value.data.object->elementCount)
-            self->environment->hashmap[2].value.data.object->element[argumentIndex].value = value;
+        if(argumentIndex < (int)self->environment->hashmap[2].hmapmapvalue.data.object->elementCount)
+            self->environment->hashmap[2].hmapmapvalue.data.object->element[argumentIndex].hmapitemvalue = value;
     }
     else if(argumentIndex < self->environment->hashmapCount - 3)
-        self->environment->hashmap[argumentIndex + 3].value = value;
+        self->environment->hashmap[argumentIndex + 3].hmapmapvalue = value;
 }
 
-eccvalue_t ecc_context_this(eccstate_t* self)
+eccvalue_t ecc_context_this(ecccontext_t* self)
 {
     self->textIndex = ECC_CTXINDEXTYPE_THIS;
     return self->thisvalue;
 }
 
-void ecc_context_assertthistype(eccstate_t* self, int type)
+void ecc_context_assertthistype(ecccontext_t* self, int type)
 {
     if(self->thisvalue.type != type)
     {
         ecc_context_settextindex(self, ECC_CTXINDEXTYPE_THIS);
-        ecc_context_typeerror(self, ecc_charbuf_create("'this' is not a %s", ecc_value_typename(type)));
+        ecc_context_typeerror(self, ecc_strbuf_create("'this' is not a %s", ecc_value_typename(type)));
     }
 }
 
-void ecc_context_assertthismask(eccstate_t* self, int mask)
+void ecc_context_assertthismask(ecccontext_t* self, int mask)
 {
     if(!(self->thisvalue.type & mask))
     {
         ecc_context_settextindex(self, ECC_CTXINDEXTYPE_THIS);
-        ecc_context_typeerror(self, ecc_charbuf_create("'this' is not a %s", ecc_value_maskname(mask)));
+        ecc_context_typeerror(self, ecc_strbuf_create("'this' is not a %s", ecc_value_maskname(mask)));
     }
 }
 
-void ecc_context_assertthiscoercibleprimitive(eccstate_t* self)
+void ecc_context_assertthiscoercibleprimitive(ecccontext_t* self)
 {
     if(self->thisvalue.type == ECC_VALTYPE_UNDEFINED || self->thisvalue.type == ECC_VALTYPE_NULL)
     {
         ecc_context_settextindex(self, ECC_CTXINDEXTYPE_THIS);
-        ecc_context_typeerror(self, ecc_charbuf_create("'this' cannot be null or undefined"));
+        ecc_context_typeerror(self, ecc_strbuf_create("'this' cannot be null or undefined"));
     }
 }
 
-void ecc_context_settext(eccstate_t* self, const ecctextstring_t* text)
+void ecc_context_settext(ecccontext_t* self, const ecctextstring_t* text)
 {
     self->textIndex = ECC_CTXINDEXTYPE_SAVED;
     self->text = text;
 }
 
-void ecc_context_settexts(eccstate_t* self, const ecctextstring_t* text, const ecctextstring_t* textAlt)
+void ecc_context_settexts(ecccontext_t* self, const ecctextstring_t* text, const ecctextstring_t* textAlt)
 {
     self->textIndex = ECC_CTXINDEXTYPE_SAVED;
     self->text = text;
     self->textAlt = textAlt;
 }
 
-void ecc_context_settextindex(eccstate_t* self, int index)
+void ecc_context_settextindex(ecccontext_t* self, int index)
 {
     self->textIndex = index;
 }
 
-void ecc_context_settextindexargument(eccstate_t* self, int argument)
+void ecc_context_settextindexargument(ecccontext_t* self, int argument)
 {
     self->textIndex = argument + 4;
 }
 
-ecctextstring_t ecc_context_textseek(eccstate_t* self)
+ecctextstring_t ecc_context_textseek(ecccontext_t* self)
 {
     const char* bytes;
-    eccstate_t seek = *self;
+    ecccontext_t seek = *self;
     uint32_t breakArray = 0, argumentCount = 0;
     ecctextstring_t callText;
     int index;
@@ -255,16 +255,16 @@ ecctextstring_t ecc_context_textseek(eccstate_t* self)
     return seek.ops->text;
 }
 
-void ecc_context_rewindstatement(eccstate_t* context)
+void ecc_context_rewindstatement(ecccontext_t* context)
 {
     while(!(context->ops->text.flags & ECC_TEXTFLAG_BREAKFLAG))
         --context->ops;
 }
 
-void ecc_context_printbacktrace(eccstate_t* context)
+void ecc_context_printbacktrace(ecccontext_t* context)
 {
     int depth = context->depth, count, skip;
-    eccstate_t frame;
+    ecccontext_t frame;
 
     if(depth > 12)
     {
@@ -300,7 +300,7 @@ void ecc_context_printbacktrace(eccstate_t* context)
     }
 }
 
-eccobject_t* ecc_context_environmentroot(eccstate_t* context)
+eccobject_t* ecc_context_environmentroot(ecccontext_t* context)
 {
     eccobject_t* environment = context->strictMode ? context->environment : &context->ecc->global->environment;
 

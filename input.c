@@ -232,7 +232,7 @@ int32_t ecc_ioinput_findline(eccioinput_t* self, ecctextstring_t text)
 eccvalue_t ecc_ioinput_attachvalue(eccioinput_t* self, eccvalue_t value)
 {
     if(value.type == ECC_VALTYPE_CHARS)
-        value.data.chars->referenceCount++;
+        value.data.chars->refcount++;
 
     self->attached = (eccvalue_t*)realloc(self->attached, sizeof(*self->attached) * (self->attachedCount + 1));
     self->attached[self->attachedCount] = value;

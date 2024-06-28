@@ -18,7 +18,7 @@ struct eccjsonparser_t
 
     // reviver
 
-    eccstate_t context;
+    ecccontext_t context;
     eccobjfunction_t* function;
     eccobject_t* arguments;
     const eccoperand_t* ops;
@@ -33,13 +33,13 @@ struct eccjsonstringify_t
 
     // replacer
 
-    eccstate_t context;
+    ecccontext_t context;
     eccobjfunction_t* function;
     eccobject_t* arguments;
     const eccoperand_t* ops;
 };
 
-static eccvalue_t ecc_json_error(eccjsonparser_t *parse, int length, ecccharbuffer_t *chars);
+static eccvalue_t ecc_json_error(eccjsonparser_t *parse, int length, eccstrbuffer_t *chars);
 static ecctextstring_t ecc_json_errorofline(eccjsonparser_t *parse);
 static ecctextchar_t ecc_json_nextc(eccjsonparser_t *parse);
 static ecctextstring_t ecc_json_parsestring(eccjsonparser_t *parse);
@@ -49,16 +49,16 @@ static eccvalue_t ecc_json_parsearray(eccjsonparser_t *parse);
 static eccvalue_t ecc_json_runparser(eccjsonparser_t *parse);
 static eccvalue_t ecc_json_revive(eccjsonparser_t *parse, eccvalue_t thisval, eccvalue_t property, eccvalue_t value);
 static eccvalue_t ecc_json_itermore(eccjsonparser_t *parse, eccvalue_t thisval, eccvalue_t property, eccvalue_t value);
-static eccvalue_t objjsonfn_parse(eccstate_t *context);
+static eccvalue_t objjsonfn_parse(ecccontext_t *context);
 static eccvalue_t ecc_json_replace(eccjsonstringify_t *stringify, eccvalue_t thisval, eccvalue_t property, eccvalue_t value);
 static int ecc_json_stringify(eccjsonstringify_t *stringify, eccvalue_t thisval, eccvalue_t property, eccvalue_t value, int isArray, int addComa);
-static eccvalue_t objjsonfn_stringify(eccstate_t *context);
+static eccvalue_t objjsonfn_stringify(ecccontext_t *context);
 
 const eccobjinterntype_t ECC_Type_Json = {
     .text = &ECC_ConstString_JsonType,
 };
 
-static eccvalue_t ecc_json_error(eccjsonparser_t* parse, int length, ecccharbuffer_t* chars)
+static eccvalue_t ecc_json_error(eccjsonparser_t* parse, int length, eccstrbuffer_t* chars)
 {
     return ecc_value_error(ecc_error_syntaxerror(ecc_textbuf_make(parse->text.bytes + (length < 0 ? length : 0), abs(length)), chars));
 }
@@ -206,7 +206,7 @@ static eccvalue_t ecc_json_parseliteral(eccjsonparser_t* parse)
         case '"':
         {
             ecctextstring_t text = ecc_json_parsestring(parse);
-            return ecc_value_chars(ecc_charbuf_createwithbytes(text.length, text.bytes));
+            return ecc_value_fromchars(ecc_strbuf_createwithbytes(text.length, text.bytes));
             break;
         }
 
@@ -218,7 +218,7 @@ static eccvalue_t ecc_json_parseliteral(eccjsonparser_t* parse)
             return ecc_json_parsearray(parse);
             break;
     }
-    return ecc_json_error(parse, -c.units, ecc_charbuf_create("unexpected '%.*s'", c.units, parse->text.bytes - c.units));
+    return ecc_json_error(parse, -c.units, ecc_strbuf_create("unexpected '%.*s'", c.units, parse->text.bytes - c.units));
 }
 
 static eccvalue_t ecc_json_parseobject(eccjsonparser_t* parse)
@@ -233,13 +233,13 @@ static eccvalue_t ecc_json_parseobject(eccjsonparser_t* parse)
         for(;;)
         {
             if(c.codepoint != '"')
-                return ecc_json_error(parse, -c.units, ecc_charbuf_create("expect property name"));
+                return ecc_json_error(parse, -c.units, ecc_strbuf_create("expect property name"));
 
             key = ecc_keyidx_makewithtext(ecc_json_parsestring(parse), ECC_INDEXFLAG_COPYONCREATE);
 
             c = ecc_json_nextc(parse);
             if(c.codepoint != ':')
-                return ecc_json_error(parse, -c.units, ecc_charbuf_create("expect colon"));
+                return ecc_json_error(parse, -c.units, ecc_strbuf_create("expect colon"));
 
             value = ecc_json_parseliteral(parse);
             if(value.type == ECC_VALTYPE_ERROR)
@@ -254,7 +254,7 @@ static eccvalue_t ecc_json_parseobject(eccjsonparser_t* parse)
             else if(c.codepoint == ',')
                 c = ecc_json_nextc(parse);
             else
-                return ecc_json_error(parse, -c.units, ecc_charbuf_create("unexpected '%.*s'", c.units, parse->text.bytes - c.units));
+                return ecc_json_error(parse, -c.units, ecc_strbuf_create("unexpected '%.*s'", c.units, parse->text.bytes - c.units));
         }
 
     return ecc_value_object(object);
@@ -282,7 +282,7 @@ static eccvalue_t ecc_json_parsearray(eccjsonparser_t* parse)
         if(c.codepoint == ']')
             break;
 
-        return ecc_json_error(parse, -c.units, ecc_charbuf_create("unexpected '%.*s'", c.units, parse->text.bytes - c.units));
+        return ecc_json_error(parse, -c.units, ecc_strbuf_create("unexpected '%.*s'", c.units, parse->text.bytes - c.units));
     }
     return ecc_value_object(object);
 }
@@ -296,7 +296,7 @@ static eccvalue_t ecc_json_runparser(eccjsonparser_t* parse)
     else if(c.codepoint == '[')
         return ecc_json_parsearray(parse);
 
-    return ecc_json_error(parse, -c.units, ecc_charbuf_create("expect { or ["));
+    return ecc_json_error(parse, -c.units, ecc_strbuf_create("expect { or ["));
 }
 
 // MARK: - Static Members
@@ -315,12 +315,12 @@ static eccvalue_t ecc_json_revive(eccjsonparser_t* parse, eccvalue_t thisval, ec
             /* fallthrough */
         case 5:
             {
-                parse->context.environment->hashmap[3 + 1].value = value;
+                parse->context.environment->hashmap[3 + 1].hmapmapvalue = value;
             }
             /* fallthrough */
         case 4:
             {
-                parse->context.environment->hashmap[3 + 0].value = property;
+                parse->context.environment->hashmap[3 + 0].hmapmapvalue = property;
             }
             /* fallthrough */
         case 3:
@@ -334,8 +334,8 @@ static eccvalue_t ecc_json_revive(eccjsonparser_t* parse, eccvalue_t thisval, ec
 
     parse->context.ops = parse->ops;
     parse->context.thisvalue = thisval;
-    parse->arguments->element[0].value = property;
-    parse->arguments->element[1].value = value;
+    parse->arguments->element[0].hmapitemvalue = property;
+    parse->arguments->element[1].hmapitemvalue = value;
     return parse->context.ops->native(&parse->context);
 }
 
@@ -350,24 +350,24 @@ static eccvalue_t ecc_json_itermore(eccjsonparser_t* parse, eccvalue_t thisval, 
 
         for(index = 0, count = object->elementCount < io_libecc_object_ElementMax ? object->elementCount : io_libecc_object_ElementMax; index < count; ++index)
         {
-            if(object->element[index].value.check == 1)
+            if(object->element[index].hmapitemvalue.check == 1)
             {
-                ecc_charbuf_beginappend(&chars);
-                ecc_charbuf_append(&chars, "%d", index);
-                object->element[index].value = ecc_json_itermore(parse, thisval, ecc_charbuf_endappend(&chars), object->element[index].value);
+                ecc_strbuf_beginappend(&chars);
+                ecc_strbuf_append(&chars, "%d", index);
+                object->element[index].hmapitemvalue = ecc_json_itermore(parse, thisval, ecc_strbuf_endappend(&chars), object->element[index].hmapitemvalue);
             }
         }
 
         for(index = 2; index < object->hashmapCount; ++index)
         {
-            if(object->hashmap[index].value.check == 1)
-                object->hashmap[index].value = ecc_json_itermore(parse, thisval, ecc_value_key(object->hashmap[index].value.key), object->hashmap[index].value);
+            if(object->hashmap[index].hmapmapvalue.check == 1)
+                object->hashmap[index].hmapmapvalue = ecc_json_itermore(parse, thisval, ecc_value_fromkey(object->hashmap[index].hmapmapvalue.key), object->hashmap[index].hmapmapvalue);
         }
     }
     return ecc_json_revive(parse, thisval, property, value);
 }
 
-static eccvalue_t objjsonfn_parse(eccstate_t* context)
+static eccvalue_t objjsonfn_parse(ecccontext_t* context)
 {
     eccvalue_t value, reviver, result;
     eccjsonparser_t parse = {};
@@ -386,7 +386,7 @@ static eccvalue_t objjsonfn_parse(eccstate_t* context)
     if(result.type != ECC_VALTYPE_ERROR && parse.text.length)
     {
         ecctextchar_t c = ecc_textbuf_character(parse.text);
-        result = ecc_json_error(&parse, c.units, ecc_charbuf_create("unexpected '%.*s'", c.units, parse.text.bytes));
+        result = ecc_json_error(&parse, c.units, ecc_strbuf_create("unexpected '%.*s'", c.units, parse.text.bytes));
     }
     if(result.type == ECC_VALTYPE_ERROR)
     {
@@ -402,9 +402,9 @@ static eccvalue_t objjsonfn_parse(eccstate_t* context)
         eccobject_t* environment = ecc_object_copy(&parse.function->environment);
         parse.context.environment = environment;
         parse.arguments = ecc_args_createsized(2);
-        ++parse.arguments->referenceCount;
-        environment->hashmap[2].value = ecc_value_object(parse.arguments);
-        result = ecc_json_itermore(&parse, result, ecc_value_text(&ECC_ConstString_Empty), result);
+        ++parse.arguments->refcount;
+        environment->hashmap[2].hmapmapvalue = ecc_value_object(parse.arguments);
+        result = ecc_json_itermore(&parse, result, ecc_value_fromtext(&ECC_ConstString_Empty), result);
     }
     else if(parse.function)
     {
@@ -419,8 +419,8 @@ static eccvalue_t objjsonfn_parse(eccstate_t* context)
         arguments.element = element;
         arguments.elementCount = 2;
         environment.hashmap = hashmap;
-        environment.hashmap[2].value = ecc_value_object(&arguments);
-        result = ecc_json_itermore(&parse, result, ecc_value_text(&ECC_ConstString_Empty), result);
+        environment.hashmap[2].hmapmapvalue = ecc_value_object(&arguments);
+        result = ecc_json_itermore(&parse, result, ecc_value_fromtext(&ECC_ConstString_Empty), result);
     }
     return result;
 }
@@ -440,12 +440,12 @@ static eccvalue_t ecc_json_replace(eccjsonstringify_t* stringify, eccvalue_t thi
             /* fallthrough */
         case 5:
             {
-                stringify->context.environment->hashmap[3 + 1].value = value;
+                stringify->context.environment->hashmap[3 + 1].hmapmapvalue = value;
             }
             /* fallthrough */
         case 4:
             {
-                stringify->context.environment->hashmap[3 + 0].value = property;
+                stringify->context.environment->hashmap[3 + 0].hmapmapvalue = property;
             }
             /* fallthrough */
         case 3:
@@ -459,8 +459,8 @@ static eccvalue_t ecc_json_replace(eccjsonstringify_t* stringify, eccvalue_t thi
 
     stringify->context.ops = stringify->ops;
     stringify->context.thisvalue = thisval;
-    stringify->arguments->element[0].value = property;
-    stringify->arguments->element[1].value = value;
+    stringify->arguments->element[0].hmapitemvalue = property;
+    stringify->arguments->element[1].hmapitemvalue = value;
     return stringify->context.ops->native(&stringify->context);
 }
 
@@ -483,9 +483,9 @@ static int ecc_json_stringify(eccjsonstringify_t* stringify, eccvalue_t thisval,
 
             for(index = 0, count = object->elementCount < io_libecc_object_ElementMax ? object->elementCount : io_libecc_object_ElementMax; index < count; ++index)
             {
-                if(object->element[index].value.check == 1)
+                if(object->element[index].hmapitemvalue.check == 1)
                 {
-                    if(ecc_value_istrue(ecc_value_equals(&stringify->context, property, object->element[index].value)))
+                    if(ecc_value_istrue(ecc_value_equals(&stringify->context, property, object->element[index].hmapitemvalue)))
                     {
                         found = 1;
                         break;
@@ -499,17 +499,17 @@ static int ecc_json_stringify(eccjsonstringify_t* stringify, eccvalue_t thisval,
     }
 
     if(addComa)
-        ecc_charbuf_append(&stringify->chars, ",%s", strlen(stringify->spaces) ? "\n" : "");
+        ecc_strbuf_append(&stringify->chars, ",%s", strlen(stringify->spaces) ? "\n" : "");
 
     for(index = 0, count = stringify->level; index < count; ++index)
-        ecc_charbuf_append(&stringify->chars, "%s", stringify->spaces);
+        ecc_strbuf_append(&stringify->chars, "%s", stringify->spaces);
 
     if(!isArray)
-        ecc_charbuf_append(&stringify->chars, "\"%.*s\":%s", ecc_value_stringlength(&property), ecc_value_stringbytes(&property),
+        ecc_strbuf_append(&stringify->chars, "\"%.*s\":%s", ecc_value_stringlength(&property), ecc_value_stringbytes(&property),
                                strlen(stringify->spaces) ? " " : "");
 
     if(value.type == ECC_VALTYPE_FUNCTION || value.type == ECC_VALTYPE_UNDEFINED)
-        ecc_charbuf_append(&stringify->chars, "null");
+        ecc_strbuf_append(&stringify->chars, "null");
     else if(ecc_value_isobject(value))
     {
         eccobject_t* object = value.data.object;
@@ -518,16 +518,16 @@ static int ecc_json_stringify(eccjsonstringify_t* stringify, eccvalue_t thisval,
         const ecctextstring_t* strprop;
         int hasValue = 0;
 
-        ecc_charbuf_append(&stringify->chars, "%s%s", subisarr ? "[" : "{", strlen(stringify->spaces) ? "\n" : "");
+        ecc_strbuf_append(&stringify->chars, "%s%s", subisarr ? "[" : "{", strlen(stringify->spaces) ? "\n" : "");
         ++stringify->level;
 
         for(index = 0, count = object->elementCount < io_libecc_object_ElementMax ? object->elementCount : io_libecc_object_ElementMax; index < count; ++index)
         {
-            if(object->element[index].value.check == 1)
+            if(object->element[index].hmapitemvalue.check == 1)
             {
-                ecc_charbuf_beginappend(&chars);
-                ecc_charbuf_append(&chars, "%d", index);
-                hasValue |= ecc_json_stringify(stringify, value, ecc_charbuf_endappend(&chars), object->element[index].value, subisarr, hasValue);
+                ecc_strbuf_beginappend(&chars);
+                ecc_strbuf_append(&chars, "%d", index);
+                hasValue |= ecc_json_stringify(stringify, value, ecc_strbuf_endappend(&chars), object->element[index].hmapitemvalue, subisarr, hasValue);
             }
         }
 
@@ -535,29 +535,29 @@ static int ecc_json_stringify(eccjsonstringify_t* stringify, eccvalue_t thisval,
         {
             for(index = 0; index < object->hashmapCount; ++index)
             {
-                if(object->hashmap[index].value.check == 1)
+                if(object->hashmap[index].hmapmapvalue.check == 1)
                 {
-                    strprop = ecc_keyidx_textof(object->hashmap[index].value.key);
-                    hasValue |= ecc_json_stringify(stringify, value, ecc_value_text(strprop), object->hashmap[index].value, subisarr, hasValue);
+                    strprop = ecc_keyidx_textof(object->hashmap[index].hmapmapvalue.key);
+                    hasValue |= ecc_json_stringify(stringify, value, ecc_value_fromtext(strprop), object->hashmap[index].hmapmapvalue, subisarr, hasValue);
                 }
             }
         }
 
-        ecc_charbuf_append(&stringify->chars, "%s", strlen(stringify->spaces) ? "\n" : "");
+        ecc_strbuf_append(&stringify->chars, "%s", strlen(stringify->spaces) ? "\n" : "");
 
         --stringify->level;
         for(index = 0, count = stringify->level; index < count; ++index)
-            ecc_charbuf_append(&stringify->chars, "%s", stringify->spaces);
+            ecc_strbuf_append(&stringify->chars, "%s", stringify->spaces);
 
-        ecc_charbuf_append(&stringify->chars, "%s", subisarr ? "]" : "}");
+        ecc_strbuf_append(&stringify->chars, "%s", subisarr ? "]" : "}");
     }
     else
-        ecc_charbuf_appendvalue(&stringify->chars, &stringify->context, value);
+        ecc_strbuf_appendvalue(&stringify->chars, &stringify->context, value);
 
     return 1;
 }
 
-static eccvalue_t objjsonfn_stringify(eccstate_t* context)
+static eccvalue_t objjsonfn_stringify(ecccontext_t* context)
 {
     eccvalue_t value, replacer, space;
     eccjsonstringify_t stringify = {};
@@ -591,7 +591,7 @@ static eccvalue_t objjsonfn_stringify(eccstate_t* context)
             strcat(stringify.spaces, " ");
     }
 
-    ecc_charbuf_beginappend(&stringify.chars);
+    ecc_strbuf_beginappend(&stringify.chars);
 
     if(stringify.function && stringify.function->flags & ECC_SCRIPTFUNCFLAG_NEEDHEAP)
     {
@@ -599,11 +599,11 @@ static eccvalue_t objjsonfn_stringify(eccstate_t* context)
 
         stringify.context.environment = environment;
         stringify.arguments = ecc_args_createsized(2);
-        ++stringify.arguments->referenceCount;
+        ++stringify.arguments->refcount;
 
-        environment->hashmap[2].value = ecc_value_object(stringify.arguments);
+        environment->hashmap[2].hmapmapvalue = ecc_value_object(stringify.arguments);
 
-        ecc_json_stringify(&stringify, value, ecc_value_text(&ECC_ConstString_Empty), value, 1, 0);
+        ecc_json_stringify(&stringify, value, ecc_value_fromtext(&ECC_ConstString_Empty), value, 1, 0);
     }
     else if(stringify.function)
     {
@@ -620,14 +620,14 @@ static eccvalue_t objjsonfn_stringify(eccstate_t* context)
         arguments.element = element;
         arguments.elementCount = 2;
         environment.hashmap = hashmap;
-        environment.hashmap[2].value = ecc_value_object(&arguments);
+        environment.hashmap[2].hmapmapvalue = ecc_value_object(&arguments);
 
-        ecc_json_stringify(&stringify, value, ecc_value_text(&ECC_ConstString_Empty), value, 1, 0);
+        ecc_json_stringify(&stringify, value, ecc_value_fromtext(&ECC_ConstString_Empty), value, 1, 0);
     }
     else
-        ecc_json_stringify(&stringify, value, ecc_value_text(&ECC_ConstString_Empty), value, 1, 0);
+        ecc_json_stringify(&stringify, value, ecc_value_fromtext(&ECC_ConstString_Empty), value, 1, 0);
 
-    return ecc_charbuf_endappend(&stringify.chars);
+    return ecc_strbuf_endappend(&stringify.chars);
 }
 
 // MARK: - Public
