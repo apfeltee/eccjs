@@ -1,10 +1,12 @@
-//
+
+/*
 //  global.c
 //  libecc
 //
 //  Copyright (c) 2019 Aurélien Bouilland
 //  Licensed under MIT license, see LICENSE.txt file in project root
-//
+*/
+
 #include "ecc.h"
 
 static eccvalue_t globalsfn_eval(ecccontext_t *context);
@@ -22,10 +24,8 @@ static eccvalue_t globalsfn_escape(ecccontext_t *context);
 static eccvalue_t globalsfn_unescape(ecccontext_t *context);
 
 const eccobjinterntype_t ECC_Type_Global = {
-    .text = &ECC_ConstString_GlobalType,
+    .text = &ECC_String_GlobalType,
 };
-
-// MARK: - Static Members
 
 static eccvalue_t globalsfn_eval(ecccontext_t* context)
 {
@@ -33,10 +33,10 @@ static eccvalue_t globalsfn_eval(ecccontext_t* context)
     eccioinput_t* input;
     ecccontext_t subContext = {};
     subContext.parent = context;
-    subContext.thisvalue = ecc_value_object(&context->ecc->global->environment);
+    subContext.thisvalue = ecc_value_object(&context->ecc->globalfunc->funcenv);
     subContext.ecc = context->ecc;
     subContext.depth = context->depth + 1;
-    subContext.environment = ecc_context_environmentroot(context->parent);
+    subContext.execenv = ecc_context_environmentroot(context->parent);
 
     value = ecc_context_argument(context, 0);
     if(!ecc_value_isstring(value) || !ecc_value_isprimitive(value))
@@ -62,8 +62,7 @@ static eccvalue_t globalsfn_parseInt(ecccontext_t* context)
 
     if(!base)
     {
-        // prevent octal auto-detection
-
+        /* prevent octal auto-detection */
         if(text.length > 2 && text.bytes[0] == '-')
         {
             if(text.bytes[1] == '0' && tolower(text.bytes[2]) != 'x')
@@ -91,7 +90,7 @@ static eccvalue_t globalsfn_isFinite(ecccontext_t* context)
     eccvalue_t value;
 
     value = ecc_value_tobinary(context, ecc_context_argument(context, 0));
-    return ecc_value_truth(!isnan(value.data.binary) && !isinf(value.data.binary));
+    return ecc_value_truth(!isnan(value.data.valnumfloat) && !isinf(value.data.valnumfloat));
 }
 
 static eccvalue_t globalsfn_isNaN(ecccontext_t* context)
@@ -99,13 +98,13 @@ static eccvalue_t globalsfn_isNaN(ecccontext_t* context)
     eccvalue_t value;
 
     value = ecc_value_tobinary(context, ecc_context_argument(context, 0));
-    return ecc_value_truth(isnan(value.data.binary));
+    return ecc_value_truth(isnan(value.data.valnumfloat));
 }
 
 static eccvalue_t eccglobals_decodeExcept(ecccontext_t* context, const char* exclude)
 {
-    uint16_t index;
-    uint16_t count;
+    uint32_t index;
+    uint32_t count;
     uint8_t byte;
     int continuation;
     char buffer[5];
@@ -193,9 +192,9 @@ static eccvalue_t eccglobals_encodeExpect(ecccontext_t* context, const char* exc
 {
     eccvalue_t value;
     const char* bytes;
-    uint16_t offset;
-    uint16_t unit;
-    uint16_t length;
+    uint32_t offset;
+    uint32_t unit;
+    uint32_t length;
     int needPair;
     eccstrbuffer_t* chars;
     ecctextstring_t text;
@@ -362,8 +361,6 @@ static eccvalue_t globalsfn_unescape(ecccontext_t* context)
     return ecc_strbuf_endappend(&chars);
 }
 
-// MARK: - Methods
-
 void ecc_globals_setup(void)
 {
     ECC_Prototype_Function = ECC_Prototype_Object = ecc_object_create(NULL);
@@ -405,10 +402,10 @@ eccobjfunction_t* ecc_globals_create(void)
     const eccvalflag_t s = ECC_VALFLAG_SEALED;
 
     eccobjfunction_t* self = ecc_function_create(ECC_Prototype_Object);
-    self->environment.type = &ECC_Type_Global;
+    self->funcenv.type = &ECC_Type_Global;
 
-    ecc_function_addvalue(self, "NaN", ecc_value_fromfloat(NAN), r | h | s);
-    ecc_function_addvalue(self, "Infinity", ecc_value_fromfloat(INFINITY), r | h | s);
+    ecc_function_addvalue(self, "NaN", ecc_value_fromfloat(ECC_CONST_NAN), r | h | s);
+    ecc_function_addvalue(self, "Infinity", ecc_value_fromfloat(ECC_CONST_INFINITY), r | h | s);
     ecc_function_addvalue(self, "undefined", ECCValConstUndefined, r | h | s);
 
     ecc_function_addfunction(self, "eval", globalsfn_eval, 1, h);

@@ -1,10 +1,12 @@
-//
+
+/*
 //  op.c
 //  libecc
 //
 //  Copyright (c) 2019 Aurélien Bouilland
 //  Licensed under MIT license, see LICENSE.txt file in project root
-//
+*/
+
 #include "ecc.h"
 
 /*
@@ -36,7 +38,7 @@
 
 #define ECC_OPS_DEBUG 0
 #define opmac_next() (++context->ops)->native(context)
-#define opmac_value() (context->ops)->value
+#define opmac_value() (context->ops)->opvalue
 #define opmac_text(O) &(context->ops + O)->text
 
 
@@ -72,7 +74,8 @@ static int g_ops_debugging = 0;
 
 eccvalue_t ecc_oper_dotrapop(ecccontext_t* context, int offset)
 {
-    const ecctextstring_t* text = opmac_text(offset);
+    const ecctextstring_t* text;
+    text = opmac_text(offset);
     if(g_ops_debugging && text->bytes && text->length)
     {
         ecc_env_newline();
@@ -97,17 +100,22 @@ eccvalue_t ecc_oper_trapop(ecccontext_t* context, int offset)
 eccvalue_t ecc_oper_retain(eccvalue_t value)
 {
     if(value.type == ECC_VALTYPE_CHARS)
+    {
         ++value.data.chars->refcount;
+    }
     if(value.type >= ECC_VALTYPE_OBJECT)
+    {
         ++value.data.object->refcount;
-
+    }
     return value;
 }
 
 eccvalue_t ecc_oper_release(eccvalue_t value)
 {
     if(value.type == ECC_VALTYPE_CHARS)
+    {
         --value.data.chars->refcount;
+    }
     if(value.type >= ECC_VALTYPE_OBJECT)
     {
         if(value.data.object != NULL)
@@ -147,10 +155,6 @@ int ecc_oper_testintwontofneg(int32_t a, int32_t negative)
 {
     return a >= INT32_MIN - negative;
 }
-
-// MARK: - Static Members
-
-// MARK: - Methods
 
 eccoperand_t ecc_oper_make(const eccnativefuncptr_t native, eccvalue_t value, ecctextstring_t text)
 {
@@ -271,10 +275,11 @@ const char* ecc_oper_tochars(const eccnativefuncptr_t native)
         { "iterateLessOrEqualRef", ecc_oper_iteratelessorequalref },
         { "iterateMoreOrEqualRef", ecc_oper_iteratemoreorequalref },
         { "iterateInRef", ecc_oper_iterateinref },
+        { NULL, NULL},
     };
 
     int index;
-    for(index = 0; index < (int)sizeof(functionList); ++index)
+    for(index = 0; functionList[index].name != NULL; ++index)
         if(functionList[index].native == native)
             return functionList[index].name;
 
@@ -300,18 +305,23 @@ eccvalue_t ecc_oper_replacerefvalue(eccvalue_t* ref, eccvalue_t value)
 eccvalue_t ecc_oper_callops(ecccontext_t* context, eccobject_t* environment)
 {
     if(context->depth >= context->ecc->maximumCallDepth)
+    {
         ecc_context_rangeerror(context, ecc_strbuf_create("maximum depth exceeded"));
-
-    //	if (!context->parent->strictMode)
-    //		if (context->thisvalue.type == ECC_VALTYPE_UNDEFINED || context->thisvalue.type == ECC_VALTYPE_NULL)
-    //			context->thisvalue = ecc_value_object(&context->ecc->global->environment);
-
-    context->environment = environment;
+    }
+    /*
+    if (!context->parent->strictMode)
+    {
+        if (context->thisvalue.type == ECC_VALTYPE_UNDEFINED || context->thisvalue.type == ECC_VALTYPE_NULL)
+        {
+            context->thisvalue = ecc_value_object(&context->ecc->globalfunc->funcenv);
+        }
+    }
+    */
+    context->execenv = environment;
     return context->ops->native(context);
 }
 
-
-eccvalue_t ecc_oper_callvalue(ecccontext_t* context, eccvalue_t value, eccvalue_t thisval, int32_t argumentCount, int construct, const ecctextstring_t* textCall)
+eccvalue_t ecc_oper_callvalue(ecccontext_t* context, eccvalue_t value, eccvalue_t thisval, int32_t argcnt, int construct, const ecctextstring_t* textCall)
 {
     eccvalue_t result;
     const ecctextstring_t* parentTextCall = context->textCall;
@@ -322,9 +332,9 @@ eccvalue_t ecc_oper_callvalue(ecccontext_t* context, eccvalue_t value, eccvalue_
     context->textCall = textCall;
 
     if(value.data.function->flags & ECC_SCRIPTFUNCFLAG_USEBOUNDTHIS)
-        result = ecc_oper_callfunction(context, value.data.function, value.data.function->boundThis, argumentCount, construct);
+        result = ecc_oper_callfunction(context, value.data.function, value.data.function->boundThis, argcnt, construct);
     else
-        result = ecc_oper_callfunction(context, value.data.function, thisval, argumentCount, construct);
+        result = ecc_oper_callfunction(context, value.data.function, thisval, argcnt, construct);
 
     context->textCall = parentTextCall;
     return result;
@@ -333,109 +343,109 @@ eccvalue_t ecc_oper_callvalue(ecccontext_t* context, eccvalue_t value, eccvalue_
 eccvalue_t ecc_oper_callopsrelease(ecccontext_t* context, eccobject_t* environment)
 {
     eccvalue_t result;
-    uint16_t index, count;
+    uint32_t index, count;
 
     result = ecc_oper_callops(context, environment);
 
-    for(index = 2, count = environment->hashmapCount; index < count; ++index)
-        ecc_oper_release(environment->hashmap[index].hmapmapvalue);
+    for(index = 2, count = environment->hmapmapcount; index < count; ++index)
+        ecc_oper_release(environment->hmapmapitems[index].hmapmapvalue);
 
     return result;
 }
 
-void ecc_oper_makeenvwithargs(eccobject_t* environment, eccobject_t* arguments, int32_t parameterCount)
+void ecc_oper_makeenvwithargs(eccobject_t* environment, eccobject_t* arguments, int32_t paramcnt)
 {
     int32_t index = 0;
-    int argumentCount = arguments->elementCount;
+    int argcnt = arguments->hmapitemcount;
 
-    ecc_oper_replacerefvalue(&environment->hashmap[2].hmapmapvalue, ecc_oper_retain(ecc_value_object(arguments)));
+    ecc_oper_replacerefvalue(&environment->hmapmapitems[2].hmapmapvalue, ecc_oper_retain(ecc_value_object(arguments)));
 
-    if(argumentCount <= parameterCount)
-        for(; index < argumentCount; ++index)
-            environment->hashmap[index + 3].hmapmapvalue = ecc_oper_retain(arguments->element[index].hmapitemvalue);
+    if(argcnt <= paramcnt)
+        for(; index < argcnt; ++index)
+            environment->hmapmapitems[index + 3].hmapmapvalue = ecc_oper_retain(arguments->hmapitemitems[index].hmapitemvalue);
     else
     {
-        for(; index < parameterCount; ++index)
-            environment->hashmap[index + 3].hmapmapvalue = ecc_oper_retain(arguments->element[index].hmapitemvalue);
+        for(; index < paramcnt; ++index)
+            environment->hmapmapitems[index + 3].hmapmapvalue = ecc_oper_retain(arguments->hmapitemitems[index].hmapitemvalue);
     }
 }
 
-void ecc_oper_makeenvandargswithva(eccobject_t* environment, int32_t parameterCount, int32_t argumentCount, va_list ap)
+void ecc_oper_makeenvandargswithva(eccobject_t* environment, int32_t paramcnt, int32_t argcnt, va_list ap)
 {
     int32_t index = 0;
-    eccobject_t* arguments = ecc_args_createsized(argumentCount);
+    eccobject_t* arguments = ecc_args_createsized(argcnt);
 
-    ecc_oper_replacerefvalue(&environment->hashmap[2].hmapmapvalue, ecc_oper_retain(ecc_value_object(arguments)));
+    ecc_oper_replacerefvalue(&environment->hmapmapitems[2].hmapmapvalue, ecc_oper_retain(ecc_value_object(arguments)));
 
-    if(argumentCount <= parameterCount)
-        for(; index < argumentCount; ++index)
-            environment->hashmap[index + 3].hmapmapvalue = arguments->element[index].hmapitemvalue = ecc_oper_retain(va_arg(ap, eccvalue_t));
+    if(argcnt <= paramcnt)
+        for(; index < argcnt; ++index)
+            environment->hmapmapitems[index + 3].hmapmapvalue = arguments->hmapitemitems[index].hmapitemvalue = ecc_oper_retain(va_arg(ap, eccvalue_t));
     else
     {
-        for(; index < parameterCount; ++index)
-            environment->hashmap[index + 3].hmapmapvalue = arguments->element[index].hmapitemvalue = ecc_oper_retain(va_arg(ap, eccvalue_t));
+        for(; index < paramcnt; ++index)
+            environment->hmapmapitems[index + 3].hmapmapvalue = arguments->hmapitemitems[index].hmapitemvalue = ecc_oper_retain(va_arg(ap, eccvalue_t));
 
-        for(; index < argumentCount; ++index)
-            arguments->element[index].hmapitemvalue = ecc_oper_retain(va_arg(ap, eccvalue_t));
+        for(; index < argcnt; ++index)
+            arguments->hmapitemitems[index].hmapitemvalue = ecc_oper_retain(va_arg(ap, eccvalue_t));
     }
 }
 
-void ecc_oper_populateenvwithva(eccobject_t* environment, int32_t parameterCount, int32_t argumentCount, va_list ap)
+void ecc_oper_populateenvwithva(eccobject_t* environment, int32_t paramcnt, int32_t argcnt, va_list ap)
 {
     int32_t index = 0;
-    if(argumentCount <= parameterCount)
-        for(; index < argumentCount; ++index)
-            environment->hashmap[index + 3].hmapmapvalue = ecc_oper_retain(va_arg(ap, eccvalue_t));
+    if(argcnt <= paramcnt)
+        for(; index < argcnt; ++index)
+            environment->hmapmapitems[index + 3].hmapmapvalue = ecc_oper_retain(va_arg(ap, eccvalue_t));
     else
-        for(; index < parameterCount; ++index)
-            environment->hashmap[index + 3].hmapmapvalue = ecc_oper_retain(va_arg(ap, eccvalue_t));
+        for(; index < paramcnt; ++index)
+            environment->hmapmapitems[index + 3].hmapmapvalue = ecc_oper_retain(va_arg(ap, eccvalue_t));
 }
 
-void ecc_oper_makestackenvandargswithops(ecccontext_t* context, eccobject_t* environment, eccobject_t* arguments, int32_t parameterCount, int32_t argumentCount)
+void ecc_oper_makestackenvandargswithops(ecccontext_t* context, eccobject_t* environment, eccobject_t* arguments, int32_t paramcnt, int32_t argcnt)
 {
     int32_t index = 0;
 
-    ecc_oper_replacerefvalue(&environment->hashmap[2].hmapmapvalue, ecc_value_object(arguments));
+    ecc_oper_replacerefvalue(&environment->hmapmapitems[2].hmapmapvalue, ecc_value_object(arguments));
 
-    if(argumentCount <= parameterCount)
-        for(; index < argumentCount; ++index)
-            environment->hashmap[index + 3].hmapmapvalue = arguments->element[index].hmapitemvalue = ecc_oper_retain(ecc_oper_nextopvalue(context));
+    if(argcnt <= paramcnt)
+        for(; index < argcnt; ++index)
+            environment->hmapmapitems[index + 3].hmapmapvalue = arguments->hmapitemitems[index].hmapitemvalue = ecc_oper_retain(ecc_oper_nextopvalue(context));
     else
     {
-        for(; index < parameterCount; ++index)
-            environment->hashmap[index + 3].hmapmapvalue = arguments->element[index].hmapitemvalue = ecc_oper_retain(ecc_oper_nextopvalue(context));
+        for(; index < paramcnt; ++index)
+            environment->hmapmapitems[index + 3].hmapmapvalue = arguments->hmapitemitems[index].hmapitemvalue = ecc_oper_retain(ecc_oper_nextopvalue(context));
 
-        for(; index < argumentCount; ++index)
-            arguments->element[index].hmapitemvalue = ecc_oper_nextopvalue(context);
+        for(; index < argcnt; ++index)
+            arguments->hmapitemitems[index].hmapitemvalue = ecc_oper_nextopvalue(context);
     }
 }
 
-void ecc_oper_makeenvandargswithops(ecccontext_t* context, eccobject_t* environment, eccobject_t* arguments, int32_t parameterCount, int32_t argumentCount)
+void ecc_oper_makeenvandargswithops(ecccontext_t* context, eccobject_t* environment, eccobject_t* arguments, int32_t paramcnt, int32_t argcnt)
 {
-    ecc_oper_makestackenvandargswithops(context, environment, arguments, parameterCount, argumentCount);
+    ecc_oper_makestackenvandargswithops(context, environment, arguments, paramcnt, argcnt);
 
     ecc_oper_retain(ecc_value_object(arguments));
 
-    if(argumentCount > parameterCount)
+    if(argcnt > paramcnt)
     {
-        int32_t index = parameterCount;
-        for(; index < argumentCount; ++index)
-            ecc_oper_retain(arguments->element[index].hmapitemvalue);
+        int32_t index = paramcnt;
+        for(; index < argcnt; ++index)
+            ecc_oper_retain(arguments->hmapitemitems[index].hmapitemvalue);
     }
 }
 
-void ecc_oper_populateenvwithops(ecccontext_t* context, eccobject_t* environment, int32_t parameterCount, int32_t argumentCount)
+void ecc_oper_populateenvwithops(ecccontext_t* context, eccobject_t* environment, int32_t paramcnt, int32_t argcnt)
 {
     int32_t index = 0;
-    if(argumentCount <= parameterCount)
-        for(; index < argumentCount; ++index)
-            environment->hashmap[index + 3].hmapmapvalue = ecc_oper_retain(ecc_oper_nextopvalue(context));
+    if(argcnt <= paramcnt)
+        for(; index < argcnt; ++index)
+            environment->hmapmapitems[index + 3].hmapmapvalue = ecc_oper_retain(ecc_oper_nextopvalue(context));
     else
     {
-        for(; index < parameterCount; ++index)
-            environment->hashmap[index + 3].hmapmapvalue = ecc_oper_retain(ecc_oper_nextopvalue(context));
+        for(; index < paramcnt; ++index)
+            environment->hmapmapitems[index + 3].hmapmapvalue = ecc_oper_retain(ecc_oper_nextopvalue(context));
 
-        for(; index < argumentCount; ++index)
+        for(; index < argcnt; ++index)
             opmac_next();
     }
 }
@@ -453,28 +463,28 @@ eccvalue_t ecc_oper_callfunctionarguments(ecccontext_t* context, int offset, ecc
     subContext.refObject = function->refObject;
     if(function->flags & ECC_SCRIPTFUNCFLAG_NEEDHEAP)
     {
-        eccobject_t* environment = ecc_object_copy(&function->environment);
+        eccobject_t* environment = ecc_object_copy(&function->funcenv);
         if(function->flags & ECC_SCRIPTFUNCFLAG_NEEDARGUMENTS)
         {
-            eccobject_t* copy = ecc_args_createsized(arguments->elementCount);
-            memcpy(copy->element, arguments->element, sizeof(*copy->element) * copy->elementCount);
+            eccobject_t* copy = ecc_args_createsized(arguments->hmapitemcount);
+            memcpy(copy->hmapitemitems, arguments->hmapitemitems, sizeof(*copy->hmapitemitems) * copy->hmapitemcount);
             arguments = copy;
         }
-        ecc_oper_makeenvwithargs(environment, arguments, function->parameterCount);
+        ecc_oper_makeenvwithargs(environment, arguments, function->argparamcount);
         return ecc_oper_callops(&subContext, environment);
     }
     else
     {
-        eccobject_t environment = function->environment;
-        ecchashmap_t hashmap[function->environment.hashmapCapacity];
-        memcpy(hashmap, function->environment.hashmap, sizeof(hashmap));
-        environment.hashmap = hashmap;
-        ecc_oper_makeenvwithargs(&environment, arguments, function->parameterCount);
+        eccobject_t environment = function->funcenv;
+        ecchashmap_t hashmap[function->funcenv.hmapmapcapacity];
+        memcpy(hashmap, function->funcenv.hmapmapitems, function->funcenv.hmapmapcapacity * sizeof(ecchashmap_t));
+        environment.hmapmapitems = hashmap;
+        ecc_oper_makeenvwithargs(&environment, arguments, function->argparamcount);
         return ecc_oper_callopsrelease(&subContext, &environment);
     }
 }
 
-eccvalue_t ecc_oper_callfunctionva(ecccontext_t* context, int offset, eccobjfunction_t* function, eccvalue_t thisval, int argumentCount, va_list ap)
+eccvalue_t ecc_oper_callfunctionva(ecccontext_t* context, int offset, eccobjfunction_t* function, eccvalue_t thisval, int argcnt, va_list ap)
 {
     ecccontext_t subContext = {};
     subContext.ops = function->oplist->ops;
@@ -485,41 +495,35 @@ eccvalue_t ecc_oper_callfunctionva(ecccontext_t* context, int offset, eccobjfunc
     subContext.depth = context->depth + 1;
     subContext.strictMode = function->flags & ECC_SCRIPTFUNCFLAG_STRICTMODE;
     subContext.refObject = function->refObject;
-
     if(function->flags & ECC_SCRIPTFUNCFLAG_NEEDHEAP)
     {
-        eccobject_t* environment = ecc_object_copy(&function->environment);
-
+        eccobject_t* environment = ecc_object_copy(&function->funcenv);
         if(function->flags & ECC_SCRIPTFUNCFLAG_NEEDARGUMENTS)
         {
-            ecc_oper_makeenvandargswithva(environment, function->parameterCount, argumentCount, ap);
-
+            ecc_oper_makeenvandargswithva(environment, function->argparamcount, argcnt, ap);
             if(!context->strictMode)
             {
-                ecc_object_addmember(environment->hashmap[2].hmapmapvalue.data.object, ECC_ConstKey_callee, ecc_oper_retain(ecc_value_function(function)), ECC_VALFLAG_HIDDEN);
-                ecc_object_addmember(environment->hashmap[2].hmapmapvalue.data.object, ECC_ConstKey_length, ecc_value_fromint(argumentCount), ECC_VALFLAG_HIDDEN);
+                ecc_object_addmember(environment->hmapmapitems[2].hmapmapvalue.data.object, ECC_ConstKey_callee, ecc_oper_retain(ecc_value_function(function)), ECC_VALFLAG_HIDDEN);
+                ecc_object_addmember(environment->hmapmapitems[2].hmapmapvalue.data.object, ECC_ConstKey_length, ecc_value_fromint(argcnt), ECC_VALFLAG_HIDDEN);
             }
         }
         else
-            ecc_oper_populateenvwithva(environment, function->parameterCount, argumentCount, ap);
+            ecc_oper_populateenvwithva(environment, function->argparamcount, argcnt, ap);
 
         return ecc_oper_callops(&subContext, environment);
     }
     else
     {
-        eccobject_t environment = function->environment;
-        ecchashmap_t hashmap[function->environment.hashmapCapacity];
-
-        memcpy(hashmap, function->environment.hashmap, sizeof(hashmap));
-        environment.hashmap = hashmap;
-
-        ecc_oper_populateenvwithva(&environment, function->parameterCount, argumentCount, ap);
-
+        eccobject_t environment = function->funcenv;
+        ecchashmap_t hashmap[function->funcenv.hmapmapcapacity+1];
+        memcpy(hashmap, function->funcenv.hmapmapitems, function->funcenv.hmapmapcapacity * sizeof(ecchashmap_t));
+        environment.hmapmapitems = hashmap;
+        ecc_oper_populateenvwithva(&environment, function->argparamcount, argcnt, ap);
         return ecc_oper_callopsrelease(&subContext, &environment);
     }
 }
 
-eccvalue_t ecc_oper_callfunction(ecccontext_t* context, eccobjfunction_t* const function, eccvalue_t thisval, int32_t argumentCount, int construct)
+eccvalue_t ecc_oper_callfunction(ecccontext_t* context, eccobjfunction_t* const function, eccvalue_t thisval, int32_t argcnt, int construct)
 {
     ecccontext_t subContext = {};
     subContext.ops = function->oplist->ops;
@@ -533,47 +537,46 @@ eccvalue_t ecc_oper_callfunction(ecccontext_t* context, eccobjfunction_t* const 
 
     if(function->flags & ECC_SCRIPTFUNCFLAG_NEEDHEAP)
     {
-        eccobject_t* environment = ecc_object_copy(&function->environment);
+        eccobject_t* environment = ecc_object_copy(&function->funcenv);
 
         if(function->flags & ECC_SCRIPTFUNCFLAG_NEEDARGUMENTS)
         {
-            ecc_oper_makeenvandargswithops(context, environment, ecc_args_createsized(argumentCount), function->parameterCount, argumentCount);
+            ecc_oper_makeenvandargswithops(context, environment, ecc_args_createsized(argcnt), function->argparamcount, argcnt);
 
             if(!context->strictMode)
             {
-                ecc_object_addmember(environment->hashmap[2].hmapmapvalue.data.object, ECC_ConstKey_callee, ecc_oper_retain(ecc_value_function(function)), ECC_VALFLAG_HIDDEN);
-                ecc_object_addmember(environment->hashmap[2].hmapmapvalue.data.object, ECC_ConstKey_length, ecc_value_fromint(argumentCount), ECC_VALFLAG_HIDDEN);
+                ecc_object_addmember(environment->hmapmapitems[2].hmapmapvalue.data.object, ECC_ConstKey_callee, ecc_oper_retain(ecc_value_function(function)), ECC_VALFLAG_HIDDEN);
+                ecc_object_addmember(environment->hmapmapitems[2].hmapmapvalue.data.object, ECC_ConstKey_length, ecc_value_fromint(argcnt), ECC_VALFLAG_HIDDEN);
             }
         }
         else
-            ecc_oper_populateenvwithops(context, environment, function->parameterCount, argumentCount);
+            ecc_oper_populateenvwithops(context, environment, function->argparamcount, argcnt);
 
         return ecc_oper_callops(&subContext, environment);
     }
     else if(function->flags & ECC_SCRIPTFUNCFLAG_NEEDARGUMENTS)
     {
-        eccobject_t environment = function->environment;
+        eccobject_t environment = function->funcenv;
         eccobject_t arguments;
         memset(&arguments, 0, sizeof(eccobject_t));
-        ecchashmap_t hashmap[function->environment.hashmapCapacity];
-        ecchashitem_t element[argumentCount];
+        ecchashmap_t hashmap[function->funcenv.hmapmapcapacity];
+        ecchashitem_t element[argcnt];
 
-        memcpy(hashmap, function->environment.hashmap, sizeof(hashmap));
-        environment.hashmap = hashmap;
-        arguments.element = element;
-        arguments.elementCount = argumentCount;
-        ecc_oper_makestackenvandargswithops(context, &environment, &arguments, function->parameterCount, argumentCount);
+        memcpy(hashmap, function->funcenv.hmapmapitems, function->funcenv.hmapmapcapacity * sizeof(ecchashmap_t));
+        environment.hmapmapitems = hashmap;
+        arguments.hmapitemitems = element;
+        arguments.hmapitemcount = argcnt;
+        ecc_oper_makestackenvandargswithops(context, &environment, &arguments, function->argparamcount, argcnt);
 
         return ecc_oper_callopsrelease(&subContext, &environment);
     }
     else
     {
-        eccobject_t environment = function->environment;
-        ecchashmap_t hashmap[function->environment.hashmapCapacity];
-
-        memcpy(hashmap, function->environment.hashmap, sizeof(hashmap));
-        environment.hashmap = hashmap;
-        ecc_oper_populateenvwithops(context, &environment, function->parameterCount, argumentCount);
+        eccobject_t environment = function->funcenv;
+        ecchashmap_t hashmap[function->funcenv.hmapmapcapacity];
+        memcpy(hashmap, function->funcenv.hmapmapitems, function->funcenv.hmapmapcapacity * sizeof(ecchashmap_t));
+        environment.hmapmapitems = hashmap;
+        ecc_oper_populateenvwithops(context, &environment, function->argparamcount, argcnt);
 
         return ecc_oper_callopsrelease(&subContext, &environment);
     }
@@ -583,7 +586,7 @@ eccvalue_t ecc_oper_construct(ecccontext_t* context)
 {
     const ecctextstring_t* textCall = opmac_text(0);
     const ecctextstring_t* text = opmac_text(1);
-    int32_t argumentCount = opmac_value().data.integer;
+    int32_t argcnt = opmac_value().data.integer;
     eccvalue_t value, *prototype, object, function = opmac_next();
 
     if(function.type != ECC_VALTYPE_FUNCTION)
@@ -606,7 +609,7 @@ eccvalue_t ecc_oper_construct(ecccontext_t* context)
         object = ECCValConstUndefined;
 
     ecc_context_settext(context, text);
-    value = ecc_oper_callvalue(context, function, object, argumentCount, 1, textCall);
+    value = ecc_oper_callvalue(context, function, object, argcnt, 1, textCall);
 
     if(ecc_value_isobject(value))
         return value;
@@ -626,7 +629,7 @@ eccvalue_t ecc_oper_call(ecccontext_t* context)
 {
     const ecctextstring_t* textCall = opmac_text(0);
     const ecctextstring_t* text = opmac_text(1);
-    int32_t argumentCount = opmac_value().data.integer;
+    int32_t argcnt = opmac_value().data.integer;
     eccvalue_t value;
     eccvalue_t thisval;
 
@@ -639,34 +642,34 @@ eccvalue_t ecc_oper_call(ecccontext_t* context)
         while(seek->parent && seek->parent->refObject == context->refObject)
             seek = seek->parent;
 
-        ++seek->environment->refcount;
-        thisval = ecc_value_objectvalue(seek->environment);
+        ++seek->execenv->refcount;
+        thisval = ecc_value_objectvalue(seek->execenv);
     }
     else
         thisval = ECCValConstUndefined;
 
     ecc_context_settext(context, text);
-    return ecc_oper_callvalue(context, value, thisval, argumentCount, 0, textCall);
+    return ecc_oper_callvalue(context, value, thisval, argcnt, 0, textCall);
 }
 
 eccvalue_t ecc_oper_eval(ecccontext_t* context)
 {
     eccvalue_t value;
     eccioinput_t* input;
-    int32_t argumentCount = opmac_value().data.integer;
+    int32_t argcnt = opmac_value().data.integer;
     ecccontext_t subContext = {};
     subContext.parent = context;
     subContext.thisvalue = context->thisvalue;
-    subContext.environment = context->environment;
+    subContext.execenv = context->execenv;
     subContext.ecc = context->ecc;
     subContext.depth = context->depth + 1;
     subContext.strictMode = context->strictMode;
 
-    if(!argumentCount)
+    if(!argcnt)
         return ECCValConstUndefined;
 
     value = opmac_next();
-    while(--argumentCount)
+    while(--argcnt)
         opmac_next();
 
     if(!ecc_value_isstring(value) || !ecc_value_isprimitive(value))
@@ -680,7 +683,7 @@ eccvalue_t ecc_oper_eval(ecccontext_t* context)
     return value;
 }
 
-// Expression
+/* expressions */
 
 eccvalue_t ecc_oper_noop(ecccontext_t* context)
 {
@@ -724,7 +727,7 @@ eccvalue_t ecc_oper_function(ecccontext_t* context)
 
     eccobjfunction_t* function = ecc_function_copy(value.data.function);
     function->object.prototype = &value.data.function->object;
-    function->environment.prototype = context->environment;
+    function->funcenv.prototype = context->execenv;
     if(context->refObject)
     {
         ++context->refObject->refcount;
@@ -735,7 +738,7 @@ eccvalue_t ecc_oper_function(ecccontext_t* context)
     ecc_function_linkprototype(function, ecc_value_object(prototype), ECC_VALFLAG_SEALED);
 
     ++prototype->refcount;
-    ++context->environment->refcount;
+    ++context->execenv->refcount;
     ++function->object.refcount;
 
     result = ecc_value_function(function);
@@ -776,7 +779,7 @@ eccvalue_t ecc_oper_array(ecccontext_t* context)
     for(index = 0; index < length; ++index)
     {
         value = ecc_oper_retain(ecc_oper_nextopvalue(context));
-        object->element[index].hmapitemvalue = value;
+        object->hmapitemitems[index].hmapitemvalue = value;
     }
     return ecc_value_object(object);
 }
@@ -790,7 +793,7 @@ eccvalue_t* ecc_oper_localref(ecccontext_t* context, eccindexkey_t key, const ec
 {
     eccvalue_t* ref;
 
-    ref = ecc_object_member(context->environment, key, 0);
+    ref = ecc_object_member(context->execenv, key, 0);
 
     if(!context->strictMode)
     {
@@ -816,7 +819,7 @@ eccvalue_t ecc_oper_createlocalref(ecccontext_t* context)
     eccvalue_t* ref = ecc_oper_localref(context, key, opmac_text(0), context->strictMode);
 
     if(!ref)
-        ref = ecc_object_addmember(&context->ecc->global->environment, key, ECCValConstUndefined, 0);
+        ref = ecc_object_addmember(&context->ecc->globalfunc->funcenv, key, ECCValConstUndefined, 0);
 
     return ecc_value_reference(ref);
 }
@@ -845,7 +848,7 @@ eccvalue_t ecc_oper_setlocal(ecccontext_t* context)
     eccvalue_t* ref = ecc_oper_localref(context, key, text, context->strictMode);
 
     if(!ref)
-        ref = ecc_object_addmember(&context->ecc->global->environment, key, ECCValConstUndefined, 0);
+        ref = ecc_object_addmember(&context->ecc->globalfunc->funcenv, key, ECCValConstUndefined, 0);
 
     if(ref->flags & ECC_VALFLAG_READONLY)
         return value;
@@ -872,19 +875,19 @@ eccvalue_t ecc_oper_deletelocal(ecccontext_t* context)
 
 eccvalue_t ecc_oper_getlocalslotref(ecccontext_t* context)
 {
-    return ecc_value_reference(&context->environment->hashmap[opmac_value().data.integer].hmapmapvalue);
+    return ecc_value_reference(&context->execenv->hmapmapitems[opmac_value().data.integer].hmapmapvalue);
 }
 
 eccvalue_t ecc_oper_getlocalslot(ecccontext_t* context)
 {
-    return context->environment->hashmap[opmac_value().data.integer].hmapmapvalue;
+    return context->execenv->hmapmapitems[opmac_value().data.integer].hmapmapvalue;
 }
 
 eccvalue_t ecc_oper_setlocalslot(ecccontext_t* context)
 {
     int32_t slot = opmac_value().data.integer;
     eccvalue_t value = opmac_next();
-    eccvalue_t* ref = &context->environment->hashmap[slot].hmapmapvalue;
+    eccvalue_t* ref = &context->execenv->hmapmapitems[slot].hmapmapvalue;
 
     if(ref->flags & ECC_VALFLAG_READONLY)
         return value;
@@ -905,11 +908,11 @@ eccvalue_t ecc_oper_getparentslotref(ecccontext_t* context)
 {
     int32_t slot = opmac_value().data.integer & 0xffff;
     int32_t count = opmac_value().data.integer >> 16;
-    eccobject_t* object = context->environment;
+    eccobject_t* object = context->execenv;
     while(count--)
         object = object->prototype;
 
-    return ecc_value_reference(&object->hashmap[slot].hmapmapvalue);
+    return ecc_value_reference(&object->hmapmapitems[slot].hmapmapvalue);
 }
 
 eccvalue_t ecc_oper_getparentslot(ecccontext_t* context)
@@ -1010,7 +1013,7 @@ eccvalue_t ecc_oper_setmember(ecccontext_t* context)
 eccvalue_t ecc_oper_callmember(ecccontext_t* context)
 {
     const ecctextstring_t* textCall = opmac_text(0);
-    int32_t argumentCount = opmac_value().data.integer;
+    int32_t argcnt = opmac_value().data.integer;
     const ecctextstring_t* text = &(++context->ops)->text;
     eccindexkey_t key = opmac_value().data.key;
     eccvalue_t object;
@@ -1018,7 +1021,7 @@ eccvalue_t ecc_oper_callmember(ecccontext_t* context)
     ecc_oper_prepareobject(context, &object);
 
     ecc_context_settext(context, text);
-    return ecc_oper_callvalue(context, ecc_object_getmember(context, object.data.object, key), object, argumentCount, 0, textCall);
+    return ecc_oper_callvalue(context, ecc_object_getmember(context, object.data.object, key), object, argcnt, 0, textCall);
 }
 
 eccvalue_t ecc_oper_deletemember(ecccontext_t* context)
@@ -1108,14 +1111,14 @@ eccvalue_t ecc_oper_setproperty(ecccontext_t* context)
 eccvalue_t ecc_oper_callproperty(ecccontext_t* context)
 {
     const ecctextstring_t* textCall = opmac_text(0);
-    int32_t argumentCount = opmac_value().data.integer;
+    int32_t argcnt = opmac_value().data.integer;
     const ecctextstring_t* text = &(++context->ops)->text;
     eccvalue_t object, property;
 
     ecc_oper_prepareobjectproperty(context, &object, &property);
 
     ecc_context_settext(context, text);
-    return ecc_oper_callvalue(context, ecc_object_getproperty(context, object.data.object, property), object, argumentCount, 0, textCall);
+    return ecc_oper_callvalue(context, ecc_object_getproperty(context, object.data.object, property), object, argcnt, 0, textCall);
 }
 
 eccvalue_t ecc_oper_deleteproperty(ecccontext_t* context)
@@ -1141,7 +1144,7 @@ eccvalue_t ecc_oper_pushenvironment(ecccontext_t* context)
     if(context->refObject)
         context->refObject = ecc_object_create(context->refObject);
     else
-        context->environment = ecc_object_create(context->environment);
+        context->execenv = ecc_object_create(context->execenv);
 
     return opmac_value();
 }
@@ -1156,8 +1159,8 @@ eccvalue_t ecc_oper_popenvironment(ecccontext_t* context)
     }
     else
     {
-        eccobject_t* environment = context->environment;
-        context->environment = context->environment->prototype;
+        eccobject_t* environment = context->execenv;
+        context->execenv = context->execenv->prototype;
         environment->prototype = NULL;
     }
     return opmac_value();
@@ -1177,7 +1180,7 @@ eccvalue_t ecc_oper_typeof(ecccontext_t* context)
     {
         eccvalue_t* ref = value.data.reference;
         if(!ref)
-            return ecc_value_fromtext(&ECC_ConstString_Undefined);
+            return ecc_value_fromtext(&ECC_String_Undefined);
         else
             value = *ref;
     }
@@ -1194,7 +1197,7 @@ eccvalue_t ecc_oper_equal(ecccontext_t* context)
 {
     prepareAB
 
-    if(a.type == ECC_VALTYPE_BINARY && b.type == ECC_VALTYPE_BINARY) return ecc_value_truth(a.data.binary == b.data.binary);
+    if(a.type == ECC_VALTYPE_BINARY && b.type == ECC_VALTYPE_BINARY) return ecc_value_truth(a.data.valnumfloat == b.data.valnumfloat);
     else
     {
         ecc_context_settexts(context, text, textAlt);
@@ -1206,7 +1209,7 @@ eccvalue_t ecc_oper_notequal(ecccontext_t* context)
 {
     prepareAB
 
-    if(a.type == ECC_VALTYPE_BINARY && b.type == ECC_VALTYPE_BINARY) return ecc_value_truth(a.data.binary != b.data.binary);
+    if(a.type == ECC_VALTYPE_BINARY && b.type == ECC_VALTYPE_BINARY) return ecc_value_truth(a.data.valnumfloat != b.data.valnumfloat);
     else
     {
         ecc_context_settexts(context, text, textAlt);
@@ -1218,7 +1221,7 @@ eccvalue_t ecc_oper_identical(ecccontext_t* context)
 {
     prepareAB
 
-    if(a.type == ECC_VALTYPE_BINARY && b.type == ECC_VALTYPE_BINARY) return ecc_value_truth(a.data.binary == b.data.binary);
+    if(a.type == ECC_VALTYPE_BINARY && b.type == ECC_VALTYPE_BINARY) return ecc_value_truth(a.data.valnumfloat == b.data.valnumfloat);
     else
     {
         ecc_context_settexts(context, text, textAlt);
@@ -1230,7 +1233,7 @@ eccvalue_t ecc_oper_notidentical(ecccontext_t* context)
 {
     prepareAB
 
-    if(a.type == ECC_VALTYPE_BINARY && b.type == ECC_VALTYPE_BINARY) return ecc_value_truth(a.data.binary != b.data.binary);
+    if(a.type == ECC_VALTYPE_BINARY && b.type == ECC_VALTYPE_BINARY) return ecc_value_truth(a.data.valnumfloat != b.data.valnumfloat);
     else
     {
         ecc_context_settexts(context, text, textAlt);
@@ -1242,7 +1245,7 @@ eccvalue_t ecc_oper_less(ecccontext_t* context)
 {
     prepareAB
 
-    if(a.type == ECC_VALTYPE_BINARY && b.type == ECC_VALTYPE_BINARY) return ecc_value_truth(a.data.binary < b.data.binary);
+    if(a.type == ECC_VALTYPE_BINARY && b.type == ECC_VALTYPE_BINARY) return ecc_value_truth(a.data.valnumfloat < b.data.valnumfloat);
     else
     {
         ecc_context_settexts(context, text, textAlt);
@@ -1254,7 +1257,7 @@ eccvalue_t ecc_oper_lessorequal(ecccontext_t* context)
 {
     prepareAB
 
-    if(a.type == ECC_VALTYPE_BINARY && b.type == ECC_VALTYPE_BINARY) return ecc_value_truth(a.data.binary <= b.data.binary);
+    if(a.type == ECC_VALTYPE_BINARY && b.type == ECC_VALTYPE_BINARY) return ecc_value_truth(a.data.valnumfloat <= b.data.valnumfloat);
     else
     {
         ecc_context_settexts(context, text, textAlt);
@@ -1266,7 +1269,7 @@ eccvalue_t ecc_oper_more(ecccontext_t* context)
 {
     prepareAB
 
-    if(a.type == ECC_VALTYPE_BINARY && b.type == ECC_VALTYPE_BINARY) return ecc_value_truth(a.data.binary > b.data.binary);
+    if(a.type == ECC_VALTYPE_BINARY && b.type == ECC_VALTYPE_BINARY) return ecc_value_truth(a.data.valnumfloat > b.data.valnumfloat);
     else
     {
         ecc_context_settexts(context, text, textAlt);
@@ -1278,7 +1281,7 @@ eccvalue_t ecc_oper_moreorequal(ecccontext_t* context)
 {
     prepareAB
 
-    if(a.type == ECC_VALTYPE_BINARY && b.type == ECC_VALTYPE_BINARY) return ecc_value_truth(a.data.binary >= b.data.binary);
+    if(a.type == ECC_VALTYPE_BINARY && b.type == ECC_VALTYPE_BINARY) return ecc_value_truth(a.data.valnumfloat >= b.data.valnumfloat);
     else
     {
         ecc_context_settexts(context, text, textAlt);
@@ -1337,7 +1340,7 @@ eccvalue_t ecc_oper_add(ecccontext_t* context)
 
     if(a.type == ECC_VALTYPE_BINARY && b.type == ECC_VALTYPE_BINARY)
     {
-        a.data.binary += b.data.binary;
+        a.data.valnumfloat += b.data.valnumfloat;
         return a;
     }
     else
@@ -1353,11 +1356,11 @@ eccvalue_t ecc_oper_minus(ecccontext_t* context)
     eccvalue_t b = opmac_next();
     if(a.type == ECC_VALTYPE_BINARY && b.type == ECC_VALTYPE_BINARY)
     {
-        a.data.binary -= b.data.binary;
+        a.data.valnumfloat -= b.data.valnumfloat;
         return a;
     }
     else
-        return ecc_value_fromfloat(ecc_value_tobinary(context, a).data.binary - ecc_value_tobinary(context, b).data.binary);
+        return ecc_value_fromfloat(ecc_value_tobinary(context, a).data.valnumfloat - ecc_value_tobinary(context, b).data.valnumfloat);
 }
 
 eccvalue_t ecc_oper_multiply(ecccontext_t* context)
@@ -1366,11 +1369,11 @@ eccvalue_t ecc_oper_multiply(ecccontext_t* context)
     eccvalue_t b = opmac_next();
     if(a.type == ECC_VALTYPE_BINARY && b.type == ECC_VALTYPE_BINARY)
     {
-        a.data.binary *= b.data.binary;
+        a.data.valnumfloat *= b.data.valnumfloat;
         return a;
     }
     else
-        return ecc_value_fromfloat(ecc_value_tobinary(context, a).data.binary * ecc_value_tobinary(context, b).data.binary);
+        return ecc_value_fromfloat(ecc_value_tobinary(context, a).data.valnumfloat * ecc_value_tobinary(context, b).data.valnumfloat);
 }
 
 eccvalue_t ecc_oper_divide(ecccontext_t* context)
@@ -1379,11 +1382,11 @@ eccvalue_t ecc_oper_divide(ecccontext_t* context)
     eccvalue_t b = opmac_next();
     if(a.type == ECC_VALTYPE_BINARY && b.type == ECC_VALTYPE_BINARY)
     {
-        a.data.binary /= b.data.binary;
+        a.data.valnumfloat /= b.data.valnumfloat;
         return a;
     }
     else
-        return ecc_value_fromfloat(ecc_value_tobinary(context, a).data.binary / ecc_value_tobinary(context, b).data.binary);
+        return ecc_value_fromfloat(ecc_value_tobinary(context, a).data.valnumfloat / ecc_value_tobinary(context, b).data.valnumfloat);
 }
 
 eccvalue_t ecc_oper_modulo(ecccontext_t* context)
@@ -1392,11 +1395,11 @@ eccvalue_t ecc_oper_modulo(ecccontext_t* context)
     eccvalue_t b = opmac_next();
     if(a.type == ECC_VALTYPE_BINARY && b.type == ECC_VALTYPE_BINARY)
     {
-        a.data.binary = fmod(a.data.binary, b.data.binary);
+        a.data.valnumfloat = fmod(a.data.valnumfloat, b.data.valnumfloat);
         return a;
     }
     else
-        return ecc_value_fromfloat(fmod(ecc_value_tobinary(context, a).data.binary, ecc_value_tobinary(context, b).data.binary));
+        return ecc_value_fromfloat(fmod(ecc_value_tobinary(context, a).data.valnumfloat, ecc_value_tobinary(context, b).data.valnumfloat));
 }
 
 eccvalue_t ecc_oper_leftshift(ecccontext_t* context)
@@ -1482,9 +1485,9 @@ eccvalue_t ecc_oper_negative(ecccontext_t* context)
 {
     eccvalue_t a = opmac_next();
     if(a.type == ECC_VALTYPE_BINARY)
-        return ecc_value_fromfloat(-a.data.binary);
+        return ecc_value_fromfloat(-a.data.valnumfloat);
     else
-        return ecc_value_fromfloat(-ecc_value_tobinary(context, a).data.binary);
+        return ecc_value_fromfloat(-ecc_value_tobinary(context, a).data.valnumfloat);
 }
 
 eccvalue_t ecc_oper_invert(ecccontext_t* context)
@@ -1498,8 +1501,6 @@ eccvalue_t ecc_oper_logicalnot(ecccontext_t * context)
     eccvalue_t a = opmac_next();
     return ecc_value_truth(!ecc_value_istrue(a));
 }
-
-// MARK: assignement
 
 #define unaryBinaryOpRef(OP)                                                                               \
     eccobject_t* refObject = context->refObject;                                                           \
@@ -1525,13 +1526,13 @@ eccvalue_t ecc_oper_logicalnot(ecccontext_t * context)
     context->refObject = refObject;                                                                        \
     return ecc_value_fromfloat(result);
 
-eccvalue_t ecc_oper_incrementref(ecccontext_t* context){ unaryBinaryOpRef(++a.data.binary) }
+eccvalue_t ecc_oper_incrementref(ecccontext_t* context){ unaryBinaryOpRef(++a.data.valnumfloat) }
 
-eccvalue_t ecc_oper_decrementref(ecccontext_t* context){ unaryBinaryOpRef(--a.data.binary) }
+eccvalue_t ecc_oper_decrementref(ecccontext_t* context){ unaryBinaryOpRef(--a.data.valnumfloat) }
 
-eccvalue_t ecc_oper_postincrementref(ecccontext_t* context){ unaryBinaryOpRef(a.data.binary++) }
+eccvalue_t ecc_oper_postincrementref(ecccontext_t* context){ unaryBinaryOpRef(a.data.valnumfloat++) }
 
-eccvalue_t ecc_oper_postdecrementref(ecccontext_t* context){ unaryBinaryOpRef(a.data.binary--) }
+eccvalue_t ecc_oper_postdecrementref(ecccontext_t* context){ unaryBinaryOpRef(a.data.valnumfloat--) }
 
 #define assignOpRef(OP, TYPE, CONV)                                                \
     eccobject_t* refObject = context->refObject;                                   \
@@ -1581,7 +1582,7 @@ eccvalue_t ecc_oper_addassignref(ecccontext_t* context)
 
     if(a.type == ECC_VALTYPE_BINARY && b.type == ECC_VALTYPE_BINARY)
     {
-        a.data.binary += b.data.binary;
+        a.data.valnumfloat += b.data.valnumfloat;
         return *ref = a;
     }
 
@@ -1593,22 +1594,22 @@ eccvalue_t ecc_oper_addassignref(ecccontext_t* context)
 
 eccvalue_t ecc_oper_minusassignref(ecccontext_t* context)
 {
-    assignBinaryOpRef(a.data.binary -= b.data.binary);
+    assignBinaryOpRef(a.data.valnumfloat -= b.data.valnumfloat);
 }
 
 eccvalue_t ecc_oper_multiplyassignref(ecccontext_t* context)
 {
-    assignBinaryOpRef(a.data.binary *= b.data.binary);
+    assignBinaryOpRef(a.data.valnumfloat *= b.data.valnumfloat);
 }
 
 eccvalue_t ecc_oper_divideassignref(ecccontext_t* context)
 {
-    assignBinaryOpRef(a.data.binary /= b.data.binary);
+    assignBinaryOpRef(a.data.valnumfloat /= b.data.valnumfloat);
 }
 
 eccvalue_t ecc_oper_moduloassignref(ecccontext_t* context)
 {
-    assignBinaryOpRef(a.data.binary = fmod(a.data.binary, b.data.binary));
+    assignBinaryOpRef(a.data.valnumfloat = fmod(a.data.valnumfloat, b.data.valnumfloat));
 }
 
 eccvalue_t ecc_oper_leftshiftassignref(ecccontext_t* context)
@@ -1641,8 +1642,6 @@ eccvalue_t ecc_oper_bitorassignref(ecccontext_t* context)
     assignIntegerOpRef(a.data.integer |= (uint32_t)b.data.integer);
 }
 
-// MARK: Statement
-
 eccvalue_t ecc_oper_debugger(ecccontext_t* context)
 {
     g_ops_debugging = 1;
@@ -1651,7 +1650,7 @@ eccvalue_t ecc_oper_debugger(ecccontext_t* context)
 
 eccvalue_t ecc_oper_try(ecccontext_t* context)
 {
-    eccobject_t* environment = context->environment;
+    eccobject_t* environment = context->execenv;
     eccobject_t* refObject = context->refObject;
     const eccoperand_t* end = context->ops + opmac_value().data.integer;
     eccindexkey_t key;
@@ -1663,22 +1662,23 @@ eccvalue_t ecc_oper_try(ecccontext_t* context)
     uint32_t indices[3];
 
     ecc_mempool_getindices(indices);
-
-    if(!setjmp(*ecc_script_pushenv(context->ecc)))// try
+    /* try */
+    if(!setjmp(*ecc_script_pushenv(context->ecc)))
         value = opmac_next();
     else
     {
         value = context->ecc->result;
         context->ecc->result = ECCValConstUndefined;
         rethrowOps = context->ops;
-
-        if(!rethrow)// catch
+        /* catch */
+        if(!rethrow)
         {
             ecc_mempool_unreferencefromindices(indices);
 
             rethrow = 1;
-            context->ops = end + 1;// bypass catch jump
-            context->environment = environment;
+            /* bypass catch jump */
+            context->ops = end + 1;
+            context->execenv = environment;
             context->refObject = refObject;
             key = opmac_next().data.key;
 
@@ -1687,16 +1687,18 @@ eccvalue_t ecc_oper_try(ecccontext_t* context)
                 if(value.type == ECC_VALTYPE_FUNCTION)
                 {
                     value.data.function->flags |= ECC_SCRIPTFUNCFLAG_USEBOUNDTHIS;
-                    value.data.function->boundThis = ecc_value_object(context->environment);
+                    value.data.function->boundThis = ecc_value_object(context->execenv);
                 }
-                ecc_object_addmember(context->environment, key, value, ECC_VALFLAG_SEALED);
-                value = opmac_next();// execute until noop
+                ecc_object_addmember(context->execenv, key, value, ECC_VALFLAG_SEALED);
+                /* execute until noop */
+                value = opmac_next();
                 rethrow = 0;
                 if(context->breaker)
                     ecc_oper_popenvironment(context);
             }
         }
-        else// rethrow
+        /* rethrow */
+        else
             ecc_oper_popenvironment(context);
     }
 
@@ -1704,8 +1706,10 @@ eccvalue_t ecc_oper_try(ecccontext_t* context)
 
     breaker = context->breaker;
     context->breaker = 0;
-    context->ops = end;// op[end] = ecc_oper_jump, to after catch
-    finallyValue = opmac_next();// jump to after catch, and execute until noop
+    /* op[end] = ecc_oper_jump, to after catch */
+    context->ops = end;
+    /* jump to after catch, and execute until noop */
+    finallyValue = opmac_next();
 
     if(context->breaker) /* return breaker */
         return finallyValue;
@@ -1731,17 +1735,17 @@ eccvalue_t ecc_oper_throw(ecccontext_t * context)
 
 eccvalue_t ecc_oper_with(ecccontext_t* context)
 {
-    eccobject_t* environment = context->environment;
+    eccobject_t* environment = context->execenv;
     eccobject_t* refObject = context->refObject;
     eccobject_t* object = ecc_value_toobject(context, opmac_next()).data.object;
     eccvalue_t value;
     if(!refObject)
     {
-        context->refObject = context->environment;
+        context->refObject = context->execenv;
     }
-    context->environment = object;
+    context->execenv = object;
     value = opmac_next();
-    context->environment = environment;
+    context->execenv = environment;
     context->refObject = refObject;
     if(context->breaker)
     {
@@ -1932,46 +1936,46 @@ eccvalue_t ecc_oper_result(ecccontext_t* context)
 
 eccvalue_t ecc_oper_repopulate(ecccontext_t* context)
 {
+    size_t hmsz;
     uint32_t index, count, arguments = opmac_value().data.integer + 3;
     int32_t offset = opmac_next().data.integer;
     const eccoperand_t* nextOps = context->ops + offset;
-
+    hmsz = context->execenv->hmapmapcapacity;
+    ecchashmap_t hashmap[context->execenv->hmapmapcapacity];
+    count = arguments <= context->execenv->hmapmapcapacity ? arguments : context->execenv->hmapmapcapacity;
+    for(index = 0; index < 3; ++index)
     {
-        ecchashmap_t hashmap[context->environment->hashmapCapacity];
-        count = arguments <= context->environment->hashmapCapacity ? arguments : context->environment->hashmapCapacity;
-
-        for(index = 0; index < 3; ++index)
-            hashmap[index].hmapmapvalue = context->environment->hashmap[index].hmapmapvalue;
-
-        for(; index < count; ++index)
-        {
-            ecc_oper_release(context->environment->hashmap[index].hmapmapvalue);
-            hashmap[index].hmapmapvalue = ecc_oper_retain(opmac_next());
-        }
-
-        if(index < context->environment->hashmapCapacity)
-        {
-            for(; index < context->environment->hashmapCapacity; ++index)
-            {
-                ecc_oper_release(context->environment->hashmap[index].hmapmapvalue);
-                hashmap[index].hmapmapvalue = ECCValConstNone;
-            }
-        }
-        else
-            for(; index < arguments; ++index)
-                opmac_next();
-
-        if(context->environment->hashmap[2].hmapmapvalue.type == ECC_VALTYPE_OBJECT)
-        {
-            eccobject_t* argvals = context->environment->hashmap[2].hmapmapvalue.data.object;
-
-            for(index = 3; index < context->environment->hashmapCapacity; ++index)
-                argvals->element[index - 3].hmapitemvalue = hashmap[index].hmapmapvalue;
-        }
-
-        memcpy(context->environment->hashmap, hashmap, sizeof(hashmap));
+        hashmap[index].hmapmapvalue = context->execenv->hmapmapitems[index].hmapmapvalue;
     }
-
+    for(; index < count; ++index)
+    {
+        ecc_oper_release(context->execenv->hmapmapitems[index].hmapmapvalue);
+        hashmap[index].hmapmapvalue = ecc_oper_retain(opmac_next());
+    }
+    if(index < context->execenv->hmapmapcapacity)
+    {
+        for(; index < context->execenv->hmapmapcapacity; ++index)
+        {
+            ecc_oper_release(context->execenv->hmapmapitems[index].hmapmapvalue);
+            hashmap[index].hmapmapvalue = ECCValConstNone;
+        }
+    }
+    else
+    {
+        for(; index < arguments; ++index)
+        {
+            opmac_next();
+        }
+    }
+    if(context->execenv->hmapmapitems[2].hmapmapvalue.type == ECC_VALTYPE_OBJECT)
+    {
+        eccobject_t* argvals = context->execenv->hmapmapitems[2].hmapmapvalue.data.object;
+        for(index = 3; index < context->execenv->hmapmapcapacity; ++index)
+        {
+            argvals->hmapitemitems[index - 3].hmapitemvalue = hashmap[index].hmapmapvalue;
+        }
+    }
+    memcpy(context->execenv->hmapmapitems, hashmap, hmsz * sizeof(ecchashmap_t));
     context->ops = nextOps;
     return opmac_next();
 }
@@ -2013,12 +2017,10 @@ eccvalue_t ecc_oper_switchop(ecccontext_t* context)
         return value;
     else
     {
-        context->ops = nextOps + 2 + nextOps[2].value.data.integer;
+        context->ops = nextOps + 2 + nextOps[2].opvalue.data.integer;
         return opmac_next();
     }
 }
-
-// MARK: Iteration
 
 #define stepIteration(value, nextOps, then)                         \
     {                                                               \
@@ -2073,17 +2075,17 @@ eccvalue_t ecc_oper_iterateintegerref(ecccontext_t *context, eccoperfncompareint
     const eccoperand_t* nextOps = context->ops;
     eccvalue_t value;
 
-    if(indexRef->type == ECC_VALTYPE_BINARY && indexRef->data.binary >= INT32_MIN && indexRef->data.binary <= INT32_MAX)
+    if(indexRef->type == ECC_VALTYPE_BINARY && indexRef->data.valnumfloat >= INT32_MIN && indexRef->data.valnumfloat <= INT32_MAX)
     {
         eccvalue_t integerValue = ecc_value_tointeger(context, *indexRef);
-        if(indexRef->data.binary == integerValue.data.integer)
+        if(indexRef->data.valnumfloat == integerValue.data.integer)
             *indexRef = integerValue;
     }
 
-    if(countRef->type == ECC_VALTYPE_BINARY && countRef->data.binary >= INT32_MIN && countRef->data.binary <= INT32_MAX)
+    if(countRef->type == ECC_VALTYPE_BINARY && countRef->data.valnumfloat >= INT32_MIN && countRef->data.valnumfloat <= INT32_MAX)
     {
         eccvalue_t integerValue = ecc_value_tointeger(context, *countRef);
-        if(countRef->data.binary == integerValue.data.integer)
+        if(countRef->data.valnumfloat == integerValue.data.integer)
             *countRef = integerValue;
     }
 
@@ -2144,10 +2146,10 @@ eccvalue_t ecc_oper_iterateinref(ecccontext_t* context)
         object = target.data.object;
         do
         {
-            count = object->elementCount < object->elementCapacity ? object->elementCount : object->elementCapacity;
+            count = object->hmapitemcount < object->hmapitemcapacity ? object->hmapitemcount : object->hmapitemcapacity;
             for(index = 0; index < count; ++index)
             {
-                ecchashitem_t* element = object->element + index;
+                ecchashitem_t* element = object->hmapitemitems + index;
 
                 if(element->hmapitemvalue.check != 1 || (element->hmapitemvalue.flags & ECC_VALFLAG_HIDDEN))
                     continue;
@@ -2167,10 +2169,10 @@ eccvalue_t ecc_oper_iterateinref(ecccontext_t* context)
         object = target.data.object;
         do
         {
-            count = object->hashmapCount;
+            count = object->hmapmapcount;
             for(index = 2; index < count; ++index)
             {
-                ecchashmap_t* hashmap = object->hashmap + index;
+                ecchashmap_t* hashmap = object->hmapmapitems + index;
 
                 if(hashmap->hmapmapvalue.check != 1 || (hashmap->hmapmapvalue.flags & ECC_VALFLAG_HIDDEN))
                     continue;

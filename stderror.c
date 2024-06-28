@@ -1,12 +1,13 @@
-//
+
+/*
 //  error.c
 //  libecc
 //
 //  Copyright (c) 2019 Aurélien Bouilland
 //  Licensed under MIT license, see LICENSE.txt file in project root
-//
-#include "ecc.h"
+*/
 
+#include "ecc.h"
 
 eccvalue_t objerrorfn_toString(ecccontext_t *context);
 eccvalue_t objerrorfn_ctorError(ecccontext_t *context);
@@ -16,7 +17,6 @@ eccvalue_t objerrorfn_ctorSyntaxError(ecccontext_t *context);
 eccvalue_t objerrorfn_ctorTypeError(ecccontext_t *context);
 eccvalue_t objerrorfn_ctorUriError(ecccontext_t *context);
 eccvalue_t objerrorfn_ctorEvalError(ecccontext_t *context);
-
 
 eccobject_t* ECC_Prototype_Error = NULL;
 eccobject_t* ECC_Prototype_ErrorRangeError = NULL;
@@ -35,9 +35,8 @@ eccobjfunction_t* ECC_CtorFunc_ErrorUriError = NULL;
 eccobjfunction_t* ECC_CtorFunc_ErrorEvalError = NULL;
 
 const eccobjinterntype_t ECC_Type_Error = {
-    .text = &ECC_ConstString_ErrorType,
+    .text = &ECC_String_ErrorType,
 };
-
 
 eccstrbuffer_t* ecc_error_messagevalue(ecccontext_t* context, eccvalue_t value)
 {
@@ -65,13 +64,13 @@ eccvalue_t ecc_error_tochars(ecccontext_t* context, eccvalue_t value)
 
     name = ecc_object_getmember(context, self, ECC_ConstKey_name);
     if(name.type == ECC_VALTYPE_UNDEFINED)
-        name = ecc_value_fromtext(&ECC_ConstString_ErrorName);
+        name = ecc_value_fromtext(&ECC_String_ErrorName);
     else
         name = ecc_value_tostring(context, name);
 
     message = ecc_object_getmember(context, self, ECC_ConstKey_message);
     if(message.type == ECC_VALTYPE_UNDEFINED)
-        message = ecc_value_fromtext(&ECC_ConstString_Empty);
+        message = ecc_value_fromtext(&ECC_String_Empty);
     else
         message = ecc_value_tostring(context, message);
 
@@ -184,23 +183,21 @@ ecc_error_setupbo(eccobjfunction_t** pctor, const eccnativefuncptr_t native, int
     ecc_object_addmember(*prototype, ECC_ConstKey_name, ecc_value_fromtext(name), ECC_VALFLAG_HIDDEN);
 }
 
-// MARK: - Methods
-
 void ecc_error_setup(void)
 {
     const eccvalflag_t h = ECC_VALFLAG_HIDDEN;
 
-    ecc_error_setupbo(&ECC_CtorFunc_Error, objerrorfn_ctorError, 1, &ECC_Prototype_Error, &ECC_ConstString_ErrorName);
-    ecc_error_setupbo(&ECC_CtorFunc_ErrorRangeError, objerrorfn_ctorRangeError, 1, &ECC_Prototype_ErrorRangeError, &ECC_ConstString_RangeErrorName);
-    ecc_error_setupbo(&ECC_CtorFunc_ErrorReferenceError, objerrorfn_ctorReferenceError, 1, &ECC_Prototype_ErrorReferenceError, &ECC_ConstString_ReferenceErrorName);
-    ecc_error_setupbo(&ECC_CtorFunc_ErrorSyntaxError, objerrorfn_ctorSyntaxError, 1, &ECC_Prototype_ErrorSyntaxError, &ECC_ConstString_SyntaxErrorName);
-    ecc_error_setupbo(&ECC_CtorFunc_ErrorTypeError, objerrorfn_ctorTypeError, 1, &ECC_Prototype_ErrorTypeError, &ECC_ConstString_TypeErrorName);
-    ecc_error_setupbo(&ECC_CtorFunc_ErrorUriError, objerrorfn_ctorUriError, 1, &ECC_Prototype_ErrorUriError, &ECC_ConstString_UriErrorName);
-    ecc_error_setupbo(&ECC_CtorFunc_ErrorEvalError, objerrorfn_ctorEvalError, 1, &ECC_Prototype_ErrorEvalError, &ECC_ConstString_EvalErrorName);
+    ecc_error_setupbo(&ECC_CtorFunc_Error, objerrorfn_ctorError, 1, &ECC_Prototype_Error, &ECC_String_ErrorName);
+    ecc_error_setupbo(&ECC_CtorFunc_ErrorRangeError, objerrorfn_ctorRangeError, 1, &ECC_Prototype_ErrorRangeError, &ECC_String_RangeErrorName);
+    ecc_error_setupbo(&ECC_CtorFunc_ErrorReferenceError, objerrorfn_ctorReferenceError, 1, &ECC_Prototype_ErrorReferenceError, &ECC_String_ReferenceErrorName);
+    ecc_error_setupbo(&ECC_CtorFunc_ErrorSyntaxError, objerrorfn_ctorSyntaxError, 1, &ECC_Prototype_ErrorSyntaxError, &ECC_String_SyntaxErrorName);
+    ecc_error_setupbo(&ECC_CtorFunc_ErrorTypeError, objerrorfn_ctorTypeError, 1, &ECC_Prototype_ErrorTypeError, &ECC_String_TypeErrorName);
+    ecc_error_setupbo(&ECC_CtorFunc_ErrorUriError, objerrorfn_ctorUriError, 1, &ECC_Prototype_ErrorUriError, &ECC_String_UriErrorName);
+    ecc_error_setupbo(&ECC_CtorFunc_ErrorEvalError, objerrorfn_ctorEvalError, 1, &ECC_Prototype_ErrorEvalError, &ECC_String_EvalErrorName);
 
     ecc_function_addto(ECC_Prototype_Error, "toString", objerrorfn_toString, 0, h);
 
-    ecc_object_addmember(ECC_Prototype_Error, ECC_ConstKey_message, ecc_value_fromtext(&ECC_ConstString_Empty), h);
+    ecc_object_addmember(ECC_Prototype_Error, ECC_ConstKey_message, ecc_value_fromtext(&ECC_String_Empty), h);
 }
 
 void ecc_error_teardown(void)

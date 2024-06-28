@@ -1,28 +1,24 @@
-//
+
+/*
 //  object.c
 //  libecc
 //
 //  Copyright (c) 2019 Aurélien Bouilland
 //  Licensed under MIT license, see LICENSE.txt file in project root
-//
+*/
+
 #include "ecc.h"
-
-const uint32_t io_libecc_object_ElementMax = 0xffffff;
-
-static const int defaultSize = 8;
 
 eccobject_t* ECC_Prototype_Object = NULL;
 eccobjfunction_t* ECC_CtorFunc_Object = NULL;
 
 const eccobjinterntype_t ECC_Type_Object = {
-    .text = &ECC_ConstString_ObjectType,
+    .text = &ECC_String_ObjectType,
 };
 
-// MARK: - Static Members
-
-uint16_t eccobject_getSlot(const eccobject_t* const self, const eccindexkey_t key)
+uint32_t eccobject_getSlot(const eccobject_t* const self, const eccindexkey_t key)
 {
-    return self->hashmap[self->hashmap[self->hashmap[self->hashmap[1].slot[key.data.depth[0]]].slot[key.data.depth[1]]].slot[key.data.depth[2]]].slot[key.data.depth[3]];
+    return self->hmapmapitems[self->hmapmapitems[self->hmapmapitems[self->hmapmapitems[1].slot[key.data.depth[0]]].slot[key.data.depth[1]]].slot[key.data.depth[2]]].slot[key.data.depth[3]];
 }
 
 uint32_t eccobject_getIndexOrKey(eccvalue_t property, eccindexkey_t* key)
@@ -52,17 +48,17 @@ uint32_t eccobject_getIndexOrKey(eccvalue_t property, eccindexkey_t* key)
             isbin = (property.type == ECC_VALTYPE_BINARY);
             if(isbin)
             {
-                abovezero = (property.data.binary >= 0);
-                belomax = (property.data.binary < UINT32_MAX);
+                abovezero = (property.data.valnumfloat >= 0);
+                belomax = (property.data.valnumfloat < UINT32_MAX);
                 /*
                 * NOTE: this *will* break when using '-march=native' and '-ffast-math' mode.
                 * it emits illegal instructions. but i have no clue why.
                 */
-                issame = (((float)property.data.binary) == ((uint32_t)property.data.binary));
+                issame = (((float)property.data.valnumfloat) == ((uint32_t)property.data.valnumfloat));
             }
             if(isbin && abovezero && belomax && issame)
             {
-                index = property.data.binary;
+                index = property.data.valnumfloat;
             }
             else if(ecc_value_isstring(property))
             {
@@ -81,7 +77,7 @@ uint32_t eccobject_getIndexOrKey(eccvalue_t property, eccindexkey_t* key)
 eccindexkey_t eccobject_keyOfIndex(uint32_t index, int create)
 {
     char buffer[10 + 1];
-    uint16_t length;
+    uint32_t length;
 
     length = snprintf(buffer, sizeof(buffer), "%u", (unsigned)index);
     if(create)
@@ -104,10 +100,10 @@ uint32_t eccobject_nextPowerOfTwo(uint32_t v)
 
 uint32_t eccobject_elementCount(eccobject_t* self)
 {
-    if(self->elementCount < io_libecc_object_ElementMax)
-        return self->elementCount;
+    if(self->hmapitemcount < ECC_CONF_MAXELEMENTS)
+        return self->hmapitemcount;
     else
-        return io_libecc_object_ElementMax;
+        return ECC_CONF_MAXELEMENTS;
 }
 
 void eccobject_readonlyError(ecccontext_t* context, eccvalue_t* ref, eccobject_t* thisobj)
@@ -119,21 +115,19 @@ void eccobject_readonlyError(ecccontext_t* context, eccvalue_t* ref, eccobject_t
         ecchashmap_t* hashmap = (ecchashmap_t*)ref;
         ecchashitem_t* element = (ecchashitem_t*)ref;
 
-        if(hashmap >= thisobj->hashmap && hashmap < thisobj->hashmap + thisobj->hashmapCount)
+        if(hashmap >= thisobj->hmapmapitems && hashmap < thisobj->hmapmapitems + thisobj->hmapmapcount)
         {
             const ecctextstring_t* keyText = ecc_keyidx_textof(hashmap->hmapmapvalue.key);
             ecc_context_typeerror(context, ecc_strbuf_create("'%.*s' is read-only", keyText->length, keyText->bytes));
         }
-        else if(element >= thisobj->element && element < thisobj->element + thisobj->elementCount)
-            ecc_context_typeerror(context, ecc_strbuf_create("'%u' is read-only", element - thisobj->element));
+        else if(element >= thisobj->hmapitemitems && element < thisobj->hmapitemitems + thisobj->hmapitemcount)
+            ecc_context_typeerror(context, ecc_strbuf_create("'%u' is read-only", element - thisobj->hmapitemitems));
 
     } while((thisobj = thisobj->prototype));
 
     text = ecc_context_textseek(context);
     ecc_context_typeerror(context, ecc_strbuf_create("'%.*s' is read-only", text.length, text.bytes));
 }
-
-//
 
 eccobject_t* eccobject_checkObject(ecccontext_t* context, int argument)
 {
@@ -279,23 +273,23 @@ eccvalue_t objobjectfn_getOwnPropertyNames(ecccontext_t* context)
     length = 0;
 
     for(index = 0, count = eccobject_elementCount(object); index < count; ++index)
-        if(object->element[index].hmapitemvalue.check == 1)
+        if(object->hmapitemitems[index].hmapitemvalue.check == 1)
             ecc_object_addelement(result, length++, ecc_value_fromchars(ecc_strbuf_create("%d", index)), 0);
 
     parent = object;
     while((parent = parent->prototype))
     {
-        for(index = 2; index < parent->hashmapCount; ++index)
+        for(index = 2; index < parent->hmapmapcount; ++index)
         {
-            eccvalue_t value = parent->hashmap[index].hmapmapvalue;
+            eccvalue_t value = parent->hmapmapitems[index].hmapmapvalue;
             if(value.check == 1 && value.flags & ECC_VALFLAG_ASOWN)
                 ecc_object_addelement(result, length++, ecc_value_fromtext(ecc_keyidx_textof(value.key)), 0);
         }
     }
 
-    for(index = 2; index < object->hashmapCount; ++index)
-        if(object->hashmap[index].hmapmapvalue.check == 1)
-            ecc_object_addelement(result, length++, ecc_value_fromtext(ecc_keyidx_textof(object->hashmap[index].hmapmapvalue.key)), 0);
+    for(index = 2; index < object->hmapmapcount; ++index)
+        if(object->hmapmapitems[index].hmapmapvalue.check == 1)
+            ecc_object_addelement(result, length++, ecc_value_fromtext(ecc_keyidx_textof(object->hmapmapitems[index].hmapmapvalue.key)), 0);
 
     return ecc_value_object(result);
 }
@@ -436,10 +430,10 @@ sealedError:
 
 eccvalue_t objobjectfn_defineProperties(ecccontext_t* context)
 {
-    ecchashmap_t* originalHashmap = context->environment->hashmap;
-    uint16_t originalHashmapCount = context->environment->hashmapCount;
+    ecchashmap_t* originalHashmap = context->execenv->hmapmapitems;
+    uint32_t originalHashmapCount = context->execenv->hmapmapcount;
 
-    uint16_t index, count, hashmapCount = 6;
+    uint32_t index, count, hashmapCount = 6;
     eccobject_t *object, *properties;
     ecchashmap_t hashmap[hashmapCount];
 
@@ -448,33 +442,33 @@ eccvalue_t objobjectfn_defineProperties(ecccontext_t* context)
     object = eccobject_checkObject(context, 0);
     properties = ecc_value_toobject(context, ecc_context_argument(context, 1)).data.object;
 
-    context->environment->hashmap = hashmap;
-    context->environment->hashmapCount = hashmapCount;
+    context->execenv->hmapmapitems = hashmap;
+    context->execenv->hmapmapcount = hashmapCount;
 
     ecc_context_replaceargument(context, 0, ecc_value_object(object));
 
     for(index = 0, count = eccobject_elementCount(properties); index < count; ++index)
     {
-        if(!properties->element[index].hmapitemvalue.check)
+        if(!properties->hmapitemitems[index].hmapitemvalue.check)
             continue;
 
         ecc_context_replaceargument(context, 1, ecc_value_fromfloat(index));
-        ecc_context_replaceargument(context, 2, properties->element[index].hmapitemvalue);
+        ecc_context_replaceargument(context, 2, properties->hmapitemitems[index].hmapitemvalue);
         objobjectfn_defineProperty(context);
     }
 
-    for(index = 2; index < properties->hashmapCount; ++index)
+    for(index = 2; index < properties->hmapmapcount; ++index)
     {
-        if(!properties->hashmap[index].hmapmapvalue.check)
+        if(!properties->hmapmapitems[index].hmapmapvalue.check)
             continue;
 
-        ecc_context_replaceargument(context, 1, ecc_value_fromkey(properties->hashmap[index].hmapmapvalue.key));
-        ecc_context_replaceargument(context, 2, properties->hashmap[index].hmapmapvalue);
+        ecc_context_replaceargument(context, 1, ecc_value_fromkey(properties->hmapmapitems[index].hmapmapvalue.key));
+        ecc_context_replaceargument(context, 2, properties->hmapmapitems[index].hmapmapvalue);
         objobjectfn_defineProperty(context);
     }
 
-    context->environment->hashmap = originalHashmap;
-    context->environment->hashmapCount = originalHashmapCount;
+    context->execenv->hmapmapitems = originalHashmap;
+    context->execenv->hmapmapcount = originalHashmapCount;
 
     return ECCValConstUndefined;
 }
@@ -506,12 +500,12 @@ eccvalue_t objobjectfn_seal(ecccontext_t* context)
     object->flags |= ECC_OBJFLAG_SEALED;
 
     for(index = 0, count = eccobject_elementCount(object); index < count; ++index)
-        if(object->element[index].hmapitemvalue.check == 1)
-            object->element[index].hmapitemvalue.flags |= ECC_VALFLAG_SEALED;
+        if(object->hmapitemitems[index].hmapitemvalue.check == 1)
+            object->hmapitemitems[index].hmapitemvalue.flags |= ECC_VALFLAG_SEALED;
 
-    for(index = 2; index < object->hashmapCount; ++index)
-        if(object->hashmap[index].hmapmapvalue.check == 1)
-            object->hashmap[index].hmapmapvalue.flags |= ECC_VALFLAG_SEALED;
+    for(index = 2; index < object->hmapmapcount; ++index)
+        if(object->hmapmapitems[index].hmapmapvalue.check == 1)
+            object->hmapmapitems[index].hmapmapvalue.flags |= ECC_VALFLAG_SEALED;
 
     return ecc_value_object(object);
 }
@@ -525,12 +519,12 @@ eccvalue_t objobjectfn_freeze(ecccontext_t* context)
     object->flags |= ECC_OBJFLAG_SEALED;
 
     for(index = 0, count = eccobject_elementCount(object); index < count; ++index)
-        if(object->element[index].hmapitemvalue.check == 1)
-            object->element[index].hmapitemvalue.flags |= ECC_VALFLAG_FROZEN;
+        if(object->hmapitemitems[index].hmapitemvalue.check == 1)
+            object->hmapitemitems[index].hmapitemvalue.flags |= ECC_VALFLAG_FROZEN;
 
-    for(index = 2; index < object->hashmapCount; ++index)
-        if(object->hashmap[index].hmapmapvalue.check == 1)
-            object->hashmap[index].hmapmapvalue.flags |= ECC_VALFLAG_FROZEN;
+    for(index = 2; index < object->hmapmapcount; ++index)
+        if(object->hmapmapitems[index].hmapmapvalue.check == 1)
+            object->hmapmapitems[index].hmapmapvalue.flags |= ECC_VALFLAG_FROZEN;
 
     return ecc_value_object(object);
 }
@@ -555,11 +549,11 @@ eccvalue_t objobjectfn_isSealed(ecccontext_t* context)
         return ECCValConstFalse;
 
     for(index = 0, count = eccobject_elementCount(object); index < count; ++index)
-        if(object->element[index].hmapitemvalue.check == 1 && !(object->element[index].hmapitemvalue.flags & ECC_VALFLAG_SEALED))
+        if(object->hmapitemitems[index].hmapitemvalue.check == 1 && !(object->hmapitemitems[index].hmapitemvalue.flags & ECC_VALFLAG_SEALED))
             return ECCValConstFalse;
 
-    for(index = 2; index < object->hashmapCount; ++index)
-        if(object->hashmap[index].hmapmapvalue.check == 1 && !(object->hashmap[index].hmapmapvalue.flags & ECC_VALFLAG_SEALED))
+    for(index = 2; index < object->hmapmapcount; ++index)
+        if(object->hmapmapitems[index].hmapmapvalue.check == 1 && !(object->hmapmapitems[index].hmapmapvalue.flags & ECC_VALFLAG_SEALED))
             return ECCValConstFalse;
 
     return ECCValConstTrue;
@@ -575,11 +569,11 @@ eccvalue_t objobjectfn_isFrozen(ecccontext_t* context)
         return ECCValConstFalse;
 
     for(index = 0, count = eccobject_elementCount(object); index < count; ++index)
-        if(object->element[index].hmapitemvalue.check == 1 && !(object->element[index].hmapitemvalue.flags & ECC_VALFLAG_FROZEN))
+        if(object->hmapitemitems[index].hmapitemvalue.check == 1 && !(object->hmapitemitems[index].hmapitemvalue.flags & ECC_VALFLAG_FROZEN))
             return ECCValConstFalse;
 
-    for(index = 2; index < object->hashmapCount; ++index)
-        if(object->hashmap[index].hmapmapvalue.check == 1 && !(object->hashmap[index].hmapmapvalue.flags & ECC_VALFLAG_FROZEN))
+    for(index = 2; index < object->hmapmapcount; ++index)
+        if(object->hmapmapitems[index].hmapmapvalue.check == 1 && !(object->hmapmapitems[index].hmapmapvalue.flags & ECC_VALFLAG_FROZEN))
             return ECCValConstFalse;
 
     return ECCValConstTrue;
@@ -604,34 +598,32 @@ eccvalue_t objobjectfn_keys(ecccontext_t* context)
     length = 0;
 
     for(index = 0, count = eccobject_elementCount(object); index < count; ++index)
-        if(object->element[index].hmapitemvalue.check == 1 && !(object->element[index].hmapitemvalue.flags & ECC_VALFLAG_HIDDEN))
+        if(object->hmapitemitems[index].hmapitemvalue.check == 1 && !(object->hmapitemitems[index].hmapitemvalue.flags & ECC_VALFLAG_HIDDEN))
             ecc_object_addelement(result, length++, ecc_value_fromchars(ecc_strbuf_create("%d", index)), 0);
 
     parent = object;
     while((parent = parent->prototype))
     {
-        for(index = 2; index < parent->hashmapCount; ++index)
+        for(index = 2; index < parent->hmapmapcount; ++index)
         {
-            eccvalue_t value = parent->hashmap[index].hmapmapvalue;
+            eccvalue_t value = parent->hmapmapitems[index].hmapmapvalue;
             if(value.check == 1 && value.flags & ECC_VALFLAG_ASOWN & !(value.flags & ECC_VALFLAG_HIDDEN))
                 ecc_object_addelement(result, length++, ecc_value_fromtext(ecc_keyidx_textof(value.key)), 0);
         }
     }
 
-    for(index = 2; index < object->hashmapCount; ++index)
-        if(object->hashmap[index].hmapmapvalue.check == 1 && !(object->hashmap[index].hmapmapvalue.flags & ECC_VALFLAG_HIDDEN))
-            ecc_object_addelement(result, length++, ecc_value_fromtext(ecc_keyidx_textof(object->hashmap[index].hmapmapvalue.key)), 0);
+    for(index = 2; index < object->hmapmapcount; ++index)
+        if(object->hmapmapitems[index].hmapmapvalue.check == 1 && !(object->hmapmapitems[index].hmapmapvalue.flags & ECC_VALFLAG_HIDDEN))
+            ecc_object_addelement(result, length++, ecc_value_fromtext(ecc_keyidx_textof(object->hmapmapitems[index].hmapmapvalue.key)), 0);
 
     return ecc_value_object(result);
 }
-
-// MARK: - Methods
 
 void ecc_object_setup()
 {
     const eccvalflag_t h = ECC_VALFLAG_HIDDEN;
 
-    assert(sizeof(*ECC_Prototype_Object->hashmap) == 32);
+    //assert(sizeof(*ECC_Prototype_Object->hmapmapitems) == 32);
 
     ecc_function_setupbuiltinobject(&ECC_CtorFunc_Object, objobjectfn_constructor, 1, NULL, ecc_value_object(ECC_Prototype_Object), NULL);
 
@@ -665,10 +657,10 @@ void ecc_object_teardown(void)
 
 eccobject_t* ecc_object_create(eccobject_t* prototype)
 {
-    return ecc_object_createsized(prototype, defaultSize);
+    return ecc_object_createsized(prototype, ECC_CONF_DEFAULTSIZE);
 }
 
-eccobject_t* ecc_object_createsized(eccobject_t* prototype, uint16_t size)
+eccobject_t* ecc_object_createsized(eccobject_t* prototype, uint32_t size)
 {
     eccobject_t* self;
     self = (eccobject_t*)calloc(sizeof(*self), 1);
@@ -678,17 +670,17 @@ eccobject_t* ecc_object_createsized(eccobject_t* prototype, uint16_t size)
 
 eccobject_t* ecc_object_createtyped(const eccobjinterntype_t* type)
 {
-    eccobject_t* self = ecc_object_createsized(ECC_Prototype_Object, defaultSize);
+    eccobject_t* self = ecc_object_createsized(ECC_Prototype_Object, ECC_CONF_DEFAULTSIZE);
     self->type = type;
     return self;
 }
 
 eccobject_t* ecc_object_initialize(eccobject_t* self, eccobject_t* prototype)
 {
-    return ecc_object_initializesized(self, prototype, defaultSize);
+    return ecc_object_initializesized(self, prototype, ECC_CONF_DEFAULTSIZE);
 }
 
-eccobject_t* ecc_object_initializesized(eccobject_t* self, eccobject_t* prototype, uint16_t size)
+eccobject_t* ecc_object_initializesized(eccobject_t* self, eccobject_t* prototype, uint32_t size)
 {
     size_t byteSize;
     assert(self);
@@ -696,66 +688,81 @@ eccobject_t* ecc_object_initializesized(eccobject_t* self, eccobject_t* prototyp
     self->type = prototype ? prototype->type : &ECC_Type_Object;
 
     self->prototype = prototype;
-    self->hashmapCount = 2;
-
+    self->hmapmapcount = 2;
+    /*
     // hashmap is always 2 slots minimum
     // slot 0 is self referencing undefined value (all zeroes)
     // slot 1 is entry point, referencing undefined (slot 0) by default (all zeroes)
-
+    */
     if(size > 0)
     {
-        self->hashmapCapacity = size;
+        self->hmapmapcapacity = size;
 
-        byteSize = sizeof(*self->hashmap) * self->hashmapCapacity;
-        self->hashmap = (ecchashmap_t*)malloc(byteSize);
-        memset(self->hashmap, 0, byteSize);
+        byteSize = sizeof(*self->hmapmapitems) * self->hmapmapcapacity;
+        self->hmapmapitems = (ecchashmap_t*)malloc(byteSize);
+        memset(self->hmapmapitems, 0, byteSize);
     }
     else
-        // size is == zero = to be initialized later by caller
-        self->hashmapCapacity = 2;
-
+    {
+        /* size is == zero = to be initialized later by caller */
+        self->hmapmapcapacity = 2;
+    }
     return self;
+}
+
+void ecc_object_destroymapmap(eccobject_t* self)
+{
+    free(self->hmapmapitems);
+    self->hmapmapitems = NULL;
+}
+
+void ecc_object_destroymapitems(eccobject_t* self)
+{
+    free(self->hmapitemitems);
+    self->hmapitemitems = NULL;
 }
 
 eccobject_t* ecc_object_finalize(eccobject_t* self)
 {
     assert(self);
-
-    if(self->type->finalize)
-        self->type->finalize(self);
-
-    free(self->hashmap), self->hashmap = NULL;
-    free(self->element), self->element = NULL;
-
+    if(self->type->fnfinalize)
+    {
+        self->type->fnfinalize(self);
+    }
+    ecc_object_destroymapmap(self);
+    ecc_object_destroymapitems(self);
     return self;
 }
 
 eccobject_t* ecc_object_copy(const eccobject_t* original)
 {
-    size_t byteSize;
-
+    size_t bsz;
     eccobject_t* self;
     self = (eccobject_t*)malloc(sizeof(*self));
     ecc_mempool_addobject(self);
-
     *self = *original;
-
-    byteSize = sizeof(*self->element) * self->elementCount;
-    self->element = (ecchashitem_t*)malloc(byteSize);
-    memcpy(self->element, original->element, byteSize);
-
-    byteSize = sizeof(*self->hashmap) * self->hashmapCount;
-    self->hashmap = (ecchashmap_t*)malloc(byteSize);
-    memcpy(self->hashmap, original->hashmap, byteSize);
-
+    bsz = sizeof(*self->hmapitemitems) * self->hmapitemcount;
+    self->hmapitemitems = (ecchashitem_t*)malloc(bsz);
+    memcpy(self->hmapitemitems, original->hmapitemitems, bsz);
+    bsz = sizeof(*self->hmapmapitems) * self->hmapmapcount;
+    self->hmapmapitems = (ecchashmap_t*)malloc(bsz);
+    memcpy(self->hmapmapitems, original->hmapmapitems, bsz);
     return self;
 }
 
 void ecc_object_destroy(eccobject_t* self)
 {
     assert(self);
-
-    free(self), self = NULL;
+    if(self->mustdestroymapmaps)
+    {
+        ecc_object_destroymapmap(self);
+    }
+    if(self->mustdestroymapitems)
+    {
+        ecc_object_destroymapitems(self);
+    }
+    free(self);
+    self = NULL;
 }
 
 eccvalue_t* ecc_object_member(eccobject_t* self, eccindexkey_t member, int flags)
@@ -771,7 +778,7 @@ eccvalue_t* ecc_object_member(eccobject_t* self, eccindexkey_t member, int flags
     {
         if((slot = eccobject_getSlot(object, member)))
         {
-            ref = &object->hashmap[slot].hmapmapvalue;
+            ref = &object->hmapmapitems[slot].hmapmapvalue;
             if(ref->check == 1)
                 return lookupChain || object == self || (ref->flags & flags) ? ref : NULL;
         }
@@ -794,7 +801,7 @@ eccvalue_t* ecc_object_element(eccobject_t* self, uint32_t index, int flags)
         subref->check = 0;
         return subref;
     }
-    else if(index > io_libecc_object_ElementMax)
+    else if(index > ECC_CONF_MAXELEMENTS)
     {
         eccindexkey_t key = eccobject_keyOfIndex(index, 0);
         if(key.data.integer)
@@ -803,9 +810,9 @@ eccvalue_t* ecc_object_element(eccobject_t* self, uint32_t index, int flags)
     else
         do
         {
-            if(index < object->elementCount)
+            if(index < object->hmapitemcount)
             {
-                ref = &object->element[index].hmapitemvalue;
+                ref = &object->hmapitemitems[index].hmapitemvalue;
                 if(ref->check == 1)
                     return lookupChain || object == self || (ref->flags & flags) ? ref : NULL;
             }
@@ -926,12 +933,12 @@ eccvalue_t ecc_object_putelement(ecccontext_t* context, eccobject_t* self, uint3
 {
     eccvalue_t* ref;
 
-    if(index > io_libecc_object_ElementMax)
+    if(index > ECC_CONF_MAXELEMENTS)
     {
-        if(self->elementCapacity <= index)
+        if(self->hmapitemcapacity <= index)
             ecc_object_resizeelement(self, index < UINT32_MAX ? index + 1 : index);
-        else if(self->elementCount <= index)
-            self->elementCount = index + 1;
+        else if(self->hmapitemcount <= index)
+            self->hmapitemcount = index + 1;
 
         return ecc_object_putmember(context, self, eccobject_keyOfIndex(index, 1), value);
     }
@@ -965,228 +972,276 @@ eccvalue_t ecc_object_putproperty(ecccontext_t* context, eccobject_t* self, eccv
 
 eccvalue_t* ecc_object_addmember(eccobject_t* self, eccindexkey_t key, eccvalue_t value, int flags)
 {
-    uint32_t slot = 1;
-    int depth = 0;
-
+    int depth;
+    int needtoadd;
+    uint32_t capacity;
+    uint32_t slot;
+    size_t needed;
+    ecchashmap_t* tmp;
+    slot = 1;
+    depth = 0;
     assert(self);
-
     do
     {
-        if(!self->hashmap[slot].slot[key.data.depth[depth]])
+        if(!self->hmapmapitems[slot].slot[key.data.depth[depth]])
         {
-            int need = 4 - depth - (self->hashmapCapacity - self->hashmapCount);
-            if(need > 0)
+            needtoadd = 4 - depth - (self->hmapmapcapacity - self->hmapmapcount);
+            if(needtoadd > 0)
             {
-                uint16_t capacity = self->hashmapCapacity;
-                self->hashmapCapacity = self->hashmapCapacity ? self->hashmapCapacity * 2 : 2;
-                self->hashmap = (ecchashmap_t*)realloc(self->hashmap, sizeof(*self->hashmap) * self->hashmapCapacity);
-                memset(self->hashmap + capacity, 0, sizeof(*self->hashmap) * (self->hashmapCapacity - capacity));
+                capacity = self->hmapmapcapacity;
+                self->hmapmapcapacity = self->hmapmapcapacity ? self->hmapmapcapacity * 2 : 2;
+                needed = (sizeof(*self->hmapmapitems) * self->hmapmapcapacity);
+                tmp = (ecchashmap_t*)realloc(self->hmapmapitems, needed);
+                if(tmp == NULL)
+                {
+                    fprintf(stderr, "in addmember: failed to reallocate for %ld bytes\n", needed);
+                }
+                self->hmapmapitems = tmp;
+                memset(self->hmapmapitems + capacity, 0, sizeof(*self->hmapmapitems) * (self->hmapmapcapacity - capacity));
             }
-
             do
             {
-                assert(self->hashmapCount < UINT16_MAX);
-                slot = self->hashmap[slot].slot[key.data.depth[depth]] = self->hashmapCount++;
+                assert(self->hmapmapcount < UINT16_MAX);
+                slot = self->hmapmapitems[slot].slot[key.data.depth[depth]] = self->hmapmapcount++;
             } while(++depth < 4);
             break;
         }
         else
-            assert(self->hashmap[slot].hmapmapvalue.check != 1);
+            assert(self->hmapmapitems[slot].hmapmapvalue.check != 1);
 
-        slot = self->hashmap[slot].slot[key.data.depth[depth]];
+        slot = self->hmapmapitems[slot].slot[key.data.depth[depth]];
         assert(slot != 1);
-        assert(slot < self->hashmapCount);
+        assert(slot < self->hmapmapcount);
     } while(++depth < 4);
 
     if(value.flags & ECC_VALFLAG_ACCESSOR)
-        if(self->hashmap[slot].hmapmapvalue.check == 1 && self->hashmap[slot].hmapmapvalue.flags & ECC_VALFLAG_ACCESSOR)
-            if((self->hashmap[slot].hmapmapvalue.flags & ECC_VALFLAG_ACCESSOR) != (value.flags & ECC_VALFLAG_ACCESSOR))
-                value.data.function->pair = self->hashmap[slot].hmapmapvalue.data.function;
+        if(self->hmapmapitems[slot].hmapmapvalue.check == 1 && self->hmapmapitems[slot].hmapmapvalue.flags & ECC_VALFLAG_ACCESSOR)
+            if((self->hmapmapitems[slot].hmapmapvalue.flags & ECC_VALFLAG_ACCESSOR) != (value.flags & ECC_VALFLAG_ACCESSOR))
+                value.data.function->pair = self->hmapmapitems[slot].hmapmapvalue.data.function;
 
     value.key = key;
     value.flags |= flags;
 
-    self->hashmap[slot].hmapmapvalue = value;
+    self->hmapmapitems[slot].hmapmapvalue = value;
 
-    return &self->hashmap[slot].hmapmapvalue;
+    return &self->hmapmapitems[slot].hmapmapvalue;
 }
 
 eccvalue_t* ecc_object_addelement(eccobject_t* self, uint32_t index, eccvalue_t value, int flags)
 {
     eccvalue_t* ref;
-
     assert(self);
-
-    if(self->elementCapacity <= index)
+    if(self->hmapitemcapacity <= index)
+    {
         ecc_object_resizeelement(self, index < UINT32_MAX ? index + 1 : index);
-    else if(self->elementCount <= index)
-        self->elementCount = index + 1;
-
-    if(index > io_libecc_object_ElementMax)
+    }
+    else if(self->hmapitemcount <= index)
+    {
+        self->hmapitemcount = index + 1;
+    }
+    if(index > ECC_CONF_MAXELEMENTS)
+    {
         return ecc_object_addmember(self, eccobject_keyOfIndex(index, 1), value, flags);
-
-    ref = &self->element[index].hmapitemvalue;
-
+    }
+    ref = &self->hmapitemitems[index].hmapitemvalue;
     value.flags |= flags;
     *ref = value;
-
     return ref;
 }
 
 eccvalue_t* ecc_object_addproperty(eccobject_t* self, eccvalue_t primitive, eccvalue_t value, int flags)
 {
+    uint32_t index;
     eccindexkey_t key;
-    uint32_t index = eccobject_getIndexOrKey(primitive, &key);
-
+    index = eccobject_getIndexOrKey(primitive, &key);
     if(index < UINT32_MAX)
+    {
         return ecc_object_addelement(self, index, value, flags);
-    else
-        return ecc_object_addmember(self, key, value, flags);
+    }
+    return ecc_object_addmember(self, key, value, flags);
 }
 
 int ecc_object_deletemember(eccobject_t* self, eccindexkey_t member)
 {
-    eccobject_t* object = self;
-    uint32_t slot, refSlot;
-
+    eccobject_t* object;
+    uint32_t slot;
+    uint32_t refSlot;
+    object = self;
     assert(object);
     assert(member.data.integer);
-
-    refSlot = self->hashmap[self->hashmap[self->hashmap[1].slot[member.data.depth[0]]].slot[member.data.depth[1]]].slot[member.data.depth[2]];
-
-    slot = self->hashmap[refSlot].slot[member.data.depth[3]];
-
-    if(!slot || !(object->hashmap[slot].hmapmapvalue.check == 1))
+    refSlot = self->hmapmapitems[self->hmapmapitems[self->hmapmapitems[1].slot[member.data.depth[0]]].slot[member.data.depth[1]]].slot[member.data.depth[2]];
+    slot = self->hmapmapitems[refSlot].slot[member.data.depth[3]];
+    if(!slot || !(object->hmapmapitems[slot].hmapmapvalue.check == 1))
+    {
         return 1;
-
-    if(object->hashmap[slot].hmapmapvalue.flags & ECC_VALFLAG_SEALED)
+    }
+    if(object->hmapmapitems[slot].hmapmapvalue.flags & ECC_VALFLAG_SEALED)
+    {
         return 0;
-
-    object->hashmap[slot].hmapmapvalue = ECCValConstUndefined;
-    self->hashmap[refSlot].slot[member.data.depth[3]] = 0;
+    }
+    object->hmapmapitems[slot].hmapmapvalue = ECCValConstUndefined;
+    self->hmapmapitems[refSlot].slot[member.data.depth[3]] = 0;
     return 1;
 }
 
 int ecc_object_deleteelement(eccobject_t* self, uint32_t index)
 {
+    eccindexkey_t key;
     assert(self);
-
-    if(index > io_libecc_object_ElementMax)
+    if(index > ECC_CONF_MAXELEMENTS)
     {
-        eccindexkey_t key = eccobject_keyOfIndex(index, 0);
+        key = eccobject_keyOfIndex(index, 0);
         if(key.data.integer)
+        {
             return ecc_object_deletemember(self, key);
+        }
         else
+        {
             return 1;
+        }
     }
-
-    if(index < self->elementCount)
+    if(index < self->hmapitemcount)
     {
-        if(self->element[index].hmapitemvalue.flags & ECC_VALFLAG_SEALED)
+        if(self->hmapitemitems[index].hmapitemvalue.flags & ECC_VALFLAG_SEALED)
+        {
             return 0;
-
-        memset(&self->element[index], 0, sizeof(*self->element));
+        }
+        memset(&self->hmapitemitems[index], 0, sizeof(*self->hmapitemitems));
     }
-
     return 1;
 }
 
 int ecc_object_deleteproperty(eccobject_t* self, eccvalue_t primitive)
 {
+    uint32_t index;
     eccindexkey_t key;
-    uint32_t index = eccobject_getIndexOrKey(primitive, &key);
-
+    index = eccobject_getIndexOrKey(primitive, &key);
     if(index < UINT32_MAX)
+    {
         return ecc_object_deleteelement(self, index);
-    else
-        return ecc_object_deletemember(self, key);
+    }    
+    return ecc_object_deletemember(self, key);
 }
 
 void ecc_object_packvalue(eccobject_t* self)
 {
+    size_t needed;
+    uint32_t index;
+    uint32_t valueIndex;
+    uint32_t copyIndex;
+    uint32_t slot;
     ecchashmap_t data;
-    uint32_t index = 2, valueIndex = 2, copyIndex, slot;
-
+    ecchashmap_t* tmp;
+    index = 2;
+    valueIndex = 2;
     assert(self);
-
-    for(; index < self->hashmapCount; ++index)
+    for(; index < self->hmapmapcount; ++index)
     {
-        if(self->hashmap[index].hmapmapvalue.check == 1)
+        if(self->hmapmapitems[index].hmapmapvalue.check == 1)
         {
-            data = self->hashmap[index];
+            data = self->hmapmapitems[index];
             for(copyIndex = index; copyIndex > valueIndex; --copyIndex)
             {
-                self->hashmap[copyIndex] = self->hashmap[copyIndex - 1];
-                if(!(self->hashmap[copyIndex].hmapmapvalue.check == 1))
+                self->hmapmapitems[copyIndex] = self->hmapmapitems[copyIndex - 1];
+                if(!(self->hmapmapitems[copyIndex].hmapmapvalue.check == 1))
                 {
                     for(slot = 0; slot < 16; ++slot)
                     {
-                        if(self->hashmap[copyIndex].slot[slot] == index)
+                        if(self->hmapmapitems[copyIndex].slot[slot] == index)
                         {
-                            self->hashmap[copyIndex].slot[slot] = valueIndex;
+                            self->hmapmapitems[copyIndex].slot[slot] = valueIndex;
                         }
-                        else if(self->hashmap[copyIndex].slot[slot] >= valueIndex && self->hashmap[copyIndex].slot[slot] < index)
+                        else if(self->hmapmapitems[copyIndex].slot[slot] >= valueIndex && self->hmapmapitems[copyIndex].slot[slot] < index)
                         {
-                            self->hashmap[copyIndex].slot[slot]++;
+                            self->hmapmapitems[copyIndex].slot[slot]++;
                         }
                     }
                 }
             }
             for(slot = 0; slot < 16; ++slot)
             {
-                if(self->hashmap[1].slot[slot] >= valueIndex && self->hashmap[1].slot[slot] < index)
+                if(self->hmapmapitems[1].slot[slot] >= valueIndex && self->hmapmapitems[1].slot[slot] < index)
                 {
-                    self->hashmap[1].slot[slot]++;
+                    self->hmapmapitems[1].slot[slot]++;
                 }
             }
-            self->hashmap[valueIndex++] = data;
+            self->hmapmapitems[valueIndex++] = data;
         }
     }
-    self->hashmap = (ecchashmap_t*)realloc(self->hashmap, sizeof(*self->hashmap) * (self->hashmapCount));
-    self->hashmapCapacity = self->hashmapCount;
-
-    if(self->elementCount)
+    needed = (sizeof(*self->hmapmapitems) * (self->hmapmapcount));
+    tmp = (ecchashmap_t*)realloc(self->hmapmapitems, needed);
+    if(tmp == NULL)
     {
-        self->elementCapacity = self->elementCount;
+        fprintf(stderr, "in packvalue: failed to reallocate for %ld bytes\n", needed);
+    }
+    self->hmapmapitems = tmp;
+    self->hmapmapcapacity = self->hmapmapcount;
+    if(self->hmapitemcount)
+    {
+        self->hmapitemcapacity = self->hmapitemcount;
     }
 }
 
 void ecc_object_stripmap(eccobject_t* self)
 {
-    uint32_t index = 2;
-
+    size_t needed;
+    uint32_t index;
+    ecchashmap_t* tmp;
+    index = 2;
     assert(self);
-
-    while(index < self->hashmapCount && self->hashmap[index].hmapmapvalue.check == 1)
+    while(index < self->hmapmapcount && self->hmapmapitems[index].hmapmapvalue.check == 1)
+    {
         ++index;
-
-    self->hashmapCapacity = self->hashmapCount = index;
-    self->hashmap = (ecchashmap_t*)realloc(self->hashmap, sizeof(*self->hashmap) * self->hashmapCapacity);
-
-    memset(self->hashmap + 1, 0, sizeof(*self->hashmap));
+    }
+    self->hmapmapcapacity = self->hmapmapcount = index;
+    needed = (sizeof(*self->hmapmapitems) * self->hmapmapcapacity);
+    tmp = (ecchashmap_t*)realloc(self->hmapmapitems, needed);
+    if(tmp == NULL)
+    {
+        fprintf(stderr, "in stripmap: failed to reallocate for %ld bytes\n", needed);
+    }
+    self->hmapmapitems = tmp;
+    memset(self->hmapmapitems + 1, 0, sizeof(*self->hmapmapitems));
 }
 
-void ecc_object_reserveslots(eccobject_t* self, uint16_t slots)
+void ecc_object_reserveslots(eccobject_t* self, uint32_t slots)
 {
-    int need = (slots * 4) - (self->hashmapCapacity - self->hashmapCount);
-
-    assert(slots < self->hashmapCapacity);
-
-    if(need > 0)
+    int needtoadd;
+    size_t needed;
+    uint32_t capacity;
+    ecchashmap_t* tmp;
+    needtoadd = (slots * 4) - (self->hmapmapcapacity - self->hmapmapcount);
+    assert(slots < self->hmapmapcapacity);
+    if(needtoadd > 0)
     {
-        uint16_t capacity = self->hashmapCapacity;
-        self->hashmapCapacity = self->hashmapCapacity ? self->hashmapCapacity * 2 : 2;
-        self->hashmap = (ecchashmap_t*)realloc(self->hashmap, sizeof(*self->hashmap) * self->hashmapCapacity);
-        memset(self->hashmap + capacity, 0, sizeof(*self->hashmap) * (self->hashmapCapacity - capacity));
+        capacity = self->hmapmapcapacity;
+        self->hmapmapcapacity = self->hmapmapcapacity ? self->hmapmapcapacity * 2 : 2;
+        needed = (sizeof(*self->hmapmapitems) * self->hmapmapcapacity);
+        tmp = (ecchashmap_t*)realloc(self->hmapmapitems, needed);
+        if(tmp == NULL)
+        {
+            fprintf(stderr, "in reserveslots: failed to reallocate for %ld bytes\n", needed);
+        }
+        self->hmapmapitems = tmp;
+        memset(self->hmapmapitems + capacity, 0, sizeof(*self->hmapmapitems) * (self->hmapmapcapacity - capacity));
     }
 }
 
 int ecc_object_resizeelement(eccobject_t* self, uint32_t size)
 {
     uint32_t capacity;
-
-    if(size <= self->elementCapacity)
-        capacity = self->elementCapacity;
+    uint32_t until;
+    uint32_t e;
+    uint32_t index;
+    uint32_t h;
+    size_t needed;
+    ecchashmap_t* hashmap;
+    ecchashitem_t* element;
+    ecchashitem_t* tmp;
+    if(size <= self->hmapitemcapacity)
+    {
+        capacity = self->hmapitemcapacity;
+    }
     else if(size < 4)
     {
         /* 64-bytes mini */
@@ -1197,8 +1252,10 @@ int ecc_object_resizeelement(eccobject_t* self, uint32_t size)
         /* power of two steps between */
         capacity = eccobject_nextPowerOfTwo(size);
     }
-    else if(size > io_libecc_object_ElementMax)
-        capacity = io_libecc_object_ElementMax + 1;
+    else if(size > ECC_CONF_MAXELEMENTS)
+    {
+        capacity = ECC_CONF_MAXELEMENTS + 1;
+    }
     else
     {
         /* 1024-bytes chunk */
@@ -1206,77 +1263,78 @@ int ecc_object_resizeelement(eccobject_t* self, uint32_t size)
         capacity |= 63;
         ++capacity;
     }
-
     assert(self);
-
-    if(capacity != self->elementCapacity)
+    if(capacity != self->hmapitemcapacity)
     {
-        if(size > io_libecc_object_ElementMax)
+        if(size > ECC_CONF_MAXELEMENTS)
         {
-            ecc_env_printwarning("Faking array length of %u while actual physical length is %u. Using array length > 0x%x is discouraged", size, capacity,
-                                  io_libecc_object_ElementMax);
+            ecc_env_printwarning("creating array of faked length %u with actual length %u, because array length is >0x%x", size, capacity,
+                                  ECC_CONF_MAXELEMENTS);
         }
-
-        self->element = (ecchashitem_t*)realloc(self->element, sizeof(*self->element) * capacity);
-        if(capacity > self->elementCapacity)
-            memset(self->element + self->elementCapacity, 0, sizeof(*self->element) * (capacity - self->elementCapacity));
-
-        self->elementCapacity = capacity;
-    }
-    else if(size < self->elementCount)
-    {
-        ecchashitem_t* element;
-        uint32_t until = size, e;
-
-        if(self->elementCount > io_libecc_object_ElementMax)
+        needed = (sizeof(*self->hmapitemitems) * capacity);
+        tmp = (ecchashitem_t*)realloc(self->hmapitemitems, needed);
+        if(tmp == NULL)
         {
-            ecchashmap_t* hashmap;
-            uint32_t index, h;
-
-            for(h = 2; h < self->hashmapCount; ++h)
+            fprintf(stderr, "in resizeelement: failed to reallocate for %ld bytes\n", needed);
+        }
+        self->hmapitemitems = tmp;
+        if(capacity > self->hmapitemcapacity)
+        {
+            memset(self->hmapitemitems + self->hmapitemcapacity, 0, sizeof(*self->hmapitemitems) * (capacity - self->hmapitemcapacity));
+        }
+        self->hmapitemcapacity = capacity;
+    }
+    else if(size < self->hmapitemcount)
+    {
+        until = size;
+        if(self->hmapitemcount > ECC_CONF_MAXELEMENTS)
+        {
+            for(h = 2; h < self->hmapmapcount; ++h)
             {
-                hashmap = &self->hashmap[h];
+                hashmap = &self->hmapmapitems[h];
                 if(hashmap->hmapmapvalue.check == 1)
                 {
                     index = ecc_astlex_scanelement(*ecc_keyidx_textof(hashmap->hmapmapvalue.key));
                     if(hashmap->hmapmapvalue.check == 1 && (hashmap->hmapmapvalue.flags & ECC_VALFLAG_SEALED) && index >= until)
+                    {
                         until = index + 1;
+                    }
                 }
             }
-
-            for(h = 2; h < self->hashmapCount; ++h)
+            for(h = 2; h < self->hmapmapcount; ++h)
             {
-                hashmap = &self->hashmap[h];
+                hashmap = &self->hmapmapitems[h];
                 if(hashmap->hmapmapvalue.check == 1)
+                {
                     if(ecc_astlex_scanelement(*ecc_keyidx_textof(hashmap->hmapmapvalue.key)) >= until)
-                        self->hashmap[h].hmapmapvalue.check = 0;
+                    {
+                        self->hmapmapitems[h].hmapmapvalue.check = 0;
+                    }
+                }
             }
-
             if(until > size)
             {
-                self->elementCount = until;
+                self->hmapitemcount = until;
                 return 1;
             }
-            self->elementCount = self->elementCapacity;
+            self->hmapitemcount = self->hmapitemcapacity;
         }
-
-        for(e = size; e < self->elementCount; ++e)
+        for(e = size; e < self->hmapitemcount; ++e)
         {
-            element = &self->element[e];
+            element = &self->hmapitemitems[e];
             if(element->hmapitemvalue.check == 1 && (element->hmapitemvalue.flags & ECC_VALFLAG_SEALED) && e >= until)
+            {
                 until = e + 1;
+            }
         }
-
-        memset(self->element + until, 0, sizeof(*self->element) * (self->elementCount - until));
-
+        memset(self->hmapitemitems + until, 0, sizeof(*self->hmapitemitems) * (self->hmapitemcount - until));
         if(until > size)
         {
-            self->elementCount = until;
+            self->hmapitemcount = until;
             return 1;
         }
     }
-    self->elementCount = size;
-
+    self->hmapitemcount = size;
     return 0;
 }
 
@@ -1287,24 +1345,24 @@ void ecc_object_populateelementwithclist(eccobject_t* self, uint32_t count, cons
     int index;
 
     assert(self);
-    assert(count <= io_libecc_object_ElementMax);
+    assert(count <= ECC_CONF_MAXELEMENTS);
 
-    if(count > self->elementCount)
+    if(count > self->hmapitemcount)
         ecc_object_resizeelement(self, count);
 
     for(index = 0; index < (int)count; ++index)
     {
-        uint16_t length = (uint16_t)strlen(list[index]);
+        uint32_t length = (uint32_t)strlen(list[index]);
         binary = strtod(list[index], &end);
 
         if(end == list[index] + length)
-            self->element[index].hmapitemvalue = ecc_value_fromfloat(binary);
+            self->hmapitemitems[index].hmapitemvalue = ecc_value_fromfloat(binary);
         else
         {
             eccstrbuffer_t* chars = ecc_strbuf_createsized(length);
             memcpy(chars->bytes, list[index], length);
 
-            self->element[index].hmapitemvalue = ecc_value_fromchars(chars);
+            self->hmapitemitems[index].hmapitemvalue = ecc_value_fromchars(chars);
         }
     }
 }
@@ -1312,15 +1370,15 @@ void ecc_object_populateelementwithclist(eccobject_t* self, uint32_t count, cons
 eccvalue_t ecc_object_tostringfn(ecccontext_t* context)
 {
     if(context->thisvalue.type == ECC_VALTYPE_NULL)
-        return ecc_value_fromtext(&ECC_ConstString_NullType);
+        return ecc_value_fromtext(&ECC_String_NullType);
     else if(context->thisvalue.type == ECC_VALTYPE_UNDEFINED)
-        return ecc_value_fromtext(&ECC_ConstString_UndefinedType);
+        return ecc_value_fromtext(&ECC_String_UndefinedType);
     else if(ecc_value_isstring(context->thisvalue))
-        return ecc_value_fromtext(&ECC_ConstString_StringType);
+        return ecc_value_fromtext(&ECC_String_StringType);
     else if(ecc_value_isnumber(context->thisvalue))
-        return ecc_value_fromtext(&ECC_ConstString_NumberType);
+        return ecc_value_fromtext(&ECC_String_NumberType);
     else if(ecc_value_isboolean(context->thisvalue))
-        return ecc_value_fromtext(&ECC_ConstString_BooleanType);
+        return ecc_value_fromtext(&ECC_String_BooleanType);
     else if(ecc_value_isobject(context->thisvalue))
         return ecc_value_fromtext(context->thisvalue.data.object->type->text);
     else
@@ -1342,15 +1400,15 @@ void ecc_object_dumpto(eccobject_t* self, FILE* file)
 
     for(index = 0, count = eccobject_elementCount(self); index < count; ++index)
     {
-        if(self->element[index].hmapitemvalue.check == 1)
+        if(self->hmapitemitems[index].hmapitemvalue.check == 1)
         {
             if(!isArray)
                 fprintf(file, "%d: ", (int)index);
 
-            if(self->element[index].hmapitemvalue.type == ECC_VALTYPE_OBJECT && self->element[index].hmapitemvalue.data.object == self)
+            if(self->hmapitemitems[index].hmapitemvalue.type == ECC_VALTYPE_OBJECT && self->hmapitemitems[index].hmapitemvalue.data.object == self)
                 fprintf(file, "this");
             else
-                ecc_value_dumpto(self->element[index].hmapitemvalue, file);
+                ecc_value_dumpto(self->hmapitemitems[index].hmapitemvalue, file);
 
             fprintf(file, ", ");
         }
@@ -1358,27 +1416,31 @@ void ecc_object_dumpto(eccobject_t* self, FILE* file)
 
     if(!isArray)
     {
-        for(index = 0; index < self->hashmapCount; ++index)
+        for(index = 0; index < self->hmapmapcount; ++index)
         {
-            if(self->hashmap[index].hmapmapvalue.check == 1)
+            if(self->hmapmapitems[index].hmapmapvalue.check == 1)
             {
                 fprintf(stderr, "'");
-                ecc_keyidx_dumpto(self->hashmap[index].hmapmapvalue.key, file);
+                ecc_keyidx_dumpto(self->hmapmapitems[index].hmapmapvalue.key, file);
                 fprintf(file, "': ");
 
-                if(self->hashmap[index].hmapmapvalue.type == ECC_VALTYPE_OBJECT && self->hashmap[index].hmapmapvalue.data.object == self)
+                if(self->hmapmapitems[index].hmapmapvalue.type == ECC_VALTYPE_OBJECT && self->hmapmapitems[index].hmapmapvalue.data.object == self)
                     fprintf(file, "this");
                 else
-                    ecc_value_dumpto(self->hashmap[index].hmapmapvalue, file);
+                    ecc_value_dumpto(self->hmapmapitems[index].hmapmapvalue, file);
 
                 fprintf(file, ", ");
             }
-            //			else
-            //			{
-            //				fprintf(file, "\n");
-            //				for (int j = 0; j < 16; ++j)
-            //					fprintf(file, "%02x ", self->hashmap[index].slot[j]);
-            //			}
+            /*
+            else
+            {
+                fprintf(file, "\n");
+                for (int j = 0; j < 16; ++j)
+                {
+                    fprintf(file, "%02x ", self->hmapmapitems[index].slot[j]);
+                }
+            }
+            */
         }
     }
 

@@ -1,10 +1,12 @@
-//
+
+/*
 //  input.c
 //  libecc
 //
 //  Copyright (c) 2019 Aurélien Bouilland
 //  Licensed under MIT license, see LICENSE.txt file in project root
-//
+*/
+
 #include "ecc.h"
 
 eccioinput_t* ecc_ioinput_create(void)
@@ -20,7 +22,7 @@ eccioinput_t* ecc_ioinput_create(void)
     return self;
 }
 
-void ecc_ioinput_printinput(const char* name, uint16_t line)
+void ecc_ioinput_printinput(const char* name, uint32_t line)
 {
     if(name[0] == '(')
         ecc_env_printcolor(0, ECC_ENVATTR_DIM, "%s", name);
@@ -32,7 +34,7 @@ void ecc_ioinput_printinput(const char* name, uint16_t line)
 
 eccioinput_t* ecc_ioinput_createfromfile(const char* filename)
 {
-    ecctextstring_t inputError = ECC_ConstString_InputErrorName;
+    ecctextstring_t inputError = ECC_String_InputErrorName;
     FILE* file;
     long size;
     eccioinput_t* self;
@@ -60,11 +62,6 @@ eccioinput_t* ecc_ioinput_createfromfile(const char* filename)
     self->length = (uint32_t)fread(self->bytes, sizeof(char), size, file);
     fclose(file), file = NULL;
     self->bytes[size] = '\0';
-
-    //	FILE *f = fopen("error.txt", "w");
-    //	fprintf(f, "%.*s", self->length, self->bytes);
-    //	fclose(f);
-
     return self;
 }
 
@@ -105,7 +102,7 @@ void ecc_ioinput_printtext(eccioinput_t* self, ecctextstring_t text, int32_t ofL
 {
     int32_t line;
     uint32_t start;
-    uint16_t length;
+    uint32_t length;
     long index;
     long marked;
     char* mark;
@@ -161,7 +158,6 @@ void ecc_ioinput_printtext(eccioinput_t* self, ecctextstring_t text, int32_t ofL
 
         if(length >= text.bytes - bytes)
         {
-            //char mark[length + 2];
             index = 0;
             marked = 0;
             mark = (char*)calloc(length+2, sizeof(char));
@@ -221,7 +217,7 @@ void ecc_ioinput_printtext(eccioinput_t* self, ecctextstring_t text, int32_t ofL
 
 int32_t ecc_ioinput_findline(eccioinput_t* self, ecctextstring_t text)
 {
-    uint16_t line = self->lineCount + 1;
+    uint32_t line = self->lineCount + 1;
     while(line--)
         if((self->bytes + self->lines[line] <= text.bytes) && (self->bytes + self->lines[line] < self->bytes + self->length))
             return line;
@@ -231,10 +227,19 @@ int32_t ecc_ioinput_findline(eccioinput_t* self, ecctextstring_t text)
 
 eccvalue_t ecc_ioinput_attachvalue(eccioinput_t* self, eccvalue_t value)
 {
+    size_t needed;
+    eccvalue_t* tmp;
     if(value.type == ECC_VALTYPE_CHARS)
+    {
         value.data.chars->refcount++;
-
-    self->attached = (eccvalue_t*)realloc(self->attached, sizeof(*self->attached) * (self->attachedCount + 1));
+    }
+    needed = (sizeof(*self->attached) * (self->attachedCount + 1));
+    tmp = (eccvalue_t*)realloc(self->attached, needed);
+    if(tmp == NULL)
+    {
+        fprintf(stderr, "in attachvalue: failed to reallocate for %ld bytes\n", needed);
+    }
+    self->attached = tmp;
     self->attached[self->attachedCount] = value;
     return value;
 }

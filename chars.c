@@ -1,12 +1,14 @@
-//
+
+/*
 //  chars.c
 //  libecc
 //
 //  Copyright (c) 2019 Aurélien Bouilland
 //  Licensed under MIT license, see LICENSE.txt file in project root
-//
-#include "ecc.h"
+*/
 
+#include "ecc.h"
+#include "compat.h"
 
 uint32_t ecc_strbuf_nextpoweroftwo(uint32_t v)
 {
@@ -35,10 +37,15 @@ eccstrbuffer_t* ecc_strbuf_reuseorcreate(eccappendbuffer_t* chars, uint32_t leng
     eccstrbuffer_t *self = NULL, *reuse = chars ? chars->sbufvalue : NULL;
 
     if(reuse && ecc_strbuf_sizeforlength(reuse->length) >= ecc_strbuf_sizeforlength(length))
+    {
         return reuse;
-    //	else
-    //		chars = ecc_mempool_reusablechars(length);
-
+    }
+    /*
+    else
+    {
+        chars = ecc_mempool_reusablechars(length);
+    }
+    */
     if(!self)
     {
         if(length < 8)
@@ -61,10 +68,6 @@ eccstrbuffer_t* ecc_strbuf_reuseorcreate(eccappendbuffer_t* chars, uint32_t leng
     return self;
 }
 
-// MARK: - Static Members
-
-// MARK: - Methods
-
 eccstrbuffer_t* ecc_strbuf_createva(int32_t length, const char* format, va_list ap)
 {
     eccstrbuffer_t* self;
@@ -77,7 +80,7 @@ eccstrbuffer_t* ecc_strbuf_createva(int32_t length, const char* format, va_list 
 
 eccstrbuffer_t* ecc_strbuf_create(const char* format, ...)
 {
-    uint16_t length;
+    uint32_t length;
     va_list ap;
     eccstrbuffer_t* self;
 
@@ -213,23 +216,23 @@ void ecc_strbuf_appendvalue(eccappendbuffer_t* chars, ecccontext_t* context, ecc
             return;
 
         case ECC_VALTYPE_NULL:
-            ecc_strbuf_appendtext(chars, ECC_ConstString_Null);
+            ecc_strbuf_appendtext(chars, ECC_String_Null);
             return;
 
         case ECC_VALTYPE_UNDEFINED:
-            ecc_strbuf_appendtext(chars, ECC_ConstString_Undefined);
+            ecc_strbuf_appendtext(chars, ECC_String_Undefined);
             return;
 
         case ECC_VALTYPE_FALSE:
-            ecc_strbuf_appendtext(chars, ECC_ConstString_False);
+            ecc_strbuf_appendtext(chars, ECC_String_False);
             return;
 
         case ECC_VALTYPE_TRUE:
-            ecc_strbuf_appendtext(chars, ECC_ConstString_True);
+            ecc_strbuf_appendtext(chars, ECC_String_True);
             return;
 
         case ECC_VALTYPE_BOOLEAN:
-            ecc_strbuf_appendtext(chars, value.data.boolean->truth ? ECC_ConstString_True : ECC_ConstString_False);
+            ecc_strbuf_appendtext(chars, value.data.boolean->truth ? ECC_String_True : ECC_String_False);
             return;
 
         case ECC_VALTYPE_INTEGER:
@@ -237,11 +240,11 @@ void ecc_strbuf_appendvalue(eccappendbuffer_t* chars, ecccontext_t* context, ecc
             return;
 
         case ECC_VALTYPE_NUMBER:
-            ecc_strbuf_appendbinary(chars, value.data.number->value, 10);
+            ecc_strbuf_appendbinary(chars, value.data.number->numvalue, 10);
             return;
 
         case ECC_VALTYPE_BINARY:
-            ecc_strbuf_appendbinary(chars, value.data.binary, 10);
+            ecc_strbuf_appendbinary(chars, value.data.valnumfloat, 10);
             return;
 
         case ECC_VALTYPE_REGEXP:
@@ -292,15 +295,15 @@ void ecc_strbuf_appendbinary(eccappendbuffer_t* chars, double binary, int base)
 {
     if(isnan(binary))
     {
-        ecc_strbuf_appendtext(chars, ECC_ConstString_Nan);
+        ecc_strbuf_appendtext(chars, ECC_String_Nan);
         return;
     }
     else if(!isfinite(binary))
     {
         if(binary < 0)
-            ecc_strbuf_appendtext(chars, ECC_ConstString_NegativeInfinity);
+            ecc_strbuf_appendtext(chars, ECC_String_NegInfinity);
         else
-            ecc_strbuf_appendtext(chars, ECC_ConstString_Infinity);
+            ecc_strbuf_appendtext(chars, ECC_String_Infinity);
 
         return;
     }
@@ -346,7 +349,7 @@ void ecc_strbuf_appendbinary(eccappendbuffer_t* chars, double binary, int base)
             static char const digits[] = "0123456789abcdefghijklmnopqrstuvwxyz";
             char buffer[1 + sizeof(integer) * CHAR_BIT];
             char* p = buffer + sizeof(buffer) - 1;
-            uint16_t count;
+            uint32_t count;
 
             while(integer)
             {

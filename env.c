@@ -1,10 +1,11 @@
-//
+
+/*
 //  env.c
 //  libecc
 //
 //  Copyright (c) 2019 Aurélien Bouilland
 //  Licensed under MIT license, see LICENSE.txt file in project root
-//
+*/
 
 #include "ecc.h"
 
@@ -20,13 +21,6 @@
 #elif _DEFAULT_SOURCE || __APPLE__
     #include <sys/time.h>
 #endif
-
-// MARK: - Private
-
-#define PRINT_MAX 2048
-
-
-const int io_libecc_env_print_max = PRINT_MAX;
 
 static struct
 {
@@ -109,7 +103,7 @@ void eccenv_textc(int c, int a)
 
 void eccenv_vprintc(const char* format, va_list ap)
 {
-    char buffer[PRINT_MAX];
+    char buffer[ECC_CONF_PRINTMAX];
     size_t size = sizeof(buffer);
 
     if(vsnprintf(buffer, size, format, ap) >= (int)size)

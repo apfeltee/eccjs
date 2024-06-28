@@ -1,10 +1,11 @@
-//
+
+/*
 //  main.c
 //  libecc
 //
 //  Copyright (c) 2019 Aurélien Bouilland
 //  Licensed under MIT license, see LICENSE.txt file in project root
-//
+*/
 
 #include "ecc.h"
 
@@ -91,12 +92,12 @@ error:
     ecc_script_garbagecollect(ecc);
 }
 
-#include "testcode.inc"
+#include "testcode.h"
 
 static int runTest(int verbosity)
 {
     testVerbosity = verbosity;
-    //test("debugger", "undefined", NULL);
+    /* test("debugger", "undefined", NULL); */
     testLexer();
     testParser();
     testEval();
@@ -154,7 +155,9 @@ static eccvalue_t printhelper(ecccontext_t* context, FILE* file, bool space, boo
     {
         if(index && space)
         {
-            //putc(' ', file);
+            #if 0
+            putc(' ', file);
+            #endif
         }
         value = ecc_context_argument(context, index);
         ecc_value_dumpto(ecc_value_tostring(context, value), file);
@@ -208,6 +211,7 @@ int main(int argc, const char* argv[])
     {
         eccobject_t* arguments = ecc_args_createwithclist(argc - 2, &argv[2]);
         ecc_script_addvalue(ecc, "arguments", ecc_value_object(arguments), 0);
+        ecc_script_addvalue(ecc, "SHELLARGV", ecc_value_object(arguments), 0);
         result = ecc_script_evalinput(ecc, ecc_ioinput_createfromfile(argv[1]), ECC_SCRIPTEVAL_SLOPPYMODE);
     }
     ecc_script_destroy(ecc), ecc = NULL;

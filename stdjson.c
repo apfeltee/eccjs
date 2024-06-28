@@ -1,10 +1,12 @@
-//
+
+/*
 //  json.c
 //  libecc
 //
 //  Copyright (c) 2019 Aurélien Bouilland
 //  Licensed under MIT license, see LICENSE.txt file in project root
-//
+*/
+
 #include "ecc.h"
 
 typedef struct eccjsonparser_t eccjsonparser_t;
@@ -15,9 +17,7 @@ struct eccjsonparser_t
     ecctextstring_t text;
     const char* start;
     int line;
-
-    // reviver
-
+    /* reviver */
     ecccontext_t context;
     eccobjfunction_t* function;
     eccobject_t* arguments;
@@ -30,9 +30,7 @@ struct eccjsonstringify_t
     char spaces[11];
     int level;
     eccobject_t* filter;
-
-    // replacer
-
+    /* replacer */
     ecccontext_t context;
     eccobjfunction_t* function;
     eccobject_t* arguments;
@@ -55,7 +53,7 @@ static int ecc_json_stringify(eccjsonstringify_t *stringify, eccvalue_t thisval,
 static eccvalue_t objjsonfn_stringify(ecccontext_t *context);
 
 const eccobjinterntype_t ECC_Type_Json = {
-    .text = &ECC_ConstString_JsonType,
+    .text = &ECC_String_JsonType,
 };
 
 static eccvalue_t ecc_json_error(eccjsonparser_t* parse, int length, eccstrbuffer_t* chars)
@@ -272,7 +270,7 @@ static eccvalue_t ecc_json_parsearray(eccjsonparser_t* parse)
         if(value.type == ECC_VALTYPE_ERROR)
             return value;
 
-        ecc_object_addelement(object, object->elementCount, value, 0);
+        ecc_object_addelement(object, object->hmapitemcount, value, 0);
 
         c = ecc_json_nextc(parse);
 
@@ -299,28 +297,26 @@ static eccvalue_t ecc_json_runparser(eccjsonparser_t* parse)
     return ecc_json_error(parse, -c.units, ecc_strbuf_create("expect { or ["));
 }
 
-// MARK: - Static Members
-
 static eccvalue_t ecc_json_revive(eccjsonparser_t* parse, eccvalue_t thisval, eccvalue_t property, eccvalue_t value)
 {
-    uint16_t hashmapCount;
+    uint32_t hashmapCount;
 
-    hashmapCount = parse->context.environment->hashmapCount;
+    hashmapCount = parse->context.execenv->hmapmapcount;
     switch(hashmapCount)
     {
         default:
             {
-                memcpy(parse->context.environment->hashmap + 5, parse->function->environment.hashmap, sizeof(*parse->context.environment->hashmap) * (hashmapCount - 5));
+                memcpy(parse->context.execenv->hmapmapitems + 5, parse->function->funcenv.hmapmapitems, sizeof(*parse->context.execenv->hmapmapitems) * (hashmapCount - 5));
             }
             /* fallthrough */
         case 5:
             {
-                parse->context.environment->hashmap[3 + 1].hmapmapvalue = value;
+                parse->context.execenv->hmapmapitems[3 + 1].hmapmapvalue = value;
             }
             /* fallthrough */
         case 4:
             {
-                parse->context.environment->hashmap[3 + 0].hmapmapvalue = property;
+                parse->context.execenv->hmapmapitems[3 + 0].hmapmapvalue = property;
             }
             /* fallthrough */
         case 3:
@@ -334,8 +330,8 @@ static eccvalue_t ecc_json_revive(eccjsonparser_t* parse, eccvalue_t thisval, ec
 
     parse->context.ops = parse->ops;
     parse->context.thisvalue = thisval;
-    parse->arguments->element[0].hmapitemvalue = property;
-    parse->arguments->element[1].hmapitemvalue = value;
+    parse->arguments->hmapitemitems[0].hmapitemvalue = property;
+    parse->arguments->hmapitemitems[1].hmapitemvalue = value;
     return parse->context.ops->native(&parse->context);
 }
 
@@ -348,20 +344,20 @@ static eccvalue_t ecc_json_itermore(eccjsonparser_t* parse, eccvalue_t thisval, 
     {
         eccobject_t* object = value.data.object;
 
-        for(index = 0, count = object->elementCount < io_libecc_object_ElementMax ? object->elementCount : io_libecc_object_ElementMax; index < count; ++index)
+        for(index = 0, count = object->hmapitemcount < ECC_CONF_MAXELEMENTS ? object->hmapitemcount : ECC_CONF_MAXELEMENTS; index < count; ++index)
         {
-            if(object->element[index].hmapitemvalue.check == 1)
+            if(object->hmapitemitems[index].hmapitemvalue.check == 1)
             {
                 ecc_strbuf_beginappend(&chars);
                 ecc_strbuf_append(&chars, "%d", index);
-                object->element[index].hmapitemvalue = ecc_json_itermore(parse, thisval, ecc_strbuf_endappend(&chars), object->element[index].hmapitemvalue);
+                object->hmapitemitems[index].hmapitemvalue = ecc_json_itermore(parse, thisval, ecc_strbuf_endappend(&chars), object->hmapitemitems[index].hmapitemvalue);
             }
         }
 
-        for(index = 2; index < object->hashmapCount; ++index)
+        for(index = 2; index < object->hmapmapcount; ++index)
         {
-            if(object->hashmap[index].hmapmapvalue.check == 1)
-                object->hashmap[index].hmapmapvalue = ecc_json_itermore(parse, thisval, ecc_value_fromkey(object->hashmap[index].hmapmapvalue.key), object->hashmap[index].hmapmapvalue);
+            if(object->hmapmapitems[index].hmapmapvalue.check == 1)
+                object->hmapmapitems[index].hmapmapvalue = ecc_json_itermore(parse, thisval, ecc_value_fromkey(object->hmapmapitems[index].hmapmapvalue.key), object->hmapmapitems[index].hmapmapvalue);
         }
     }
     return ecc_json_revive(parse, thisval, property, value);
@@ -399,53 +395,53 @@ static eccvalue_t objjsonfn_parse(ecccontext_t* context)
 
     if(parse.function && parse.function->flags & ECC_SCRIPTFUNCFLAG_NEEDHEAP)
     {
-        eccobject_t* environment = ecc_object_copy(&parse.function->environment);
-        parse.context.environment = environment;
+        eccobject_t* environment = ecc_object_copy(&parse.function->funcenv);
+        parse.context.execenv = environment;
         parse.arguments = ecc_args_createsized(2);
         ++parse.arguments->refcount;
-        environment->hashmap[2].hmapmapvalue = ecc_value_object(parse.arguments);
-        result = ecc_json_itermore(&parse, result, ecc_value_fromtext(&ECC_ConstString_Empty), result);
+        environment->hmapmapitems[2].hmapmapvalue = ecc_value_object(parse.arguments);
+        result = ecc_json_itermore(&parse, result, ecc_value_fromtext(&ECC_String_Empty), result);
     }
     else if(parse.function)
     {
-        eccobject_t environment = parse.function->environment;
+        eccobject_t environment = parse.function->funcenv;
         eccobject_t arguments;
         memset(&arguments, 0, sizeof(eccobject_t));
-        ecchashmap_t hashmap[parse.function->environment.hashmapCapacity];
+        ecchashmap_t hashmap[parse.function->funcenv.hmapmapcapacity];
         ecchashitem_t element[2];
-        memcpy(hashmap, parse.function->environment.hashmap, sizeof(hashmap));
-        parse.context.environment = &environment;
+        memcpy(hashmap, parse.function->funcenv.hmapmapitems, sizeof(hashmap));
+        parse.context.execenv = &environment;
         parse.arguments = &arguments;
-        arguments.element = element;
-        arguments.elementCount = 2;
-        environment.hashmap = hashmap;
-        environment.hashmap[2].hmapmapvalue = ecc_value_object(&arguments);
-        result = ecc_json_itermore(&parse, result, ecc_value_fromtext(&ECC_ConstString_Empty), result);
+        arguments.hmapitemitems = element;
+        arguments.hmapitemcount = 2;
+        environment.hmapmapitems = hashmap;
+        environment.hmapmapitems[2].hmapmapvalue = ecc_value_object(&arguments);
+        result = ecc_json_itermore(&parse, result, ecc_value_fromtext(&ECC_String_Empty), result);
     }
     return result;
 }
 
 static eccvalue_t ecc_json_replace(eccjsonstringify_t* stringify, eccvalue_t thisval, eccvalue_t property, eccvalue_t value)
 {
-    uint16_t hashmapCount;
+    uint32_t hashmapCount;
 
-    hashmapCount = stringify->context.environment->hashmapCount;
+    hashmapCount = stringify->context.execenv->hmapmapcount;
     switch(hashmapCount)
     {
         default:
             {
-                memcpy(stringify->context.environment->hashmap + 5, stringify->function->environment.hashmap,
-                   sizeof(*stringify->context.environment->hashmap) * (hashmapCount - 5));
+                memcpy(stringify->context.execenv->hmapmapitems + 5, stringify->function->funcenv.hmapmapitems,
+                   sizeof(*stringify->context.execenv->hmapmapitems) * (hashmapCount - 5));
             }
             /* fallthrough */
         case 5:
             {
-                stringify->context.environment->hashmap[3 + 1].hmapmapvalue = value;
+                stringify->context.execenv->hmapmapitems[3 + 1].hmapmapvalue = value;
             }
             /* fallthrough */
         case 4:
             {
-                stringify->context.environment->hashmap[3 + 0].hmapmapvalue = property;
+                stringify->context.execenv->hmapmapitems[3 + 0].hmapmapvalue = property;
             }
             /* fallthrough */
         case 3:
@@ -459,8 +455,8 @@ static eccvalue_t ecc_json_replace(eccjsonstringify_t* stringify, eccvalue_t thi
 
     stringify->context.ops = stringify->ops;
     stringify->context.thisvalue = thisval;
-    stringify->arguments->element[0].hmapitemvalue = property;
-    stringify->arguments->element[1].hmapitemvalue = value;
+    stringify->arguments->hmapitemitems[0].hmapitemvalue = property;
+    stringify->arguments->hmapitemitems[1].hmapitemvalue = value;
     return stringify->context.ops->native(&stringify->context);
 }
 
@@ -481,11 +477,11 @@ static int ecc_json_stringify(eccjsonstringify_t* stringify, eccvalue_t thisval,
             eccobject_t* object = stringify->filter;
             int found = 0;
 
-            for(index = 0, count = object->elementCount < io_libecc_object_ElementMax ? object->elementCount : io_libecc_object_ElementMax; index < count; ++index)
+            for(index = 0, count = object->hmapitemcount < ECC_CONF_MAXELEMENTS ? object->hmapitemcount : ECC_CONF_MAXELEMENTS; index < count; ++index)
             {
-                if(object->element[index].hmapitemvalue.check == 1)
+                if(object->hmapitemitems[index].hmapitemvalue.check == 1)
                 {
-                    if(ecc_value_istrue(ecc_value_equals(&stringify->context, property, object->element[index].hmapitemvalue)))
+                    if(ecc_value_istrue(ecc_value_equals(&stringify->context, property, object->hmapitemitems[index].hmapitemvalue)))
                     {
                         found = 1;
                         break;
@@ -521,24 +517,24 @@ static int ecc_json_stringify(eccjsonstringify_t* stringify, eccvalue_t thisval,
         ecc_strbuf_append(&stringify->chars, "%s%s", subisarr ? "[" : "{", strlen(stringify->spaces) ? "\n" : "");
         ++stringify->level;
 
-        for(index = 0, count = object->elementCount < io_libecc_object_ElementMax ? object->elementCount : io_libecc_object_ElementMax; index < count; ++index)
+        for(index = 0, count = object->hmapitemcount < ECC_CONF_MAXELEMENTS ? object->hmapitemcount : ECC_CONF_MAXELEMENTS; index < count; ++index)
         {
-            if(object->element[index].hmapitemvalue.check == 1)
+            if(object->hmapitemitems[index].hmapitemvalue.check == 1)
             {
                 ecc_strbuf_beginappend(&chars);
                 ecc_strbuf_append(&chars, "%d", index);
-                hasValue |= ecc_json_stringify(stringify, value, ecc_strbuf_endappend(&chars), object->element[index].hmapitemvalue, subisarr, hasValue);
+                hasValue |= ecc_json_stringify(stringify, value, ecc_strbuf_endappend(&chars), object->hmapitemitems[index].hmapitemvalue, subisarr, hasValue);
             }
         }
 
         if(!subisarr)
         {
-            for(index = 0; index < object->hashmapCount; ++index)
+            for(index = 0; index < object->hmapmapcount; ++index)
             {
-                if(object->hashmap[index].hmapmapvalue.check == 1)
+                if(object->hmapmapitems[index].hmapmapvalue.check == 1)
                 {
-                    strprop = ecc_keyidx_textof(object->hashmap[index].hmapmapvalue.key);
-                    hasValue |= ecc_json_stringify(stringify, value, ecc_value_fromtext(strprop), object->hashmap[index].hmapmapvalue, subisarr, hasValue);
+                    strprop = ecc_keyidx_textof(object->hmapmapitems[index].hmapmapvalue.key);
+                    hasValue |= ecc_json_stringify(stringify, value, ecc_value_fromtext(strprop), object->hmapmapitems[index].hmapmapvalue, subisarr, hasValue);
                 }
             }
         }
@@ -595,42 +591,40 @@ static eccvalue_t objjsonfn_stringify(ecccontext_t* context)
 
     if(stringify.function && stringify.function->flags & ECC_SCRIPTFUNCFLAG_NEEDHEAP)
     {
-        eccobject_t* environment = ecc_object_copy(&stringify.function->environment);
+        eccobject_t* environment = ecc_object_copy(&stringify.function->funcenv);
 
-        stringify.context.environment = environment;
+        stringify.context.execenv = environment;
         stringify.arguments = ecc_args_createsized(2);
         ++stringify.arguments->refcount;
 
-        environment->hashmap[2].hmapmapvalue = ecc_value_object(stringify.arguments);
+        environment->hmapmapitems[2].hmapmapvalue = ecc_value_object(stringify.arguments);
 
-        ecc_json_stringify(&stringify, value, ecc_value_fromtext(&ECC_ConstString_Empty), value, 1, 0);
+        ecc_json_stringify(&stringify, value, ecc_value_fromtext(&ECC_String_Empty), value, 1, 0);
     }
     else if(stringify.function)
     {
-        eccobject_t environment = stringify.function->environment;
+        eccobject_t environment = stringify.function->funcenv;
         eccobject_t arguments;
         memset(&arguments, 0, sizeof(eccobject_t));
-        ecchashmap_t hashmap[stringify.function->environment.hashmapCapacity];
+        ecchashmap_t hashmap[stringify.function->funcenv.hmapmapcapacity];
         ecchashitem_t element[2];
 
-        memcpy(hashmap, stringify.function->environment.hashmap, sizeof(hashmap));
-        stringify.context.environment = &environment;
+        memcpy(hashmap, stringify.function->funcenv.hmapmapitems, sizeof(hashmap));
+        stringify.context.execenv = &environment;
         stringify.arguments = &arguments;
 
-        arguments.element = element;
-        arguments.elementCount = 2;
-        environment.hashmap = hashmap;
-        environment.hashmap[2].hmapmapvalue = ecc_value_object(&arguments);
+        arguments.hmapitemitems = element;
+        arguments.hmapitemcount = 2;
+        environment.hmapmapitems = hashmap;
+        environment.hmapmapitems[2].hmapmapvalue = ecc_value_object(&arguments);
 
-        ecc_json_stringify(&stringify, value, ecc_value_fromtext(&ECC_ConstString_Empty), value, 1, 0);
+        ecc_json_stringify(&stringify, value, ecc_value_fromtext(&ECC_String_Empty), value, 1, 0);
     }
     else
-        ecc_json_stringify(&stringify, value, ecc_value_fromtext(&ECC_ConstString_Empty), value, 1, 0);
+        ecc_json_stringify(&stringify, value, ecc_value_fromtext(&ECC_String_Empty), value, 1, 0);
 
     return ecc_strbuf_endappend(&stringify.chars);
 }
-
-// MARK: - Public
 
 eccobject_t* ECC_Prototype_JSONObject = NULL;
 

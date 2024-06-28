@@ -1,12 +1,14 @@
-//
+
+/*
 //  array.c
 //  libecc
 //
 //  Copyright (c) 2019 Aurélien Bouilland
 //  Licensed under MIT license, see LICENSE.txt file in project root
-//
+*/
 
 #include "ecc.h"
+#include "compat.h"
 
 typedef struct eccarraycomparestate_t eccarraycomparestate_t;
 
@@ -23,7 +25,7 @@ eccobject_t* ECC_Prototype_Array = NULL;
 eccobjfunction_t* ECC_CtorFunc_Array = NULL;
 
 const eccobjinterntype_t ECC_Type_Array = {
-    .text = &ECC_ConstString_ArrayType,
+    .text = &ECC_String_ArrayType,
 };
 
 static eccvalue_t objarrayfn_toString(ecccontext_t *context);
@@ -52,7 +54,7 @@ int ecc_array_valueisarray(eccvalue_t value)
 uint32_t ecc_array_getlengtharrayval(eccvalue_t value)
 {
     if(ecc_array_valueisarray(value))
-        return value.data.object->elementCount;
+        return value.data.object->hmapitemcount;
 
     return 1;
 }
@@ -60,7 +62,7 @@ uint32_t ecc_array_getlengtharrayval(eccvalue_t value)
 uint32_t ecc_array_getlength(ecccontext_t* context, eccobject_t* object)
 {
     if(object->type == &ECC_Type_Array)
-        return object->elementCount;
+        return object->hmapitemcount;
     else
         return ecc_value_tointeger(context, ecc_object_getmember(context, object, ECC_ConstKey_length)).data.integer;
 }
@@ -84,7 +86,7 @@ void ecc_array_valueappendfromelement(ecccontext_t* context, eccvalue_t value, e
     uint32_t index;
 
     if(ecc_array_valueisarray(value))
-        for(index = 0; index < value.data.object->elementCount; ++index)
+        for(index = 0; index < value.data.object->hmapitemcount; ++index)
             ecc_object_putelement(context, object, (*element)++, ecc_object_getelement(context, value.data.object, index));
     else
         ecc_object_putelement(context, object, (*element)++, value);
@@ -353,7 +355,7 @@ static eccvalue_t objarrayfn_slice(ecccontext_t* context)
     length = ecc_array_getlength(context, thisobj);
 
     start = ecc_context_argument(context, 0);
-    binary = ecc_value_tobinary(context, start).data.binary;
+    binary = ecc_value_tobinary(context, start).data.valnumfloat;
     if(start.type == ECC_VALTYPE_UNDEFINED)
         from = 0;
     else if(binary >= 0)
@@ -362,7 +364,7 @@ static eccvalue_t objarrayfn_slice(ecccontext_t* context)
         from = binary + length >= 0 ? length + binary : 0;
 
     end = ecc_context_argument(context, 1);
-    binary = ecc_value_tobinary(context, end).data.binary;
+    binary = ecc_value_tobinary(context, end).data.valnumfloat;
     if(end.type == ECC_VALTYPE_UNDEFINED)
         to = length;
     else if(binary < 0 || isnan(binary))
@@ -439,7 +441,7 @@ void ecc_array_rotate(eccobject_t* object, ecccontext_t* context, uint32_t first
 
 static int ecc_array_compare(eccarraycomparestate_t* cmp, eccvalue_t left, eccvalue_t right)
 {
-    uint16_t hashmapCount;
+    uint32_t hashmapCount;
 
     if(left.check != 1)
         return 0;
@@ -451,22 +453,22 @@ static int ecc_array_compare(eccarraycomparestate_t* cmp, eccvalue_t left, eccva
     else if(right.type == ECC_VALTYPE_UNDEFINED)
         return 1;
 
-    hashmapCount = cmp->context.environment->hashmapCount;
+    hashmapCount = cmp->context.execenv->hmapmapcount;
     switch(hashmapCount)
     {
         default:
             {
-                memcpy(cmp->context.environment->hashmap + 5, cmp->function->environment.hashmap, sizeof(*cmp->context.environment->hashmap) * (hashmapCount - 5));
+                memcpy(cmp->context.execenv->hmapmapitems + 5, cmp->function->funcenv.hmapmapitems, sizeof(*cmp->context.execenv->hmapmapitems) * (hashmapCount - 5));
             }
             /* fallthrough */
         case 5:
             {
-                cmp->context.environment->hashmap[3 + 1].hmapmapvalue = right;
+                cmp->context.execenv->hmapmapitems[3 + 1].hmapmapvalue = right;
             }
             /* fallthrough */
         case 4:
             {
-                cmp->context.environment->hashmap[3 + 0].hmapmapvalue = left;
+                cmp->context.execenv->hmapmapitems[3 + 0].hmapmapvalue = left;
             }
             /* fallthrough */
         case 3:
@@ -479,8 +481,8 @@ static int ecc_array_compare(eccarraycomparestate_t* cmp, eccvalue_t left, eccva
     }
 
     cmp->context.ops = cmp->ops;
-    cmp->arguments->element[0].hmapitemvalue = left;
-    cmp->arguments->element[1].hmapitemvalue = right;
+    cmp->arguments->hmapitemitems[0].hmapitemvalue = left;
+    cmp->arguments->hmapitemitems[1].hmapitemvalue = right;
 
     return ecc_value_tointeger(&cmp->context, cmp->context.ops->native(&cmp->context)).data.integer < 0;
 }
@@ -576,7 +578,7 @@ static void ecc_array_sortandmerge(eccobject_t* object, eccarraycomparestate_t* 
 
 void ecc_array_sortinplace(ecccontext_t* context, eccobject_t* object, eccobjfunction_t* function, int first, int last)
 {
-    eccoperand_t defaultOps = { objarrayfn_defaultComparison, ECCValConstUndefined, ECC_ConstString_NativeCode };
+    eccoperand_t defaultOps = { objarrayfn_defaultComparison, ECCValConstUndefined, ECC_String_NativeCode };
     const eccoperand_t* ops = function ? function->oplist->ops : &defaultOps;
 
     /*
@@ -599,13 +601,13 @@ void ecc_array_sortinplace(ecccontext_t* context, eccobject_t* object, eccobjfun
 
     if(function && function->flags & ECC_SCRIPTFUNCFLAG_NEEDHEAP)
     {
-        eccobject_t* environment = ecc_object_copy(&function->environment);
+        eccobject_t* environment = ecc_object_copy(&function->funcenv);
 
-        cmp.context.environment = environment;
+        cmp.context.execenv = environment;
         cmp.arguments = ecc_args_createsized(2);
         ++cmp.arguments->refcount;
 
-        environment->hashmap[2].hmapmapvalue = ecc_value_object(cmp.arguments);
+        environment->hmapmapitems[2].hmapmapvalue = ecc_value_object(cmp.arguments);
 
         ecc_array_sortandmerge(object, &cmp, first, last);
     }
@@ -618,23 +620,23 @@ void ecc_array_sortinplace(ecccontext_t* context, eccobject_t* object, eccobjfun
 
         if(function)
         {
-            environment = function->environment;
+            environment = function->funcenv;
         }
-        ecchashmap_t hashmap[function ? function->environment.hashmapCapacity : 3];
+        ecchashmap_t hashmap[function ? function->funcenv.hmapmapcapacity : 3];
         ecchashitem_t element[2];
 
         if(function)
-            memcpy(hashmap, function->environment.hashmap, sizeof(hashmap));
+            memcpy(hashmap, function->funcenv.hmapmapitems, sizeof(hashmap));
         else
-            environment.hashmapCount = 3;
+            environment.hmapmapcount = 3;
 
-        cmp.context.environment = &environment;
+        cmp.context.execenv = &environment;
         cmp.arguments = &arguments;
 
-        arguments.element = element;
-        arguments.elementCount = 2;
-        environment.hashmap = hashmap;
-        environment.hashmap[2].hmapmapvalue = ecc_value_object(&arguments);
+        arguments.hmapitemitems = element;
+        arguments.hmapitemcount = 2;
+        environment.hmapmapitems = hashmap;
+        environment.hmapmapitems[2].hmapmapvalue = ecc_value_object(&arguments);
 
         ecc_array_sortandmerge(object, &cmp, first, last);
     }
@@ -671,7 +673,7 @@ static eccvalue_t objarrayfn_splice(ecccontext_t* context)
 
     if(count >= 1)
     {
-        double binary = ecc_value_tobinary(context, ecc_context_argument(context, 0)).data.binary;
+        double binary = ecc_value_tobinary(context, ecc_context_argument(context, 0)).data.valnumfloat;
         if(isnan(binary))
             binary = 0;
         else if(binary < 0)
@@ -687,7 +689,7 @@ static eccvalue_t objarrayfn_splice(ecccontext_t* context)
 
     if(count >= 2)
     {
-        double binary = ecc_value_tobinary(context, ecc_context_argument(context, 1)).data.binary;
+        double binary = ecc_value_tobinary(context, ecc_context_argument(context, 1)).data.valnumfloat;
         if(isnan(binary) || binary < 0)
             binary = 0;
         else if(binary > length - start)
@@ -781,19 +783,19 @@ static eccvalue_t objarrayfn_lastIndexOf(ecccontext_t* context)
 
 static eccvalue_t objarrayfn_getLength(ecccontext_t* context)
 {
-    return ecc_value_fromfloat(context->thisvalue.data.object->elementCount);
+    return ecc_value_fromfloat(context->thisvalue.data.object->hmapitemcount);
 }
 
 static eccvalue_t objarrayfn_setLength(ecccontext_t* context)
 {
     double length;
 
-    length = ecc_value_tobinary(context, ecc_context_argument(context, 0)).data.binary;
+    length = ecc_value_tobinary(context, ecc_context_argument(context, 0)).data.valnumfloat;
     if(!isfinite(length) || length < 0 || length > UINT32_MAX || length != (uint32_t)length)
         ecc_context_rangeerror(context, ecc_strbuf_create("invalid array length"));
 
     if(ecc_object_resizeelement(context->thisvalue.data.object, length) && context->parent->strictMode)
-        ecc_context_typeerror(context, ecc_strbuf_create("'%u' is non-configurable", context->thisvalue.data.object->elementCount));
+        ecc_context_typeerror(context, ecc_strbuf_create("'%u' is non-configurable", context->thisvalue.data.object->hmapitemcount));
 
     return ECCValConstUndefined;
 }
@@ -808,7 +810,7 @@ static eccvalue_t objarrayfn_constructor(ecccontext_t* context)
     value = ecc_context_argument(context, 0);
     if(count == 1 && ecc_value_isnumber(value) && ecc_value_isprimitive(value))
     {
-        double binary = ecc_value_tobinary(context, value).data.binary;
+        double binary = ecc_value_tobinary(context, value).data.valnumfloat;
         if(isfinite(binary) && binary >= 0 && binary <= UINT32_MAX && binary == (uint32_t)binary)
         {
             length = binary;
@@ -822,8 +824,8 @@ static eccvalue_t objarrayfn_constructor(ecccontext_t* context)
 
     for(index = 0; index < count; ++index)
     {
-        array->element[index].hmapitemvalue = ecc_context_argument(context, index);
-        array->element[index].hmapitemvalue.flags &= ~(ECC_VALFLAG_READONLY | ECC_VALFLAG_HIDDEN | ECC_VALFLAG_SEALED);
+        array->hmapitemitems[index].hmapitemvalue = ecc_context_argument(context, index);
+        array->hmapitemitems[index].hmapitemvalue.flags &= ~(ECC_VALFLAG_READONLY | ECC_VALFLAG_HIDDEN | ECC_VALFLAG_SEALED);
     }
 
     return ecc_value_object(array);

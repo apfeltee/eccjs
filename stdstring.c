@@ -1,11 +1,14 @@
-//
+
+/*
 //  string.c
 //  libecc
 //
 //  Copyright (c) 2019 Aurélien Bouilland
 //  Licensed under MIT license, see LICENSE.txt file in project root
-//
+*/
+
 #include "ecc.h"
+#include "compat.h"
 
 static void eccstringtypefn_mark(eccobject_t *object);
 static void eccstringtypefn_capture(eccobject_t *object);
@@ -36,10 +39,10 @@ eccobject_t* ECC_Prototype_String = NULL;
 eccobjfunction_t* ECC_CtorFunc_String = NULL;
 
 const eccobjinterntype_t ECC_Type_String = {
-    .text = &ECC_ConstString_StringType,
-    .mark = eccstringtypefn_mark,
-    .capture = eccstringtypefn_capture,
-    .finalize = eccstringtypefn_finalize,
+    .text = &ECC_String_StringType,
+    .fnmark = eccstringtypefn_mark,
+    .fncapture = eccstringtypefn_capture,
+    .fnfinalize = eccstringtypefn_finalize,
 };
 
 
@@ -47,37 +50,35 @@ static void eccstringtypefn_mark(eccobject_t* object)
 {
     eccobjstring_t* self = (eccobjstring_t*)object;
 
-    ecc_mempool_markvalue(ecc_value_fromchars(self->value));
+    ecc_mempool_markvalue(ecc_value_fromchars(self->sbuf));
 }
 
 static void eccstringtypefn_capture(eccobject_t* object)
 {
     eccobjstring_t* self = (eccobjstring_t*)object;
 
-    ++self->value->refcount;
+    ++self->sbuf->refcount;
 }
 
 static void eccstringtypefn_finalize(eccobject_t* object)
 {
     eccobjstring_t* self = (eccobjstring_t*)object;
 
-    --self->value->refcount;
+    --self->sbuf->refcount;
 }
-
-// MARK: - Static Members
 
 static eccvalue_t objstringfn_toString(ecccontext_t* context)
 {
     ecc_context_assertthistype(context, ECC_VALTYPE_STRING);
 
-    return ecc_value_fromchars(context->thisvalue.data.string->value);
+    return ecc_value_fromchars(context->thisvalue.data.string->sbuf);
 }
 
 static eccvalue_t objstringfn_valueOf(ecccontext_t* context)
 {
     ecc_context_assertthistype(context, ECC_VALTYPE_STRING);
 
-    return ecc_value_fromchars(context->thisvalue.data.string->value);
+    return ecc_value_fromchars(context->thisvalue.data.string->sbuf);
 }
 
 static eccvalue_t objstringfn_charAt(ecccontext_t* context)
@@ -95,7 +96,7 @@ static eccvalue_t objstringfn_charAt(ecccontext_t* context)
 
     text = ecc_string_textatindex(chars, length, index, 0);
     if(!text.length)
-        return ecc_value_fromtext(&ECC_ConstString_Empty);
+        return ecc_value_fromtext(&ECC_String_Empty);
     else
     {
         ecctextchar_t c = ecc_textbuf_character(text);
@@ -135,7 +136,7 @@ static eccvalue_t objstringfn_charCodeAt(ecccontext_t* context)
 
     text = ecc_string_textatindex(chars, length, index, 0);
     if(!text.length)
-        return ecc_value_fromfloat(NAN);
+        return ecc_value_fromfloat(ECC_CONST_NAN);
     else
     {
         ecctextchar_t c = ecc_textbuf_character(text);
@@ -232,8 +233,8 @@ static eccvalue_t objstringfn_lastIndexOf(ecccontext_t* context)
 
     start = ecc_value_tobinary(context, ecc_context_argument(context, 1));
     index = ecc_string_unitindex(chars, length, length);
-    if(!isnan(start.data.binary) && start.data.binary < index)
-        index = start.data.binary < 0 ? 0 : start.data.binary;
+    if(!isnan(start.data.valnumfloat) && start.data.valnumfloat < index)
+        index = start.data.valnumfloat < 0 ? 0 : start.data.valnumfloat;
 
     text = ecc_string_textatindex(chars, length, index, 0);
     if(text.flags & ECC_TEXTFLAG_BREAKFLAG)
@@ -292,7 +293,7 @@ static eccvalue_t objstringfn_match(ecccontext_t* context)
     else
         regexp = ecc_regexp_createwith(context, value, ECCValConstUndefined);
 
-    lastIndex = regexp->global ? ecc_value_fromint(0) : ecc_value_tointeger(context, ecc_object_getmember(context, &regexp->object, ECC_ConstKey_lastIndex));
+    lastIndex = regexp->isflagglobal ? ecc_value_fromint(0) : ecc_value_tointeger(context, ecc_object_getmember(context, &regexp->object, ECC_ConstKey_lastIndex));
 
     ecc_object_putmember(context, &regexp->object, ECC_ConstKey_lastIndex, ecc_value_fromint(0));
 
@@ -317,7 +318,7 @@ static eccvalue_t objstringfn_match(ecccontext_t* context)
                 ecc_strbuf_append(&chars, "%.*s", capture[1] - capture[0], capture[0]);
                 ecc_object_addelement(array, size++, ecc_strbuf_endappend(&chars), 0);
 
-                if(!regexp->global)
+                if(!regexp->isflagglobal)
                 {
                     int32_t numindex, count;
 
@@ -349,7 +350,7 @@ static eccvalue_t objstringfn_match(ecccontext_t* context)
             ecc_object_addmember(array, ECC_ConstKey_input, context->thisvalue, 0);
             ecc_object_addmember(array, ECC_ConstKey_index, ecc_value_fromint(ecc_string_unitindex(bytes, length, (int32_t)(capture[0] - bytes))), 0);
 
-            if(regexp->global)
+            if(regexp->isflagglobal)
                 ecc_object_putmember(context, &regexp->object, ECC_ConstKey_lastIndex,
                                       ecc_value_fromint(ecc_string_unitindex(bytes, length, (int32_t)(text.bytes - bytes))));
 
@@ -479,13 +480,13 @@ static eccvalue_t objstringfn_replace(ecccontext_t* context)
                     for(numindex = 0, count = regexp->count; numindex < count; ++numindex)
                     {
                         if(capture[numindex * 2])
-                            arguments->element[numindex].hmapitemvalue
+                            arguments->hmapitemitems[numindex].hmapitemvalue
                             = ecc_value_fromchars(ecc_strbuf_createwithbytes((int32_t)(capture[numindex * 2 + 1] - capture[numindex * 2]), capture[numindex * 2]));
                         else
-                            arguments->element[numindex].hmapitemvalue = ECCValConstUndefined;
+                            arguments->hmapitemitems[numindex].hmapitemvalue = ECCValConstUndefined;
                     }
-                    arguments->element[regexp->count].hmapitemvalue = ecc_value_fromint(ecc_string_unitindex(bytes, length, (int32_t)(capture[0] - bytes)));
-                    arguments->element[regexp->count + 1].hmapitemvalue = context->thisvalue;
+                    arguments->hmapitemitems[regexp->count].hmapitemvalue = ecc_value_fromint(ecc_string_unitindex(bytes, length, (int32_t)(capture[0] - bytes)));
+                    arguments->hmapitemitems[regexp->count + 1].hmapitemvalue = context->thisvalue;
 
                     result = ecc_value_tostring(context, ecc_oper_callfunctionarguments(context, 0, replace.data.function, ECCValConstUndefined, arguments));
                     ecc_strbuf_append(&chars, "%.*s", ecc_value_stringlength(&result), ecc_value_stringbytes(&result));
@@ -503,7 +504,7 @@ static eccvalue_t objstringfn_replace(ecccontext_t* context)
             }
             else
                 break;
-        } while(text.length && regexp->global);
+        } while(text.length && regexp->isflagglobal);
 
         ecc_strbuf_append(&chars, "%.*s", text.length, text.bytes);
 
@@ -535,9 +536,9 @@ static eccvalue_t objstringfn_replace(ecccontext_t* context)
             eccobject_t* arguments = ecc_array_createsized(1 + 2);
             eccvalue_t result;
 
-            arguments->element[0].hmapitemvalue = ecc_value_fromchars(ecc_strbuf_createwithbytes(text.length, text.bytes));
-            arguments->element[1].hmapitemvalue = ecc_value_fromint(ecc_string_unitindex(bytes, length, (int32_t)(text.bytes - bytes)));
-            arguments->element[2].hmapitemvalue = context->thisvalue;
+            arguments->hmapitemitems[0].hmapitemvalue = ecc_value_fromchars(ecc_strbuf_createwithbytes(text.length, text.bytes));
+            arguments->hmapitemitems[1].hmapitemvalue = ecc_value_fromint(ecc_string_unitindex(bytes, length, (int32_t)(text.bytes - bytes)));
+            arguments->hmapitemitems[2].hmapitemvalue = context->thisvalue;
 
             result = ecc_value_tostring(context, ecc_oper_callfunctionarguments(context, 0, replace.data.function, ECCValConstUndefined, arguments));
             ecc_strbuf_append(&chars, "%.*s", ecc_value_stringlength(&result), ecc_value_stringbytes(&result));
@@ -601,15 +602,15 @@ static eccvalue_t objstringfn_slice(ecccontext_t* context)
     from = ecc_context_argument(context, 0);
     if(from.type == ECC_VALTYPE_UNDEFINED)
         start = ecc_textbuf_make(chars, length);
-    else if(from.type == ECC_VALTYPE_BINARY && from.data.binary == INFINITY)
+    else if(from.type == ECC_VALTYPE_BINARY && from.data.valnumfloat == ECC_CONST_INFINITY)
         start = ecc_textbuf_make(chars + length, 0);
     else
         start = ecc_string_textatindex(chars, length, ecc_value_tointeger(context, from).data.integer, 1);
 
     to = ecc_context_argument(context, 1);
-    if(to.type == ECC_VALTYPE_UNDEFINED || (to.type == ECC_VALTYPE_BINARY && (isnan(to.data.binary) || to.data.binary == INFINITY)))
+    if(to.type == ECC_VALTYPE_UNDEFINED || (to.type == ECC_VALTYPE_BINARY && (isnan(to.data.valnumfloat) || to.data.valnumfloat == ECC_CONST_INFINITY)))
         end = ecc_textbuf_make(chars + length, 0);
-    else if(to.type == ECC_VALTYPE_BINARY && to.data.binary == -INFINITY)
+    else if(to.type == ECC_VALTYPE_BINARY && to.data.valnumfloat == -ECC_CONST_INFINITY)
         end = ecc_textbuf_make(chars, length);
     else
         end = ecc_string_textatindex(chars, length, ecc_value_tointeger(context, to).data.integer, 1);
@@ -626,7 +627,7 @@ static eccvalue_t objstringfn_slice(ecccontext_t* context)
         tail = 3;
 
     if(head + length + tail <= 0)
-        return ecc_value_fromtext(&ECC_ConstString_Empty);
+        return ecc_value_fromtext(&ECC_String_Empty);
     else
     {
         eccstrbuffer_t* result = ecc_strbuf_createsized(length + head + tail);
@@ -676,7 +677,7 @@ static eccvalue_t objstringfn_split(ecccontext_t* context)
     if(separatorValue.type == ECC_VALTYPE_UNDEFINED)
     {
         eccobject_t* subarr = ecc_array_createsized(1);
-        subarr->element[0].hmapitemvalue = context->thisvalue;
+        subarr->hmapitemitems[0].hmapitemvalue = context->thisvalue;
         return ecc_value_object(subarr);
     }
     else if(separatorValue.type == ECC_VALTYPE_REGEXP)
@@ -819,17 +820,17 @@ static eccvalue_t objstringfn_substring(ecccontext_t* context)
     length = ecc_value_stringlength(&context->thisvalue);
 
     from = ecc_context_argument(context, 0);
-    if(from.type == ECC_VALTYPE_UNDEFINED || (from.type == ECC_VALTYPE_BINARY && (isnan(from.data.binary) || from.data.binary == -INFINITY)))
+    if(from.type == ECC_VALTYPE_UNDEFINED || (from.type == ECC_VALTYPE_BINARY && (isnan(from.data.valnumfloat) || from.data.valnumfloat == -ECC_CONST_INFINITY)))
         start = ecc_textbuf_make(chars, length);
-    else if(from.type == ECC_VALTYPE_BINARY && from.data.binary == INFINITY)
+    else if(from.type == ECC_VALTYPE_BINARY && from.data.valnumfloat == ECC_CONST_INFINITY)
         start = ecc_textbuf_make(chars + length, 0);
     else
         start = ecc_string_textatindex(chars, length, ecc_value_tointeger(context, from).data.integer, 0);
 
     to = ecc_context_argument(context, 1);
-    if(to.type == ECC_VALTYPE_UNDEFINED || (to.type == ECC_VALTYPE_BINARY && to.data.binary == INFINITY))
+    if(to.type == ECC_VALTYPE_UNDEFINED || (to.type == ECC_VALTYPE_BINARY && to.data.valnumfloat == ECC_CONST_INFINITY))
         end = ecc_textbuf_make(chars + length, 0);
-    else if(to.type == ECC_VALTYPE_BINARY && !isfinite(to.data.binary))
+    else if(to.type == ECC_VALTYPE_BINARY && !isfinite(to.data.valnumfloat))
         end = ecc_textbuf_make(chars, length);
     else
         end = ecc_string_textatindex(chars, length, ecc_value_tointeger(context, to).data.integer, 0);
@@ -853,7 +854,7 @@ static eccvalue_t objstringfn_substring(ecccontext_t* context)
         tail = 3;
 
     if(head + length + tail <= 0)
-        return ecc_value_fromtext(&ECC_ConstString_Empty);
+        return ecc_value_fromtext(&ECC_String_Empty);
     else
     {
         eccstrbuffer_t* result = ecc_strbuf_createsized(length + head + tail);
@@ -951,7 +952,7 @@ static eccvalue_t objstringfn_constructor(ecccontext_t* context)
 
     value = ecc_context_argument(context, 0);
     if(value.type == ECC_VALTYPE_UNDEFINED)
-        value = ecc_value_fromtext(value.check == 1 ? &ECC_ConstString_Undefined : &ECC_ConstString_Empty);
+        value = ecc_value_fromtext(value.check == 1 ? &ECC_String_Undefined : &ECC_String_Empty);
     else
         value = ecc_value_tostring(context, value);
 
@@ -1025,7 +1026,7 @@ eccobjstring_t* ecc_string_create(eccstrbuffer_t* chars)
     ecc_object_initialize(&self->object, ECC_Prototype_String);
     length = ecc_string_unitindex(chars->bytes, chars->length, chars->length);
     ecc_object_addmember(&self->object, ECC_ConstKey_length, ecc_value_fromint(length), r | h | s);
-    self->value = chars;
+    self->sbuf = chars;
     if(length == (uint32_t)chars->length)
     {
         chars->flags |= ECC_CHARBUFFLAG_ASCIIONLY;
@@ -1038,7 +1039,7 @@ eccvalue_t ecc_string_valueatindex(eccobjstring_t* self, int32_t index)
     ecctextchar_t c;
     ecctextstring_t text;
 
-    text = ecc_string_textatindex(self->value->bytes, self->value->length, index, 0);
+    text = ecc_string_textatindex(self->sbuf->bytes, self->sbuf->length, index, 0);
     c = ecc_textbuf_character(text);
 
     if(c.units <= 0)

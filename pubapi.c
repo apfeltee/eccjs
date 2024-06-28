@@ -1,25 +1,29 @@
-//
+
+/*
 //  ecc.c
 //  libecc
 //
 //  Copyright (c) 2019 Aurélien Bouilland
 //  Licensed under MIT license, see LICENSE.txt file in project root
-//
+*/
+
 #include "ecc.h"
 
 static int instanceCount = 0;
 
-// MARK: - Static Members
-
-void eccpubapi_addInput(eccstate_t* self, eccioinput_t* input)
+void ecc_script_addinput(eccstate_t* self, eccioinput_t* input)
 {
-    self->inputs = (eccioinput_t**)realloc(self->inputs, sizeof(*self->inputs) * (self->inputCount + 1));
+    size_t needed;
+    eccioinput_t** tmp;
+    needed = (sizeof(*self->inputs) * (self->inputCount + 1));
+    tmp = (eccioinput_t**)realloc(self->inputs, needed);
+    if(tmp == NULL)
+    {
+        fprintf(stderr, "in addinput: failed to reallocate for %ld bytes\n", needed);
+    }
+    self->inputs = tmp;
     self->inputs[self->inputCount++] = input;
 }
-
-// MARK: - Methods
-
-uint32_t io_libecc_ecc_version = (0 << 24) | (1 << 16) | (0 << 0);
 
 eccstate_t* ecc_script_create(void)
 {
@@ -33,10 +37,9 @@ eccstate_t* ecc_script_create(void)
         ecc_globals_setup();
     }
     self = (eccstate_t*)malloc(sizeof(*self));
-    // *self = ecc_script_identity;
     memset(self, 0, sizeof(eccstate_t));
 
-    self->global = ecc_globals_create();
+    self->globalfunc = ecc_globals_create();
     self->maximumCallDepth = 512;
 
     return self;
@@ -66,22 +69,22 @@ void ecc_script_addfunction(eccstate_t* self, const char* name, const eccnativef
 {
     assert(self);
 
-    ecc_function_addfunction(self->global, name, native, argumentCount, flags);
+    ecc_function_addfunction(self->globalfunc, name, native, argumentCount, flags);
 }
 
 void ecc_script_addvalue(eccstate_t* self, const char* name, eccvalue_t value, int flags)
 {
     assert(self);
 
-    ecc_function_addvalue(self->global, name, value, flags);
+    ecc_function_addvalue(self->globalfunc, name, value, flags);
 }
 
 int ecc_script_evalinput(eccstate_t* self, eccioinput_t* input, int flags)
 {
     int result = EXIT_SUCCESS, trap = !self->envCount || flags & ECC_SCRIPTEVAL_PRIMITIVERESULT, catchpos = 0;
     ecccontext_t context = {};
-    context.environment = &self->global->environment;
-    context.thisvalue = ecc_value_object(&self->global->environment);
+    context.execenv = &self->globalfunc->funcenv;
+    context.thisvalue = ecc_value_object(&self->globalfunc->funcenv);
     context.ecc = self;
     context.strictMode = !(flags & ECC_SCRIPTEVAL_SLOPPYMODE);
 
@@ -130,7 +133,7 @@ void ecc_script_evalinputwithcontext(eccstate_t* self, eccioinput_t* input, eccc
     assert(self);
     assert(self->envCount);
 
-    eccpubapi_addInput(self, input);
+    ecc_script_addinput(self, input);
 
     lexer = ecc_astlex_createwithinput(input);
     parser = ecc_astparse_createwithlexer(lexer);
@@ -139,17 +142,17 @@ void ecc_script_evalinputwithcontext(eccstate_t* self, eccioinput_t* input, eccc
         parser->strictMode = 1;
 
     if(self->sloppyMode)
-        lexer->allowUnicodeOutsideLiteral = 1;
+        lexer->permitutfoutsidelit = 1;
 
-    function = ecc_astparse_parsewithenvironment(parser, context->environment, &self->global->environment);
+    function = ecc_astparse_parsewithenvironment(parser, context->execenv, &self->globalfunc->funcenv);
     context->ops = function->oplist->ops;
-    context->environment = &function->environment;
+    context->execenv = &function->funcenv;
 
     ecc_astparse_destroy(parser), parser = NULL;
-
-    //	fprintf(stderr, "--- source:\n%.*s\n", input->length, input->bytes);
-    //	ecc_oplist_dumpto(function->oplist, stderr);
-
+    /*
+    fprintf(stderr, "--- source:\n%.*s\n", input->length, input->bytes);
+    ecc_oplist_dumpto(function->oplist, stderr);
+    */
     self->result = ECCValConstUndefined;
 
     context->ops->native(context);
@@ -157,10 +160,19 @@ void ecc_script_evalinputwithcontext(eccstate_t* self, eccioinput_t* input, eccc
 
 jmp_buf* ecc_script_pushenv(eccstate_t* self)
 {
+    size_t needed;
+    uint32_t capacity;
+    jmp_buf* tmp;
     if(self->envCount >= self->envCapacity)
     {
-        uint16_t capacity = self->envCapacity ? self->envCapacity * 2 : 8;
-        self->envList = (jmp_buf*)realloc(self->envList, sizeof(*self->envList) * capacity);
+        capacity = self->envCapacity ? self->envCapacity * 2 : 8;
+        needed = (sizeof(*self->envList) * capacity);
+        tmp = (jmp_buf*)realloc(self->envList, needed);
+        if(tmp == NULL)
+        {
+            fprintf(stderr, "in pushenv: failed to reallocate for %ld bytes\n", needed);
+        }
+        self->envList = tmp;
         memset(self->envList + self->envCapacity, 0, sizeof(*self->envList) * (capacity - self->envCapacity));
         self->envCapacity = capacity;
     }
@@ -189,7 +201,7 @@ void ecc_script_jmpenv(eccstate_t* self, eccvalue_t value)
 
 void ecc_script_fatal(const char* format, ...)
 {
-    int16_t length;
+    int32_t length;
     va_list ap;
 
     va_start(ap, format);
@@ -211,7 +223,7 @@ void ecc_script_fatal(const char* format, ...)
 
 eccioinput_t* ecc_script_findinput(eccstate_t* self, ecctextstring_t text)
 {
-    uint16_t i;
+    uint32_t i;
 
     for(i = 0; i < self->inputCount; ++i)
         if(text.bytes >= self->inputs[i]->bytes && text.bytes <= self->inputs[i]->bytes + self->inputs[i]->length)
@@ -237,7 +249,7 @@ void ecc_script_printtextinput(eccstate_t* self, ecctextstring_t text, int fullL
     else
     {
         ofLine = 0;
-        ofText = ECC_ConstString_Empty;
+        ofText = ECC_String_Empty;
         ofInput = NULL;
     }
 
@@ -246,16 +258,16 @@ void ecc_script_printtextinput(eccstate_t* self, ecctextstring_t text, int fullL
 
 void ecc_script_garbagecollect(eccstate_t* self)
 {
-    uint16_t index, count;
+    uint32_t index, count;
 
     ecc_mempool_unmarkall();
     ecc_mempool_markvalue(ecc_value_object(ECC_Prototype_Arguments));
-    ecc_mempool_markvalue(ecc_value_function(self->global));
+    ecc_mempool_markvalue(ecc_value_function(self->globalfunc));
 
     for(index = 0, count = self->inputCount; index < count; ++index)
     {
         eccioinput_t* input = self->inputs[index];
-        uint16_t a = input->attachedCount;
+        uint32_t a = input->attachedCount;
 
         while(a--)
             ecc_mempool_markvalue(input->attached[a]);

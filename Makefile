@@ -26,9 +26,11 @@ else
 CC = gcc  $(WFLAGS)
 endif
 
+#SANIFLAGS = -fsanitize=undefined
+SANIFLAGS = -fsanitize=signed-integer-overflow,pointer-overflow,bounds,enum,vptr -ftrapv
 #CFLAGS = $(INCFLAGS) -Ofast -march=native -flto -ffast-math -funroll-loops
-CFLAGS = $(INCFLAGS) -O0 -g3 -ggdb3
-LDFLAGS = -ldl -lm  -lreadline -lpthread
+CFLAGS = $(INCFLAGS) -O0 -g3 -ggdb3 $(SANIFLAGS) -Wstrict-overflow=5 -fstrict-overflow 
+LDFLAGS = -ldl -lm  -lreadline -lpthread -fsanitize=undefined
 target = run
 .PRECIOUS: $(target)
 
@@ -63,7 +65,7 @@ endif
 
 $(target): $(objfiles_all)
 	$(CC) -o $@ $^ $(LDFLAGS)
-	./run --test
+	valgrind ./run --test
 
 -include $(depfiles_all)
 

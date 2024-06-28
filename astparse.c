@@ -1,10 +1,12 @@
-//
+
+/*
 //  parser.c
 //  libecc
 //
 //  Copyright (c) 2019 Aurélien Bouilland
 //  Licensed under MIT license, see LICENSE.txt file in project root
-//
+*/
+
 #include "ecc.h"
 
 int ecc_astparse_previewtoken(eccastparser_t* self)
@@ -78,11 +80,17 @@ int ecc_astparse_expecttoken(eccastparser_t* self, int token)
     return 1;
 }
 
-// MARK: Depth
-
 void ecc_astparse_pushdepth(eccastparser_t* self, eccindexkey_t key, char depth)
 {
-    self->depthlistvals = (eccastdepths_t*)realloc(self->depthlistvals, (self->depthlistcount + 1) * sizeof(*self->depthlistvals));
+    size_t needed;
+    eccastdepths_t* tmp;
+    needed = ((self->depthlistcount + 1) * sizeof(*self->depthlistvals));
+    tmp = (eccastdepths_t*)realloc(self->depthlistvals, needed);
+    if(tmp == NULL)
+    {
+        fprintf(stderr, "in pushdepth: failed to reallocate for %ld bytes\n", needed);
+    }
+    self->depthlistvals = tmp;
     self->depthlistvals[self->depthlistcount].key = key;
     self->depthlistvals[self->depthlistcount].depth = depth;
     ++self->depthlistcount;
@@ -93,12 +101,10 @@ void ecc_astparse_popdepth(eccastparser_t* self)
     --self->depthlistcount;
 }
 
-// MARK: Expression
-
 eccoplist_t* ecc_astparse_foldconstant(eccastparser_t* self, eccoplist_t* oplist)
 {
     eccstate_t ecc = {};
-    ecc.sloppyMode = self->lexer->allowUnicodeOutsideLiteral;
+    ecc.sloppyMode = self->lexer->permitutfoutsidelit;
     ecccontext_t context = {};
     context.ops = oplist->ops;
     context.ecc = &ecc;
@@ -112,12 +118,12 @@ eccoplist_t* ecc_astparse_usebinary(eccastparser_t* self, eccoplist_t* oplist, i
 {
     ecccontext_t context = {};
     eccstate_t ecc = {};
-    if(oplist && oplist->ops[0].native == ecc_oper_value && (ecc_value_isnumber(oplist->ops[0].value) || !add))
+    if(oplist && oplist->ops[0].native == ecc_oper_value && (ecc_value_isnumber(oplist->ops[0].opvalue) || !add))
     {
-        ecc.sloppyMode = self->lexer->allowUnicodeOutsideLiteral;
+        ecc.sloppyMode = self->lexer->permitutfoutsidelit;
         context.ops = oplist->ops;
         context.ecc = &ecc;
-        oplist->ops[0].value = ecc_value_tobinary(&context, oplist->ops[0].value);
+        oplist->ops[0].opvalue = ecc_value_tobinary(&context, oplist->ops[0].opvalue);
     }
     return oplist;
 }
@@ -128,10 +134,10 @@ eccoplist_t* ecc_astparse_useinteger(eccastparser_t* self, eccoplist_t* oplist)
     eccstate_t ecc = {};
     if(oplist && oplist->ops[0].native == ecc_oper_value)
     {
-        ecc.sloppyMode = self->lexer->allowUnicodeOutsideLiteral;
+        ecc.sloppyMode = self->lexer->permitutfoutsidelit;
         context.ops = oplist->ops;
         context.ecc = &ecc;
-        oplist->ops[0].value = ecc_value_tointeger(&context, oplist->ops[0].value);
+        oplist->ops[0].opvalue = ecc_value_tointeger(&context, oplist->ops[0].opvalue);
     }
     return oplist;
 }
@@ -143,11 +149,11 @@ eccoplist_t* ecc_astparse_expressionref(eccastparser_t* self, eccoplist_t* oplis
 
     if(oplist->ops[0].native == ecc_oper_getlocal && oplist->count == 1)
     {
-        if(oplist->ops[0].value.type == ECC_VALTYPE_KEY)
+        if(oplist->ops[0].opvalue.type == ECC_VALTYPE_KEY)
         {
-            if(ecc_keyidx_isequal(oplist->ops[0].value.data.key, ECC_ConstKey_eval))
+            if(ecc_keyidx_isequal(oplist->ops[0].opvalue.data.key, ECC_ConstKey_eval))
                 ecc_astparse_syntaxerror(self, ecc_oplist_text(oplist), ecc_strbuf_create(name));
-            else if(ecc_keyidx_isequal(oplist->ops[0].value.data.key, ECC_ConstKey_arguments))
+            else if(ecc_keyidx_isequal(oplist->ops[0].opvalue.data.key, ECC_ConstKey_arguments))
                 ecc_astparse_syntaxerror(self, ecc_oplist_text(oplist), ecc_strbuf_create(name));
         }
 
@@ -170,7 +176,7 @@ void ecc_astparse_semicolon(eccastparser_t* self)
         ecc_astparse_nexttoken(self);
         return;
     }
-    else if(self->lexer->didLineBreak || ecc_astparse_previewtoken(self) == '}' || ecc_astparse_previewtoken(self) == ECC_TOK_NO)
+    else if(self->lexer->stdidlinebreak || ecc_astparse_previewtoken(self) == '}' || ecc_astparse_previewtoken(self) == ECC_TOK_NO)
         return;
 
     ecc_astparse_syntaxerror(self, self->lexer->text, ecc_strbuf_create("missing ; before statement"));
@@ -523,7 +529,7 @@ eccoplist_t* ecc_astparse_lefthandside(eccastparser_t* self)
         {
             int count = 0;
 
-            int isEval = oplist->count == 1 && oplist->ops[0].native == ecc_oper_getlocal && ecc_keyidx_isequal(oplist->ops[0].value.data.key, ECC_ConstKey_eval);
+            int isEval = oplist->count == 1 && oplist->ops[0].native == ecc_oper_getlocal && ecc_keyidx_isequal(oplist->ops[0].opvalue.data.key, ECC_ConstKey_eval);
             if(isEval)
             {
                 text = ecc_textbuf_join(ecc_oplist_text(oplist), self->lexer->text);
@@ -556,10 +562,10 @@ eccoplist_t* ecc_astparse_postfix(eccastparser_t* self)
     eccoplist_t* oplist = ecc_astparse_lefthandside(self);
     ecctextstring_t text = self->lexer->text;
 
-    if(!self->lexer->didLineBreak && ecc_astparse_accepttoken(self, ECC_TOK_INCREMENT))
+    if(!self->lexer->stdidlinebreak && ecc_astparse_accepttoken(self, ECC_TOK_INCREMENT))
         oplist = ecc_oplist_unshift(ecc_oper_make(ecc_oper_postincrementref, ECCValConstUndefined, ecc_textbuf_join(oplist->ops->text, text)),
                                           ecc_astparse_expressionref(self, oplist, "invalid increment operand"));
-    if(!self->lexer->didLineBreak && ecc_astparse_accepttoken(self, ECC_TOK_DECREMENT))
+    if(!self->lexer->stdidlinebreak && ecc_astparse_accepttoken(self, ECC_TOK_DECREMENT))
         oplist = ecc_oplist_unshift(ecc_oper_make(ecc_oper_postdecrementref, ECCValConstUndefined, ecc_textbuf_join(oplist->ops->text, text)),
                                           ecc_astparse_expressionref(self, oplist, "invalid decrement operand"));
 
@@ -588,7 +594,7 @@ eccoplist_t* ecc_astparse_unary(eccastparser_t* self)
         else if(oplist && oplist->ops[0].native == ecc_oper_getproperty)
             oplist->ops->native = ecc_oper_deleteproperty;
         else if(!self->strictMode && oplist)
-            oplist = ecc_oplist_unshift(ecc_oper_make(ecc_oper_exchange, ECCValConstTrue, ECC_ConstString_Empty), oplist);
+            oplist = ecc_oplist_unshift(ecc_oper_make(ecc_oper_exchange, ECCValConstTrue, ECC_String_Empty), oplist);
         else if(oplist)
             ecc_astparse_referenceerror(self, ecc_oplist_text(oplist), ecc_strbuf_create("invalid delete operand"));
         else
@@ -949,14 +955,13 @@ eccoplist_t* ecc_astparse_assignment(eccastparser_t* self, int noIn)
         }
         else if(oplist->ops[0].native == ecc_oper_getlocal && oplist->count == 1)
         {
-            if(ecc_keyidx_isequal(oplist->ops[0].value.data.key, ECC_ConstKey_eval))
+            if(ecc_keyidx_isequal(oplist->ops[0].opvalue.data.key, ECC_ConstKey_eval))
                 ecc_astparse_syntaxerror(self, text, ecc_strbuf_create("can't assign to eval"));
-            else if(ecc_keyidx_isequal(oplist->ops[0].value.data.key, ECC_ConstKey_arguments))
+            else if(ecc_keyidx_isequal(oplist->ops[0].opvalue.data.key, ECC_ConstKey_arguments))
                 ecc_astparse_syntaxerror(self, text, ecc_strbuf_create("can't assign to arguments"));
 
-            if(!self->strictMode && !ecc_object_member(&self->function->environment, oplist->ops[0].value.data.key, 0))
+            if(!self->strictMode && !ecc_object_member(&self->function->funcenv, oplist->ops[0].opvalue.data.key, 0))
                 ++self->reserveGlobalSlots;
-            //				ecc_object_addmember(self->global, oplist->ops[0].value.data.key, ECCValConstNone, 0);
 
             oplist->ops->native = ecc_oper_setlocal;
         }
@@ -1019,17 +1024,15 @@ eccoplist_t* ecc_astparse_expression(eccastparser_t* self, int noIn)
 {
     eccoplist_t* oplist = ecc_astparse_assignment(self, noIn);
     while(ecc_astparse_accepttoken(self, ','))
-        oplist = ecc_oplist_unshiftjoin(ecc_oper_make(ecc_oper_discard, ECCValConstUndefined, ECC_ConstString_Empty), oplist, ecc_astparse_assignment(self, noIn));
+        oplist = ecc_oplist_unshiftjoin(ecc_oper_make(ecc_oper_discard, ECCValConstUndefined, ECC_String_Empty), oplist, ecc_astparse_assignment(self, noIn));
 
     return oplist;
 }
 
-// MARK: Statements
-
 eccoplist_t* ecc_astparse_statementlist(eccastparser_t* self)
 {
     eccoplist_t *oplist = NULL, *statementOps = NULL, *discardOps = NULL;
-    uint16_t discardCount = 0;
+    uint32_t discardCount = 0;
 
     while(ecc_astparse_previewtoken(self) != ECC_TOK_ERROR && ecc_astparse_previewtoken(self) != ECC_TOK_NO)
     {
@@ -1099,25 +1102,28 @@ eccoplist_t* ecc_astparse_variabledeclaration(eccastparser_t* self, int noIn)
         ecc_astparse_syntaxerror(self, text, ecc_strbuf_create("redefining arguments is not allowed"));
 
     if(self->function->flags & ECC_SCRIPTFUNCFLAG_STRICTMODE || self->sourcedepth > 1)
-        ecc_object_addmember(&self->function->environment, value.data.key, ECCValConstUndefined, ECC_VALFLAG_SEALED);
+        ecc_object_addmember(&self->function->funcenv, value.data.key, ECCValConstUndefined, ECC_VALFLAG_SEALED);
     else
-        ecc_object_addmember(self->global, value.data.key, ECCValConstUndefined, ECC_VALFLAG_SEALED);
+        ecc_object_addmember(self->globalobject, value.data.key, ECCValConstUndefined, ECC_VALFLAG_SEALED);
 
     if(ecc_astparse_accepttoken(self, '='))
     {
         eccoplist_t* opassign = ecc_astparse_assignment(self, noIn);
 
         if(opassign)
-            return ecc_oplist_unshiftjoin(ecc_oper_make(ecc_oper_discard, ECCValConstUndefined, ECC_ConstString_Empty),
+            return ecc_oplist_unshiftjoin(ecc_oper_make(ecc_oper_discard, ECCValConstUndefined, ECC_String_Empty),
                                                 ecc_oplist_create(ecc_oper_setlocal, value, ecc_textbuf_join(text, opassign->ops->text)), opassign);
 
         ecc_astparse_tokenerror(self, "expression");
         return NULL;
     }
-    //	else if (!(self->function->flags & ECC_SCRIPTFUNCFLAG_STRICTMODE) && self->sourcedepth <= 1)
-    //		return ecc_oplist_unshift(ecc_oper_make(ecc_oper_discard, ECCValConstUndefined, ECC_ConstString_Empty), ecc_oplist_create(ecc_oper_createlocalref, value, text));
-    else
-        return ecc_oplist_create(ecc_oper_next, value, text);
+    /*
+        else if (!(self->function->flags & ECC_SCRIPTFUNCFLAG_STRICTMODE) && self->sourcedepth <= 1)
+        {
+            return ecc_oplist_unshift(ecc_oper_make(ecc_oper_discard, ECCValConstUndefined, ECC_String_Empty), ecc_oplist_create(ecc_oper_createlocalref, value, text));
+        }            
+    */
+    return ecc_oplist_create(ecc_oper_next, value, text);
 }
 
 eccoplist_t* ecc_astparse_variabledeclarationlist(eccastparser_t* self, int noIn)
@@ -1211,7 +1217,7 @@ eccoplist_t* ecc_astparse_forstatement(eccastparser_t* self)
     {
         if(oplist->count == 2 && oplist->ops[0].native == ecc_oper_discard && oplist->ops[1].native == ecc_oper_getlocal)
         {
-            if(!self->strictMode && !ecc_object_member(&self->function->environment, oplist->ops[1].value.data.key, 0))
+            if(!self->strictMode && !ecc_object_member(&self->function->funcenv, oplist->ops[1].opvalue.data.key, 0))
                 ++self->reserveGlobalSlots;
 
             oplist->ops[0].native = ecc_oper_iterateinref;
@@ -1265,9 +1271,9 @@ eccoplist_t* ecc_astparse_continuestatement(eccastparser_t* self, ecctextstring_
     eccoplist_t* oplist = NULL;
     eccindexkey_t label = ECC_ConstKey_none;
     ecctextstring_t labelText = self->lexer->text;
-    uint16_t depth, lastestDepth, breaker = 0;
+    uint32_t depth, lastestDepth, breaker = 0;
 
-    if(!self->lexer->didLineBreak && ecc_astparse_previewtoken(self) == ECC_TOK_IDENTIFIER)
+    if(!self->lexer->stdidlinebreak && ecc_astparse_previewtoken(self) == ECC_TOK_IDENTIFIER)
     {
         label = self->lexer->tokenvalue.data.key;
         ecc_astparse_nexttoken(self);
@@ -1298,9 +1304,9 @@ eccoplist_t* ecc_astparse_breakstatement(eccastparser_t* self, ecctextstring_t t
     eccoplist_t* oplist = NULL;
     eccindexkey_t label = ECC_ConstKey_none;
     ecctextstring_t labelText = self->lexer->text;
-    uint16_t depth, breaker = 0;
+    uint32_t depth, breaker = 0;
 
-    if(!self->lexer->didLineBreak && ecc_astparse_previewtoken(self) == ECC_TOK_IDENTIFIER)
+    if(!self->lexer->stdidlinebreak && ecc_astparse_previewtoken(self) == ECC_TOK_IDENTIFIER)
     {
         label = self->lexer->tokenvalue.data.key;
         ecc_astparse_nexttoken(self);
@@ -1328,7 +1334,7 @@ eccoplist_t* ecc_astparse_returnstatement(eccastparser_t* self, ecctextstring_t 
     if(self->sourcedepth <= 1)
         ecc_astparse_syntaxerror(self, text, ecc_strbuf_create("return not in function"));
 
-    if(!self->lexer->didLineBreak && ecc_astparse_previewtoken(self) != ';' && ecc_astparse_previewtoken(self) != '}' && ecc_astparse_previewtoken(self) != ECC_TOK_NO)
+    if(!self->lexer->stdidlinebreak && ecc_astparse_previewtoken(self) != ';' && ecc_astparse_previewtoken(self) != '}' && ecc_astparse_previewtoken(self) != ECC_TOK_NO)
         oplist = ecc_astparse_expression(self, 0);
 
     ecc_astparse_semicolon(self);
@@ -1343,7 +1349,7 @@ eccoplist_t* ecc_astparse_returnstatement(eccastparser_t* self, ecctextstring_t 
 eccoplist_t* ecc_astparse_switchstatement(eccastparser_t* self)
 {
     eccoplist_t *oplist = NULL, *conditionOps = NULL, *defaultOps = NULL;
-    ecctextstring_t text = ECC_ConstString_Empty;
+    ecctextstring_t text = ECC_String_Empty;
     uint32_t conditionCount = 0;
 
     ecc_astparse_expecttoken(self, '(');
@@ -1360,7 +1366,7 @@ eccoplist_t* ecc_astparse_switchstatement(eccastparser_t* self)
         {
             conditionOps = ecc_oplist_join(conditionOps, ecc_astparse_expression(self, 0));
             conditionOps
-            = ecc_oplist_append(conditionOps, ecc_oper_make(ecc_oper_value, ecc_value_fromint(2 + (oplist ? oplist->count : 0)), ECC_ConstString_Empty));
+            = ecc_oplist_append(conditionOps, ecc_oper_make(ecc_oper_value, ecc_value_fromint(2 + (oplist ? oplist->count : 0)), ECC_String_Empty));
             ++conditionCount;
             ecc_astparse_expecttoken(self, ':');
             oplist = ecc_oplist_join(oplist, ecc_astparse_statementlist(self));
@@ -1381,12 +1387,12 @@ eccoplist_t* ecc_astparse_switchstatement(eccastparser_t* self)
     }
 
     if(!defaultOps)
-        defaultOps = ecc_oplist_create(ecc_oper_noop, ECCValConstNone, ECC_ConstString_Empty);
+        defaultOps = ecc_oplist_create(ecc_oper_noop, ECCValConstNone, ECC_String_Empty);
 
     oplist = ecc_oplist_appendnoop(oplist);
-    defaultOps = ecc_oplist_append(defaultOps, ecc_oper_make(ecc_oper_jump, ecc_value_fromint(oplist ? oplist->count : 0), ECC_ConstString_Empty));
+    defaultOps = ecc_oplist_append(defaultOps, ecc_oper_make(ecc_oper_jump, ecc_value_fromint(oplist ? oplist->count : 0), ECC_String_Empty));
     conditionOps = ecc_oplist_unshiftjoin(
-    ecc_oper_make(ecc_oper_switchop, ecc_value_fromint(conditionOps ? conditionOps->count : 0), ECC_ConstString_Empty), conditionOps, defaultOps);
+    ecc_oper_make(ecc_oper_switchop, ecc_value_fromint(conditionOps ? conditionOps->count : 0), ECC_String_Empty), conditionOps, defaultOps);
     oplist = ecc_oplist_join(conditionOps, oplist);
 
     ecc_astparse_popdepth(self);
@@ -1433,7 +1439,7 @@ eccoplist_t* ecc_astparse_allstatement(eccastparser_t* self)
             ecc_astparse_tokenerror(self, "expression");
 
         oplist = ecc_oplist_join(oplist, ecc_oplist_appendnoop(ecc_astparse_statement(self)));
-        oplist = ecc_oplist_unshift(ecc_oper_make(ecc_oper_with, ecc_value_fromint(oplist->count), ECC_ConstString_Empty), oplist);
+        oplist = ecc_oplist_unshift(ecc_oper_make(ecc_oper_with, ecc_value_fromint(oplist->count), ECC_String_Empty), oplist);
 
         return oplist;
     }
@@ -1441,7 +1447,7 @@ eccoplist_t* ecc_astparse_allstatement(eccastparser_t* self)
         return ecc_astparse_switchstatement(self);
     else if(ecc_astparse_accepttoken(self, ECC_TOK_THROW))
     {
-        if(!self->lexer->didLineBreak && ecc_astparse_previewtoken(self) != ';' && ecc_astparse_previewtoken(self) != '}' && ecc_astparse_previewtoken(self) != ECC_TOK_NO)
+        if(!self->lexer->stdidlinebreak && ecc_astparse_previewtoken(self) != ';' && ecc_astparse_previewtoken(self) != '}' && ecc_astparse_previewtoken(self) != ECC_TOK_NO)
             oplist = ecc_astparse_expression(self, 0);
 
         if(!oplist)
@@ -1471,7 +1477,7 @@ eccoplist_t* ecc_astparse_allstatement(eccastparser_t* self)
             ecc_astparse_expecttoken(self, ')');
 
             catchOps = ecc_astparse_block(self);
-            catchOps = ecc_oplist_unshift(ecc_oper_make(ecc_oper_pushenvironment, ecc_value_fromkey(identiferOp.value.data.key), text), catchOps);
+            catchOps = ecc_oplist_unshift(ecc_oper_make(ecc_oper_pushenvironment, ecc_value_fromkey(identiferOp.opvalue.data.key), text), catchOps);
             catchOps = ecc_oplist_append(catchOps, ecc_oper_make(ecc_oper_popenvironment, ECCValConstUndefined, text));
             catchOps = ecc_oplist_unshift(ecc_oper_make(ecc_oper_jump, ecc_value_fromint(catchOps->count), text), catchOps);
             oplist = ecc_oplist_join(oplist, catchOps);
@@ -1500,7 +1506,7 @@ eccoplist_t* ecc_astparse_allstatement(eccastparser_t* self)
 
         if(oplist->ops[0].native == ecc_oper_getlocal && oplist->count == 1 && ecc_astparse_accepttoken(self, ':'))
         {
-            ecc_astparse_pushdepth(self, oplist->ops[0].value.data.key, 0);
+            ecc_astparse_pushdepth(self, oplist->ops[0].opvalue.data.key, 0);
             free(oplist), oplist = NULL;
             oplist = ecc_astparse_statement(self);
             ecc_astparse_popdepth(self);
@@ -1513,11 +1519,11 @@ eccoplist_t* ecc_astparse_allstatement(eccastparser_t* self)
         while(index--)
             if(oplist->ops[index].native == ecc_oper_call)
                 return ecc_oplist_unshift(ecc_oper_make(self->sourcedepth <= 1 ? ecc_oper_autoreleaseexpression : ecc_oper_autoreleasediscard,
-                                                                  ECCValConstUndefined, ECC_ConstString_Empty),
+                                                                  ECCValConstUndefined, ECC_String_Empty),
                                                 oplist);
 
         return ecc_oplist_unshift(
-        ecc_oper_make(self->sourcedepth <= 1 ? ecc_oper_expression : ecc_oper_discard, ECCValConstUndefined, ECC_ConstString_Empty), oplist);
+        ecc_oper_make(self->sourcedepth <= 1 ? ecc_oper_expression : ecc_oper_discard, ECCValConstUndefined, ECC_String_Empty), oplist);
     }
 }
 
@@ -1530,8 +1536,6 @@ eccoplist_t* ecc_astparse_statement(eccastparser_t* self)
     return oplist;
 }
 
-// MARK: ECCNSFunction
-
 eccoplist_t* ecc_astparse_parameters(eccastparser_t* self, int* count)
 {
     eccoperand_t op;
@@ -1542,15 +1546,15 @@ eccoplist_t* ecc_astparse_parameters(eccastparser_t* self, int* count)
             ++*count;
             op = ecc_astparse_identifier(self);
 
-            if(op.value.data.key.data.integer)
+            if(op.opvalue.data.key.data.integer)
             {
-                if(self->strictMode && ecc_keyidx_isequal(op.value.data.key, ECC_ConstKey_eval))
+                if(self->strictMode && ecc_keyidx_isequal(op.opvalue.data.key, ECC_ConstKey_eval))
                     ecc_astparse_syntaxerror(self, op.text, ecc_strbuf_create("redefining eval is not allowed"));
-                else if(self->strictMode && ecc_keyidx_isequal(op.value.data.key, ECC_ConstKey_arguments))
+                else if(self->strictMode && ecc_keyidx_isequal(op.opvalue.data.key, ECC_ConstKey_arguments))
                     ecc_astparse_syntaxerror(self, op.text, ecc_strbuf_create("redefining arguments is not allowed"));
 
-                ecc_object_deletemember(&self->function->environment, op.value.data.key);
-                ecc_object_addmember(&self->function->environment, op.value.data.key, ECCValConstUndefined, ECC_VALFLAG_HIDDEN);
+                ecc_object_deletemember(&self->function->funcenv, op.opvalue.data.key);
+                ecc_object_addmember(&self->function->funcenv, op.opvalue.data.key, ECCValConstUndefined, ECC_VALFLAG_HIDDEN);
             }
         } while(ecc_astparse_accepttoken(self, ','));
 
@@ -1569,7 +1573,7 @@ eccoplist_t* ecc_astparse_function(eccastparser_t* self, int isDeclaration, int 
     eccobjfunction_t* parentFunction;
     eccobjfunction_t* function;
     ecchashmap_t* arguments;
-    uint16_t slot;
+    uint32_t slot;
 
     if(!isGetter && !isSetter)
     {
@@ -1579,9 +1583,9 @@ eccoplist_t* ecc_astparse_function(eccastparser_t* self, int isDeclaration, int 
         {
             identifierOp = ecc_astparse_identifier(self);
 
-            if(self->strictMode && ecc_keyidx_isequal(identifierOp.value.data.key, ECC_ConstKey_eval))
+            if(self->strictMode && ecc_keyidx_isequal(identifierOp.opvalue.data.key, ECC_ConstKey_eval))
                 ecc_astparse_syntaxerror(self, identifierOp.text, ecc_strbuf_create("redefining eval is not allowed"));
-            else if(self->strictMode && ecc_keyidx_isequal(identifierOp.value.data.key, ECC_ConstKey_arguments))
+            else if(self->strictMode && ecc_keyidx_isequal(identifierOp.opvalue.data.key, ECC_ConstKey_arguments))
                 ecc_astparse_syntaxerror(self, identifierOp.text, ecc_strbuf_create("redefining arguments is not allowed"));
         }
         else if(isDeclaration)
@@ -1594,10 +1598,10 @@ eccoplist_t* ecc_astparse_function(eccastparser_t* self, int isDeclaration, int 
     parentFunction = self->function;
     parentFunction->flags |= ECC_SCRIPTFUNCFLAG_NEEDHEAP;
 
-    function = ecc_function_create(&self->function->environment);
+    function = ecc_function_create(&self->function->funcenv);
 
-    arguments = (ecchashmap_t*)ecc_object_addmember(&function->environment, ECC_ConstKey_arguments, ECCValConstUndefined, 0);
-    slot = arguments - function->environment.hashmap;
+    arguments = (ecchashmap_t*)ecc_object_addmember(&function->funcenv, ECC_ConstKey_arguments, ECCValConstUndefined, 0);
+    slot = arguments - function->funcenv.hmapmapitems;
 
     self->function = function;
     text = self->lexer->text;
@@ -1605,9 +1609,9 @@ eccoplist_t* ecc_astparse_function(eccastparser_t* self, int isDeclaration, int 
     textParameter = self->lexer->text;
     oplist = ecc_oplist_join(oplist, ecc_astparse_parameters(self, &parameterCount));
 
-    function->environment.hashmap[slot].hmapmapvalue = ECCValConstUndefined;
-    function->environment.hashmap[slot].hmapmapvalue.key = ECC_ConstKey_arguments;
-    function->environment.hashmap[slot].hmapmapvalue.flags |= ECC_VALFLAG_HIDDEN | ECC_VALFLAG_SEALED;
+    function->funcenv.hmapmapitems[slot].hmapmapvalue = ECCValConstUndefined;
+    function->funcenv.hmapmapitems[slot].hmapmapvalue.key = ECC_ConstKey_arguments;
+    function->funcenv.hmapmapitems[slot].hmapmapvalue.flags |= ECC_VALFLAG_HIDDEN | ECC_VALFLAG_SEALED;
 
     if(isGetter && parameterCount != 0)
         ecc_astparse_syntaxerror(self, ecc_textbuf_make(textParameter.bytes, (int32_t)(self->lexer->text.bytes - textParameter.bytes)),
@@ -1628,7 +1632,7 @@ eccoplist_t* ecc_astparse_function(eccastparser_t* self, int isDeclaration, int 
 
     function->oplist = oplist;
     function->text = text;
-    function->parameterCount = parameterCount;
+    function->argparamcount = parameterCount;
 
     ecc_object_addmember(&function->object, ECC_ConstKey_length, ecc_value_fromint(parameterCount), ECC_VALFLAG_READONLY | ECC_VALFLAG_HIDDEN | ECC_VALFLAG_SEALED);
 
@@ -1637,14 +1641,14 @@ eccoplist_t* ecc_astparse_function(eccastparser_t* self, int isDeclaration, int 
     if(isDeclaration)
     {
         if(self->function->flags & ECC_SCRIPTFUNCFLAG_STRICTMODE || self->sourcedepth > 1)
-            ecc_object_addmember(&parentFunction->environment, identifierOp.value.data.key, ECCValConstUndefined, ECC_VALFLAG_HIDDEN);
+            ecc_object_addmember(&parentFunction->funcenv, identifierOp.opvalue.data.key, ECCValConstUndefined, ECC_VALFLAG_HIDDEN);
         else
-            ecc_object_addmember(self->global, identifierOp.value.data.key, ECCValConstUndefined, ECC_VALFLAG_HIDDEN);
+            ecc_object_addmember(self->globalobject, identifierOp.opvalue.data.key, ECCValConstUndefined, ECC_VALFLAG_HIDDEN);
     }
-    else if(identifierOp.value.type != ECC_VALTYPE_UNDEFINED && !isGetter && !isSetter)
+    else if(identifierOp.opvalue.type != ECC_VALTYPE_UNDEFINED && !isGetter && !isSetter)
     {
-        ecc_object_addmember(&function->environment, identifierOp.value.data.key, value, ECC_VALFLAG_HIDDEN);
-        ecc_object_packvalue(&function->environment);
+        ecc_object_addmember(&function->funcenv, identifierOp.opvalue.data.key, value, ECC_VALFLAG_HIDDEN);
+        ecc_object_packvalue(&function->funcenv);
     }
 
     if(isGetter)
@@ -1653,13 +1657,11 @@ eccoplist_t* ecc_astparse_function(eccastparser_t* self, int isDeclaration, int 
         value.flags |= ECC_VALFLAG_SETTER;
 
     if(isDeclaration)
-        return ecc_oplist_append(ecc_oplist_create(ecc_oper_setlocal, identifierOp.value, ECC_ConstString_Empty),
+        return ecc_oplist_append(ecc_oplist_create(ecc_oper_setlocal, identifierOp.opvalue, ECC_String_Empty),
                                        ecc_oper_make(ecc_oper_function, value, text));
     else
         return ecc_oplist_create(ecc_oper_function, value, text);
 }
-
-// MARK: Source
 
 eccoplist_t* ecc_astparse_sourceelements(eccastparser_t* self)
 {
@@ -1677,7 +1679,7 @@ eccoplist_t* ecc_astparse_sourceelements(eccastparser_t* self)
     if(self->sourcedepth <= 1)
         oplist = ecc_oplist_appendnoop(oplist);
     else
-        oplist = ecc_oplist_append(oplist, ecc_oper_make(ecc_oper_resultvoid, ECCValConstUndefined, ECC_ConstString_Empty));
+        oplist = ecc_oplist_append(oplist, ecc_oper_make(ecc_oper_resultvoid, ECCValConstUndefined, ECC_String_Empty));
 
     if(self->function->oplist)
         self->function->oplist = ecc_oplist_joindiscarded(NULL, self->function->oplist->count / 2, self->function->oplist);
@@ -1688,14 +1690,12 @@ eccoplist_t* ecc_astparse_sourceelements(eccastparser_t* self)
     if(oplist->count > 1)
         oplist->ops[1].text.flags |= ECC_TEXTFLAG_BREAKFLAG;
 
-    ecc_object_packvalue(&self->function->environment);
+    ecc_object_packvalue(&self->function->funcenv);
 
     --self->sourcedepth;
 
     return oplist;
 }
-
-// MARK: - Methods
 
 eccastparser_t* ecc_astparse_createwithlexer(eccastlexer_t* lexer)
 {
@@ -1724,14 +1724,14 @@ eccobjfunction_t* ecc_astparse_parsewithenvironment(eccastparser_t* const self, 
 
     function = ecc_function_create(environment);
     self->function = function;
-    self->global = global;
+    self->globalobject = global;
     self->reserveGlobalSlots = 0;
     if(self->strictMode)
         function->flags |= ECC_SCRIPTFUNCFLAG_STRICTMODE;
 
     ecc_astparse_nexttoken(self);
     oplist = ecc_astparse_sourceelements(self);
-    ecc_oplist_optimizewithenvironment(oplist, &function->environment, 0);
+    ecc_oplist_optimizewithenvironment(oplist, &function->funcenv, 0);
 
     ecc_object_reserveslots(global, self->reserveGlobalSlots);
 

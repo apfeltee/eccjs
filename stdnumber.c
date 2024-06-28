@@ -1,10 +1,12 @@
-//
+
+/*
 //  number.c
 //  libecc
 //
 //  Copyright (c) 2019 Aurélien Bouilland
 //  Licensed under MIT license, see LICENSE.txt file in project root
-//
+*/
+
 #include "ecc.h"
 
 static eccvalue_t objnumberfn_toExponential(ecccontext_t *context);
@@ -14,13 +16,11 @@ static eccvalue_t objnumberfn_toString(ecccontext_t *context);
 static eccvalue_t objnumberfn_valueOf(ecccontext_t *context);
 static eccvalue_t objnumberfn_constructor(ecccontext_t *context);
 
-
-
 eccobject_t* ECC_Prototype_Number = NULL;
 eccobjfunction_t* ECC_CtorFunc_Number = NULL;
 
 const eccobjinterntype_t ECC_Type_Number = {
-    .text = &ECC_ConstString_NumberType,
+    .text = &ECC_String_NumberType,
 };
 
 static eccvalue_t objnumberfn_toExponential(ecccontext_t* context)
@@ -31,11 +31,11 @@ static eccvalue_t objnumberfn_toExponential(ecccontext_t* context)
 
     ecc_context_assertthismask(context, ECC_VALMASK_NUMBER);
 
-    binary = ecc_value_tobinary(context, context->thisvalue).data.binary;
+    binary = ecc_value_tobinary(context, context->thisvalue).data.valnumfloat;
     value = ecc_context_argument(context, 0);
     if(value.type != ECC_VALTYPE_UNDEFINED)
     {
-        precision = ecc_value_tobinary(context, value).data.binary;
+        precision = ecc_value_tobinary(context, value).data.valnumfloat;
         if(precision <= -1 || precision >= 21)
             ecc_context_rangeerror(context, ecc_strbuf_create("precision '%.0f' out of range", precision));
 
@@ -44,11 +44,11 @@ static eccvalue_t objnumberfn_toExponential(ecccontext_t* context)
     }
 
     if(isnan(binary))
-        return ecc_value_fromtext(&ECC_ConstString_Nan);
-    else if(binary == INFINITY)
-        return ecc_value_fromtext(&ECC_ConstString_Infinity);
-    else if(binary == -INFINITY)
-        return ecc_value_fromtext(&ECC_ConstString_NegativeInfinity);
+        return ecc_value_fromtext(&ECC_String_Nan);
+    else if(binary == ECC_CONST_INFINITY)
+        return ecc_value_fromtext(&ECC_String_Infinity);
+    else if(binary == -ECC_CONST_INFINITY)
+        return ecc_value_fromtext(&ECC_String_NegInfinity);
 
     ecc_strbuf_beginappend(&chars);
 
@@ -69,11 +69,11 @@ static eccvalue_t objnumberfn_toFixed(ecccontext_t* context)
 
     ecc_context_assertthismask(context, ECC_VALMASK_NUMBER);
 
-    binary = ecc_value_tobinary(context, context->thisvalue).data.binary;
+    binary = ecc_value_tobinary(context, context->thisvalue).data.valnumfloat;
     value = ecc_context_argument(context, 0);
     if(value.type != ECC_VALTYPE_UNDEFINED)
     {
-        precision = ecc_value_tobinary(context, value).data.binary;
+        precision = ecc_value_tobinary(context, value).data.valnumfloat;
         if(precision <= -1 || precision >= 21)
             ecc_context_rangeerror(context, ecc_strbuf_create("precision '%.0f' out of range", precision));
 
@@ -82,11 +82,11 @@ static eccvalue_t objnumberfn_toFixed(ecccontext_t* context)
     }
 
     if(isnan(binary))
-        return ecc_value_fromtext(&ECC_ConstString_Nan);
-    else if(binary == INFINITY)
-        return ecc_value_fromtext(&ECC_ConstString_Infinity);
-    else if(binary == -INFINITY)
-        return ecc_value_fromtext(&ECC_ConstString_NegativeInfinity);
+        return ecc_value_fromtext(&ECC_String_Nan);
+    else if(binary == ECC_CONST_INFINITY)
+        return ecc_value_fromtext(&ECC_String_Infinity);
+    else if(binary == -ECC_CONST_INFINITY)
+        return ecc_value_fromtext(&ECC_String_NegInfinity);
 
     ecc_strbuf_beginappend(&chars);
 
@@ -106,11 +106,11 @@ static eccvalue_t objnumberfn_toPrecision(ecccontext_t* context)
 
     ecc_context_assertthismask(context, ECC_VALMASK_NUMBER);
 
-    binary = ecc_value_tobinary(context, context->thisvalue).data.binary;
+    binary = ecc_value_tobinary(context, context->thisvalue).data.valnumfloat;
     value = ecc_context_argument(context, 0);
     if(value.type != ECC_VALTYPE_UNDEFINED)
     {
-        precision = ecc_value_tobinary(context, value).data.binary;
+        precision = ecc_value_tobinary(context, value).data.valnumfloat;
         if(precision <= -1 || precision >= 101)
         {
             ecc_context_rangeerror(context, ecc_strbuf_create("precision '%.0f' out of range", precision));
@@ -122,15 +122,15 @@ static eccvalue_t objnumberfn_toPrecision(ecccontext_t* context)
     }
     if(isnan(binary))
     {
-        return ecc_value_fromtext(&ECC_ConstString_Nan);
+        return ecc_value_fromtext(&ECC_String_Nan);
     }
-    else if(binary == INFINITY)
+    else if(binary == ECC_CONST_INFINITY)
     {
-        return ecc_value_fromtext(&ECC_ConstString_Infinity);
+        return ecc_value_fromtext(&ECC_String_Infinity);
     }
-    else if(binary == -INFINITY)
+    else if(binary == -ECC_CONST_INFINITY)
     {
-        return ecc_value_fromtext(&ECC_ConstString_NegativeInfinity);
+        return ecc_value_fromtext(&ECC_String_NegInfinity);
     }
     ecc_strbuf_beginappend(&chars);
 
@@ -151,7 +151,7 @@ static eccvalue_t objnumberfn_toString(ecccontext_t* context)
     int32_t radix = 10;
     double binary;
     ecc_context_assertthismask(context, ECC_VALMASK_NUMBER);
-    binary = ecc_value_tobinary(context, context->thisvalue).data.binary;
+    binary = ecc_value_tobinary(context, context->thisvalue).data.valnumfloat;
     value = ecc_context_argument(context, 0);
     if(value.type != ECC_VALTYPE_UNDEFINED)
     {
@@ -172,7 +172,7 @@ static eccvalue_t objnumberfn_valueOf(ecccontext_t* context)
 {
     ecc_context_assertthistype(context, ECC_VALTYPE_NUMBER);
 
-    return ecc_value_fromfloat(context->thisvalue.data.number->value);
+    return ecc_value_fromfloat(context->thisvalue.data.number->numvalue);
 }
 
 static eccvalue_t objnumberfn_constructor(ecccontext_t* context)
@@ -181,17 +181,15 @@ static eccvalue_t objnumberfn_constructor(ecccontext_t* context)
 
     value = ecc_context_argument(context, 0);
     if(value.type == ECC_VALTYPE_UNDEFINED)
-        value = ecc_value_fromfloat(value.check == 1 ? NAN : 0);
+        value = ecc_value_fromfloat(value.check == 1 ? ECC_CONST_NAN : 0);
     else
         value = ecc_value_tobinary(context, value);
 
     if(context->construct)
-        return ecc_value_number(ecc_number_create(value.data.binary));
+        return ecc_value_number(ecc_number_create(value.data.valnumfloat));
     else
         return value;
 }
-
-// MARK: - Methods
 
 void ecc_number_setup()
 {
@@ -203,9 +201,9 @@ void ecc_number_setup()
 
     ecc_function_addmember(ECC_CtorFunc_Number, "MAX_VALUE", ecc_value_fromfloat(DBL_MAX), r | h | s);
     ecc_function_addmember(ECC_CtorFunc_Number, "MIN_VALUE", ecc_value_fromfloat(DBL_MIN * DBL_EPSILON), r | h | s);
-    ecc_function_addmember(ECC_CtorFunc_Number, "NaN", ecc_value_fromfloat(NAN), r | h | s);
-    ecc_function_addmember(ECC_CtorFunc_Number, "NEGATIVE_INFINITY", ecc_value_fromfloat(-INFINITY), r | h | s);
-    ecc_function_addmember(ECC_CtorFunc_Number, "POSITIVE_INFINITY", ecc_value_fromfloat(INFINITY), r | h | s);
+    ecc_function_addmember(ECC_CtorFunc_Number, "NaN", ecc_value_fromfloat(ECC_CONST_NAN), r | h | s);
+    ecc_function_addmember(ECC_CtorFunc_Number, "NEGATIVE_INFINITY", ecc_value_fromfloat(-ECC_CONST_INFINITY), r | h | s);
+    ecc_function_addmember(ECC_CtorFunc_Number, "POSITIVE_INFINITY", ecc_value_fromfloat(ECC_CONST_INFINITY), r | h | s);
 
     ecc_function_addto(ECC_Prototype_Number, "toString", objnumberfn_toString, 1, h);
     ecc_function_addto(ECC_Prototype_Number, "toLocaleString", objnumberfn_toString, 1, h);
@@ -228,6 +226,6 @@ eccobjnumber_t* ecc_number_create(double binary)
     memset(self, 0, sizeof(eccobjnumber_t));
     ecc_mempool_addobject(&self->object);
     ecc_object_initialize(&self->object, ECC_Prototype_Number);
-    self->value = binary;
+    self->numvalue = binary;
     return self;
 }

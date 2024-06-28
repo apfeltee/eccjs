@@ -1,13 +1,13 @@
-//
+
+/*
 //  context.c
 //  libecc
 //
 //  Copyright (c) 2019 Aurélien Bouilland
 //  Licensed under MIT license, see LICENSE.txt file in project root
-//
+*/
+
 #include "ecc.h"
-
-
 
 void ecc_context_rangeerror(ecccontext_t* self, eccstrbuffer_t* chars)
 {
@@ -53,7 +53,7 @@ void ecc_context_throw(ecccontext_t * self, eccvalue_t value)
             message = ecc_value_tostring(self, value);
 
         if(name.type == ECC_VALTYPE_UNDEFINED)
-            name = ecc_value_fromtext(&ECC_ConstString_ErrorName);
+            name = ecc_value_fromtext(&ECC_String_ErrorName);
 
         ecc_env_newline();
         ecc_env_printerror(ecc_value_stringlength(&name), ecc_value_stringbytes(&name), "%.*s", ecc_value_stringlength(&message), ecc_value_stringbytes(&message));
@@ -84,36 +84,36 @@ eccvalue_t ecc_context_callfunction(ecccontext_t* self, eccobjfunction_t* functi
 
 int ecc_context_argumentcount(ecccontext_t* self)
 {
-    if(self->environment->hashmap[2].hmapmapvalue.type == ECC_VALTYPE_OBJECT)
-        return self->environment->hashmap[2].hmapmapvalue.data.object->elementCount;
+    if(self->execenv->hmapmapitems[2].hmapmapvalue.type == ECC_VALTYPE_OBJECT)
+        return self->execenv->hmapmapitems[2].hmapmapvalue.data.object->hmapitemcount;
     else
-        return self->environment->hashmapCount - 3;
+        return self->execenv->hmapmapcount - 3;
 }
 
 eccvalue_t ecc_context_argument(ecccontext_t* self, int argumentIndex)
 {
     self->textIndex = argumentIndex + 4;
 
-    if(self->environment->hashmap[2].hmapmapvalue.type == ECC_VALTYPE_OBJECT)
+    if(self->execenv->hmapmapitems[2].hmapmapvalue.type == ECC_VALTYPE_OBJECT)
     {
-        if(argumentIndex < (int)self->environment->hashmap[2].hmapmapvalue.data.object->elementCount)
-            return self->environment->hashmap[2].hmapmapvalue.data.object->element[argumentIndex].hmapitemvalue;
+        if(argumentIndex < (int)self->execenv->hmapmapitems[2].hmapmapvalue.data.object->hmapitemcount)
+            return self->execenv->hmapmapitems[2].hmapmapvalue.data.object->hmapitemitems[argumentIndex].hmapitemvalue;
     }
-    else if(argumentIndex < (self->environment->hashmapCount - 3))
-        return self->environment->hashmap[argumentIndex + 3].hmapmapvalue;
+    else if(argumentIndex < (self->execenv->hmapmapcount - 3))
+        return self->execenv->hmapmapitems[argumentIndex + 3].hmapmapvalue;
 
     return ECCValConstNone;
 }
 
 void ecc_context_replaceargument(ecccontext_t* self, int argumentIndex, eccvalue_t value)
 {
-    if(self->environment->hashmap[2].hmapmapvalue.type == ECC_VALTYPE_OBJECT)
+    if(self->execenv->hmapmapitems[2].hmapmapvalue.type == ECC_VALTYPE_OBJECT)
     {
-        if(argumentIndex < (int)self->environment->hashmap[2].hmapmapvalue.data.object->elementCount)
-            self->environment->hashmap[2].hmapmapvalue.data.object->element[argumentIndex].hmapitemvalue = value;
+        if(argumentIndex < (int)self->execenv->hmapmapitems[2].hmapmapvalue.data.object->hmapitemcount)
+            self->execenv->hmapmapitems[2].hmapmapvalue.data.object->hmapitemitems[argumentIndex].hmapitemvalue = value;
     }
-    else if(argumentIndex < self->environment->hashmapCount - 3)
-        self->environment->hashmap[argumentIndex + 3].hmapmapvalue = value;
+    else if(argumentIndex < self->execenv->hmapmapcount - 3)
+        self->execenv->hmapmapitems[argumentIndex + 3].hmapmapvalue = value;
 }
 
 eccvalue_t ecc_context_this(ecccontext_t* self)
@@ -192,7 +192,7 @@ ecctextstring_t ecc_context_textseek(ecccontext_t* self)
     if(index == ECC_CTXINDECTYPE_SAVEDINDEXALT)
         return *self->textAlt;
 
-    while(seek.ops->text.bytes == ECC_ConstString_NativeCode.bytes)
+    while(seek.ops->text.bytes == ECC_String_NativeCode.bytes)
     {
         if(!seek.parent)
             return seek.ops->text;
@@ -224,18 +224,18 @@ ecctextstring_t ecc_context_textseek(ecccontext_t* self)
         while(seek.ops->text.bytes != seek.textCall->bytes || seek.ops->text.length != seek.textCall->length)
             --seek.ops;
 
-        argumentCount += seek.ops->value.data.integer;
+        argumentCount += seek.ops->opvalue.data.integer;
         callText = seek.ops->text;
 
-        // func
+        /* func */
         if(index-- > ECC_CTXINDEXTYPE_CALL)
             ++seek.ops;
 
-        // this
+        /* this */
         if(index-- > ECC_CTXINDEXTYPE_CALL && (seek.ops + 1)->text.bytes <= seek.ops->text.bytes)
             ++seek.ops;
 
-        // arguments
+        /* arguments */
         while(index-- > ECC_CTXINDEXTYPE_CALL)
         {
             if(!argumentCount--)
@@ -285,13 +285,13 @@ void ecc_context_printbacktrace(ecccontext_t* context)
 
             if(frame.argumentOffset == ECC_CTXOFFSET_CALL || frame.argumentOffset == ECC_CTXOFFSET_APPLY)
                 skip = 2;
-            else if(frame.textIndex > ECC_CTXINDEXTYPE_NO && frame.ops->text.bytes == ECC_ConstString_NativeCode.bytes)
+            else if(frame.textIndex > ECC_CTXINDEXTYPE_NO && frame.ops->text.bytes == ECC_String_NativeCode.bytes)
                 skip = 1;
 
             frame = *frame.parent;
         }
 
-        if(skip <= 0 && frame.ops->text.bytes != ECC_ConstString_NativeCode.bytes)
+        if(skip <= 0 && frame.ops->text.bytes != ECC_String_NativeCode.bytes)
         {
             ecc_context_rewindstatement(&frame);
             if(frame.ops->text.length)
@@ -302,10 +302,10 @@ void ecc_context_printbacktrace(ecccontext_t* context)
 
 eccobject_t* ecc_context_environmentroot(ecccontext_t* context)
 {
-    eccobject_t* environment = context->strictMode ? context->environment : &context->ecc->global->environment;
+    eccobject_t* environment = context->strictMode ? context->execenv : &context->ecc->globalfunc->funcenv;
 
     if(context->strictMode)
-        while(environment->prototype && environment->prototype != &context->ecc->global->environment)
+        while(environment->prototype && environment->prototype != &context->ecc->globalfunc->funcenv)
             environment = environment->prototype;
 
     return environment;

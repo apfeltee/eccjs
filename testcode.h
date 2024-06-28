@@ -1013,7 +1013,7 @@ static void testDate (void)
 	test("var o = {}; Date.prototype.toJSON.call(o)", "TypeError: toISOString is not a function"
 	,    "            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
 	
-	// iso format
+	/* iso format */
 	test("Date.parse('1984')", "441763200000", NULL);
 	test("Date.parse('1984-08')", "460166400000", NULL);
 	test("Date.parse('1984-08-31')", "462758400000", NULL);
@@ -1024,24 +1024,24 @@ static void testDate (void)
 	test("Date.parse('1984-08-31T01:23:45+12:34')", "462718185000", NULL);
 	test("Date.parse('1984-08-31T01:23:45.678+12:34')", "462718185678", NULL);
 	
-	// iso format with time and no offset is not supported: ES5 & ES6 are contradictory and hence not portable
+	/* iso format with time and no offset is not supported: ES5 & ES6 are contradictory and hence not portable */
 	test("Date.parse('1984-08-31T01:23')", "NaN", NULL);
 	test("Date.parse('1984-08-31T01:23:45')", "NaN", NULL);
 	test("Date.parse('1984-08-31T01:23:45.678')", "NaN", NULL);
 	
-	// iso format only support '+hh:mm' time offset
+	/* iso format only support '+hh:mm' time offset */
 	test("Date.parse('1984-08-31T01:23+1234')", "NaN", NULL);
 	test("Date.parse('1984-08-31T01:23 +12:34')", "NaN", NULL);
 	
-	// implementation format
+	/* implementation format */
 	test("Date.parse('1984/08/31 01:23 +0000')", "462763380000", NULL);
 	test("Date.parse('1984/08/31 01:23:45 +0000')", "462763425000", NULL);
 	test("Date.parse('100/08/31 01:23:45 +0000')", "-58990545375000", NULL);
 	
-	// implementation format years < 100 are not supported
+	/* implementation format years < 100 are not supported */
 	test("Date.parse('99/08/31 01:23:45 +0000')", "NaN", NULL);
 	
-	// implementation format only support ' +hhmm' time offset
+	/* implementation format only support ' +hhmm' time offset */
 	test("Date.parse('1984/08')", "NaN", NULL);
 	test("Date.parse('1984/08/31 01:23:45+0000')", "NaN", NULL);
 	test("Date.parse('1984/08/31 01:23:45 +00:00')", "NaN", NULL);

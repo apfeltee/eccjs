@@ -1,35 +1,38 @@
-//
+
+/*
 //  arguments.c
 //  libecc
 //
 //  Copyright (c) 2019 Aurélien Bouilland
 //  Licensed under MIT license, see LICENSE.txt file in project root
-//
+*/
+
 #include "ecc.h"
+#include "compat.h"
 
 eccobject_t* ECC_Prototype_Arguments;
 
 const eccobjinterntype_t ECC_Type_Arguments = {
-    .text = &ECC_ConstString_ArgumentsType,
+    .text = &ECC_String_ArgumentsType,
 };
 
 
 eccvalue_t argobjfn_getLength(ecccontext_t* context)
 {
-    return ecc_value_fromfloat(context->thisvalue.data.object->elementCount);
+    return ecc_value_fromfloat(context->thisvalue.data.object->hmapitemcount);
 }
 
 eccvalue_t argobjfn_setLength(ecccontext_t* context)
 {
     double length;
 
-    length = ecc_value_tobinary(context, ecc_context_argument(context, 0)).data.binary;
+    length = ecc_value_tobinary(context, ecc_context_argument(context, 0)).data.valnumfloat;
     if(!isfinite(length) || length < 0 || length > UINT32_MAX || length != (uint32_t)length)
         ecc_context_rangeerror(context, ecc_strbuf_create("invalid array length"));
 
     if(ecc_object_resizeelement(context->thisvalue.data.object, length) && context->strictMode)
     {
-        ecc_context_typeerror(context, ecc_strbuf_create("'%u' is non-configurable", context->thisvalue.data.object->elementCount));
+        ecc_context_typeerror(context, ecc_strbuf_create("'%u' is non-configurable", context->thisvalue.data.object->hmapitemcount));
     }
 
     return ECCValConstUndefined;

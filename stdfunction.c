@@ -1,10 +1,12 @@
-//
+
+/*
 //  function.c
 //  libecc
 //
 //  Copyright (c) 2019 Aurélien Bouilland
 //  Licensed under MIT license, see LICENSE.txt file in project root
-//
+*/
+
 #include "ecc.h"
 
 static va_list empty_ap;
@@ -13,7 +15,9 @@ eccobject_t* ECC_Prototype_Function = NULL;
 eccobjfunction_t* ECC_CtorFunc_Function = NULL;
 
 const eccobjinterntype_t ECC_Type_Function = {
-    .text = &ECC_ConstString_FunctionType, .mark = eccfunction_mark, .capture = eccfunction_capture,
+    .text = &ECC_String_FunctionType,
+    .fnmark = eccfunction_mark,
+    .fncapture = eccfunction_capture,
     /* XXX: don't finalize */
 };
 
@@ -32,7 +36,7 @@ void eccfunction_mark(eccobject_t* object)
 {
     eccobjfunction_t* self = (eccobjfunction_t*)object;
 
-    ecc_mempool_markobject(&self->environment);
+    ecc_mempool_markobject(&self->funcenv);
 
     if(self->refObject)
         ecc_mempool_markobject(self->refObject);
@@ -40,8 +44,6 @@ void eccfunction_mark(eccobject_t* object)
     if(self->pair)
         ecc_mempool_markobject(&self->pair->object);
 }
-
-// MARK: - Static Members
 
 eccvalue_t eccfunction_toChars(ecccontext_t* context, eccvalue_t value)
 {
@@ -56,7 +58,7 @@ eccvalue_t eccfunction_toChars(ecccontext_t* context, eccvalue_t value)
 
     ecc_strbuf_append(&chars, "function %s", self->name ? self->name : "anonymous");
 
-    if(self->text.bytes == ECC_ConstString_NativeCode.bytes)
+    if(self->text.bytes == ECC_String_NativeCode.bytes)
         ecc_strbuf_append(&chars, "() [native code]");
     else
         ecc_strbuf_append(&chars, "%.*s", self->text.length, self->text.bytes);
@@ -104,21 +106,21 @@ eccvalue_t objfunctionfn_call(ecccontext_t* context)
 
     context->strictMode = context->parent->strictMode;
 
-    arguments = *context->environment->hashmap[2].hmapmapvalue.data.object;
+    arguments = *context->execenv->hmapmapitems[2].hmapmapvalue.data.object;
 
-    if(arguments.elementCount)
+    if(arguments.hmapitemcount)
     {
         eccvalue_t thisval = ecc_context_argument(context, 0);
         if(thisval.type != ECC_VALTYPE_UNDEFINED && thisval.type != ECC_VALTYPE_NULL)
             thisval = ecc_value_toobject(context, thisval);
 
-        --arguments.elementCapacity;
-        --arguments.elementCount;
-        ++arguments.element;
-        if(!arguments.elementCount)
+        --arguments.hmapitemcapacity;
+        --arguments.hmapitemcount;
+        ++arguments.hmapitemitems;
+        if(!arguments.hmapitemcount)
         {
-            arguments.element = NULL;
-            arguments.elementCapacity = 0;
+            arguments.hmapitemitems = NULL;
+            arguments.hmapitemcapacity = 0;
         }
 
         return ecc_oper_callfunctionarguments(context, ECC_CTXOFFSET_CALL, context->thisvalue.data.function, thisval, &arguments);
@@ -131,7 +133,7 @@ eccvalue_t objfunctionfn_bindCall(ecccontext_t* context)
 {
     eccobjfunction_t* function;
     eccobject_t* arguments;
-    uint16_t count, length;
+    uint32_t count, length;
 
     ecc_context_assertthistype(context, ECC_VALTYPE_FUNCTION);
 
@@ -140,34 +142,34 @@ eccvalue_t objfunctionfn_bindCall(ecccontext_t* context)
     function = context->thisvalue.data.function;
 
     count = ecc_context_argumentcount(context);
-    length = (function->environment.elementCount - 1) + count;
+    length = (function->funcenv.hmapitemcount - 1) + count;
     arguments = ecc_array_createsized(length);
 
-    memcpy(arguments->element, function->environment.element + 1, sizeof(*arguments->element) * (function->environment.elementCount - 1));
-    memcpy(arguments->element + (function->environment.elementCount - 1), context->environment->hashmap[2].hmapmapvalue.data.object->element,
-           sizeof(*arguments->element) * (context->environment->hashmap[2].hmapmapvalue.data.object->elementCount));
+    memcpy(arguments->hmapitemitems, function->funcenv.hmapitemitems + 1, sizeof(*arguments->hmapitemitems) * (function->funcenv.hmapitemcount - 1));
+    memcpy(arguments->hmapitemitems + (function->funcenv.hmapitemcount - 1), context->execenv->hmapmapitems[2].hmapmapvalue.data.object->hmapitemitems,
+           sizeof(*arguments->hmapitemitems) * (context->execenv->hmapmapitems[2].hmapmapvalue.data.object->hmapitemcount));
 
-    return ecc_oper_callfunctionarguments(context, 0, context->thisvalue.data.function->pair, function->environment.element[0].hmapitemvalue, arguments);
+    return ecc_oper_callfunctionarguments(context, 0, context->thisvalue.data.function->pair, function->funcenv.hmapitemitems[0].hmapitemvalue, arguments);
 }
 
 eccvalue_t objfunctionfn_bind(ecccontext_t* context)
 {
     eccobjfunction_t* function;
-    uint16_t index, count;
+    uint32_t index, count;
     int parameterCount = 0;
 
     ecc_context_assertthistype(context, ECC_VALTYPE_FUNCTION);
 
     count = ecc_context_argumentcount(context);
-    parameterCount = context->thisvalue.data.function->parameterCount - (count > 1 ? count - 1 : 0);
+    parameterCount = context->thisvalue.data.function->argparamcount - (count > 1 ? count - 1 : 0);
     function = ecc_function_createwithnative(objfunctionfn_bindCall, parameterCount > 0 ? parameterCount : 0);
 
-    ecc_object_resizeelement(&function->environment, count ? count : 1);
+    ecc_object_resizeelement(&function->funcenv, count ? count : 1);
     if(count)
         for(index = 0; index < count; ++index)
-            function->environment.element[index].hmapitemvalue = ecc_context_argument(context, index);
+            function->funcenv.hmapitemitems[index].hmapitemvalue = ecc_context_argument(context, index);
     else
-        function->environment.element[0].hmapitemvalue = ECCValConstUndefined;
+        function->funcenv.hmapitemitems[0].hmapitemvalue = ECCValConstUndefined;
 
     function->pair = context->thisvalue.data.function;
     function->boundThis = ecc_value_function(function);
@@ -195,10 +197,10 @@ eccvalue_t objfunctionfn_constructor(ecccontext_t* context)
         eccioinput_t* input;
         ecccontext_t subContext = {};
         subContext.parent = context;
-        subContext.thisvalue = ecc_value_object(&context->ecc->global->environment);
+        subContext.thisvalue = ecc_value_object(&context->ecc->globalfunc->funcenv);
         subContext.ecc = context->ecc;
         subContext.depth = context->depth + 1;
-        subContext.environment = ecc_context_environmentroot(context->parent);
+        subContext.execenv = ecc_context_environmentroot(context->parent);
 
         ecc_strbuf_beginappend(&chars);
         ecc_strbuf_append(&chars, "(function (");
@@ -227,8 +229,6 @@ eccvalue_t objfunctionfn_constructor(ecccontext_t* context)
 
     return context->ecc->result;
 }
-
-// MARK: - Methods
 
 void ecc_function_setup()
 {
@@ -262,7 +262,7 @@ eccobjfunction_t* ecc_function_createsized(eccobject_t* environment, uint32_t si
     ecc_mempool_addfunction(self);
     memset(self, 0, sizeof(eccobjfunction_t));
     ecc_object_initialize(&self->object, ECC_Prototype_Function);
-    ecc_object_initializesized(&self->environment, environment, size);
+    ecc_object_initializesized(&self->funcenv, environment, size);
 
     return self;
 }
@@ -279,12 +279,12 @@ eccobjfunction_t* ecc_function_createwithnative(const eccnativefuncptr_t native,
     else
     {
         self = ecc_function_createsized(NULL, 3 + parameterCount);
-        self->parameterCount = parameterCount;
+        self->argparamcount = parameterCount;
     }
 
-    self->environment.hashmapCount = self->environment.hashmapCapacity;
-    self->oplist = ecc_oplist_create(native, ECCValConstUndefined, ECC_ConstString_NativeCode);
-    self->text = ECC_ConstString_NativeCode;
+    self->funcenv.hmapmapcount = self->funcenv.hmapmapcapacity;
+    self->oplist = ecc_oplist_create(native, ECCValConstUndefined, ECC_String_NativeCode);
+    self->text = ECC_String_NativeCode;
 
     ecc_object_addmember(&self->object, ECC_ConstKey_length, ecc_value_fromint(abs(parameterCount)), ECC_VALFLAG_READONLY | ECC_VALFLAG_HIDDEN | ECC_VALFLAG_SEALED);
 
@@ -301,9 +301,9 @@ eccobjfunction_t* ecc_function_copy(eccobjfunction_t* original)
 
     *self = *original;
 
-    byteSize = sizeof(*self->object.hashmap) * self->object.hashmapCapacity;
-    self->object.hashmap = (ecchashmap_t*)malloc(byteSize);
-    memcpy(self->object.hashmap, original->object.hashmap, byteSize);
+    byteSize = sizeof(*self->object.hmapmapitems) * self->object.hmapmapcapacity;
+    self->object.hmapmapitems = (ecchashmap_t*)malloc(byteSize);
+    memcpy(self->object.hmapmapitems, original->object.hmapmapitems, byteSize);
 
     return self;
 }
@@ -313,7 +313,7 @@ void ecc_function_destroy(eccobjfunction_t* self)
     assert(self);
 
     ecc_object_finalize(&self->object);
-    ecc_object_finalize(&self->environment);
+    ecc_object_finalize(&self->funcenv);
 
     if(self->oplist)
         ecc_oplist_destroy(self->oplist), self->oplist = NULL;
@@ -345,14 +345,14 @@ void ecc_function_addvalue(eccobjfunction_t* self, const char* name, eccvalue_t 
     if(value.type == ECC_VALTYPE_FUNCTION)
         value.data.function->name = name;
 
-    ecc_object_addmember(&self->environment, ecc_keyidx_makewithcstring(name), value, flags);
+    ecc_object_addmember(&self->funcenv, ecc_keyidx_makewithcstring(name), value, flags);
 }
 
 eccobjfunction_t* ecc_function_addfunction(eccobjfunction_t* self, const char* name, const eccnativefuncptr_t native, int parameterCount, int flags)
 {
     assert(self);
 
-    return ecc_function_addto(&self->environment, name, native, parameterCount, flags);
+    return ecc_function_addto(&self->funcenv, name, native, parameterCount, flags);
 }
 
 eccobjfunction_t* ecc_function_addto(eccobject_t* object, const char* name, const eccnativefuncptr_t native, int parameterCount, int flags)

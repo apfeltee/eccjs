@@ -1,12 +1,13 @@
-//
+
+/*
 //  oplist.c
 //  libecc
 //
 //  Copyright (c) 2019 Aurélien Bouilland
 //  Licensed under MIT license, see LICENSE.txt file in project root
-//
-#include "ecc.h"
+*/
 
+#include "ecc.h"
 
 eccoplist_t* ecc_oplist_create(const eccnativefuncptr_t native, eccvalue_t value, ecctextstring_t text)
 {
@@ -26,6 +27,8 @@ void ecc_oplist_destroy(eccoplist_t* self)
 
 eccoplist_t* ecc_oplist_join(eccoplist_t* self, eccoplist_t* with)
 {
+    size_t needed;
+    eccoperand_t* tmp;
     if(!self)
     {
         return with;
@@ -34,57 +37,74 @@ eccoplist_t* ecc_oplist_join(eccoplist_t* self, eccoplist_t* with)
     {
         return self;
     }
-    self->ops = (eccoperand_t*)realloc(self->ops, sizeof(*self->ops) * (self->count + with->count));
+    needed = sizeof(*self->ops) * (self->count + with->count);
+    tmp = (eccoperand_t*)realloc(self->ops, needed);
+    if(tmp == NULL)
+    {
+        fprintf(stderr, "in join: failed to reallocate for %ld bytes\n", needed);
+    }
+    self->ops = tmp;
     memcpy(self->ops + self->count, with->ops, sizeof(*self->ops) * with->count);
     self->count += with->count;
-
-    ecc_oplist_destroy(with), with = NULL;
-
+    ecc_oplist_destroy(with);
+    with = NULL;
     return self;
 }
 
 eccoplist_t* ecc_oplist_join3(eccoplist_t* self, eccoplist_t* a, eccoplist_t* b)
 {
+    size_t needed;
+    eccoperand_t* tmp;
     if(!self)
         return ecc_oplist_join(a, b);
     else if(!a)
         return ecc_oplist_join(self, b);
     else if(!b)
         return ecc_oplist_join(self, a);
-
-    self->ops = (eccoperand_t*)realloc(self->ops, sizeof(*self->ops) * (self->count + a->count + b->count));
+    needed = (sizeof(*self->ops) * (self->count + a->count + b->count));
+    tmp = (eccoperand_t*)realloc(self->ops, needed);
+    if(tmp == NULL)
+    {
+        fprintf(stderr, "in join3: failed to reallocate for %ld bytes\n", needed);
+    }
+    self->ops = tmp;
     memcpy(self->ops + self->count, a->ops, sizeof(*self->ops) * a->count);
     memcpy(self->ops + self->count + a->count, b->ops, sizeof(*self->ops) * b->count);
     self->count += a->count + b->count;
-
     ecc_oplist_destroy(a), a = NULL;
     ecc_oplist_destroy(b), b = NULL;
-
     return self;
 }
 
-eccoplist_t* ecc_oplist_joindiscarded(eccoplist_t* self, uint16_t n, eccoplist_t* with)
+eccoplist_t* ecc_oplist_joindiscarded(eccoplist_t* self, uint32_t n, eccoplist_t* with)
 {
     while(n > 16)
     {
-        self = ecc_oplist_append(self, ecc_oper_make(ecc_oper_discardn, ecc_value_fromint(16), ECC_ConstString_Empty));
+        self = ecc_oplist_append(self, ecc_oper_make(ecc_oper_discardn, ecc_value_fromint(16), ECC_String_Empty));
         n -= 16;
     }
 
     if(n == 1)
-        self = ecc_oplist_append(self, ecc_oper_make(ecc_oper_discard, ECCValConstUndefined, ECC_ConstString_Empty));
+        self = ecc_oplist_append(self, ecc_oper_make(ecc_oper_discard, ECCValConstUndefined, ECC_String_Empty));
     else
-        self = ecc_oplist_append(self, ecc_oper_make(ecc_oper_discardn, ecc_value_fromint(n), ECC_ConstString_Empty));
+        self = ecc_oplist_append(self, ecc_oper_make(ecc_oper_discardn, ecc_value_fromint(n), ECC_String_Empty));
 
     return ecc_oplist_join(self, with);
 }
 
 eccoplist_t* ecc_oplist_unshift(eccoperand_t op, eccoplist_t* self)
 {
+    size_t needed;
+    eccoperand_t* tmp;
     if(!self)
-        return ecc_oplist_create(op.native, op.value, op.text);
-
-    self->ops = (eccoperand_t*)realloc(self->ops, sizeof(*self->ops) * (self->count + 1));
+        return ecc_oplist_create(op.native, op.opvalue, op.text);
+    needed = (sizeof(*self->ops) * (self->count + 1));
+    tmp = (eccoperand_t*)realloc(self->ops, needed);
+    if(tmp == NULL)
+    {
+        fprintf(stderr, "in unshift: failed to reallocate for %ld bytes\n", needed);
+    }
+    self->ops = tmp;
     memmove(self->ops + 1, self->ops, sizeof(*self->ops) * self->count++);
     self->ops[0] = op;
     return self;
@@ -92,24 +112,36 @@ eccoplist_t* ecc_oplist_unshift(eccoperand_t op, eccoplist_t* self)
 
 eccoplist_t* ecc_oplist_unshiftjoin(eccoperand_t op, eccoplist_t* self, eccoplist_t* with)
 {
+    size_t needed;
+    eccoperand_t* tmp;
     if(!self)
+    {
         return ecc_oplist_unshift(op, with);
+    }
     else if(!with)
+    {
         return ecc_oplist_unshift(op, self);
-
-    self->ops = (eccoperand_t*)realloc(self->ops, sizeof(*self->ops) * (self->count + with->count + 1));
+    }
+    needed = (sizeof(*self->ops) * (self->count + with->count + 1));
+    tmp = (eccoperand_t*)realloc(self->ops, needed);
+    if(tmp == NULL)
+    {
+        fprintf(stderr, "in unshiftjoin: failed to reallocate for %ld bytes\n", needed);
+    }
+    self->ops = tmp;
     memmove(self->ops + 1, self->ops, sizeof(*self->ops) * self->count);
     memcpy(self->ops + self->count + 1, with->ops, sizeof(*self->ops) * with->count);
     self->ops[0] = op;
     self->count += with->count + 1;
-
-    ecc_oplist_destroy(with), with = NULL;
-
+    ecc_oplist_destroy(with);
+    with = NULL;
     return self;
 }
 
 eccoplist_t* ecc_oplist_unshiftjoin3(eccoperand_t op, eccoplist_t* self, eccoplist_t* a, eccoplist_t* b)
 {
+    size_t needed;
+    eccoperand_t* tmp;
     if(!self)
     {
         return ecc_oplist_unshiftjoin(op, a, b);
@@ -122,7 +154,13 @@ eccoplist_t* ecc_oplist_unshiftjoin3(eccoperand_t op, eccoplist_t* self, eccopli
     {
         return ecc_oplist_unshiftjoin(op, self, a);
     }
-    self->ops = (eccoperand_t*)realloc(self->ops, sizeof(*self->ops) * (self->count + a->count + b->count + 1));
+    needed = (sizeof(*self->ops) * (self->count + a->count + b->count + 1));
+    tmp = (eccoperand_t*)realloc(self->ops, needed);
+    if(tmp == NULL)
+    {
+        fprintf(stderr, "in unshiftjoin3: failed to reallocate for %ld bytes\n", needed);
+    }
+    self->ops = tmp;
     memmove(self->ops + 1, self->ops, sizeof(*self->ops) * self->count);
     memcpy(self->ops + self->count + 1, a->ops, sizeof(*self->ops) * a->count);
     memcpy(self->ops + self->count + a->count + 1, b->ops, sizeof(*self->ops) * b->count);
@@ -143,18 +181,26 @@ eccoplist_t* ecc_oplist_shift(eccoplist_t* self)
 
 eccoplist_t* ecc_oplist_append(eccoplist_t* self, eccoperand_t op)
 {
+    size_t needed;
+    eccoperand_t* tmp;
     if(!self)
     {
-        return ecc_oplist_create(op.native, op.value, op.text);
+        return ecc_oplist_create(op.native, op.opvalue, op.text);
     }
-    self->ops = (eccoperand_t*)realloc(self->ops, sizeof(*self->ops) * (self->count + 1));
+    needed = (sizeof(*self->ops) * (self->count + 1));
+    tmp = (eccoperand_t*)realloc(self->ops, needed);
+    if(tmp == NULL)
+    {
+        fprintf(stderr, "in append: failed to reallocate for %ld bytes\n", needed);
+    }
+    self->ops = tmp;
     self->ops[self->count++] = op;
     return self;
 }
 
 eccoplist_t* ecc_oplist_appendnoop(eccoplist_t* self)
 {
-    return ecc_oplist_append(self, ecc_oper_make(ecc_oper_noop, ECCValConstUndefined, ECC_ConstString_Empty));
+    return ecc_oplist_append(self, ecc_oper_make(ecc_oper_noop, ECCValConstUndefined, ECC_String_Empty));
 }
 
 eccoplist_t* ecc_oplist_createloop(eccoplist_t* initial, eccoplist_t* condition, eccoplist_t* step, eccoplist_t* body, int reverseCondition)
@@ -162,7 +208,7 @@ eccoplist_t* ecc_oplist_createloop(eccoplist_t* initial, eccoplist_t* condition,
     if(condition && step && condition->count == 3 && !reverseCondition)
     {
         if(condition->ops[1].native == ecc_oper_getlocal && (condition->ops[0].native == ecc_oper_less || condition->ops[0].native == ecc_oper_lessorequal))
-            if(step->count >= 2 && step->ops[1].value.data.key.data.integer == condition->ops[1].value.data.key.data.integer)
+            if(step->count >= 2 && step->ops[1].opvalue.data.key.data.integer == condition->ops[1].opvalue.data.key.data.integer)
             {
                 eccvalue_t stepValue;
                 if(step->count == 2 && (step->ops[0].native == ecc_oper_incrementref || step->ops[0].native == ecc_oper_postincrementref))
@@ -170,9 +216,9 @@ eccoplist_t* ecc_oplist_createloop(eccoplist_t* initial, eccoplist_t* condition,
                     stepValue = ecc_value_fromint(1);
                 }
                 else if(step->count == 3 && step->ops[0].native == ecc_oper_addassignref && step->ops[2].native == ecc_oper_value
-                        && step->ops[2].value.type == ECC_VALTYPE_INTEGER && step->ops[2].value.data.integer > 0)
+                        && step->ops[2].opvalue.type == ECC_VALTYPE_INTEGER && step->ops[2].opvalue.data.integer > 0)
                 {
-                    stepValue = step->ops[2].value;
+                    stepValue = step->ops[2].opvalue;
                 }
                 else
                 {
@@ -180,11 +226,11 @@ eccoplist_t* ecc_oplist_createloop(eccoplist_t* initial, eccoplist_t* condition,
                 }
                 if(condition->ops[2].native == ecc_oper_getlocal)
                 {
-                    body = ecc_oplist_unshift(ecc_oper_make(ecc_oper_getlocalref, condition->ops[2].value, condition->ops[2].text), body);
+                    body = ecc_oplist_unshift(ecc_oper_make(ecc_oper_getlocalref, condition->ops[2].opvalue, condition->ops[2].text), body);
                 }
                 else if(condition->ops[2].native == ecc_oper_value)
                 {
-                    body = ecc_oplist_unshift(ecc_oper_make(ecc_oper_valueconstref, condition->ops[2].value, condition->ops[2].text), body);
+                    body = ecc_oplist_unshift(ecc_oper_make(ecc_oper_valueconstref, condition->ops[2].opvalue, condition->ops[2].text), body);
                 }
                 else
                 {
@@ -192,7 +238,7 @@ eccoplist_t* ecc_oplist_createloop(eccoplist_t* initial, eccoplist_t* condition,
                 }
                 body = ecc_oplist_appendnoop(
                     ecc_oplist_unshift(
-                        ecc_oper_make(ecc_oper_getlocalref, condition->ops[1].value, condition->ops[1].text),
+                        ecc_oper_make(ecc_oper_getlocalref, condition->ops[1].opvalue, condition->ops[1].text),
                         body
                     )
                 );
@@ -210,7 +256,7 @@ eccoplist_t* ecc_oplist_createloop(eccoplist_t* initial, eccoplist_t* condition,
             }
 
         if(condition->ops[1].native == ecc_oper_getlocal && (condition->ops[0].native == ecc_oper_more || condition->ops[0].native == ecc_oper_moreorequal))
-            if(step->count >= 2 && step->ops[1].value.data.key.data.integer == condition->ops[1].value.data.key.data.integer)
+            if(step->count >= 2 && step->ops[1].opvalue.data.key.data.integer == condition->ops[1].opvalue.data.key.data.integer)
             {
                 eccvalue_t stepValue;
                 if(step->count == 2 && (step->ops[0].native == ecc_oper_decrementref || step->ops[0].native == ecc_oper_postdecrementref))
@@ -218,9 +264,9 @@ eccoplist_t* ecc_oplist_createloop(eccoplist_t* initial, eccoplist_t* condition,
                     stepValue = ecc_value_fromint(1);
                 }
                 else if(step->count == 3 && step->ops[0].native == ecc_oper_minusassignref && step->ops[2].native == ecc_oper_value
-                        && step->ops[2].value.type == ECC_VALTYPE_INTEGER && step->ops[2].value.data.integer > 0)
+                        && step->ops[2].opvalue.type == ECC_VALTYPE_INTEGER && step->ops[2].opvalue.data.integer > 0)
                 {
-                    stepValue = step->ops[2].value;
+                    stepValue = step->ops[2].opvalue;
                 }
                 else
                 {
@@ -228,18 +274,18 @@ eccoplist_t* ecc_oplist_createloop(eccoplist_t* initial, eccoplist_t* condition,
                 }
                 if(condition->ops[2].native == ecc_oper_getlocal)
                 {
-                    body = ecc_oplist_unshift(ecc_oper_make(ecc_oper_getlocalref, condition->ops[2].value, condition->ops[2].text), body);
+                    body = ecc_oplist_unshift(ecc_oper_make(ecc_oper_getlocalref, condition->ops[2].opvalue, condition->ops[2].text), body);
                 }
                 else if(condition->ops[2].native == ecc_oper_value)
                 {
-                    body = ecc_oplist_unshift(ecc_oper_make(ecc_oper_valueconstref, condition->ops[2].value, condition->ops[2].text), body);
+                    body = ecc_oplist_unshift(ecc_oper_make(ecc_oper_valueconstref, condition->ops[2].opvalue, condition->ops[2].text), body);
                 }
                 else
                 {
                     goto normal;
                 }
                 body = ecc_oplist_appendnoop(
-                ecc_oplist_unshift(ecc_oper_make(ecc_oper_getlocalref, condition->ops[1].value, condition->ops[1].text), body));
+                ecc_oplist_unshift(ecc_oper_make(ecc_oper_getlocalref, condition->ops[1].opvalue, condition->ops[1].text), body));
                 body = ecc_oplist_unshift(ecc_oper_make(ecc_oper_value, stepValue, condition->ops[0].text), body);
                 body = ecc_oplist_unshift(ecc_oper_make(condition->ops[0].native == ecc_oper_more ? ecc_oper_iteratemoreref : ecc_oper_iteratemoreorequalref,
                                                                   ecc_value_fromint(body->count), condition->ops[0].text),
@@ -255,11 +301,11 @@ eccoplist_t* ecc_oplist_createloop(eccoplist_t* initial, eccoplist_t* condition,
 
         if(!condition)
         {
-            condition = ecc_oplist_create(ecc_oper_value, ecc_value_truth(1), ECC_ConstString_Empty);
+            condition = ecc_oplist_create(ecc_oper_value, ecc_value_truth(1), ECC_String_Empty);
         }
         if(step)
         {
-            step = ecc_oplist_unshift(ecc_oper_make(ecc_oper_discard, ECCValConstNone, ECC_ConstString_Empty), step);
+            step = ecc_oplist_unshift(ecc_oper_make(ecc_oper_discard, ECCValConstNone, ECC_String_Empty), step);
             skipOpCount = step->count;
         }
         else
@@ -270,12 +316,12 @@ eccoplist_t* ecc_oplist_createloop(eccoplist_t* initial, eccoplist_t* condition,
         if(reverseCondition)
         {
             skipOpCount += condition->count + body->count;
-            body = ecc_oplist_append(body, ecc_oper_make(ecc_oper_value, ecc_value_truth(1), ECC_ConstString_Empty));
-            body = ecc_oplist_append(body, ecc_oper_make(ecc_oper_jump, ecc_value_fromint(-body->count - 1), ECC_ConstString_Empty));
+            body = ecc_oplist_append(body, ecc_oper_make(ecc_oper_value, ecc_value_truth(1), ECC_String_Empty));
+            body = ecc_oplist_append(body, ecc_oper_make(ecc_oper_jump, ecc_value_fromint(-body->count - 1), ECC_String_Empty));
         }
         body = ecc_oplist_join(ecc_oplist_join(step, condition), body);
-        body = ecc_oplist_unshift(ecc_oper_make(ecc_oper_jump, ecc_value_fromint(body->count), ECC_ConstString_Empty), body);
-        initial = ecc_oplist_append(initial, ecc_oper_make(ecc_oper_iterate, ecc_value_fromint(skipOpCount), ECC_ConstString_Empty));
+        body = ecc_oplist_unshift(ecc_oper_make(ecc_oper_jump, ecc_value_fromint(body->count), ECC_String_Empty), body);
+        initial = ecc_oplist_append(initial, ecc_oper_make(ecc_oper_iterate, ecc_value_fromint(skipOpCount), ECC_String_Empty));
         return ecc_oplist_join(initial, body);
     }
 }
@@ -297,17 +343,17 @@ void ecc_oplist_optimizewithenvironment(eccoplist_t* self, eccobject_t* environm
     {
         if(self->ops[index].native == ecc_oper_with)
         {
-            index += self->ops[index].value.data.integer;
+            index += self->ops[index].opvalue.data.integer;
             haveLocal = 1;
         }
         if(self->ops[index].native == ecc_oper_function)
         {
-            uint32_t subselfidx = ((index && (self->ops[index - 1].native == ecc_oper_setlocalslot)) ? self->ops[index - 1].value.data.integer : 0);
-            ecc_oplist_optimizewithenvironment(self->ops[index].value.data.function->oplist, &self->ops[index].value.data.function->environment, subselfidx);
+            uint32_t subselfidx = ((index && (self->ops[index - 1].native == ecc_oper_setlocalslot)) ? self->ops[index - 1].opvalue.data.integer : 0);
+            ecc_oplist_optimizewithenvironment(self->ops[index].opvalue.data.function->oplist, &self->ops[index].opvalue.data.function->funcenv, subselfidx);
         }
         if(self->ops[index].native == ecc_oper_pushenvironment)
         {
-            environments[envlevel++] = self->ops[index].value.data.key;
+            environments[envlevel++] = self->ops[index].opvalue.data.key;
         }
         if(self->ops[index].native == ecc_oper_popenvironment)
         {
@@ -328,7 +374,7 @@ void ecc_oplist_optimizewithenvironment(eccoplist_t* self, eccobject_t* environm
             level = envlevel;
             while(level--)
             {
-                if(ecc_keyidx_isequal(environments[level], self->ops[index].value.data.key))
+                if(ecc_keyidx_isequal(environments[level], self->ops[index].opvalue.data.key))
                 {
                     goto notfound;
                 }
@@ -336,11 +382,11 @@ void ecc_oplist_optimizewithenvironment(eccoplist_t* self, eccobject_t* environm
             level = envlevel;
             do
             {
-                for(slot = searchenv->hashmapCount; slot--;)
+                for(slot = searchenv->hmapmapcount; slot--;)
                 {
-                    if(searchenv->hashmap[slot].hmapmapvalue.check == 1)
+                    if(searchenv->hmapmapitems[slot].hmapmapvalue.check == 1)
                     {
-                        if(ecc_keyidx_isequal(searchenv->hashmap[slot].hmapmapvalue.key, self->ops[index].value.data.key))
+                        if(ecc_keyidx_isequal(searchenv->hmapmapitems[slot].hmapmapvalue.key, self->ops[index].opvalue.data.key))
                         {
                             if(!level)
                             {
@@ -377,7 +423,7 @@ void ecc_oplist_optimizewithenvironment(eccoplist_t* self, eccobject_t* environm
                                 eccoperand_t op = self->ops[index - 1];
                                 if(op.native == ecc_oper_call && self->ops[index - 2].native == ecc_oper_result)
                                 {
-                                    self->ops[index - 1] = ecc_oper_make(ecc_oper_repopulate, op.value, op.text);
+                                    self->ops[index - 1] = ecc_oper_make(ecc_oper_repopulate, op.opvalue, op.text);
                                     self->ops[index] = ecc_oper_make(ecc_oper_value, ecc_value_fromint(-index - 1), self->ops[index].text);
                                 }
                             }
@@ -419,13 +465,13 @@ void ecc_oplist_dumpto(eccoplist_t* self, FILE* file)
         if(self->ops[i].native == ecc_oper_function)
         {
             fprintf(file, "{");
-            ecc_oplist_dumpto(self->ops[i].value.data.function->oplist, stderr);
+            ecc_oplist_dumpto(self->ops[i].opvalue.data.function->oplist, stderr);
             fprintf(file, "} ");
         }
         else if(self->ops[i].native == ecc_oper_getparentslot || self->ops[i].native == ecc_oper_getparentslotref || self->ops[i].native == ecc_oper_setparentslot)
-            fprintf(file, "[-%hu] %hu", (uint16_t)(self->ops[i].value.data.integer >> 16), (uint16_t)(self->ops[i].value.data.integer & 0xffff));
-        else if(self->ops[i].value.type != ECC_VALTYPE_UNDEFINED || self->ops[i].native == ecc_oper_value || self->ops[i].native == ecc_oper_exchange)
-            ecc_value_dumpto(self->ops[i].value, file);
+            fprintf(file, "[-%hu] %hu", (uint32_t)(self->ops[i].opvalue.data.integer >> 16), (uint32_t)(self->ops[i].opvalue.data.integer & 0xffff));
+        else if(self->ops[i].opvalue.type != ECC_VALTYPE_UNDEFINED || self->ops[i].native == ecc_oper_value || self->ops[i].native == ecc_oper_exchange)
+            ecc_value_dumpto(self->ops[i].opvalue, file);
 
         if(self->ops[i].native == ecc_oper_text)
             fprintf(file, "'%.*s'", (int)self->ops[i].text.length, self->ops[i].text.bytes);
@@ -439,9 +485,9 @@ void ecc_oplist_dumpto(eccoplist_t* self, FILE* file)
 
 ecctextstring_t ecc_oplist_text(eccoplist_t* oplist)
 {
-    uint16_t length;
+    uint32_t length;
     if(!oplist)
-        return ECC_ConstString_Empty;
+        return ECC_String_Empty;
 
     length = oplist->ops[oplist->count - 1].text.bytes + oplist->ops[oplist->count - 1].text.length - oplist->ops[0].text.bytes;
 

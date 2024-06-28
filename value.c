@@ -1,13 +1,14 @@
-//
+
+/*
 //  value.c
 //  libecc
 //
 //  Copyright (c) 2019 Aurélien Bouilland
 //  Licensed under MIT license, see LICENSE.txt file in project root
-//
-#include "ecc.h"
+*/
 
-// MARK: - Private
+#include "ecc.h"
+#include "compat.h"
 
 #define valueMake(T)          \
     {                         \
@@ -31,6 +32,7 @@ const eccvalue_t ECCValConstNull = valueMake(ECC_VALTYPE_NULL);
 * used to evaluate an expression for its fenv side-effects only.
 */
 
+
 #ifndef fp_force_evalf
 #define fp_force_evalf fp_force_evalf
 void fp_force_evalf(float x)
@@ -42,7 +44,7 @@ void fp_force_evalf(float x)
 
 #ifndef fp_force_eval
 #define fp_force_eval fp_force_eval
-void fp_force_eval(double x)
+static void fp_force_eval(double x)
 {
     volatile double y;
     y = x;
@@ -81,12 +83,12 @@ void fp_force_evall(long double x)
 #elif FLT_EVAL_METHOD==2
     #define EPS LDBL_EPSILON
 #endif
-static const double_t toint = 1/EPS;
+static const double toint = 1/EPS;
 
 double eccutil_mathfloor(double x)
 {
     int e;
-    double_t y;
+    double y;
     union {
         double f;
         uint64_t i;
@@ -147,7 +149,7 @@ eccvalue_t ecc_value_fromfloat(double binary)
 {
     eccvalue_t v;
     v = ecc_value_makevalue(ECC_VALTYPE_BINARY);
-    v.data.binary = binary;
+    v.data.valnumfloat = binary;
     v.check = 1;
     return v;
 }
@@ -282,15 +284,13 @@ eccvalue_t ecc_value_host(eccobject_t* object)
 
 eccvalue_t ecc_value_reference(eccvalue_t* reference)
 {
-    assert(reference);
     eccvalue_t v;
+    //assert(reference);
     v = ecc_value_makevalue(ECC_VALTYPE_REFERENCE);
     v.data.reference = reference;
     v.check = 0;
     return v;
 }
-
-// check
 
 int ecc_value_isprimitive(eccvalue_t value)
 {
@@ -338,7 +338,7 @@ int ecc_value_istrue(eccvalue_t value)
     }
     else if(value.type == ECC_VALTYPE_BINARY)
     {
-        return !isnan(value.data.binary) && value.data.binary != 0;
+        return !isnan(value.data.valnumfloat) && value.data.valnumfloat != 0;
     }
     else if(ecc_value_isstring(value))
     {
@@ -347,8 +347,6 @@ int ecc_value_istrue(eccvalue_t value)
     ecc_script_fatal("Invalid value type : %u", value.type);
     return 0;
 }
-
-// convert
 
 eccvalue_t ecc_value_toprimitive(ecccontext_t* context, eccvalue_t value, int hint)
 {
@@ -406,7 +404,7 @@ eccvalue_t ecc_value_tobinary(ecccontext_t* context, eccvalue_t value)
             return ecc_value_fromfloat(value.data.integer);
 
         case ECC_VALTYPE_NUMBER:
-            return ecc_value_fromfloat(value.data.number->value);
+            return ecc_value_fromfloat(value.data.number->numvalue);
 
         case ECC_VALTYPE_NULL:
         case ECC_VALTYPE_FALSE:
@@ -419,20 +417,20 @@ eccvalue_t ecc_value_tobinary(ecccontext_t* context, eccvalue_t value)
             return ecc_value_fromfloat(value.data.boolean->truth ? 1 : 0);
 
         case ECC_VALTYPE_UNDEFINED:
-            return ecc_value_fromfloat(NAN);
+            return ecc_value_fromfloat(ECC_CONST_NAN);
 
         case ECC_VALTYPE_TEXT:
         {
-            if(value.data.text == &ECC_ConstString_Zero)
+            if(value.data.text == &ECC_String_Zero)
                 return ecc_value_fromfloat(0);
-            else if(value.data.text == &ECC_ConstString_One)
+            else if(value.data.text == &ECC_String_One)
                 return ecc_value_fromfloat(1);
-            else if(value.data.text == &ECC_ConstString_Nan)
-                return ecc_value_fromfloat(NAN);
-            else if(value.data.text == &ECC_ConstString_Infinity)
-                return ecc_value_fromfloat(INFINITY);
-            else if(value.data.text == &ECC_ConstString_NegativeInfinity)
-                return ecc_value_fromfloat(-INFINITY);
+            else if(value.data.text == &ECC_String_Nan)
+                return ecc_value_fromfloat(ECC_CONST_NAN);
+            else if(value.data.text == &ECC_String_Infinity)
+                return ecc_value_fromfloat(ECC_CONST_INFINITY);
+            else if(value.data.text == &ECC_String_NegInfinity)
+                return ecc_value_fromfloat(-ECC_CONST_INFINITY);
         }
             /* fallthrough */
         case ECC_VALTYPE_KEY:
@@ -459,7 +457,7 @@ eccvalue_t ecc_value_tobinary(ecccontext_t* context, eccvalue_t value)
 eccvalue_t ecc_value_tointeger(ecccontext_t* context, eccvalue_t value)
 {
     const double modulus = (double)UINT32_MAX + 1;
-    double binary = ecc_value_tobinary(context, value).data.binary;
+    double binary = ecc_value_tobinary(context, value).data.valnumfloat;
 
     if(!binary || !isfinite(binary))
         return ecc_value_fromint(0);
@@ -485,17 +483,17 @@ eccvalue_t ecc_value_binarytostring(double binary, int base)
     eccappendbuffer_t chars;
 
     if(binary == 0)
-        return ecc_value_fromtext(&ECC_ConstString_Zero);
+        return ecc_value_fromtext(&ECC_String_Zero);
     else if(binary == 1)
-        return ecc_value_fromtext(&ECC_ConstString_One);
+        return ecc_value_fromtext(&ECC_String_One);
     else if(isnan(binary))
-        return ecc_value_fromtext(&ECC_ConstString_Nan);
+        return ecc_value_fromtext(&ECC_String_Nan);
     else if(isinf(binary))
     {
         if(binary < 0)
-            return ecc_value_fromtext(&ECC_ConstString_NegativeInfinity);
+            return ecc_value_fromtext(&ECC_String_NegInfinity);
         else
-            return ecc_value_fromtext(&ECC_ConstString_Infinity);
+            return ecc_value_fromtext(&ECC_String_Infinity);
     }
 
     ecc_strbuf_beginappend(&chars);
@@ -521,34 +519,34 @@ eccvalue_t ecc_value_tostring(ecccontext_t* context, eccvalue_t value)
         break;
         case ECC_VALTYPE_STRING:
         {
-            return ecc_value_fromchars(value.data.string->value);
+            return ecc_value_fromchars(value.data.string->sbuf);
         }
         break;
         case ECC_VALTYPE_NULL:
-            return ecc_value_fromtext(&ECC_ConstString_Null);
+            return ecc_value_fromtext(&ECC_String_Null);
 
         case ECC_VALTYPE_UNDEFINED:
-            return ecc_value_fromtext(&ECC_ConstString_Undefined);
+            return ecc_value_fromtext(&ECC_String_Undefined);
 
         case ECC_VALTYPE_FALSE:
-            return ecc_value_fromtext(&ECC_ConstString_False);
+            return ecc_value_fromtext(&ECC_String_False);
 
         case ECC_VALTYPE_TRUE:
-            return ecc_value_fromtext(&ECC_ConstString_True);
+            return ecc_value_fromtext(&ECC_String_True);
 
         case ECC_VALTYPE_BOOLEAN:
-            return value.data.boolean->truth ? ecc_value_fromtext(&ECC_ConstString_True) : ecc_value_fromtext(&ECC_ConstString_False);
+            return value.data.boolean->truth ? ecc_value_fromtext(&ECC_String_True) : ecc_value_fromtext(&ECC_String_False);
 
         case ECC_VALTYPE_INTEGER:
             return ecc_value_binarytostring(value.data.integer, 10);
 
         case ECC_VALTYPE_NUMBER:
         {
-            value.data.binary = value.data.number->value;
+            value.data.valnumfloat = value.data.number->numvalue;
         }
             /* fallthrough */
         case ECC_VALTYPE_BINARY:
-            return ecc_value_binarytostring(value.data.binary, 10);
+            return ecc_value_binarytostring(value.data.valnumfloat, 10);
 
         case ECC_VALTYPE_OBJECT:
         case ECC_VALTYPE_DATE:
@@ -576,7 +574,7 @@ int32_t ecc_value_stringlength(const eccvalue_t* value)
             return value->data.text->length;
 
         case ECC_VALTYPE_STRING:
-            return value->data.string->value->length;
+            return value->data.string->sbuf->length;
 
         case ECC_VALTYPE_BUFFER:
             return value->data.buffer[7];
@@ -598,7 +596,7 @@ const char* ecc_value_stringbytes(const eccvalue_t* value)
             return value->data.text->bytes;
 
         case ECC_VALTYPE_STRING:
-            return value->data.string->value->bytes;
+            return value->data.string->sbuf->bytes;
 
         case ECC_VALTYPE_BUFFER:
             return value->data.buffer;
@@ -620,7 +618,7 @@ ecctextstring_t ecc_value_textof(const eccvalue_t* value)
             return *value->data.text;
 
         case ECC_VALTYPE_STRING:
-            return ecc_textbuf_make(value->data.string->value->bytes, value->data.string->value->length);
+            return ecc_textbuf_make(value->data.string->sbuf->bytes, value->data.string->sbuf->length);
 
         case ECC_VALTYPE_KEY:
             return *ecc_keyidx_textof(value->data.key);
@@ -631,7 +629,7 @@ ecctextstring_t ecc_value_textof(const eccvalue_t* value)
         default:
             break;
     }
-    return ECC_ConstString_Empty;
+    return ECC_String_Empty;
 }
 
 eccvalue_t ecc_value_toobject(ecccontext_t* context, eccvalue_t value)
@@ -642,7 +640,7 @@ eccvalue_t ecc_value_toobject(ecccontext_t* context, eccvalue_t value)
     switch((eccvaltype_t)value.type)
     {
         case ECC_VALTYPE_BINARY:
-            return ecc_value_number(ecc_number_create(value.data.binary));
+            return ecc_value_number(ecc_number_create(value.data.valnumfloat));
 
         case ECC_VALTYPE_INTEGER:
             return ecc_value_number(ecc_number_create(value.data.integer));
@@ -722,20 +720,20 @@ eccvalue_t ecc_value_totype(eccvalue_t value)
     {
         case ECC_VALTYPE_TRUE:
         case ECC_VALTYPE_FALSE:
-            return ecc_value_fromtext(&ECC_ConstString_Boolean);
+            return ecc_value_fromtext(&ECC_String_Boolean);
 
         case ECC_VALTYPE_UNDEFINED:
-            return ecc_value_fromtext(&ECC_ConstString_Undefined);
+            return ecc_value_fromtext(&ECC_String_Undefined);
 
         case ECC_VALTYPE_INTEGER:
         case ECC_VALTYPE_BINARY:
-            return ecc_value_fromtext(&ECC_ConstString_Number);
+            return ecc_value_fromtext(&ECC_String_Number);
 
         case ECC_VALTYPE_KEY:
         case ECC_VALTYPE_TEXT:
         case ECC_VALTYPE_CHARS:
         case ECC_VALTYPE_BUFFER:
-            return ecc_value_fromtext(&ECC_ConstString_String);
+            return ecc_value_fromtext(&ECC_String_String);
 
         case ECC_VALTYPE_NULL:
         case ECC_VALTYPE_OBJECT:
@@ -746,10 +744,10 @@ eccvalue_t ecc_value_totype(eccvalue_t value)
         case ECC_VALTYPE_DATE:
         case ECC_VALTYPE_REGEXP:
         case ECC_VALTYPE_HOST:
-            return ecc_value_fromtext(&ECC_ConstString_Object);
+            return ecc_value_fromtext(&ECC_String_Object);
 
         case ECC_VALTYPE_FUNCTION:
-            return ecc_value_fromtext(&ECC_ConstString_Function);
+            return ecc_value_fromtext(&ECC_String_Function);
 
         case ECC_VALTYPE_REFERENCE:
             break;
@@ -771,7 +769,7 @@ eccvalue_t ecc_value_equals(ecccontext_t* context, eccvalue_t a, eccvalue_t b)
         return ecc_value_equals(context, a, b);
     }
     else if(ecc_value_isnumber(a) && ecc_value_isnumber(b))
-        return ecc_value_truth(ecc_value_tobinary(context, a).data.binary == ecc_value_tobinary(context, b).data.binary);
+        return ecc_value_truth(ecc_value_tobinary(context, a).data.valnumfloat == ecc_value_tobinary(context, b).data.valnumfloat);
     else if(ecc_value_isstring(a) && ecc_value_isstring(b))
     {
         int32_t aLength = ecc_value_stringlength(&a);
@@ -804,7 +802,7 @@ eccvalue_t ecc_value_same(ecccontext_t* context, eccvalue_t a, eccvalue_t b)
     if(ecc_value_isobject(a) || ecc_value_isobject(b))
         return ecc_value_truth(ecc_value_isobject(a) && ecc_value_isobject(b) && a.data.object == b.data.object);
     else if(ecc_value_isnumber(a) && ecc_value_isnumber(b))
-        return ecc_value_truth(ecc_value_tobinary(context, a).data.binary == ecc_value_tobinary(context, b).data.binary);
+        return ecc_value_truth(ecc_value_tobinary(context, a).data.valnumfloat == ecc_value_tobinary(context, b).data.valnumfloat);
     else if(ecc_value_isstring(a) && ecc_value_isstring(b))
     {
         int32_t aLength = ecc_value_stringlength(&a);
@@ -837,12 +835,12 @@ eccvalue_t ecc_value_add(ecccontext_t* context, eccvalue_t a, eccvalue_t b)
             return ecc_strbuf_endappend(&chars);
         }
     }
-    return ecc_value_fromfloat(ecc_value_tobinary(context, a).data.binary + ecc_value_tobinary(context, b).data.binary);
+    return ecc_value_fromfloat(ecc_value_tobinary(context, a).data.valnumfloat + ecc_value_tobinary(context, b).data.valnumfloat);
 }
 
 eccvalue_t ecc_value_subtract(ecccontext_t* context, eccvalue_t a, eccvalue_t b)
 {
-    return ecc_value_fromfloat(ecc_value_tobinary(context, a).data.binary - ecc_value_tobinary(context, b).data.binary);
+    return ecc_value_fromfloat(ecc_value_tobinary(context, a).data.valnumfloat - ecc_value_tobinary(context, b).data.valnumfloat);
 }
 
 eccvalue_t eccvalue_compare(ecccontext_t* context, eccvalue_t a, eccvalue_t b)
@@ -866,9 +864,9 @@ eccvalue_t eccvalue_compare(ecccontext_t* context, eccvalue_t a, eccvalue_t b)
     }
     a = ecc_value_tobinary(context, a);
     b = ecc_value_tobinary(context, b);
-    if(isnan(a.data.binary) || isnan(b.data.binary))
+    if(isnan(a.data.valnumfloat) || isnan(b.data.valnumfloat))
         return ECCValConstUndefined;
-    return ecc_value_truth(a.data.binary < b.data.binary);
+    return ecc_value_truth(a.data.valnumfloat < b.data.valnumfloat);
 }
 
 eccvalue_t ecc_value_less(ecccontext_t* context, eccvalue_t a, eccvalue_t b)
@@ -1015,12 +1013,12 @@ void ecc_value_dumpto(eccvalue_t value, FILE* file)
         break;
         case ECC_VALTYPE_NUMBER:
         {
-            value.data.binary = value.data.number->value;
+            value.data.valnumfloat = value.data.number->numvalue;
         }
             /* fallthrough */
         case ECC_VALTYPE_BINARY:
         {
-            fprintf(file, "%g", value.data.binary);
+            fprintf(file, "%g", value.data.valnumfloat);
             return;
         }
         break;
@@ -1031,9 +1029,7 @@ void ecc_value_dumpto(eccvalue_t value, FILE* file)
         case ECC_VALTYPE_BUFFER:
         {
             const ecctextstring_t text = ecc_value_textof(&value);
-            //putc('\'', file);
             fwrite(text.bytes, sizeof(char), text.length, file);
-            //putc('\'', file);
             return;
         }
         break;

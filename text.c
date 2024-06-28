@@ -1,58 +1,58 @@
-//
+
+/*
 //  text.c
 //  libecc
 //
 //  Copyright (c) 2019 Aurélien Bouilland
 //  Licensed under MIT license, see LICENSE.txt file in project root
-//
+*/
+
 #include "ecc.h"
 
 #define _textMake(name, litstr)               \
     static const char cstr_##name[] = litstr; \
-    const ecctextstring_t name = { .bytes = cstr_##name, .length = sizeof(cstr_##name) - 1 }
+    const ecctextstring_t name = { cstr_##name, sizeof(cstr_##name) - 1, 0 }
 
-_textMake(ECC_ConstString_Undefined, "undefined");
-_textMake(ECC_ConstString_Null, "null");
-_textMake(ECC_ConstString_True, "true");
-_textMake(ECC_ConstString_False, "false");
-_textMake(ECC_ConstString_Boolean, "boolean");
-_textMake(ECC_ConstString_Number, "number");
-_textMake(ECC_ConstString_String, "string");
-_textMake(ECC_ConstString_Object, "object");
-_textMake(ECC_ConstString_Function, "function");
-_textMake(ECC_ConstString_Zero, "0");
-_textMake(ECC_ConstString_One, "1");
-_textMake(ECC_ConstString_Nan, "NaN");
-_textMake(ECC_ConstString_Infinity, "Infinity");
-_textMake(ECC_ConstString_NegativeInfinity, "-Infinity");
-_textMake(ECC_ConstString_NativeCode, "[native code]");
-_textMake(ECC_ConstString_Empty, "");
-_textMake(ECC_ConstString_EmptyRegExp, "/(?:)/");
-_textMake(ECC_ConstString_NullType, "[object Null]");
-_textMake(ECC_ConstString_UndefinedType, "[object Undefined]");
-_textMake(ECC_ConstString_ObjectType, "[object Object]");
-_textMake(ECC_ConstString_ErrorType, "[object Error]");
-_textMake(ECC_ConstString_ArrayType, "[object Array]");
-_textMake(ECC_ConstString_StringType, "[object String]");
-_textMake(ECC_ConstString_RegexpType, "[object RegExp]");
-_textMake(ECC_ConstString_NumberType, "[object Number]");
-_textMake(ECC_ConstString_BooleanType, "[object Boolean]");
-_textMake(ECC_ConstString_DateType, "[object Date]");
-_textMake(ECC_ConstString_FunctionType, "[object Function]");
-_textMake(ECC_ConstString_ArgumentsType, "[object Arguments]");
-_textMake(ECC_ConstString_MathType, "[object Math]");
-_textMake(ECC_ConstString_JsonType, "[object JSON]");
-_textMake(ECC_ConstString_GlobalType, "[object Global]");
-_textMake(ECC_ConstString_ErrorName, "Error");
-_textMake(ECC_ConstString_RangeErrorName, "RangeError");
-_textMake(ECC_ConstString_ReferenceErrorName, "ReferenceError");
-_textMake(ECC_ConstString_SyntaxErrorName, "SyntaxError");
-_textMake(ECC_ConstString_TypeErrorName, "TypeError");
-_textMake(ECC_ConstString_UriErrorName, "URIError");
-_textMake(ECC_ConstString_InputErrorName, "InputError");
-_textMake(ECC_ConstString_EvalErrorName, "EvalError");
-
-// MARK: - Static Members
+_textMake(ECC_String_Undefined, "undefined");
+_textMake(ECC_String_Null, "null");
+_textMake(ECC_String_True, "true");
+_textMake(ECC_String_False, "false");
+_textMake(ECC_String_Boolean, "boolean");
+_textMake(ECC_String_Number, "number");
+_textMake(ECC_String_String, "string");
+_textMake(ECC_String_Object, "object");
+_textMake(ECC_String_Function, "function");
+_textMake(ECC_String_Zero, "0");
+_textMake(ECC_String_One, "1");
+_textMake(ECC_String_Nan, "NaN");
+_textMake(ECC_String_Infinity, "Infinity");
+_textMake(ECC_String_NegInfinity, "-Infinity");
+_textMake(ECC_String_NativeCode, "[native code]");
+_textMake(ECC_String_Empty, "");
+_textMake(ECC_String_EmptyRegExp, "/(?:)/");
+_textMake(ECC_String_NullType, "[object Null]");
+_textMake(ECC_String_UndefinedType, "[object Undefined]");
+_textMake(ECC_String_ObjectType, "[object Object]");
+_textMake(ECC_String_ErrorType, "[object Error]");
+_textMake(ECC_String_ArrayType, "[object Array]");
+_textMake(ECC_String_StringType, "[object String]");
+_textMake(ECC_String_RegexpType, "[object RegExp]");
+_textMake(ECC_String_NumberType, "[object Number]");
+_textMake(ECC_String_BooleanType, "[object Boolean]");
+_textMake(ECC_String_DateType, "[object Date]");
+_textMake(ECC_String_FunctionType, "[object Function]");
+_textMake(ECC_String_ArgumentsType, "[object Arguments]");
+_textMake(ECC_String_MathType, "[object Math]");
+_textMake(ECC_String_JsonType, "[object JSON]");
+_textMake(ECC_String_GlobalType, "[object Global]");
+_textMake(ECC_String_ErrorName, "Error");
+_textMake(ECC_String_RangeErrorName, "RangeError");
+_textMake(ECC_String_ReferenceErrorName, "ReferenceError");
+_textMake(ECC_String_SyntaxErrorName, "SyntaxError");
+_textMake(ECC_String_TypeErrorName, "TypeError");
+_textMake(ECC_String_UriErrorName, "URIError");
+_textMake(ECC_String_InputErrorName, "InputError");
+_textMake(ECC_String_EvalErrorName, "EvalError");
 
 /* clang-format off */
 static const unsigned char g_textchars_lowers[] =
@@ -590,9 +590,9 @@ void ecc_textbuf_advance(ecctextstring_t* text, int32_t units)
     }
 }
 
-uint16_t ecc_textbuf_toutf16length(ecctextstring_t text)
+uint32_t ecc_textbuf_toutf16length(ecctextstring_t text)
 {
-    uint16_t windex = 0;
+    uint32_t windex = 0;
 
     while(text.length)
         windex += ecc_textbuf_nextcharacter(&text).codepoint >= 0x010000 ? 2 : 1;
@@ -600,9 +600,9 @@ uint16_t ecc_textbuf_toutf16length(ecctextstring_t text)
     return windex;
 }
 
-uint16_t ecc_textbuf_toutf16(ecctextstring_t text, uint16_t* wbuffer)
+uint32_t ecc_textbuf_toutf16(ecctextstring_t text, uint32_t* wbuffer)
 {
-    uint16_t windex = 0;
+    uint32_t windex = 0;
     uint32_t cp;
 
     while(text.length)

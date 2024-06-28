@@ -1,10 +1,11 @@
-//
+
+/*
 //  regexp.c
 //  libecc
 //
 //  Copyright (c) 2019 Aurélien Bouilland
 //  Licensed under MIT license, see LICENSE.txt file in project root
-//
+*/
 
 #include "ecc.h"
 
@@ -45,7 +46,7 @@ typedef struct eccrxparser_t eccrxparser_t;
 struct eccregexnode_t
 {
     char* bytes;
-    int16_t offset;
+    int32_t offset;
     uint8_t opcode;
     uint8_t depth;
 };
@@ -54,7 +55,7 @@ struct eccrxparser_t
 {
     const char* c;
     const char* end;
-    uint16_t count;
+    uint32_t count;
     int ignoreCase;
     int multiline;
     int disallowQuantifier;
@@ -65,18 +66,18 @@ static void regextypefn_capture(eccobject_t *object);
 static void regextypefn_finalize(eccobject_t *object);
 static eccregexnode_t *ecc_regexp_node(eccrxopcode_t opcode, long offset, const char *bytes);
 static void ecc_regexp_toss(eccregexnode_t *node);
-static uint16_t ecc_regexp_nlen(eccregexnode_t *n);
+static uint32_t ecc_regexp_nlen(eccregexnode_t *n);
 static eccregexnode_t *ecc_regexp_join(eccregexnode_t *a, eccregexnode_t *b);
 static int ecc_regexp_accept(eccrxparser_t *p, char c);
-static eccrxopcode_t ecc_regexp_escape(eccrxparser_t *p, int16_t *offset, char buffer[5]);
-static eccrxopcode_t ecc_regexp_character(ecctextstring_t text, int16_t *offset, char buffer[12], int ignoreCase);
+static eccrxopcode_t ecc_regexp_escape(eccrxparser_t *p, int32_t *offset, char buffer[5]);
+static eccrxopcode_t ecc_regexp_character(ecctextstring_t text, int32_t *offset, char buffer[12], int ignoreCase);
 static eccregexnode_t *ecc_regexp_characternode(ecctextstring_t text, int ignoreCase);
 static eccregexnode_t *ecc_regexp_term(eccrxparser_t *p, eccobjerror_t **error);
 static eccregexnode_t *ecc_regexp_alternative(eccrxparser_t *p, eccobjerror_t **error);
 static eccregexnode_t *ecc_regexp_disjunction(eccrxparser_t *p, eccobjerror_t **error);
 static eccregexnode_t *ecc_regexp_pattern(eccrxparser_t *p, eccobjerror_t **error);
 static void ecc_regexp_clear(eccrxstate_t *const s, const char *c, uint8_t *bytes);
-static int ecc_regexp_forkmatch(eccrxstate_t *const s, eccregexnode_t *n, ecctextstring_t text, int16_t offset);
+static int ecc_regexp_forkmatch(eccrxstate_t *const s, eccregexnode_t *n, ecctextstring_t text, int32_t offset);
 static int ecc_regexp_match(eccrxstate_t *const s, eccregexnode_t *n, ecctextstring_t text);
 static eccvalue_t objregexpfn_constructor(ecccontext_t *context);
 static eccvalue_t objregexpfn_toString(ecccontext_t *context);
@@ -87,10 +88,10 @@ eccobject_t* ECC_Prototype_Regexp = NULL;
 eccobjfunction_t* ECC_CtorFunc_Regexp = NULL;
 
 const eccobjinterntype_t ECC_Type_Regexp = {
-    .text = &ECC_ConstString_RegexpType,
-    .mark = regextypefn_mark,
-    .capture = regextypefn_capture,
-    .finalize = regextypefn_finalize,
+    .text = &ECC_String_RegexpType,
+    .fnmark = regextypefn_mark,
+    .fncapture = regextypefn_capture,
+    .fnfinalize = regextypefn_finalize,
 };
 
 static void regextypefn_mark(eccobject_t* object)
@@ -231,8 +232,6 @@ static void printNode(eccregexnode_t* n)
 }
 #endif
 
-//MARK: parsing
-
 static eccregexnode_t* ecc_regexp_node(eccrxopcode_t opcode, long offset, const char* bytes)
 {
     eccregexnode_t* n;
@@ -258,16 +257,17 @@ static void ecc_regexp_toss(eccregexnode_t* node)
 
     while(n->opcode != ECC_RXOP_OVER)
     {
-        free(n->bytes), n->bytes = NULL;
+        free(n->bytes);
+        n->bytes = NULL;
         ++n;
     }
 
     free(node), node = NULL;
 }
 
-static uint16_t ecc_regexp_nlen(eccregexnode_t* n)
+static uint32_t ecc_regexp_nlen(eccregexnode_t* n)
 {
-    uint16_t len = 0;
+    uint32_t len = 0;
     if(n)
     {
         while(n[++len].opcode != ECC_RXOP_OVER)
@@ -279,30 +279,51 @@ static uint16_t ecc_regexp_nlen(eccregexnode_t* n)
 
 static eccregexnode_t* ecc_regexp_join(eccregexnode_t* a, eccregexnode_t* b)
 {
-    uint16_t lena = 0, lenb = 0;
-
+    char* tmpch;
+    size_t needed;
+    uint32_t lena;
+    uint32_t lenb;
+    eccregexnode_t* tmprn;
+    eccregexnode_t* c;
+    lena = 0;
+    lenb = 0;
     if(!a)
+    {
         return b;
+    }
     else if(!b)
+    {
         return a;
-
+    }
     while(a[++lena].opcode != ECC_RXOP_OVER)
-        ;
+    {
+    }
     while(b[++lenb].opcode != ECC_RXOP_OVER)
-        ;
-
+    {
+    }
     if(lena == 1 && lenb == 1 && a[lena - 1].opcode == ECC_RXOP_BYTES && b->opcode == ECC_RXOP_BYTES)
     {
-        eccregexnode_t* c = a + lena - 1;
-
-        c->bytes = (char*)realloc(c->bytes, c->offset + b->offset + 1);
+        c = a + lena - 1;
+        needed = (c->offset + b->offset + 1);
+        tmpch = (char*)realloc(c->bytes, needed);
+        if(tmpch == NULL)
+        {
+            fprintf(stderr, "in join: failed to reallocate for %ld bytes\n", needed);
+        }
+        c->bytes = tmpch;
         memcpy(c->bytes + c->offset, b->bytes, b->offset + 1);
         c->offset += b->offset;
         free(b->bytes), b->bytes = NULL;
     }
     else
     {
-        a = (eccregexnode_t*)realloc(a, sizeof(*a) * (lena + lenb + 1));
+        needed = (sizeof(*a) * (lena + lenb + 1));
+        tmprn = (eccregexnode_t*)realloc(a, needed);
+        if(tmprn == NULL)
+        {
+            fprintf(stderr, "in pushdepth: failed to reallocate for %ld bytes\n", needed);
+        }
+        a = tmprn;
         memcpy(a + lena, b, sizeof(*a) * (lenb + 1));
     }
     free(b), b = NULL;
@@ -319,7 +340,7 @@ static int ecc_regexp_accept(eccrxparser_t* p, char c)
     return 0;
 }
 
-static eccrxopcode_t ecc_regexp_escape(eccrxparser_t* p, int16_t* offset, char buffer[5])
+static eccrxopcode_t ecc_regexp_escape(eccrxparser_t* p, int32_t* offset, char buffer[5])
 {
     *offset = 1;
     buffer[0] = *(p->c++);
@@ -430,7 +451,7 @@ static eccrxopcode_t ecc_regexp_escape(eccrxparser_t* p, int16_t* offset, char b
     return ECC_RXOP_BYTES;
 }
 
-static eccrxopcode_t ecc_regexp_character(ecctextstring_t text, int16_t* offset, char buffer[12], int ignoreCase)
+static eccrxopcode_t ecc_regexp_character(ecctextstring_t text, int32_t* offset, char buffer[12], int ignoreCase)
 {
     if(ignoreCase)
     {
@@ -458,7 +479,7 @@ static eccrxopcode_t ecc_regexp_character(ecctextstring_t text, int16_t* offset,
 static eccregexnode_t* ecc_regexp_characternode(ecctextstring_t text, int ignoreCase)
 {
     char buffer[12];
-    int16_t offset;
+    int32_t offset;
     eccrxopcode_t opcode = ecc_regexp_character(text, &offset, buffer, ignoreCase);
 
     return ecc_regexp_node(opcode, offset, buffer);
@@ -517,7 +538,7 @@ static eccregexnode_t* ecc_regexp_term(eccrxparser_t* p, eccobjerror_t** error)
             default:
             {
                 eccrxopcode_t opcode;
-                int16_t offset;
+                int32_t offset;
                 char buffer[5];
 
                 opcode = ecc_regexp_escape(p, &offset, buffer);
@@ -591,7 +612,7 @@ static eccregexnode_t* ecc_regexp_term(eccrxparser_t* p, eccobjerror_t** error)
     else if(ecc_regexp_accept(p, '['))
     {
         eccrxopcode_t opcode;
-        int16_t offset;
+        int32_t offset;
 
         int isnot = ecc_regexp_accept(p, '^'), length = 0, lastLength, range = -1;
         char buffer[255];
@@ -705,127 +726,178 @@ static eccregexnode_t* ecc_regexp_term(eccrxparser_t* p, eccobjerror_t** error)
 
 static eccregexnode_t* ecc_regexp_alternative(eccrxparser_t* p, eccobjerror_t** error)
 {
-    eccregexnode_t *n = NULL, *t = NULL;
-
+    int noop;
+    int lazy;
+    uint8_t min;
+    uint8_t max;
+    uint8_t quantifier;
+    uint32_t index;
+    uint32_t count;
+    uint32_t length;
+    eccregexnode_t* redo;
+    eccregexnode_t* n;
+    eccregexnode_t* t;
+    n = NULL;
+    t = NULL;
     for(;;)
     {
         if(!(t = ecc_regexp_term(p, error)))
+        {
             break;
-
+        }
         if(!p->disallowQuantifier)
         {
-            int noop = 0, lazy = 0;
-
-            uint8_t quantifier = ecc_regexp_accept(p, '?') ? '?' : ecc_regexp_accept(p, '*') ? '*' : ecc_regexp_accept(p, '+') ? '+' : ecc_regexp_accept(p, '{') ? '{' : '\0', min = 1, max = 1;
-
+            noop = 0;
+            lazy = 0;
+            quantifier = '\0';
+            if(ecc_regexp_accept(p, '?'))
+            {
+                quantifier = '?';
+            }
+            else if(ecc_regexp_accept(p, '*'))
+            {
+                quantifier = '*';
+            }
+            else if(ecc_regexp_accept(p, '+'))
+            {
+                quantifier = '+';
+            }
+            else if(ecc_regexp_accept(p, '{'))
+            {
+                quantifier = '{';
+            }
+            min = 1;
+            max = 1;
             switch(quantifier)
             {
                 case '?':
-                    min = 0, max = 1;
+                    {
+                        min = 0;
+                        max = 1;
+                    }
                     break;
-
                 case '*':
-                    min = 0, max = 0;
+                    {
+                        min = 0;
+                        max = 0;
+                    }
                     break;
-
                 case '+':
-                    min = 1, max = 0;
+                    {
+                        min = 1;
+                        max = 0;
+                    }
                     break;
-
                 case '{':
-                {
-                    if(isdigit(*p->c))
-                    {
-                        min = *(p->c++) - '0';
-                        while(isdigit(*p->c))
-                            min = min * 10 + *(p->c++) - '0';
-                    }
-                    else
-                    {
-                        *error = ecc_error_syntaxerror(ecc_textbuf_make(p->c, 1), ecc_strbuf_create("expect number"));
-                        goto error;
-                    }
-
-                    if(ecc_regexp_accept(p, ','))
                     {
                         if(isdigit(*p->c))
                         {
-                            max = *(p->c++) - '0';
+                            min = *(p->c++) - '0';
                             while(isdigit(*p->c))
-                                max = max * 10 + *(p->c++) - '0';
-
-                            if(!max)
-                                noop = 1;
+                            {
+                                min = min * 10 + *(p->c++) - '0';
+                            }
                         }
                         else
-                            max = 0;
-                    }
-                    else if(!min)
-                        noop = 1;
-                    else
-                        max = min;
-
-                    if(!ecc_regexp_accept(p, '}'))
-                    {
-                        *error = ecc_error_syntaxerror(ecc_textbuf_make(p->c, 1), ecc_strbuf_create("expect '}'"));
-                        goto error;
+                        {
+                            *error = ecc_error_syntaxerror(ecc_textbuf_make(p->c, 1), ecc_strbuf_create("expect number"));
+                            goto error;
+                        }
+                        if(ecc_regexp_accept(p, ','))
+                        {
+                            if(isdigit(*p->c))
+                            {
+                                max = *(p->c++) - '0';
+                                while(isdigit(*p->c))
+                                {
+                                    max = max * 10 + *(p->c++) - '0';
+                                }
+                                if(!max)
+                                {
+                                    noop = 1;
+                                }
+                            }
+                            else
+                            {
+                                max = 0;
+                            }
+                        }
+                        else if(!min)
+                        {
+                            noop = 1;
+                        }
+                        else
+                        {
+                            max = min;
+                        }
+                        if(!ecc_regexp_accept(p, '}'))
+                        {
+                            *error = ecc_error_syntaxerror(ecc_textbuf_make(p->c, 1), ecc_strbuf_create("expect '}'"));
+                            goto error;
+                        }
                     }
                     break;
-                }
             }
-
             lazy = ecc_regexp_accept(p, '?');
             if(noop)
             {
                 ecc_regexp_toss(t);
                 continue;
             }
-
             if(max != 1)
             {
-                eccregexnode_t* redo;
-                uint16_t index, count = ecc_regexp_nlen(t) - (lazy ? 1 : 0), length = 3;
-                char buffer[count + length];
-
+                count = ecc_regexp_nlen(t) - (lazy ? 1 : 0);
+                length = 3;
+                char buffer[(count + length) + 1];
                 for(index = (lazy ? 1 : 0); index < count; ++index)
+                {
                     if(t[index].opcode == ECC_RXOP_SAVE)
+                    {
                         buffer[length++] = (uint8_t)t[index].offset;
-
+                    }
+                }
                 buffer[0] = min;
                 buffer[1] = max;
                 buffer[2] = lazy;
                 buffer[length] = '\0';
-
                 redo = ecc_regexp_node(ECC_RXOP_REDO, -ecc_regexp_nlen(t), NULL);
                 redo->bytes = (char*)malloc(length + 1);
                 memcpy(redo->bytes, buffer, length + 1);
-
                 t = ecc_regexp_join(t, redo);
             }
 
             if(min == 0)
             {
                 if(lazy)
-                    t = ecc_regexp_join(ecc_regexp_node(ECC_RXOP_SPLIT, 2, NULL), ecc_regexp_join(ecc_regexp_node(ECC_RXOP_JUMP, ecc_regexp_nlen(t) + 1, NULL), t));
+                {
+                    t = ecc_regexp_join(
+                            ecc_regexp_node(ECC_RXOP_SPLIT, 2, NULL), ecc_regexp_join(
+                                ecc_regexp_node(ECC_RXOP_JUMP, ecc_regexp_nlen(t) + 1, NULL), t));
+                }
                 else
+                {
                     t = ecc_regexp_join(ecc_regexp_node(ECC_RXOP_SPLIT, ecc_regexp_nlen(t) + 1, NULL), t);
+                }
             }
         }
         n = ecc_regexp_join(n, t);
     }
     return n;
-
-error:
-    ecc_regexp_toss(t);
+    error:
+    {
+        ecc_regexp_toss(t);
+    }
     return n;
 }
 
 static eccregexnode_t* ecc_regexp_disjunction(eccrxparser_t* p, eccobjerror_t** error)
 {
-    eccregexnode_t *n = ecc_regexp_alternative(p, error), *d;
+    uint32_t len;
+    eccregexnode_t *n;
+    eccregexnode_t* d;
+    n = ecc_regexp_alternative(p, error);
     if(ecc_regexp_accept(p, '|'))
     {
-        uint16_t len;
         d = ecc_regexp_disjunction(p, error);
         n = ecc_regexp_join(n, ecc_regexp_node(ECC_RXOP_JUMP, ecc_regexp_nlen(d) + 1, NULL));
         len = ecc_regexp_nlen(n);
@@ -858,12 +930,12 @@ static void ecc_regexp_clear(eccrxstate_t* const s, const char* c, uint8_t* byte
     }
 }
 
-static int ecc_regexp_forkmatch(eccrxstate_t* const s, eccregexnode_t* n, ecctextstring_t text, int16_t offset)
+static int ecc_regexp_forkmatch(eccrxstate_t* const s, eccregexnode_t* n, ecctextstring_t text, int32_t offset)
 {
     int result;
-
+    /* too much recursion */
     if(n->depth == 0xff)
-        return 0;//!\\ too many recursion
+        return 0;
     else
         ++n->depth;
 
@@ -878,11 +950,10 @@ static int ecc_regexp_match(eccrxstate_t* const s, eccregexnode_t* n, ecctextstr
 next:
     ++n;
 start:;
-
-    //	#if DUMP_REGEXP
-    //		fprintf(stderr, "\n%.*s\n^ ", text.length, text.bytes);
-    //		printNode(n);
-    //	#endif
+    #if DUMP_REGEXP
+        fprintf(stderr, "\n%.*s\n^ ", text.length, text.bytes);
+        printNode(n);
+    #endif
 
     switch((eccrxopcode_t)n->opcode)
     {
@@ -949,13 +1020,13 @@ start:;
 
         case ECC_RXOP_REFERENCE:
         {
-            uint16_t len = s->capture[n->offset * 2 + 1] ? s->capture[n->offset * 2 + 1] - s->capture[n->offset * 2] : 0;
+            uint32_t len = s->capture[n->offset * 2 + 1] ? s->capture[n->offset * 2 + 1] - s->capture[n->offset * 2] : 0;
 
             if(len)
             {
-                //#if DUMP_REGEXP
-                //				fprintf(stderr, "ref: %.*s", len, s->capture[n->offset * 2]);
-                //#endif
+                #if DUMP_REGEXP
+                    fprintf(stderr, "ref: %.*s", len, s->capture[n->offset * 2]);
+                #endif
                 if(text.length < len || memcmp(text.bytes, s->capture[n->offset * 2], len))
                     return 0;
 
@@ -1177,13 +1248,13 @@ static eccvalue_t objregexpfn_exec(ecccontext_t* context)
     ecc_context_assertthistype(context, ECC_VALTYPE_REGEXP);
 
     value = ecc_value_tostring(context, ecc_context_argument(context, 0));
-    lastIndex = self->global ? ecc_value_tointeger(context, ecc_object_getmember(context, &self->object, ECC_ConstKey_lastIndex)) : ecc_value_fromint(0);
+    lastIndex = self->isflagglobal ? ecc_value_tointeger(context, ecc_object_getmember(context, &self->object, ECC_ConstKey_lastIndex)) : ecc_value_fromint(0);
 
     ecc_object_putmember(context, &self->object, ECC_ConstKey_lastIndex, ecc_value_fromint(0));
 
     if(lastIndex.data.integer >= 0)
     {
-        uint16_t length = ecc_value_stringlength(&value);
+        uint32_t length = ecc_value_stringlength(&value);
         const char* bytes = ecc_value_stringbytes(&value);
         const char* capture[self->count * 2];
         const char* strindex[self->count * 2];
@@ -1201,13 +1272,13 @@ static eccvalue_t objregexpfn_exec(ecccontext_t* context)
                 if(capture[numindex * 2])
                 {
                     element = ecc_strbuf_createwithbytes((int32_t)(capture[numindex * 2 + 1] - capture[numindex * 2]), capture[numindex * 2]);
-                    array->element[numindex].hmapitemvalue = ecc_value_fromchars(element);
+                    array->hmapitemitems[numindex].hmapitemvalue = ecc_value_fromchars(element);
                 }
                 else
-                    array->element[numindex].hmapitemvalue = ECCValConstUndefined;
+                    array->hmapitemitems[numindex].hmapitemvalue = ECCValConstUndefined;
             }
 
-            if(self->global)
+            if(self->isflagglobal)
                 ecc_object_putmember(context, &self->object, ECC_ConstKey_lastIndex,
                                       ecc_value_fromint(ecc_string_unitindex(bytes, length, (int32_t)(capture[1] - bytes))));
 
@@ -1234,7 +1305,7 @@ static eccvalue_t objregexpfn_test(ecccontext_t* context)
 
     if(lastIndex.data.integer >= 0)
     {
-        uint16_t length = ecc_value_stringlength(&value);
+        uint32_t length = ecc_value_stringlength(&value);
         const char* bytes = ecc_value_stringbytes(&value);
         const char* capture[self->count * 2];
         const char* index[self->count * 2];
@@ -1243,7 +1314,7 @@ static eccvalue_t objregexpfn_test(ecccontext_t* context)
 
         if(state.start >= bytes && state.start <= state.end && ecc_regexp_matchwithstate(self, &state))
         {
-            if(self->global)
+            if(self->isflagglobal)
                 ecc_object_putmember(context, &self->object, ECC_ConstKey_lastIndex,
                                       ecc_value_fromint(ecc_string_unitindex(bytes, length, (int32_t)(capture[1] - bytes))));
 
@@ -1252,8 +1323,6 @@ static eccvalue_t objregexpfn_test(ecccontext_t* context)
     }
     return ECCValConstFalse;
 }
-
-// MARK: - Methods
 
 void ecc_regexp_setup()
 {
@@ -1302,18 +1371,13 @@ eccobjregexp_t* ecc_regexp_create(eccstrbuffer_t* s, eccobjerror_t** error, int 
                 continue;
         }
     }
-
 #if DUMP_REGEXP
     fprintf(stderr, "\n%.*s\n", s->length, s->bytes);
 #endif
-
     self->pattern = s;
     self->program = ecc_regexp_pattern(&p, error);
     self->count = p.count + 1;
     self->source = ecc_strbuf_createwithbytes((int32_t)(p.c - self->pattern->bytes - 1), self->pattern->bytes + 1);
-
-    //	++self->pattern->refcount;
-    //	++self->source->refcount;
 
     if(error && *p.c == '/')
     {
@@ -1324,33 +1388,33 @@ eccobjregexp_t* ecc_regexp_create(eccstrbuffer_t* s, eccobjerror_t** error, int 
                 case 'g':
                     {
                     g:
-                        if(self->global == 1)
+                        if(self->isflagglobal == 1)
                         {
                             *error = ecc_error_syntaxerror(ecc_textbuf_make(p.c, 1), ecc_strbuf_create("invalid flag"));
                         }
-                        self->global = 1;
+                        self->isflagglobal = 1;
                     }
                     continue;
 
                 case 'i':
                     {
                     i:
-                        if(self->ignoreCase == 1)
+                        if(self->isflagigncase == 1)
                         {
                             *error = ecc_error_syntaxerror(ecc_textbuf_make(p.c, 1), ecc_strbuf_create("invalid flag"));
                         }
-                        self->ignoreCase = 1;
+                        self->isflagigncase = 1;
                     }
                     continue;
 
                 case 'm':
                     {
                     m:
-                        if(self->multiline == 1)
+                        if(self->isflagmultiline == 1)
                         {
                             *error = ecc_error_syntaxerror(ecc_textbuf_make(p.c, 1), ecc_strbuf_create("invalid flag"));
                         }
-                        self->multiline = 1;
+                        self->isflagmultiline = 1;
                     }
                     continue;
                 case '\0':
@@ -1393,9 +1457,9 @@ eccobjregexp_t* ecc_regexp_create(eccstrbuffer_t* s, eccobjerror_t** error, int 
         *error = ecc_error_syntaxerror(ecc_textbuf_make(p.c, 1), ecc_strbuf_create("invalid character '%c'", isgraph(*p.c) ? *p.c : '?'));
     }
     ecc_object_addmember(&self->object, ECC_ConstKey_source, ecc_value_fromchars(self->source), ECC_VALFLAG_READONLY | ECC_VALFLAG_HIDDEN | ECC_VALFLAG_SEALED);
-    ecc_object_addmember(&self->object, ECC_ConstKey_global, ecc_value_truth(self->global), ECC_VALFLAG_READONLY | ECC_VALFLAG_HIDDEN | ECC_VALFLAG_SEALED);
-    ecc_object_addmember(&self->object, ECC_ConstKey_ignoreCase, ecc_value_truth(self->ignoreCase), ECC_VALFLAG_READONLY | ECC_VALFLAG_HIDDEN | ECC_VALFLAG_SEALED);
-    ecc_object_addmember(&self->object, ECC_ConstKey_multiline, ecc_value_truth(self->multiline), ECC_VALFLAG_READONLY | ECC_VALFLAG_HIDDEN | ECC_VALFLAG_SEALED);
+    ecc_object_addmember(&self->object, ECC_ConstKey_global, ecc_value_truth(self->isflagglobal), ECC_VALFLAG_READONLY | ECC_VALFLAG_HIDDEN | ECC_VALFLAG_SEALED);
+    ecc_object_addmember(&self->object, ECC_ConstKey_ignoreCase, ecc_value_truth(self->isflagigncase), ECC_VALFLAG_READONLY | ECC_VALFLAG_HIDDEN | ECC_VALFLAG_SEALED);
+    ecc_object_addmember(&self->object, ECC_ConstKey_multiline, ecc_value_truth(self->isflagmultiline), ECC_VALFLAG_READONLY | ECC_VALFLAG_HIDDEN | ECC_VALFLAG_SEALED);
     ecc_object_addmember(&self->object, ECC_ConstKey_lastIndex, ecc_value_fromint(0), ECC_VALFLAG_HIDDEN | ECC_VALFLAG_SEALED);
 
     return self;
@@ -1460,7 +1524,7 @@ eccobjregexp_t* ecc_regexp_createwith(ecccontext_t* context, eccvalue_t pattern,
 int ecc_regexp_matchwithstate(eccobjregexp_t* self, eccrxstate_t* state)
 {
     int result = 0;
-    uint16_t index, count;
+    uint32_t index, count;
     ecctextstring_t text = ecc_textbuf_make(state->start, (int32_t)(state->end - state->start));
 
 #if DUMP_REGEXP
