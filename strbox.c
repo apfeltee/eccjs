@@ -1,17 +1,16 @@
 
 /*
-//  text.c
-//  libecc
-//
-//  Copyright (c) 2019 Aurélien Bouilland
 //  Licensed under MIT license, see LICENSE.txt file in project root
+---------
+* be warned that attempts to optimize this code may very likely break
+* a lot of things!
 */
 
 #include "ecc.h"
 
 #define _textMake(name, litstr)               \
     static const char cstr_##name[] = litstr; \
-    const ecctextstring_t name = { cstr_##name, sizeof(cstr_##name) - 1, 0 }
+    const eccstrbox_t name = { cstr_##name, sizeof(cstr_##name) - 1, 0 }
 
 _textMake(ECC_String_Undefined, "undefined");
 _textMake(ECC_String_Null, "null");
@@ -444,22 +443,23 @@ static const unsigned char g_textchars_uppers[]=
 };
 /* clang-format on */
 
-ecctextstring_t ecc_textbuf_make(const char* bytes, int32_t length)
+eccstrbox_t ecc_strbox_make(const char* bytes, int32_t length)
 {
-    return (ecctextstring_t){
-        .bytes = bytes,
-        .length = length,
-    };
+    eccstrbox_t r;
+    r.bytes = bytes;
+    r.length = length;
+    r.flags = 0;
+    return r;
 }
 
-ecctextstring_t ecc_textbuf_join(ecctextstring_t from, ecctextstring_t to)
+eccstrbox_t ecc_strbox_join(eccstrbox_t from, eccstrbox_t to)
 {
-    return ecc_textbuf_make(from.bytes, (int32_t)(to.bytes - from.bytes) + to.length);
+    return ecc_strbox_make(from.bytes, (int32_t)(to.bytes - from.bytes) + to.length);
 }
 
-ecctextchar_t ecc_textbuf_character(ecctextstring_t text)
+eccrune_t ecc_strbox_character(eccstrbox_t text)
 {
-    ecctextchar_t c = { 0 };
+    eccrune_t c = { 0 };
 
     switch(text.length)
     {
@@ -512,16 +512,16 @@ ecctextchar_t ecc_textbuf_character(ecctextstring_t text)
     return c;
 }
 
-ecctextchar_t ecc_textbuf_nextcharacter(ecctextstring_t* text)
+eccrune_t ecc_strbox_nextcharacter(eccstrbox_t* text)
 {
-    ecctextchar_t c = ecc_textbuf_character(*text);
-    ecc_textbuf_advance(text, c.units);
+    eccrune_t c = ecc_strbox_character(*text);
+    ecc_strbox_advance(text, c.units);
     return c;
 }
 
-ecctextchar_t ecc_textbuf_prevcharacter(ecctextstring_t* text)
+eccrune_t ecc_strbox_prevcharacter(eccstrbox_t* text)
 {
-    ecctextchar_t c = { 0 };
+    eccrune_t c = { 0 };
 
     switch(text->length)
     {
@@ -576,7 +576,7 @@ ecctextchar_t ecc_textbuf_prevcharacter(ecctextstring_t* text)
     return c;
 }
 
-void ecc_textbuf_advance(ecctextstring_t* text, int32_t units)
+void ecc_strbox_advance(eccstrbox_t* text, int32_t units)
 {
     if(units >= text->length)
     {
@@ -590,25 +590,25 @@ void ecc_textbuf_advance(ecctextstring_t* text, int32_t units)
     }
 }
 
-uint32_t ecc_textbuf_toutf16length(ecctextstring_t text)
+uint32_t ecc_strbox_toutf16length(eccstrbox_t text)
 {
-    uint32_t windex = 0;
-
+    uint32_t windex;
+    windex = 0;
     while(text.length)
-        windex += ecc_textbuf_nextcharacter(&text).codepoint >= 0x010000 ? 2 : 1;
-
+    {
+        windex += ecc_strbox_nextcharacter(&text).codepoint >= 0x010000 ? 2 : 1;
+    }
     return windex;
 }
 
-uint32_t ecc_textbuf_toutf16(ecctextstring_t text, uint32_t* wbuffer)
+uint32_t ecc_strbox_toutf16(eccstrbox_t text, uint32_t* wbuffer)
 {
-    uint32_t windex = 0;
     uint32_t cp;
-
+    uint32_t windex;
+    windex = 0;
     while(text.length)
     {
-        cp = ecc_textbuf_nextcharacter(&text).codepoint;
-
+        cp = ecc_strbox_nextcharacter(&text).codepoint;
         if(cp >= 0x010000)
         {
             cp -= 0x010000;
@@ -616,41 +616,45 @@ uint32_t ecc_textbuf_toutf16(ecctextstring_t text, uint32_t* wbuffer)
             wbuffer[windex++] = ((cp >> 0) & 0x3ff) + 0xdc00;
         }
         else
+        {
             wbuffer[windex++] = cp;
+        }
     }
-
     return windex;
 }
 
-char* ecc_textbuf_tolower(ecctextstring_t i, char* o /* length x 2 */)
+char* ecc_strbox_tolower(eccstrbox_t i, char* o /* length x 2 */)
 {
     char buffer[5];
     const char* p;
-    ecctextchar_t c;
-
+    eccrune_t c;
     while(i.length)
     {
-        c = ecc_textbuf_character(i);
+        c = ecc_strbox_character(i);
         memcpy(buffer, i.bytes, c.units);
         buffer[c.units] = '\0';
-        ecc_textbuf_advance(&i, c.units);
+        ecc_strbox_advance(&i, c.units);
         p = buffer;
-
         if(c.units > 1 || isupper(*p))
         {
             p = strstr((const char*)g_textchars_uppers, p);
             if(p)
             {
                 while(p[c.units] == (char)255)
-                    ++c.units;
+                {
+                    c.units++;
+                }
                 p = ((const char*)g_textchars_lowers) + (p - ((const char*)g_textchars_uppers));
                 while(p[c.units - 1] == (char)255)
-                    --c.units;
+                {
+                    c.units--;
+                }
             }
             else
+            {
                 p = buffer;
+            }
         }
-
         memcpy(o, p, c.units);
         o += c.units;
     }
@@ -658,59 +662,76 @@ char* ecc_textbuf_tolower(ecctextstring_t i, char* o /* length x 2 */)
     return o;
 }
 
-char* ecc_textbuf_toupper(ecctextstring_t i, char* o /* length x 3 */)
+char* ecc_strbox_toupper(eccstrbox_t i, char* o /* length x 3 */)
 {
     char buffer[5];
     const char* p;
-    ecctextchar_t c;
-
+    eccrune_t c;
     while(i.length)
     {
-        c = ecc_textbuf_character(i);
+        c = ecc_strbox_character(i);
         memcpy(buffer, i.bytes, c.units);
         buffer[c.units] = '\0';
-        ecc_textbuf_advance(&i, c.units);
+        ecc_strbox_advance(&i, c.units);
         p = buffer;
-
         if(c.units > 1 || islower(*p))
         {
             p = strstr((const char*)g_textchars_lowers, p);
             if(p)
             {
                 while(p[c.units] == (char)255)
-                    ++c.units;
+                {
+                    c.units++;
+                }
                 p = ((const char*)g_textchars_uppers) + (p - ((const char*)g_textchars_lowers));
                 while(p[c.units - 1] == (char)255)
-                    --c.units;
+                {
+                    c.units--;
+                }
             }
             else
+            {
                 p = buffer;
+            }
         }
-
         memcpy(o, p, c.units);
         o += c.units;
     }
-
     return o;
 }
 
-int ecc_textbuf_isspace(ecctextchar_t c)
+int ecc_strbox_isspace(eccrune_t c)
 {
-    return (c.codepoint < 0x7f && isspace(c.codepoint)) || c.codepoint == 0xA0 || c.codepoint == 0xFEFF || c.codepoint == 0x1680 || c.codepoint == 0x180E
-           || (c.codepoint >= 0x2000 && c.codepoint <= 0x200A) || c.codepoint == 0x202F || c.codepoint == 0x205F || c.codepoint == 0x3000 || ecc_textbuf_islinefeed(c);
+    return (
+        (c.codepoint < 0x7f && isspace(c.codepoint)) ||
+        (c.codepoint == 0xA0) ||
+        (c.codepoint == 0xFEFF) ||
+        (c.codepoint == 0x1680) ||
+        (c.codepoint == 0x180E) ||
+        ((c.codepoint >= 0x2000) && (c.codepoint <= 0x200A)) ||
+        (c.codepoint == 0x202F) ||
+        (c.codepoint == 0x205F) ||
+        (c.codepoint == 0x3000) ||
+        ecc_strbox_islinefeed(c)
+    );
 }
 
-int ecc_textbuf_isdigit(ecctextchar_t c)
+int ecc_strbox_isdigit(eccrune_t c)
 {
     return isdigit(c.codepoint) != 0;
 }
 
-int ecc_textbuf_isword(ecctextchar_t c)
+int ecc_strbox_isword(eccrune_t c)
 {
     return isalnum(c.codepoint) || c.codepoint == '_';
 }
 
-int ecc_textbuf_islinefeed(ecctextchar_t c)
+int ecc_strbox_islinefeed(eccrune_t c)
 {
-    return c.codepoint == '\n' || c.codepoint == '\r' || c.codepoint == 0x2028 || c.codepoint == 0x2029;
+    return (
+        (c.codepoint == '\n') ||
+        (c.codepoint == '\r') ||
+        (c.codepoint == 0x2028) ||
+        (c.codepoint == 0x2029)
+    );
 }

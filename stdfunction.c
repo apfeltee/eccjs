@@ -9,6 +9,9 @@
 
 #include "ecc.h"
 
+void ecc_function_typecapture(eccobject_t* object);
+void ecc_function_typemark(eccobject_t* object);
+
 static va_list empty_ap;
 
 eccobject_t* ECC_Prototype_Function = NULL;
@@ -16,39 +19,39 @@ eccobjfunction_t* ECC_CtorFunc_Function = NULL;
 
 const eccobjinterntype_t ECC_Type_Function = {
     .text = &ECC_String_FunctionType,
-    .fnmark = eccfunction_mark,
-    .fncapture = eccfunction_capture,
+    .fnmark = ecc_function_typemark,
+    .fncapture = ecc_function_typecapture,
     /* XXX: don't finalize */
 };
 
-void eccfunction_capture(eccobject_t* object)
+void ecc_function_typecapture(eccobject_t* object)
 {
     eccobjfunction_t* self = (eccobjfunction_t*)object;
 
-    if(self->refObject)
-        ++self->refObject->refcount;
+    if(self->refobject)
+        ++self->refobject->refcount;
 
     if(self->pair)
         ++self->pair->object.refcount;
 }
 
-void eccfunction_mark(eccobject_t* object)
+void ecc_function_typemark(eccobject_t* object)
 {
     eccobjfunction_t* self = (eccobjfunction_t*)object;
 
     ecc_mempool_markobject(&self->funcenv);
 
-    if(self->refObject)
-        ecc_mempool_markobject(self->refObject);
+    if(self->refobject)
+        ecc_mempool_markobject(self->refobject);
 
     if(self->pair)
         ecc_mempool_markobject(&self->pair->object);
 }
 
-eccvalue_t eccfunction_toChars(ecccontext_t* context, eccvalue_t value)
+eccvalue_t ecc_function_tochars(ecccontext_t* context, eccvalue_t value)
 {
     eccobjfunction_t* self;
-    eccappendbuffer_t chars;
+    eccappbuf_t chars;
     (void)context;
     assert(value.type == ECC_VALTYPE_FUNCTION);
     assert(value.data.function);
@@ -66,20 +69,20 @@ eccvalue_t eccfunction_toChars(ecccontext_t* context, eccvalue_t value)
     return ecc_strbuf_endappend(&chars);
 }
 
-eccvalue_t objfunctionfn_toString(ecccontext_t* context)
+eccvalue_t ecc_objfnfunction_tostring(ecccontext_t* context)
 {
     ecc_context_assertthistype(context, ECC_VALTYPE_FUNCTION);
 
-    return eccfunction_toChars(context, context->thisvalue);
+    return ecc_function_tochars(context, context->thisvalue);
 }
 
-eccvalue_t objfunctionfn_apply(ecccontext_t* context)
+eccvalue_t ecc_objfnfunction_apply(ecccontext_t* context)
 {
     eccvalue_t thisval, arguments;
 
     ecc_context_assertthistype(context, ECC_VALTYPE_FUNCTION);
 
-    context->strictMode = context->parent->strictMode;
+    context->isstrictmode = context->parent->isstrictmode;
 
     thisval = ecc_context_argument(context, 0);
     if(thisval.type != ECC_VALTYPE_UNDEFINED && thisval.type != ECC_VALTYPE_NULL)
@@ -98,13 +101,13 @@ eccvalue_t objfunctionfn_apply(ecccontext_t* context)
     }
 }
 
-eccvalue_t objfunctionfn_call(ecccontext_t* context)
+eccvalue_t ecc_objfnfunction_call(ecccontext_t* context)
 {
     eccobject_t arguments;
 
     ecc_context_assertthistype(context, ECC_VALTYPE_FUNCTION);
 
-    context->strictMode = context->parent->strictMode;
+    context->isstrictmode = context->parent->isstrictmode;
 
     arguments = *context->execenv->hmapmapitems[2].hmapmapvalue.data.object;
 
@@ -129,7 +132,7 @@ eccvalue_t objfunctionfn_call(ecccontext_t* context)
         return ecc_oper_callfunctionva(context, ECC_CTXOFFSET_CALL, context->thisvalue.data.function, ECCValConstUndefined, 0, empty_ap);
 }
 
-eccvalue_t objfunctionfn_bindCall(ecccontext_t* context)
+eccvalue_t ecc_objfnfunction_bindcall(ecccontext_t* context)
 {
     eccobjfunction_t* function;
     eccobject_t* arguments;
@@ -137,7 +140,7 @@ eccvalue_t objfunctionfn_bindCall(ecccontext_t* context)
 
     ecc_context_assertthistype(context, ECC_VALTYPE_FUNCTION);
 
-    context->strictMode = context->parent->strictMode;
+    context->isstrictmode = context->parent->isstrictmode;
 
     function = context->thisvalue.data.function;
 
@@ -152,7 +155,7 @@ eccvalue_t objfunctionfn_bindCall(ecccontext_t* context)
     return ecc_oper_callfunctionarguments(context, 0, context->thisvalue.data.function->pair, function->funcenv.hmapitemitems[0].hmapitemvalue, arguments);
 }
 
-eccvalue_t objfunctionfn_bind(ecccontext_t* context)
+eccvalue_t ecc_objfnfunction_bind(ecccontext_t* context)
 {
     eccobjfunction_t* function;
     uint32_t index, count;
@@ -162,7 +165,7 @@ eccvalue_t objfunctionfn_bind(ecccontext_t* context)
 
     count = ecc_context_argumentcount(context);
     parameterCount = context->thisvalue.data.function->argparamcount - (count > 1 ? count - 1 : 0);
-    function = ecc_function_createwithnative(objfunctionfn_bindCall, parameterCount > 0 ? parameterCount : 0);
+    function = ecc_function_createwithnative(ecc_objfnfunction_bindcall, parameterCount > 0 ? parameterCount : 0);
 
     ecc_object_resizeelement(&function->funcenv, count ? count : 1);
     if(count)
@@ -172,19 +175,19 @@ eccvalue_t objfunctionfn_bind(ecccontext_t* context)
         function->funcenv.hmapitemitems[0].hmapitemvalue = ECCValConstUndefined;
 
     function->pair = context->thisvalue.data.function;
-    function->boundThis = ecc_value_function(function);
+    function->boundthisvalue = ecc_value_function(function);
     function->flags |= ECC_SCRIPTFUNCFLAG_NEEDARGUMENTS | ECC_SCRIPTFUNCFLAG_USEBOUNDTHIS;
 
     return ecc_value_function(function);
 }
 
-eccvalue_t objfunctionfn_prototypeConstructor(ecccontext_t* context)
+eccvalue_t ecc_objfnfunction_prototypeconstructor(ecccontext_t* context)
 {
     (void)context;
     return ECCValConstUndefined;
 }
 
-eccvalue_t objfunctionfn_constructor(ecccontext_t* context)
+eccvalue_t ecc_objfnfunction_constructor(ecccontext_t* context)
 {
     int argumentCount;
 
@@ -193,7 +196,7 @@ eccvalue_t objfunctionfn_constructor(ecccontext_t* context)
     {
         int_fast32_t index;
         eccvalue_t value;
-        eccappendbuffer_t chars;
+        eccappbuf_t chars;
         eccioinput_t* input;
         ecccontext_t subContext = {};
         subContext.parent = context;
@@ -234,15 +237,15 @@ void ecc_function_setup()
 {
     const eccvalflag_t h = ECC_VALFLAG_HIDDEN;
 
-    ecc_function_setupbuiltinobject(&ECC_CtorFunc_Function, objfunctionfn_constructor, -1, &ECC_Prototype_Function,
-                                          ecc_value_function(ecc_function_createwithnative(objfunctionfn_prototypeConstructor, 0)), &ECC_Type_Function);
+    ecc_function_setupbuiltinobject(&ECC_CtorFunc_Function, ecc_objfnfunction_constructor, -1, &ECC_Prototype_Function,
+                                          ecc_value_function(ecc_function_createwithnative(ecc_objfnfunction_prototypeconstructor, 0)), &ECC_Type_Function);
 
     ECC_CtorFunc_Function->object.prototype = ECC_Prototype_Function;
 
-    ecc_function_addto(ECC_Prototype_Function, "toString", objfunctionfn_toString, 0, h);
-    ecc_function_addto(ECC_Prototype_Function, "apply", objfunctionfn_apply, 2, h);
-    ecc_function_addto(ECC_Prototype_Function, "call", objfunctionfn_call, -1, h);
-    ecc_function_addto(ECC_Prototype_Function, "bind", objfunctionfn_bind, -1, h);
+    ecc_function_addto(ECC_Prototype_Function, "toString", ecc_objfnfunction_tostring, 0, h);
+    ecc_function_addto(ECC_Prototype_Function, "apply", ecc_objfnfunction_apply, 2, h);
+    ecc_function_addto(ECC_Prototype_Function, "call", ecc_objfnfunction_call, -1, h);
+    ecc_function_addto(ECC_Prototype_Function, "bind", ecc_objfnfunction_bind, -1, h);
 }
 
 void ecc_function_teardown(void)

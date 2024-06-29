@@ -92,7 +92,7 @@ int ecc_context_argumentcount(ecccontext_t* self)
 
 eccvalue_t ecc_context_argument(ecccontext_t* self, int argumentIndex)
 {
-    self->textIndex = argumentIndex + 4;
+    self->ctxtextindex = argumentIndex + 4;
 
     if(self->execenv->hmapmapitems[2].hmapmapvalue.type == ECC_VALTYPE_OBJECT)
     {
@@ -118,7 +118,7 @@ void ecc_context_replaceargument(ecccontext_t* self, int argumentIndex, eccvalue
 
 eccvalue_t ecc_context_this(ecccontext_t* self)
 {
-    self->textIndex = ECC_CTXINDEXTYPE_THIS;
+    self->ctxtextindex = ECC_CTXINDEXTYPE_THIS;
     return self->thisvalue;
 }
 
@@ -149,63 +149,63 @@ void ecc_context_assertthiscoercibleprimitive(ecccontext_t* self)
     }
 }
 
-void ecc_context_settext(ecccontext_t* self, const ecctextstring_t* text)
+void ecc_context_settext(ecccontext_t* self, const eccstrbox_t* text)
 {
-    self->textIndex = ECC_CTXINDEXTYPE_SAVED;
-    self->text = text;
+    self->ctxtextindex = ECC_CTXINDEXTYPE_SAVED;
+    self->ctxtextfirst = text;
 }
 
-void ecc_context_settexts(ecccontext_t* self, const ecctextstring_t* text, const ecctextstring_t* textAlt)
+void ecc_context_settexts(ecccontext_t* self, const eccstrbox_t* text, const eccstrbox_t* textAlt)
 {
-    self->textIndex = ECC_CTXINDEXTYPE_SAVED;
-    self->text = text;
-    self->textAlt = textAlt;
+    self->ctxtextindex = ECC_CTXINDEXTYPE_SAVED;
+    self->ctxtextfirst = text;
+    self->ctxtextalt = textAlt;
 }
 
 void ecc_context_settextindex(ecccontext_t* self, int index)
 {
-    self->textIndex = index;
+    self->ctxtextindex = index;
 }
 
 void ecc_context_settextindexargument(ecccontext_t* self, int argument)
 {
-    self->textIndex = argument + 4;
+    self->ctxtextindex = argument + 4;
 }
 
-ecctextstring_t ecc_context_textseek(ecccontext_t* self)
+eccstrbox_t ecc_context_textseek(ecccontext_t* self)
 {
     const char* bytes;
     ecccontext_t seek = *self;
     uint32_t breakArray = 0, argumentCount = 0;
-    ecctextstring_t callText;
+    eccstrbox_t callText;
     int index;
     int isAccessor = 0;
 
     assert(self);
     assert(self->ecc);
 
-    index = self->textIndex;
+    index = self->ctxtextindex;
 
     if(index == ECC_CTXINDEXTYPE_SAVED)
-        return *self->text;
+        return *self->ctxtextfirst;
 
     if(index == ECC_CTXINDECTYPE_SAVEDINDEXALT)
-        return *self->textAlt;
+        return *self->ctxtextalt;
 
     while(seek.ops->text.bytes == ECC_String_NativeCode.bytes)
     {
         if(!seek.parent)
             return seek.ops->text;
 
-        isAccessor = seek.argumentOffset == ECC_CTXOFFSET_ACCESSOR;
+        isAccessor = seek.argoffset == ECC_CTXOFFSET_ACCESSOR;
 
-        if(seek.argumentOffset > 0 && index >= ECC_CTXINDEXTYPE_THIS)
+        if(seek.argoffset > 0 && index >= ECC_CTXINDEXTYPE_THIS)
         {
             ++index;
             ++argumentCount;
             breakArray <<= 1;
 
-            if(seek.argumentOffset == ECC_CTXOFFSET_APPLY)
+            if(seek.argoffset == ECC_CTXOFFSET_APPLY)
                 breakArray |= 2;
         }
         seek = *seek.parent;
@@ -221,7 +221,7 @@ ecctextstring_t ecc_context_textseek(ecccontext_t* self)
     }
     else if(index > ECC_CTXINDEXTYPE_NO)
     {
-        while(seek.ops->text.bytes != seek.textCall->bytes || seek.ops->text.length != seek.textCall->length)
+        while(seek.ops->text.bytes != seek.ctxtextcall->bytes || seek.ops->text.length != seek.ctxtextcall->length)
             --seek.ops;
 
         argumentCount += seek.ops->opvalue.data.integer;
@@ -239,7 +239,7 @@ ecctextstring_t ecc_context_textseek(ecccontext_t* self)
         while(index-- > ECC_CTXINDEXTYPE_CALL)
         {
             if(!argumentCount--)
-                return ecc_textbuf_make(callText.bytes + callText.length - 1, 0);
+                return ecc_strbox_make(callText.bytes + callText.length - 1, 0);
 
             bytes = seek.ops->text.bytes + seek.ops->text.length;
             while(bytes > seek.ops->text.bytes && seek.ops->text.bytes)
@@ -283,9 +283,9 @@ void ecc_context_printbacktrace(ecccontext_t* context)
         {
             --skip;
 
-            if(frame.argumentOffset == ECC_CTXOFFSET_CALL || frame.argumentOffset == ECC_CTXOFFSET_APPLY)
+            if(frame.argoffset == ECC_CTXOFFSET_CALL || frame.argoffset == ECC_CTXOFFSET_APPLY)
                 skip = 2;
-            else if(frame.textIndex > ECC_CTXINDEXTYPE_NO && frame.ops->text.bytes == ECC_String_NativeCode.bytes)
+            else if(frame.ctxtextindex > ECC_CTXINDEXTYPE_NO && frame.ops->text.bytes == ECC_String_NativeCode.bytes)
                 skip = 1;
 
             frame = *frame.parent;
@@ -302,9 +302,9 @@ void ecc_context_printbacktrace(ecccontext_t* context)
 
 eccobject_t* ecc_context_environmentroot(ecccontext_t* context)
 {
-    eccobject_t* environment = context->strictMode ? context->execenv : &context->ecc->globalfunc->funcenv;
+    eccobject_t* environment = context->isstrictmode ? context->execenv : &context->ecc->globalfunc->funcenv;
 
-    if(context->strictMode)
+    if(context->isstrictmode)
         while(environment->prototype && environment->prototype != &context->ecc->globalfunc->funcenv)
             environment = environment->prototype;
 

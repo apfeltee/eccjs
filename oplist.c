@@ -9,7 +9,7 @@
 
 #include "ecc.h"
 
-eccoplist_t* ecc_oplist_create(const eccnativefuncptr_t native, eccvalue_t value, ecctextstring_t text)
+eccoplist_t* ecc_oplist_create(const eccnativefuncptr_t native, eccvalue_t value, eccstrbox_t text)
 {
     eccoplist_t* self = (eccoplist_t*)malloc(sizeof(*self));
     self->ops = (eccoperand_t*)malloc(sizeof(*self->ops) * 1);
@@ -483,7 +483,7 @@ void ecc_oplist_dumpto(eccoplist_t* self, FILE* file)
     }
 }
 
-ecctextstring_t ecc_oplist_text(eccoplist_t* oplist)
+eccstrbox_t ecc_oplist_text(eccoplist_t* oplist)
 {
     uint32_t length;
     if(!oplist)
@@ -491,5 +491,5 @@ ecctextstring_t ecc_oplist_text(eccoplist_t* oplist)
 
     length = oplist->ops[oplist->count - 1].text.bytes + oplist->ops[oplist->count - 1].text.length - oplist->ops[0].text.bytes;
 
-    return ecc_textbuf_make(oplist->ops[0].text.bytes, oplist->ops[0].text.length > length ? oplist->ops[0].text.length : length);
+    return ecc_strbox_make(oplist->ops[0].text.bytes, oplist->ops[0].text.length > length ? oplist->ops[0].text.length : length);
 }

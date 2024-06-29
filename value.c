@@ -25,7 +25,7 @@ const eccvalue_t ECCValConstNull = valueMake(ECC_VALTYPE_NULL);
 * 'floor*' lifted from musl-libc, because the builtins break during
 * aggressive optimization (-march=native -ffast-math -Ofast...)
 * -----
-* fp_force_eval ensures that the input value is computed when that's
+* ecc_mathutil_forceeval ensures that the input value is computed when that's
 * otherwise unused.  To prevent the constant folding of the input
 * expression, an additional fp_barrier may be needed or a compilation
 * mode that does so (e.g. -frounding-math in gcc). Then it can be
@@ -33,27 +33,27 @@ const eccvalue_t ECCValConstNull = valueMake(ECC_VALTYPE_NULL);
 */
 
 
-#ifndef fp_force_evalf
-#define fp_force_evalf fp_force_evalf
-void fp_force_evalf(float x)
+#ifndef ecc_mathutil_forceevalf
+#define ecc_mathutil_forceevalf ecc_mathutil_forceevalf
+void ecc_mathutil_forceevalf(float x)
 {
     volatile float y;
     y = x;
 }
 #endif
 
-#ifndef fp_force_eval
-#define fp_force_eval fp_force_eval
-static void fp_force_eval(double x)
+#ifndef ecc_mathutil_forceeval
+#define ecc_mathutil_forceeval ecc_mathutil_forceeval
+static void ecc_mathutil_forceeval(double x)
 {
     volatile double y;
     y = x;
 }
 #endif
 
-#ifndef fp_force_evall
-#define fp_force_evall fp_force_evall
-void fp_force_evall(long double x)
+#ifndef ecc_mathutil_forceevall
+#define ecc_mathutil_forceevall ecc_mathutil_forceevall
+void ecc_mathutil_forceevall(long double x)
 {
     volatile long double y;
     y = x;
@@ -65,15 +65,15 @@ void fp_force_evall(long double x)
     { \
         if(sizeof(x) == sizeof(float)) \
         { \
-            fp_force_evalf(x);\
+            ecc_mathutil_forceevalf(x);\
         } \
         else if (sizeof(x) == sizeof(double)) \
         { \
-            fp_force_eval(x);\
+            ecc_mathutil_forceeval(x);\
         } \
         else \
         { \
-            fp_force_evall(x);\
+            ecc_mathutil_forceevall(x);\
         } \
     } while (0)
 
@@ -85,7 +85,7 @@ void fp_force_evall(long double x)
 #endif
 static const double toint = 1/EPS;
 
-double eccutil_mathfloor(double x)
+double ecc_mathutil_mathfloor(double x)
 {
     int e;
     double y;
@@ -173,7 +173,7 @@ eccvalue_t ecc_value_fromkey(eccindexkey_t key)
     return v;
 }
 
-eccvalue_t ecc_value_fromtext(const ecctextstring_t* text)
+eccvalue_t ecc_value_fromtext(const eccstrbox_t* text)
 {
     eccvalue_t v;
     v = ecc_value_makevalue(ECC_VALTYPE_TEXT);
@@ -356,7 +356,7 @@ eccvalue_t ecc_value_toprimitive(ecccontext_t* context, eccvalue_t value, int hi
     eccvalue_t aFunction;
     eccvalue_t bFunction;
     eccvalue_t result;
-    ecctextstring_t text;
+    eccstrbox_t text;
 
     if(value.type < ECC_VALTYPE_OBJECT)
         return value;
@@ -386,7 +386,7 @@ eccvalue_t ecc_value_toprimitive(ecccontext_t* context, eccvalue_t value, int hi
     }
 
     text = ecc_context_textseek(context);
-    if(context->textIndex != ECC_CTXINDEXTYPE_CALL && text.length)
+    if(context->ctxtextindex != ECC_CTXINDEXTYPE_CALL && text.length)
         ecc_context_typeerror(context, ecc_strbuf_create("cannot convert '%.*s' to primitive", text.length, text.bytes));
     else
         ecc_context_typeerror(context, ecc_strbuf_create("cannot convert value to primitive"));
@@ -465,7 +465,7 @@ eccvalue_t ecc_value_tointeger(ecccontext_t* context, eccvalue_t value)
     binary = fmod(binary, modulus);
     if(binary >= 0)
     {
-        binary = eccutil_mathfloor(binary);
+        binary = ecc_mathutil_mathfloor(binary);
     }
     else
     {
@@ -480,7 +480,7 @@ eccvalue_t ecc_value_tointeger(ecccontext_t* context, eccvalue_t value)
 
 eccvalue_t ecc_value_binarytostring(double binary, int base)
 {
-    eccappendbuffer_t chars;
+    eccappbuf_t chars;
 
     if(binary == 0)
         return ecc_value_fromtext(&ECC_String_Zero);
@@ -607,24 +607,24 @@ const char* ecc_value_stringbytes(const eccvalue_t* value)
     return NULL;
 }
 
-ecctextstring_t ecc_value_textof(const eccvalue_t* value)
+eccstrbox_t ecc_value_textof(const eccvalue_t* value)
 {
     switch(value->type)
     {
         case ECC_VALTYPE_CHARS:
-            return ecc_textbuf_make(value->data.chars->bytes, value->data.chars->length);
+            return ecc_strbox_make(value->data.chars->bytes, value->data.chars->length);
 
         case ECC_VALTYPE_TEXT:
             return *value->data.text;
 
         case ECC_VALTYPE_STRING:
-            return ecc_textbuf_make(value->data.string->sbuf->bytes, value->data.string->sbuf->length);
+            return ecc_strbox_make(value->data.string->sbuf->bytes, value->data.string->sbuf->length);
 
         case ECC_VALTYPE_KEY:
             return *ecc_keyidx_textof(value->data.key);
 
         case ECC_VALTYPE_BUFFER:
-            return ecc_textbuf_make(value->data.buffer, value->data.buffer[7]);
+            return ecc_strbox_make(value->data.buffer, value->data.buffer[7]);
 
         default:
             break;
@@ -677,8 +677,8 @@ eccvalue_t ecc_value_toobject(ecccontext_t* context, eccvalue_t value)
     return ECCValConstUndefined;
     error:
     {
-        ecctextstring_t text = ecc_context_textseek(context);
-        if(context->textIndex != ECC_CTXINDEXTYPE_CALL && text.length)
+        eccstrbox_t text = ecc_context_textseek(context);
+        if(context->ctxtextindex != ECC_CTXINDEXTYPE_CALL && text.length)
             ecc_context_typeerror(context, ecc_strbuf_create("cannot convert '%.*s' to object", text.length, text.bytes));
         else
             ecc_context_typeerror(context, ecc_strbuf_create("cannot convert %s to object", ecc_value_typename(value.type)));
@@ -827,7 +827,7 @@ eccvalue_t ecc_value_add(ecccontext_t* context, eccvalue_t a, eccvalue_t b)
 
         if(ecc_value_isstring(a) || ecc_value_isstring(b))
         {
-            eccappendbuffer_t chars;
+            eccappbuf_t chars;
 
             ecc_strbuf_beginappend(&chars);
             ecc_strbuf_appendvalue(&chars, context, a);
@@ -843,7 +843,7 @@ eccvalue_t ecc_value_subtract(ecccontext_t* context, eccvalue_t a, eccvalue_t b)
     return ecc_value_fromfloat(ecc_value_tobinary(context, a).data.valnumfloat - ecc_value_tobinary(context, b).data.valnumfloat);
 }
 
-eccvalue_t eccvalue_compare(ecccontext_t* context, eccvalue_t a, eccvalue_t b)
+eccvalue_t ecc_value_compare(ecccontext_t* context, eccvalue_t a, eccvalue_t b)
 {
     a = ecc_value_toprimitive(context, a, ECC_VALHINT_NUMBER);
     ecc_context_settextindex(context, ECC_CTXINDECTYPE_SAVEDINDEXALT);
@@ -871,7 +871,7 @@ eccvalue_t eccvalue_compare(ecccontext_t* context, eccvalue_t a, eccvalue_t b)
 
 eccvalue_t ecc_value_less(ecccontext_t* context, eccvalue_t a, eccvalue_t b)
 {
-    a = eccvalue_compare(context, a, b);
+    a = ecc_value_compare(context, a, b);
     if(a.type == ECC_VALTYPE_UNDEFINED)
         return ECCValConstFalse;
     return a;
@@ -879,7 +879,7 @@ eccvalue_t ecc_value_less(ecccontext_t* context, eccvalue_t a, eccvalue_t b)
 
 eccvalue_t ecc_value_more(ecccontext_t* context, eccvalue_t a, eccvalue_t b)
 {
-    a = eccvalue_compare(context, b, a);
+    a = ecc_value_compare(context, b, a);
     if(a.type == ECC_VALTYPE_UNDEFINED)
         return ECCValConstFalse;
     return a;
@@ -887,7 +887,7 @@ eccvalue_t ecc_value_more(ecccontext_t* context, eccvalue_t a, eccvalue_t b)
 
 eccvalue_t ecc_value_lessorequal(ecccontext_t* context, eccvalue_t a, eccvalue_t b)
 {
-    a = eccvalue_compare(context, b, a);
+    a = ecc_value_compare(context, b, a);
     if(a.type == ECC_VALTYPE_UNDEFINED || a.type == ECC_VALTYPE_TRUE)
         return ECCValConstFalse;
     return ECCValConstTrue;
@@ -895,7 +895,7 @@ eccvalue_t ecc_value_lessorequal(ecccontext_t* context, eccvalue_t a, eccvalue_t
 
 eccvalue_t ecc_value_moreorequal(ecccontext_t* context, eccvalue_t a, eccvalue_t b)
 {
-    a = eccvalue_compare(context, a, b);
+    a = ecc_value_compare(context, a, b);
     if(a.type == ECC_VALTYPE_UNDEFINED || a.type == ECC_VALTYPE_TRUE)
         return ECCValConstFalse;
     return ECCValConstTrue;
@@ -1028,7 +1028,7 @@ void ecc_value_dumpto(eccvalue_t value, FILE* file)
         case ECC_VALTYPE_STRING:
         case ECC_VALTYPE_BUFFER:
         {
-            const ecctextstring_t text = ecc_value_textof(&value);
+            const eccstrbox_t text = ecc_value_textof(&value);
             fwrite(text.bytes, sizeof(char), text.length, file);
             return;
         }

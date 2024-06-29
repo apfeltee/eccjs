@@ -32,7 +32,7 @@ uint32_t ecc_strbuf_sizeforlength(uint32_t length)
         return ecc_strbuf_nextpoweroftwo(size);
 }
 
-eccstrbuffer_t* ecc_strbuf_reuseorcreate(eccappendbuffer_t* chars, uint32_t length)
+eccstrbuffer_t* ecc_strbuf_reuseorcreate(eccappbuf_t* chars, uint32_t length)
 {
     eccstrbuffer_t *self = NULL, *reuse = chars ? chars->sbufvalue : NULL;
 
@@ -120,13 +120,13 @@ eccstrbuffer_t* ecc_strbuf_createwithbytes(int32_t length, const char* bytes)
     return self;
 }
 
-void ecc_strbuf_beginappend(eccappendbuffer_t* chars)
+void ecc_strbuf_beginappend(eccappbuf_t* chars)
 {
     chars->sbufvalue = NULL;
     chars->units = 0;
 }
 
-void ecc_strbuf_append(eccappendbuffer_t* chars, const char* format, ...)
+void ecc_strbuf_append(eccappbuf_t* chars, const char* format, ...)
 {
     uint32_t length;
     va_list ap;
@@ -148,28 +148,28 @@ void ecc_strbuf_append(eccappendbuffer_t* chars, const char* format, ...)
         chars->units += length;
 }
 
-void ecc_strbuf_appendtext(eccappendbuffer_t* chars, ecctextstring_t text)
+void ecc_strbuf_appendtext(eccappbuf_t* chars, eccstrbox_t text)
 {
     eccstrbuffer_t* self = chars->sbufvalue;
-    ecctextchar_t lo = ecc_textbuf_character(text), hi = { 0 };
-    ecctextstring_t prev;
+    eccrune_t lo = ecc_strbox_character(text), hi = { 0 };
+    eccstrbox_t prev;
     int surrogates = 0;
 
     if(!text.length)
         return;
 
     if(self)
-        prev = ecc_textbuf_make(self->bytes + self->length, self->length);
+        prev = ecc_strbox_make(self->bytes + self->length, self->length);
     else
-        prev = ecc_textbuf_make(chars->buffer + chars->units, chars->units);
+        prev = ecc_strbox_make(chars->buffer + chars->units, chars->units);
 
     if(lo.units == 3 && lo.codepoint >= 0xDC00 && lo.codepoint <= 0xDFFF)
     {
-        hi = ecc_textbuf_prevcharacter(&prev);
+        hi = ecc_strbox_prevcharacter(&prev);
         if(hi.units == 3 && hi.codepoint >= 0xD800 && hi.codepoint <= 0xDBFF)
         {
             surrogates = 1;
-            ecc_textbuf_nextcharacter(&text);
+            ecc_strbox_nextcharacter(&text);
             if(self)
                 self->length = prev.length;
             else
@@ -196,14 +196,14 @@ void ecc_strbuf_appendtext(eccappendbuffer_t* chars, ecctextstring_t text)
         chars->units += text.length;
 }
 
-void ecc_strbuf_appendcodepoint(eccappendbuffer_t* chars, uint32_t cp)
+void ecc_strbuf_appendcodepoint(eccappbuf_t* chars, uint32_t cp)
 {
     char buffer[5] = { 0 };
-    ecctextstring_t text = ecc_textbuf_make(buffer, ecc_strbuf_writecodepoint(buffer, cp));
+    eccstrbox_t text = ecc_strbox_make(buffer, ecc_strbuf_writecodepoint(buffer, cp));
     ecc_strbuf_appendtext(chars, text);
 }
 
-void ecc_strbuf_appendvalue(eccappendbuffer_t* chars, ecccontext_t* context, eccvalue_t value)
+void ecc_strbuf_appendvalue(eccappbuf_t* chars, ecccontext_t* context, eccvalue_t value)
 {
     switch((eccvaltype_t)value.type)
     {
@@ -291,7 +291,7 @@ uint32_t ecc_strbuf_normalizebinaryofbytes(char* bytes, uint32_t length)
     return length;
 }
 
-void ecc_strbuf_appendbinary(eccappendbuffer_t* chars, double binary, int base)
+void ecc_strbuf_appendbinary(eccappbuf_t* chars, double binary, int base)
 {
     if(isnan(binary))
     {
@@ -365,7 +365,7 @@ void ecc_strbuf_appendbinary(eccappendbuffer_t* chars, double binary, int base)
     }
 }
 
-void ecc_strbuf_normalizebinary(eccappendbuffer_t* chars)
+void ecc_strbuf_normalizebinary(eccappbuf_t* chars)
 {
     if(chars->sbufvalue)
         chars->sbufvalue->length = ecc_strbuf_normalizebinaryofbytes(chars->sbufvalue->bytes, chars->sbufvalue->length);
@@ -373,7 +373,7 @@ void ecc_strbuf_normalizebinary(eccappendbuffer_t* chars)
         chars->units = ecc_strbuf_normalizebinaryofbytes(chars->buffer, chars->units);
 }
 
-eccvalue_t ecc_strbuf_endappend(eccappendbuffer_t* chars)
+eccvalue_t ecc_strbuf_endappend(eccappbuf_t* chars)
 {
     eccstrbuffer_t* self = chars->sbufvalue;
 

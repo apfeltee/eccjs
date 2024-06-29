@@ -1,58 +1,36 @@
 /**
- * This program stresses method calls, memory sustainability
- * and looping.
- *
- * Part of Promit Test Suit, location /test/Benchmark/BinaryTrees.Promit
- * 
- * Created by SD Asif Hossein in 21th June, 2022 (Tuesday) at 01:31 PM (UTC +06).
- */
-
-/*
-
-old:
-==17234== HEAP SUMMARY:
-==17234==     in use at exit: 0 bytes in 0 blocks
-==17234==   total heap usage: 102,004 allocs, 102,004 frees, 14,546,573 bytes allocated
-==17234==
-==17234== All heap blocks were freed -- no leaks are possible
-==17234==
-==17234== For lists of detected and suppressed errors, rerun with: -s
-==17234== ERROR SUMMARY: 0 errors from 0 contexts (suppressed: 0 from 0)
-
-baaaad. very bad.
-
-
+* This program stresses method calls, memory sustainability
+* and looping.
 */
 
 var g_totaltrees = 0;
 
-class Tree
+function Tree(value, depth)
 {
-	constructor(value, depth)
+    var my = {};
+    g_totaltrees++;
+    my.depth = depth;
+    my.value = value;
+    if(depth > 0)
     {
-        g_totaltrees++;
-        this.depth = depth;
-        this.value = value;
-		if(depth > 0)
-        {
-            this.left  = new Tree(value - 1, depth - 1);
-            this.right = new Tree(2 * value + 1, depth - 1);
-        }
-        else
-        {
-            this.left  = null;
-            this.right = null;
-        }
+        my.left  = new Tree(value - 1, depth - 1);
+        my.right = new Tree(2 * value + 1, depth - 1);
+    }
+    else
+    {
+        my.left  = null;
+        my.right = null;
     }
 
-	check()
+	my.check = function()
     {
-        if(!this.left)
+        if(!my.left)
         {
-            return this.value;
+            return my.value;
         }
-        return this.value + this.right.check() - this.left.check();
+        return my.value + my.right.check() - my.left.check();
     }
+    return my;
 }
 
 var mindepth = 4;

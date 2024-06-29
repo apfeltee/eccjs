@@ -9,12 +9,12 @@
 
 #include "ecc.h"
 
-static eccvalue_t objnumberfn_toExponential(ecccontext_t *context);
-static eccvalue_t objnumberfn_toFixed(ecccontext_t *context);
-static eccvalue_t objnumberfn_toPrecision(ecccontext_t *context);
-static eccvalue_t objnumberfn_toString(ecccontext_t *context);
-static eccvalue_t objnumberfn_valueOf(ecccontext_t *context);
-static eccvalue_t objnumberfn_constructor(ecccontext_t *context);
+static eccvalue_t ecc_objfnnumber_toexponential(ecccontext_t *context);
+static eccvalue_t ecc_objfnnumber_tofixed(ecccontext_t *context);
+static eccvalue_t ecc_objfnnumber_toprecision(ecccontext_t *context);
+static eccvalue_t ecc_objfnnumber_tostring(ecccontext_t *context);
+static eccvalue_t ecc_objfnnumber_valueof(ecccontext_t *context);
+static eccvalue_t ecc_objfnnumber_constructor(ecccontext_t *context);
 
 eccobject_t* ECC_Prototype_Number = NULL;
 eccobjfunction_t* ECC_CtorFunc_Number = NULL;
@@ -23,9 +23,9 @@ const eccobjinterntype_t ECC_Type_Number = {
     .text = &ECC_String_NumberType,
 };
 
-static eccvalue_t objnumberfn_toExponential(ecccontext_t* context)
+static eccvalue_t ecc_objfnnumber_toexponential(ecccontext_t* context)
 {
-    eccappendbuffer_t chars;
+    eccappbuf_t chars;
     eccvalue_t value;
     double binary, precision = 0;
 
@@ -61,9 +61,9 @@ static eccvalue_t objnumberfn_toExponential(ecccontext_t* context)
     return ecc_strbuf_endappend(&chars);
 }
 
-static eccvalue_t objnumberfn_toFixed(ecccontext_t* context)
+static eccvalue_t ecc_objfnnumber_tofixed(ecccontext_t* context)
 {
-    eccappendbuffer_t chars;
+    eccappbuf_t chars;
     eccvalue_t value;
     double binary, precision = 0;
 
@@ -98,9 +98,9 @@ static eccvalue_t objnumberfn_toFixed(ecccontext_t* context)
     return ecc_strbuf_endappend(&chars);
 }
 
-static eccvalue_t objnumberfn_toPrecision(ecccontext_t* context)
+static eccvalue_t ecc_objfnnumber_toprecision(ecccontext_t* context)
 {
-    eccappendbuffer_t chars;
+    eccappbuf_t chars;
     eccvalue_t value;
     double binary, precision = 0;
 
@@ -145,7 +145,7 @@ static eccvalue_t objnumberfn_toPrecision(ecccontext_t* context)
     return ecc_strbuf_endappend(&chars);
 }
 
-static eccvalue_t objnumberfn_toString(ecccontext_t* context)
+static eccvalue_t ecc_objfnnumber_tostring(ecccontext_t* context)
 {
     eccvalue_t value;
     int32_t radix = 10;
@@ -168,14 +168,14 @@ static eccvalue_t objnumberfn_toString(ecccontext_t* context)
     return ecc_value_binarytostring(binary, radix);
 }
 
-static eccvalue_t objnumberfn_valueOf(ecccontext_t* context)
+static eccvalue_t ecc_objfnnumber_valueof(ecccontext_t* context)
 {
     ecc_context_assertthistype(context, ECC_VALTYPE_NUMBER);
 
     return ecc_value_fromfloat(context->thisvalue.data.number->numvalue);
 }
 
-static eccvalue_t objnumberfn_constructor(ecccontext_t* context)
+static eccvalue_t ecc_objfnnumber_constructor(ecccontext_t* context)
 {
     eccvalue_t value;
 
@@ -197,7 +197,7 @@ void ecc_number_setup()
     const eccvalflag_t h = ECC_VALFLAG_HIDDEN;
     const eccvalflag_t s = ECC_VALFLAG_SEALED;
 
-    ecc_function_setupbuiltinobject(&ECC_CtorFunc_Number, objnumberfn_constructor, 1, &ECC_Prototype_Number, ecc_value_number(ecc_number_create(0)), &ECC_Type_Number);
+    ecc_function_setupbuiltinobject(&ECC_CtorFunc_Number, ecc_objfnnumber_constructor, 1, &ECC_Prototype_Number, ecc_value_number(ecc_number_create(0)), &ECC_Type_Number);
 
     ecc_function_addmember(ECC_CtorFunc_Number, "MAX_VALUE", ecc_value_fromfloat(DBL_MAX), r | h | s);
     ecc_function_addmember(ECC_CtorFunc_Number, "MIN_VALUE", ecc_value_fromfloat(DBL_MIN * DBL_EPSILON), r | h | s);
@@ -205,12 +205,12 @@ void ecc_number_setup()
     ecc_function_addmember(ECC_CtorFunc_Number, "NEGATIVE_INFINITY", ecc_value_fromfloat(-ECC_CONST_INFINITY), r | h | s);
     ecc_function_addmember(ECC_CtorFunc_Number, "POSITIVE_INFINITY", ecc_value_fromfloat(ECC_CONST_INFINITY), r | h | s);
 
-    ecc_function_addto(ECC_Prototype_Number, "toString", objnumberfn_toString, 1, h);
-    ecc_function_addto(ECC_Prototype_Number, "toLocaleString", objnumberfn_toString, 1, h);
-    ecc_function_addto(ECC_Prototype_Number, "valueOf", objnumberfn_valueOf, 0, h);
-    ecc_function_addto(ECC_Prototype_Number, "toFixed", objnumberfn_toFixed, 1, h);
-    ecc_function_addto(ECC_Prototype_Number, "toExponential", objnumberfn_toExponential, 1, h);
-    ecc_function_addto(ECC_Prototype_Number, "toPrecision", objnumberfn_toPrecision, 1, h);
+    ecc_function_addto(ECC_Prototype_Number, "toString", ecc_objfnnumber_tostring, 1, h);
+    ecc_function_addto(ECC_Prototype_Number, "toLocaleString", ecc_objfnnumber_tostring, 1, h);
+    ecc_function_addto(ECC_Prototype_Number, "valueOf", ecc_objfnnumber_valueof, 0, h);
+    ecc_function_addto(ECC_Prototype_Number, "toFixed", ecc_objfnnumber_tofixed, 1, h);
+    ecc_function_addto(ECC_Prototype_Number, "toExponential", ecc_objfnnumber_toexponential, 1, h);
+    ecc_function_addto(ECC_Prototype_Number, "toPrecision", ecc_objfnnumber_toprecision, 1, h);
 }
 
 void ecc_number_teardown(void)

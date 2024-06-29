@@ -1,41 +1,39 @@
 
-class Tree
+function Tree(item, depth)
 {
-    constructor(item, depth) {
-        this.item = item;
-        this.depth = depth;
-        if (depth > 0)
-        {
-            var item2 = item + item;
-            depth = depth - 1;
-            this.left = new Tree(item2 - 1, depth);
-            this.right = new Tree(item2, depth);
-        }
-        else
-        {
-            this.left = null;
-            this.right = null;
-        }
-    }
-
-    check()
+    var my = {};
+    my.item = item;
+    my.depth = depth;
+    if (depth > 0)
     {
-        if(this.left == null)
+        var item2 = item + item;
+        depth = depth - 1;
+        my.left = new Tree(item2 - 1, depth);
+        my.right = new Tree(item2, depth);
+    }
+    else
+    {
+        my.left = null;
+        my.right = null;
+    }
+    my.check = function()
+    {
+        if(my.left == null)
         {
-            return this.item;
+            return my.item;
         }
-        var a = this.item;
-        var b = this.left.check();
-        var c = this.right.check();
+        var a = my.item;
+        var b = my.left.check();
+        var c = my.right.check();
         return a + b - c;
     }
+    return my;
 }
 
 function clock()
 {
     return 0
 }
-
 
 var mindepth = 4;
 var maxdepth = mindepth*2;

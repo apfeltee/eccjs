@@ -10,30 +10,30 @@
 #include "ecc.h"
 #include "compat.h"
 
-static eccvalue_t mathobjfn_mathAbs(ecccontext_t *context);
-static eccvalue_t mathobjfn_mathACos(ecccontext_t *context);
-static eccvalue_t mathobjfn_mathASin(ecccontext_t *context);
-static eccvalue_t mathobjfn_mathATan(ecccontext_t *context);
-static eccvalue_t mathobjfn_mathATan2(ecccontext_t *context);
-static eccvalue_t mathobjfn_mathCeil(ecccontext_t *context);
-static eccvalue_t mathobjfn_mathCos(ecccontext_t *context);
-static eccvalue_t mathobjfn_mathExp(ecccontext_t *context);
-static eccvalue_t mathobjfn_mathFloor(ecccontext_t *context);
-static eccvalue_t mathobjfn_mathLog(ecccontext_t *context);
-static eccvalue_t mathobjfn_mathMax(ecccontext_t *context);
-static eccvalue_t mathobjfn_mathMin(ecccontext_t *context);
-static eccvalue_t mathobjfn_mathPow(ecccontext_t *context);
-static eccvalue_t mathobjfn_mathRandom(ecccontext_t *context);
-static eccvalue_t mathobjfn_mathRound(ecccontext_t *context);
-static eccvalue_t mathobjfn_mathSin(ecccontext_t *context);
-static eccvalue_t mathobjfn_mathSqrt(ecccontext_t *context);
-static eccvalue_t mathobjfn_mathTan(ecccontext_t *context);
+static eccvalue_t ecc_objfnmath_mathabs(ecccontext_t *context);
+static eccvalue_t ecc_objfnmath_mathacos(ecccontext_t *context);
+static eccvalue_t ecc_objfnmath_mathasin(ecccontext_t *context);
+static eccvalue_t ecc_objfnmath_mathatan(ecccontext_t *context);
+static eccvalue_t ecc_objfnmath_mathatan2(ecccontext_t *context);
+static eccvalue_t ecc_objfnmath_mathceil(ecccontext_t *context);
+static eccvalue_t ecc_objfnmath_mathcos(ecccontext_t *context);
+static eccvalue_t ecc_objfnmath_mathexp(ecccontext_t *context);
+static eccvalue_t ecc_objfnmath_mathfloor(ecccontext_t *context);
+static eccvalue_t ecc_objfnmath_mathlog(ecccontext_t *context);
+static eccvalue_t ecc_objfnmath_mathmax(ecccontext_t *context);
+static eccvalue_t ecc_objfnmath_mathmin(ecccontext_t *context);
+static eccvalue_t ecc_objfnmath_mathpow(ecccontext_t *context);
+static eccvalue_t ecc_objfnmath_mathrandom(ecccontext_t *context);
+static eccvalue_t ecc_objfnmath_mathround(ecccontext_t *context);
+static eccvalue_t ecc_objfnmath_mathsin(ecccontext_t *context);
+static eccvalue_t ecc_objfnmath_mathsqrt(ecccontext_t *context);
+static eccvalue_t ecc_objfnmath_mathtan(ecccontext_t *context);
 
 const eccobjinterntype_t ECC_Type_Math = {
     .text = &ECC_String_MathType,
 };
 
-static eccvalue_t mathobjfn_mathAbs(ecccontext_t* context)
+static eccvalue_t ecc_objfnmath_mathabs(ecccontext_t* context)
 {
     eccvalue_t value;
 
@@ -44,7 +44,7 @@ static eccvalue_t mathobjfn_mathAbs(ecccontext_t* context)
     return ecc_value_fromfloat(fabs(value.data.valnumfloat));
 }
 
-static eccvalue_t mathobjfn_mathACos(ecccontext_t* context)
+static eccvalue_t ecc_objfnmath_mathacos(ecccontext_t* context)
 {
     eccvalue_t value;
 
@@ -55,7 +55,7 @@ static eccvalue_t mathobjfn_mathACos(ecccontext_t* context)
     return ecc_value_fromfloat(acos(value.data.valnumfloat));
 }
 
-static eccvalue_t mathobjfn_mathASin(ecccontext_t* context)
+static eccvalue_t ecc_objfnmath_mathasin(ecccontext_t* context)
 {
     eccvalue_t value;
 
@@ -66,7 +66,7 @@ static eccvalue_t mathobjfn_mathASin(ecccontext_t* context)
     return ecc_value_fromfloat(asin(value.data.valnumfloat));
 }
 
-static eccvalue_t mathobjfn_mathATan(ecccontext_t* context)
+static eccvalue_t ecc_objfnmath_mathatan(ecccontext_t* context)
 {
     eccvalue_t value;
 
@@ -77,7 +77,7 @@ static eccvalue_t mathobjfn_mathATan(ecccontext_t* context)
     return ecc_value_fromfloat(atan(value.data.valnumfloat));
 }
 
-static eccvalue_t mathobjfn_mathATan2(ecccontext_t* context)
+static eccvalue_t ecc_objfnmath_mathatan2(ecccontext_t* context)
 {
     eccvalue_t x, y;
 
@@ -92,7 +92,7 @@ static eccvalue_t mathobjfn_mathATan2(ecccontext_t* context)
     return ecc_value_fromfloat(atan2(x.data.valnumfloat, y.data.valnumfloat));
 }
 
-static eccvalue_t mathobjfn_mathCeil(ecccontext_t* context)
+static eccvalue_t ecc_objfnmath_mathceil(ecccontext_t* context)
 {
     eccvalue_t value;
 
@@ -103,7 +103,7 @@ static eccvalue_t mathobjfn_mathCeil(ecccontext_t* context)
     return ecc_value_fromfloat(ceil(value.data.valnumfloat));
 }
 
-static eccvalue_t mathobjfn_mathCos(ecccontext_t* context)
+static eccvalue_t ecc_objfnmath_mathcos(ecccontext_t* context)
 {
     eccvalue_t value;
 
@@ -114,7 +114,7 @@ static eccvalue_t mathobjfn_mathCos(ecccontext_t* context)
     return ecc_value_fromfloat(cos(value.data.valnumfloat));
 }
 
-static eccvalue_t mathobjfn_mathExp(ecccontext_t* context)
+static eccvalue_t ecc_objfnmath_mathexp(ecccontext_t* context)
 {
     eccvalue_t value;
 
@@ -125,7 +125,7 @@ static eccvalue_t mathobjfn_mathExp(ecccontext_t* context)
     return ecc_value_fromfloat(exp(value.data.valnumfloat));
 }
 
-static eccvalue_t mathobjfn_mathFloor(ecccontext_t* context)
+static eccvalue_t ecc_objfnmath_mathfloor(ecccontext_t* context)
 {
     eccvalue_t value;
 
@@ -136,7 +136,7 @@ static eccvalue_t mathobjfn_mathFloor(ecccontext_t* context)
     return ecc_value_fromfloat(floor(value.data.valnumfloat));
 }
 
-static eccvalue_t mathobjfn_mathLog(ecccontext_t* context)
+static eccvalue_t ecc_objfnmath_mathlog(ecccontext_t* context)
 {
     eccvalue_t value;
 
@@ -147,7 +147,7 @@ static eccvalue_t mathobjfn_mathLog(ecccontext_t* context)
     return ecc_value_fromfloat(log(value.data.valnumfloat));
 }
 
-static eccvalue_t mathobjfn_mathMax(ecccontext_t* context)
+static eccvalue_t ecc_objfnmath_mathmax(ecccontext_t* context)
 {
     double result = -ECC_CONST_INFINITY;
     double value;
@@ -170,7 +170,7 @@ static eccvalue_t mathobjfn_mathMax(ecccontext_t* context)
     return ecc_value_fromfloat(result);
 }
 
-static eccvalue_t mathobjfn_mathMin(ecccontext_t* context)
+static eccvalue_t ecc_objfnmath_mathmin(ecccontext_t* context)
 {
     double result = ECC_CONST_INFINITY, value;
     int index, count;
@@ -192,7 +192,7 @@ static eccvalue_t mathobjfn_mathMin(ecccontext_t* context)
     return ecc_value_fromfloat(result);
 }
 
-static eccvalue_t mathobjfn_mathPow(ecccontext_t* context)
+static eccvalue_t ecc_objfnmath_mathpow(ecccontext_t* context)
 {
     eccvalue_t x, y;
 
@@ -205,13 +205,13 @@ static eccvalue_t mathobjfn_mathPow(ecccontext_t* context)
     return ecc_value_fromfloat(pow(x.data.valnumfloat, y.data.valnumfloat));
 }
 
-static eccvalue_t mathobjfn_mathRandom(ecccontext_t* context)
+static eccvalue_t ecc_objfnmath_mathrandom(ecccontext_t* context)
 {
     (void)context;
     return ecc_value_fromfloat((double)rand() / (double)RAND_MAX);
 }
 
-static eccvalue_t mathobjfn_mathRound(ecccontext_t* context)
+static eccvalue_t ecc_objfnmath_mathround(ecccontext_t* context)
 {
     eccvalue_t value;
 
@@ -225,7 +225,7 @@ static eccvalue_t mathobjfn_mathRound(ecccontext_t* context)
         return ecc_value_fromfloat(floor(0.5 + value.data.valnumfloat));
 }
 
-static eccvalue_t mathobjfn_mathSin(ecccontext_t* context)
+static eccvalue_t ecc_objfnmath_mathsin(ecccontext_t* context)
 {
     eccvalue_t value;
 
@@ -236,7 +236,7 @@ static eccvalue_t mathobjfn_mathSin(ecccontext_t* context)
     return ecc_value_fromfloat(sin(value.data.valnumfloat));
 }
 
-static eccvalue_t mathobjfn_mathSqrt(ecccontext_t* context)
+static eccvalue_t ecc_objfnmath_mathsqrt(ecccontext_t* context)
 {
     eccvalue_t value;
 
@@ -247,7 +247,7 @@ static eccvalue_t mathobjfn_mathSqrt(ecccontext_t* context)
     return ecc_value_fromfloat(sqrt(value.data.valnumfloat));
 }
 
-static eccvalue_t mathobjfn_mathTan(ecccontext_t* context)
+static eccvalue_t ecc_objfnmath_mathtan(ecccontext_t* context)
 {
     eccvalue_t value;
 
@@ -277,24 +277,24 @@ void ecc_libmath_setup()
     ecc_object_addmember(ECC_Prototype_MathObject, ecc_keyidx_makewithcstring("SQRT1_2"), ecc_value_fromfloat(0.707106781186547524401), r | h | s);
     ecc_object_addmember(ECC_Prototype_MathObject, ecc_keyidx_makewithcstring("SQRT2"), ecc_value_fromfloat(1.41421356237309504880), r | h | s);
 
-    ecc_function_addto(ECC_Prototype_MathObject, "abs", mathobjfn_mathAbs, 1, h);
-    ecc_function_addto(ECC_Prototype_MathObject, "acos", mathobjfn_mathACos, 1, h);
-    ecc_function_addto(ECC_Prototype_MathObject, "asin", mathobjfn_mathASin, 1, h);
-    ecc_function_addto(ECC_Prototype_MathObject, "atan", mathobjfn_mathATan, 1, h);
-    ecc_function_addto(ECC_Prototype_MathObject, "atan2", mathobjfn_mathATan2, 2, h);
-    ecc_function_addto(ECC_Prototype_MathObject, "ceil", mathobjfn_mathCeil, 1, h);
-    ecc_function_addto(ECC_Prototype_MathObject, "cos", mathobjfn_mathCos, 1, h);
-    ecc_function_addto(ECC_Prototype_MathObject, "exp", mathobjfn_mathExp, 1, h);
-    ecc_function_addto(ECC_Prototype_MathObject, "floor", mathobjfn_mathFloor, 1, h);
-    ecc_function_addto(ECC_Prototype_MathObject, "log", mathobjfn_mathLog, 1, h);
-    ecc_function_addto(ECC_Prototype_MathObject, "max", mathobjfn_mathMax, -2, h);
-    ecc_function_addto(ECC_Prototype_MathObject, "min", mathobjfn_mathMin, -2, h);
-    ecc_function_addto(ECC_Prototype_MathObject, "pow", mathobjfn_mathPow, 2, h);
-    ecc_function_addto(ECC_Prototype_MathObject, "random", mathobjfn_mathRandom, 0, h);
-    ecc_function_addto(ECC_Prototype_MathObject, "round", mathobjfn_mathRound, 1, h);
-    ecc_function_addto(ECC_Prototype_MathObject, "sin", mathobjfn_mathSin, 1, h);
-    ecc_function_addto(ECC_Prototype_MathObject, "sqrt", mathobjfn_mathSqrt, 1, h);
-    ecc_function_addto(ECC_Prototype_MathObject, "tan", mathobjfn_mathTan, 1, h);
+    ecc_function_addto(ECC_Prototype_MathObject, "abs", ecc_objfnmath_mathabs, 1, h);
+    ecc_function_addto(ECC_Prototype_MathObject, "acos", ecc_objfnmath_mathacos, 1, h);
+    ecc_function_addto(ECC_Prototype_MathObject, "asin", ecc_objfnmath_mathasin, 1, h);
+    ecc_function_addto(ECC_Prototype_MathObject, "atan", ecc_objfnmath_mathatan, 1, h);
+    ecc_function_addto(ECC_Prototype_MathObject, "atan2", ecc_objfnmath_mathatan2, 2, h);
+    ecc_function_addto(ECC_Prototype_MathObject, "ceil", ecc_objfnmath_mathceil, 1, h);
+    ecc_function_addto(ECC_Prototype_MathObject, "cos", ecc_objfnmath_mathcos, 1, h);
+    ecc_function_addto(ECC_Prototype_MathObject, "exp", ecc_objfnmath_mathexp, 1, h);
+    ecc_function_addto(ECC_Prototype_MathObject, "floor", ecc_objfnmath_mathfloor, 1, h);
+    ecc_function_addto(ECC_Prototype_MathObject, "log", ecc_objfnmath_mathlog, 1, h);
+    ecc_function_addto(ECC_Prototype_MathObject, "max", ecc_objfnmath_mathmax, -2, h);
+    ecc_function_addto(ECC_Prototype_MathObject, "min", ecc_objfnmath_mathmin, -2, h);
+    ecc_function_addto(ECC_Prototype_MathObject, "pow", ecc_objfnmath_mathpow, 2, h);
+    ecc_function_addto(ECC_Prototype_MathObject, "random", ecc_objfnmath_mathrandom, 0, h);
+    ecc_function_addto(ECC_Prototype_MathObject, "round", ecc_objfnmath_mathround, 1, h);
+    ecc_function_addto(ECC_Prototype_MathObject, "sin", ecc_objfnmath_mathsin, 1, h);
+    ecc_function_addto(ECC_Prototype_MathObject, "sqrt", ecc_objfnmath_mathsqrt, 1, h);
+    ecc_function_addto(ECC_Prototype_MathObject, "tan", ecc_objfnmath_mathtan, 1, h);
 }
 
 void ecc_libmath_teardown(void)

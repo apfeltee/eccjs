@@ -22,19 +22,22 @@ eccioinput_t* ecc_ioinput_create(void)
     return self;
 }
 
-void ecc_ioinput_printinput(const char* name, uint32_t line)
+void ecc_ioinput_printinput(eccioinput_t* self, const char* name, uint32_t line)
 {
     if(name[0] == '(')
+    {
         ecc_env_printcolor(0, ECC_ENVATTR_DIM, "%s", name);
+    }
     else
+    {
         ecc_env_printcolor(0, ECC_ENVATTR_BOLD, "%s", name);
-
+    }
     ecc_env_printcolor(0, ECC_ENVATTR_BOLD, " line:%d", line);
 }
 
 eccioinput_t* ecc_ioinput_createfromfile(const char* filename)
 {
-    ecctextstring_t inputError = ECC_String_InputErrorName;
+    eccstrbox_t inputError = ECC_String_InputErrorName;
     FILE* file;
     long size;
     eccioinput_t* self;
@@ -98,7 +101,7 @@ void ecc_ioinput_destroy(eccioinput_t* self)
     free(self), self = NULL;
 }
 
-void ecc_ioinput_printtext(eccioinput_t* self, ecctextstring_t text, int32_t ofLine, ecctextstring_t ofText, const char* ofInput, int fullLine)
+void ecc_ioinput_printtext(eccioinput_t* self, eccstrbox_t text, int32_t ofLine, eccstrbox_t ofText, const char* ofInput, int fullLine)
 {
     int32_t line;
     uint32_t start;
@@ -114,16 +117,16 @@ void ecc_ioinput_printtext(eccioinput_t* self, ecctextstring_t text, int32_t ofL
     {
         bytes = ofText.bytes;
         length = ofText.length;
-        ecc_ioinput_printinput(ofInput ? ofInput : "native code", ofLine ? ofLine : 1);
+        ecc_ioinput_printinput(self, ofInput ? ofInput : "native code", ofLine ? ofLine : 1);
     }
     else if(!self)
     {
-        ecc_ioinput_printinput(ofInput ? ofInput : "(unknown input)", 0);
+        ecc_ioinput_printinput(self, ofInput ? ofInput : "(unknown input)", 0);
     }
     else
     {
         line = ecc_ioinput_findline(self, text);
-        ecc_ioinput_printinput(ofInput ? ofInput : self->name, line > 0 ? line : 0);
+        ecc_ioinput_printinput(self,ofInput ? ofInput : self->name, line > 0 ? line : 0);
         if(line > 0)
         {
             start = self->lines[line];
@@ -215,7 +218,7 @@ void ecc_ioinput_printtext(eccioinput_t* self, ecctextstring_t text, int32_t ofL
     ecc_env_newline();
 }
 
-int32_t ecc_ioinput_findline(eccioinput_t* self, ecctextstring_t text)
+int32_t ecc_ioinput_findline(eccioinput_t* self, eccstrbox_t text)
 {
     uint32_t line = self->lineCount + 1;
     while(line--)

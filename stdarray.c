@@ -28,23 +28,23 @@ const eccobjinterntype_t ECC_Type_Array = {
     .text = &ECC_String_ArrayType,
 };
 
-static eccvalue_t objarrayfn_toString(ecccontext_t *context);
-static eccvalue_t objarrayfn_concat(ecccontext_t *context);
-static eccvalue_t objarrayfn_join(ecccontext_t *context);
-static eccvalue_t objarrayfn_pop(ecccontext_t *context);
-static eccvalue_t objarrayfn_push(ecccontext_t *context);
-static eccvalue_t objarrayfn_reverse(ecccontext_t *context);
-static eccvalue_t objarrayfn_shift(ecccontext_t *context);
-static eccvalue_t objarrayfn_unshift(ecccontext_t *context);
-static eccvalue_t objarrayfn_slice(ecccontext_t *context);
-static eccvalue_t objarrayfn_defaultComparison(ecccontext_t *context);
-static eccvalue_t objarrayfn_sort(ecccontext_t *context);
-static eccvalue_t objarrayfn_splice(ecccontext_t *context);
-static eccvalue_t objarrayfn_indexOf(ecccontext_t *context);
-static eccvalue_t objarrayfn_lastIndexOf(ecccontext_t *context);
-static eccvalue_t objarrayfn_getLength(ecccontext_t *context);
-static eccvalue_t objarrayfn_setLength(ecccontext_t *context);
-static eccvalue_t objarrayfn_constructor(ecccontext_t *context);
+static eccvalue_t ecc_objfnarray_tostring(ecccontext_t *context);
+static eccvalue_t ecc_objfnarray_concat(ecccontext_t *context);
+static eccvalue_t ecc_objfnarray_join(ecccontext_t *context);
+static eccvalue_t ecc_objfnarray_pop(ecccontext_t *context);
+static eccvalue_t ecc_objfnarray_push(ecccontext_t *context);
+static eccvalue_t ecc_objfnarray_reverse(ecccontext_t *context);
+static eccvalue_t ecc_objfnarray_shift(ecccontext_t *context);
+static eccvalue_t ecc_objfnarray_unshift(ecccontext_t *context);
+static eccvalue_t ecc_objfnarray_slice(ecccontext_t *context);
+static eccvalue_t ecc_objfnarray_defaultcomparison(ecccontext_t *context);
+static eccvalue_t ecc_objfnarray_sort(ecccontext_t *context);
+static eccvalue_t ecc_objfnarray_splice(ecccontext_t *context);
+static eccvalue_t ecc_objfnarray_indexof(ecccontext_t *context);
+static eccvalue_t ecc_objfnarray_lastindexof(ecccontext_t *context);
+static eccvalue_t ecc_objfnarray_getlength(ecccontext_t *context);
+static eccvalue_t ecc_objfnarray_setlength(ecccontext_t *context);
+static eccvalue_t ecc_objfnarray_constructor(ecccontext_t *context);
 
 int ecc_array_valueisarray(eccvalue_t value)
 {
@@ -71,7 +71,7 @@ void ecc_array_objectresize(ecccontext_t* context, eccobject_t* object, uint32_t
 {
     if(object->type == &ECC_Type_Array)
     {
-        if(ecc_object_resizeelement(object, length) && context->parent->strictMode)
+        if(ecc_object_resizeelement(object, length) && context->parent->isstrictmode)
         {
             ecc_context_settextindex(context, ECC_CTXINDEXTYPE_CALL);
             ecc_context_typeerror(context, ecc_strbuf_create("'%u' is non-configurable", length));
@@ -92,7 +92,7 @@ void ecc_array_valueappendfromelement(ecccontext_t* context, eccvalue_t value, e
         ecc_object_putelement(context, object, (*element)++, value);
 }
 
-static eccvalue_t objarrayfn_isArray(ecccontext_t* context)
+static eccvalue_t ecc_objfnarray_isarray(ecccontext_t* context)
 {
     eccvalue_t value;
 
@@ -101,12 +101,12 @@ static eccvalue_t objarrayfn_isArray(ecccontext_t* context)
     return ecc_value_truth(value.type == ECC_VALTYPE_OBJECT && value.data.object->type == &ECC_Type_Array);
 }
 
-eccvalue_t ecc_array_tochars(ecccontext_t* context, eccvalue_t thisval, ecctextstring_t separator)
+eccvalue_t ecc_array_tochars(ecccontext_t* context, eccvalue_t thisval, eccstrbox_t separator)
 {
     eccobject_t* object = thisval.data.object;
     eccvalue_t value, length = ecc_object_getmember(context, object, ECC_ConstKey_length);
     uint32_t index, count = ecc_value_tointeger(context, length).data.integer;
-    eccappendbuffer_t chars;
+    eccappbuf_t chars;
 
     ecc_strbuf_beginappend(&chars);
     for(index = 0; index < count; ++index)
@@ -123,7 +123,7 @@ eccvalue_t ecc_array_tochars(ecccontext_t* context, eccvalue_t thisval, ecctexts
     return ecc_strbuf_endappend(&chars);
 }
 
-static eccvalue_t objarrayfn_toString(ecccontext_t* context)
+static eccvalue_t ecc_objfnarray_tostring(ecccontext_t* context)
 {
     eccvalue_t function;
 
@@ -136,7 +136,7 @@ static eccvalue_t objarrayfn_toString(ecccontext_t* context)
         return ecc_object_tostringfn(context);
 }
 
-static eccvalue_t objarrayfn_concat(ecccontext_t* context)
+static eccvalue_t ecc_objfnarray_concat(ecccontext_t* context)
 {
     eccvalue_t value;
     uint32_t element = 0, length = 0, index, count;
@@ -158,15 +158,15 @@ static eccvalue_t objarrayfn_concat(ecccontext_t* context)
     return ecc_value_object(array);
 }
 
-static eccvalue_t objarrayfn_join(ecccontext_t* context)
+static eccvalue_t ecc_objfnarray_join(ecccontext_t* context)
 {
     eccvalue_t object;
     eccvalue_t value;
-    ecctextstring_t separator;
+    eccstrbox_t separator;
     value = ecc_context_argument(context, 0);
     if(value.type == ECC_VALTYPE_UNDEFINED)
     {
-        separator = ecc_textbuf_make(",", 1);
+        separator = ecc_strbox_make(",", 1);
     }
     else
     {
@@ -177,7 +177,7 @@ static eccvalue_t objarrayfn_join(ecccontext_t* context)
     return ecc_array_tochars(context, object, separator);
 }
 
-static eccvalue_t objarrayfn_map(ecccontext_t* context)
+static eccvalue_t ecc_objfnarray_map(ecccontext_t* context)
 {
     eccvalue_t thing;
     eccvalue_t callme;
@@ -206,7 +206,7 @@ static eccvalue_t objarrayfn_map(ecccontext_t* context)
     return ecc_value_object(thisobj);
 }
 
-static eccvalue_t objarrayfn_pop(ecccontext_t* context)
+static eccvalue_t ecc_objfnarray_pop(ecccontext_t* context)
 {
     eccvalue_t value = ECCValConstUndefined;
     eccobject_t* thisobj;
@@ -219,7 +219,7 @@ static eccvalue_t objarrayfn_pop(ecccontext_t* context)
     {
         --length;
         value = ecc_object_getelement(context, thisobj, length);
-        if(!ecc_object_deleteelement(thisobj, length) && context->parent->strictMode)
+        if(!ecc_object_deleteelement(thisobj, length) && context->parent->isstrictmode)
         {
             ecc_context_settextindex(context, ECC_CTXINDEXTYPE_CALL);
             ecc_context_typeerror(context, ecc_strbuf_create("'%u' is non-configurable", length));
@@ -230,7 +230,7 @@ static eccvalue_t objarrayfn_pop(ecccontext_t* context)
     return value;
 }
 
-static eccvalue_t objarrayfn_push(ecccontext_t* context)
+static eccvalue_t ecc_objfnarray_push(ecccontext_t* context)
 {
     eccobject_t* thisobj;
     uint32_t length = 0, index, count, base;
@@ -265,7 +265,7 @@ static eccvalue_t objarrayfn_push(ecccontext_t* context)
     return ecc_value_fromfloat(length);
 }
 
-static eccvalue_t objarrayfn_reverse(ecccontext_t* context)
+static eccvalue_t ecc_objfnarray_reverse(ecccontext_t* context)
 {
     eccvalue_t temp;
     eccobject_t* thisobj;
@@ -289,7 +289,7 @@ static eccvalue_t objarrayfn_reverse(ecccontext_t* context)
     return ecc_value_object(thisobj);
 }
 
-static eccvalue_t objarrayfn_shift(ecccontext_t* context)
+static eccvalue_t ecc_objfnarray_shift(ecccontext_t* context)
 {
     eccvalue_t result;
     eccobject_t* thisobj;
@@ -308,7 +308,7 @@ static eccvalue_t objarrayfn_shift(ecccontext_t* context)
         for(index = 0, count = length; index < count; ++index)
             ecc_object_putelement(context, thisobj, index, ecc_object_getelement(context, thisobj, index + 1));
 
-        if(!ecc_object_deleteelement(thisobj, length) && context->parent->strictMode)
+        if(!ecc_object_deleteelement(thisobj, length) && context->parent->isstrictmode)
         {
             ecc_context_settextindex(context, ECC_CTXINDEXTYPE_CALL);
             ecc_context_typeerror(context, ecc_strbuf_create("'%u' is non-configurable", length));
@@ -322,7 +322,7 @@ static eccvalue_t objarrayfn_shift(ecccontext_t* context)
     return result;
 }
 
-static eccvalue_t objarrayfn_unshift(ecccontext_t* context)
+static eccvalue_t ecc_objfnarray_unshift(ecccontext_t* context)
 {
     eccobject_t* thisobj;
     uint32_t length = 0, index, count;
@@ -344,7 +344,7 @@ static eccvalue_t objarrayfn_unshift(ecccontext_t* context)
     return ecc_value_fromfloat(length);
 }
 
-static eccvalue_t objarrayfn_slice(ecccontext_t* context)
+static eccvalue_t ecc_objfnarray_slice(ecccontext_t* context)
 {
     eccobject_t* thisobj, *result;
     eccvalue_t start, end;
@@ -388,7 +388,7 @@ static eccvalue_t objarrayfn_slice(ecccontext_t* context)
     return ecc_value_object(result);
 }
 
-static eccvalue_t objarrayfn_defaultComparison(ecccontext_t* context)
+static eccvalue_t ecc_objfnarray_defaultcomparison(ecccontext_t* context)
 {
     eccvalue_t left, right, result;
 
@@ -578,7 +578,7 @@ static void ecc_array_sortandmerge(eccobject_t* object, eccarraycomparestate_t* 
 
 void ecc_array_sortinplace(ecccontext_t* context, eccobject_t* object, eccobjfunction_t* function, int first, int last)
 {
-    eccoperand_t defaultOps = { objarrayfn_defaultComparison, ECCValConstUndefined, ECC_String_NativeCode };
+    eccoperand_t defaultOps = { ecc_objfnarray_defaultcomparison, ECCValConstUndefined, ECC_String_NativeCode };
     const eccoperand_t* ops = function ? function->oplist->ops : &defaultOps;
 
     /*
@@ -594,7 +594,7 @@ void ecc_array_sortinplace(ecccontext_t* context, eccobject_t* object, eccobjfun
     cmp.context.ecc = context->ecc;
     cmp.context.depth = context->depth + 1;
     cmp.context.ops = ops;
-    cmp.context.textIndex = ECC_CTXINDEXTYPE_CALL;
+    cmp.context.ctxtextindex = ECC_CTXINDEXTYPE_CALL;
     cmp.function = function;
     cmp.arguments = NULL;
     cmp.ops = ops;
@@ -642,7 +642,7 @@ void ecc_array_sortinplace(ecccontext_t* context, eccobject_t* object, eccobjfun
     }
 }
 
-static eccvalue_t objarrayfn_sort(ecccontext_t* context)
+static eccvalue_t ecc_objfnarray_sort(ecccontext_t* context)
 {
     eccobject_t* thisobj;
     eccvalue_t compare;
@@ -662,7 +662,7 @@ static eccvalue_t objarrayfn_sort(ecccontext_t* context)
     return ecc_value_object(thisobj);
 }
 
-static eccvalue_t objarrayfn_splice(ecccontext_t* context)
+static eccvalue_t ecc_objfnarray_splice(ecccontext_t* context)
 {
     eccobject_t* thisobj, *result;
     uint32_t length, from, to, count = 0, add = 0, start = 0, delindex = 0;
@@ -730,7 +730,7 @@ static eccvalue_t objarrayfn_splice(ecccontext_t* context)
     return ecc_value_object(result);
 }
 
-static eccvalue_t objarrayfn_indexOf(ecccontext_t* context)
+static eccvalue_t ecc_objfnarray_indexof(ecccontext_t* context)
 {
     eccobject_t* thisobj;
     eccvalue_t search, start;
@@ -755,7 +755,7 @@ static eccvalue_t objarrayfn_indexOf(ecccontext_t* context)
     return ecc_value_fromfloat(-1);
 }
 
-static eccvalue_t objarrayfn_lastIndexOf(ecccontext_t* context)
+static eccvalue_t ecc_objfnarray_lastindexof(ecccontext_t* context)
 {
     eccobject_t* thisobj;
     eccvalue_t search, start;
@@ -781,12 +781,12 @@ static eccvalue_t objarrayfn_lastIndexOf(ecccontext_t* context)
     return ecc_value_fromfloat(-1);
 }
 
-static eccvalue_t objarrayfn_getLength(ecccontext_t* context)
+static eccvalue_t ecc_objfnarray_getlength(ecccontext_t* context)
 {
     return ecc_value_fromfloat(context->thisvalue.data.object->hmapitemcount);
 }
 
-static eccvalue_t objarrayfn_setLength(ecccontext_t* context)
+static eccvalue_t ecc_objfnarray_setlength(ecccontext_t* context)
 {
     double length;
 
@@ -794,13 +794,13 @@ static eccvalue_t objarrayfn_setLength(ecccontext_t* context)
     if(!isfinite(length) || length < 0 || length > UINT32_MAX || length != (uint32_t)length)
         ecc_context_rangeerror(context, ecc_strbuf_create("invalid array length"));
 
-    if(ecc_object_resizeelement(context->thisvalue.data.object, length) && context->parent->strictMode)
+    if(ecc_object_resizeelement(context->thisvalue.data.object, length) && context->parent->isstrictmode)
         ecc_context_typeerror(context, ecc_strbuf_create("'%u' is non-configurable", context->thisvalue.data.object->hmapitemcount));
 
     return ECCValConstUndefined;
 }
 
-static eccvalue_t objarrayfn_constructor(ecccontext_t* context)
+static eccvalue_t ecc_objfnarray_constructor(ecccontext_t* context)
 {
     eccvalue_t value;
     uint32_t index, count, length;
@@ -836,27 +836,27 @@ void ecc_array_setup(void)
     const eccvalflag_t h = ECC_VALFLAG_HIDDEN;
     const eccvalflag_t s = ECC_VALFLAG_SEALED;
 
-    ecc_function_setupbuiltinobject(&ECC_CtorFunc_Array, objarrayfn_constructor, -1, &ECC_Prototype_Array, ecc_value_object(ecc_array_createsized(0)), &ECC_Type_Array);
+    ecc_function_setupbuiltinobject(&ECC_CtorFunc_Array, ecc_objfnarray_constructor, -1, &ECC_Prototype_Array, ecc_value_object(ecc_array_createsized(0)), &ECC_Type_Array);
 
-    ecc_function_addmethod(ECC_CtorFunc_Array, "isArray", objarrayfn_isArray, 1, h);
+    ecc_function_addmethod(ECC_CtorFunc_Array, "isArray", ecc_objfnarray_isarray, 1, h);
 
-    ecc_function_addto(ECC_Prototype_Array, "toString", objarrayfn_toString, 0, h);
-    ecc_function_addto(ECC_Prototype_Array, "toLocaleString", objarrayfn_toString, 0, h);
-    ecc_function_addto(ECC_Prototype_Array, "concat", objarrayfn_concat, -1, h);
-    ecc_function_addto(ECC_Prototype_Array, "map", objarrayfn_map, 1, h);
-    ecc_function_addto(ECC_Prototype_Array, "join", objarrayfn_join, 1, h);
-    ecc_function_addto(ECC_Prototype_Array, "pop", objarrayfn_pop, 0, h);
-    ecc_function_addto(ECC_Prototype_Array, "push", objarrayfn_push, -1, h);
-    ecc_function_addto(ECC_Prototype_Array, "reverse", objarrayfn_reverse, 0, h);
-    ecc_function_addto(ECC_Prototype_Array, "shift", objarrayfn_shift, 0, h);
-    ecc_function_addto(ECC_Prototype_Array, "slice", objarrayfn_slice, 2, h);
-    ecc_function_addto(ECC_Prototype_Array, "sort", objarrayfn_sort, 1, h);
-    ecc_function_addto(ECC_Prototype_Array, "splice", objarrayfn_splice, -2, h);
-    ecc_function_addto(ECC_Prototype_Array, "unshift", objarrayfn_unshift, -1, h);
-    ecc_function_addto(ECC_Prototype_Array, "indexOf", objarrayfn_indexOf, -1, h);
-    ecc_function_addto(ECC_Prototype_Array, "lastIndexOf", objarrayfn_lastIndexOf, -1, h);
+    ecc_function_addto(ECC_Prototype_Array, "toString", ecc_objfnarray_tostring, 0, h);
+    ecc_function_addto(ECC_Prototype_Array, "toLocaleString", ecc_objfnarray_tostring, 0, h);
+    ecc_function_addto(ECC_Prototype_Array, "concat", ecc_objfnarray_concat, -1, h);
+    ecc_function_addto(ECC_Prototype_Array, "map", ecc_objfnarray_map, 1, h);
+    ecc_function_addto(ECC_Prototype_Array, "join", ecc_objfnarray_join, 1, h);
+    ecc_function_addto(ECC_Prototype_Array, "pop", ecc_objfnarray_pop, 0, h);
+    ecc_function_addto(ECC_Prototype_Array, "push", ecc_objfnarray_push, -1, h);
+    ecc_function_addto(ECC_Prototype_Array, "reverse", ecc_objfnarray_reverse, 0, h);
+    ecc_function_addto(ECC_Prototype_Array, "shift", ecc_objfnarray_shift, 0, h);
+    ecc_function_addto(ECC_Prototype_Array, "slice", ecc_objfnarray_slice, 2, h);
+    ecc_function_addto(ECC_Prototype_Array, "sort", ecc_objfnarray_sort, 1, h);
+    ecc_function_addto(ECC_Prototype_Array, "splice", ecc_objfnarray_splice, -2, h);
+    ecc_function_addto(ECC_Prototype_Array, "unshift", ecc_objfnarray_unshift, -1, h);
+    ecc_function_addto(ECC_Prototype_Array, "indexOf", ecc_objfnarray_indexof, -1, h);
+    ecc_function_addto(ECC_Prototype_Array, "lastIndexOf", ecc_objfnarray_lastindexof, -1, h);
 
-    ecc_object_addmember(ECC_Prototype_Array, ECC_ConstKey_length, ecc_function_accessor(objarrayfn_getLength, objarrayfn_setLength), h | s | ECC_VALFLAG_ASOWN | ECC_VALFLAG_ASDATA);
+    ecc_object_addmember(ECC_Prototype_Array, ECC_ConstKey_length, ecc_function_accessor(ecc_objfnarray_getlength, ecc_objfnarray_setlength), h | s | ECC_VALFLAG_ASOWN | ECC_VALFLAG_ASDATA);
 }
 
 void ecc_array_teardown(void)

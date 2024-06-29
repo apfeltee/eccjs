@@ -64,7 +64,8 @@ $(protofile): $(srcfiles_all)
 endif
 
 $(target): $(objfiles_all)
-	$(CC) -o $@ $^ $(LDFLAGS)
+	@echo "[link] $@"
+	@$(CC) -o $@ $^ $(LDFLAGS)
 	valgrind ./run --test
 
 -include $(depfiles_all)
@@ -72,10 +73,12 @@ $(target): $(objfiles_all)
 # rule to generate a dep file by using the C preprocessor
 # (see man cpp for details on the -MM and -MT options)
 %.d: %.c
-	$(CC) $(CFLAGS) $< -MM -MT $(@:.d=.o) -MF $@
+	@echo "[dep] $< -> $@"
+	@$(CC) $(CFLAGS) $< -MM -MT $(@:.d=.o) -MF $@
 
 %.o: %.c
-	$(CC) $(CFLAGS) -c $(DBGFLAGS) -o $@ $<
+	@echo "[cc] $< -> $@"
+	@$(CC) $(CFLAGS) -c $(DBGFLAGS) -o $@ $<
 
 .PHONY: listsource
 listsource:

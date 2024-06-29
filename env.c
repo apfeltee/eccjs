@@ -67,7 +67,7 @@ void ecc_env_teardown(void)
     ecc_env_newline();
 }
 
-void eccenv_textc(int c, int a)
+void ecc_env_settextcolor(int c, int a)
 {
 #if __MSDOS__ || _WIN32
     if(a == ECC_ENVATTR_INVISIBLE)
@@ -101,7 +101,7 @@ void eccenv_textc(int c, int a)
 #endif
 }
 
-void eccenv_vprintc(const char* format, va_list ap)
+void ecc_env_vprintc(const char* format, va_list ap)
 {
     char buffer[ECC_CONF_PRINTMAX];
     size_t size = sizeof(buffer);
@@ -128,7 +128,7 @@ void ecc_env_print(const char* format, ...)
     va_list ap;
 
     va_start(ap, format);
-    eccenv_vprintc(format, ap);
+    ecc_env_vprintc(format, ap);
     va_end(ap);
 }
 
@@ -137,9 +137,9 @@ void ecc_env_printcolor(int color, int attribute, const char* format, ...)
     va_list ap;
 
     va_start(ap, format);
-    eccenv_textc(color, attribute);
-    eccenv_vprintc(format, ap);
-    eccenv_textc(0, 0);
+    ecc_env_settextcolor(color, attribute);
+    ecc_env_vprintc(format, ap);
+    ecc_env_settextcolor(0, 0);
     va_end(ap);
 }
 
@@ -151,9 +151,9 @@ void ecc_env_printerror(int typeLength, const char* type, const char* format, ..
     ecc_env_print(": ");
 
     va_start(ap, format);
-    eccenv_textc(0, ECC_ENVATTR_BOLD);
-    eccenv_vprintc(format, ap);
-    eccenv_textc(0, 0);
+    ecc_env_settextcolor(0, ECC_ENVATTR_BOLD);
+    ecc_env_vprintc(format, ap);
+    ecc_env_settextcolor(0, 0);
     va_end(ap);
 
     ecc_env_newline();
@@ -167,9 +167,9 @@ void ecc_env_printwarning(const char* format, ...)
     ecc_env_print(": ");
 
     va_start(ap, format);
-    eccenv_textc(0, ECC_ENVATTR_BOLD);
-    eccenv_vprintc(format, ap);
-    eccenv_textc(0, 0);
+    ecc_env_settextcolor(0, ECC_ENVATTR_BOLD);
+    ecc_env_vprintc(format, ap);
+    ecc_env_settextcolor(0, 0);
     va_end(ap);
 
     ecc_env_newline();

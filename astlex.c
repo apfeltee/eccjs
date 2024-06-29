@@ -98,7 +98,7 @@ uint32_t ecc_astlex_uint16hex(char a, char b, char c, char d)
     return ecc_astlex_hexhigit(a) << 12 | ecc_astlex_hexhigit(b) << 8 | ecc_astlex_hexhigit(c) << 4 | ecc_astlex_hexhigit(d);
 }
 
-double ecc_astlex_strtolhexfallback(ecctextstring_t text)
+double ecc_astlex_strtolhexfallback(eccstrbox_t text)
 {
     double dblval = 0;
     int sign = 1;
@@ -167,17 +167,17 @@ uint32_t ecc_astlex_nextchar(eccastlexer_t* self)
 {
     if(self->offset < self->input->length)
     {
-        ecctextchar_t c = ecc_textbuf_character(ecc_textbuf_make(self->input->bytes + self->offset, self->input->length - self->offset));
+        eccrune_t c = ecc_strbox_character(ecc_strbox_make(self->input->bytes + self->offset, self->input->length - self->offset));
 
         self->offset += c.units;
 
-        if((self->permitutfoutsidelit && ecc_textbuf_islinefeed(c)) || (c.codepoint == '\r' && ecc_astlex_previewchar(self) != '\n') || c.codepoint == '\n')
+        if((self->permitutfoutsidelit && ecc_strbox_islinefeed(c)) || (c.codepoint == '\r' && ecc_astlex_previewchar(self) != '\n') || c.codepoint == '\n')
         {
             self->stdidlinebreak = 1;
             ecc_astlex_addline(self, self->offset);
             c.codepoint = '\n';
         }
-        else if(self->permitutfoutsidelit && ecc_textbuf_isspace(c))
+        else if(self->permitutfoutsidelit && ecc_strbox_isspace(c))
             c.codepoint = ' ';
 
         self->text.length += c.units;
@@ -252,10 +252,10 @@ int ecc_astlex_nexttoken(eccastlexer_t* self)
     char ubc4;
     const char* kidstr;
     const char* escbytes;
-    eccappendbuffer_t chars;
-    eccappendbuffer_t esccharbuf;
-    ecctextstring_t escsubtext;
-    ecctextstring_t identxt;
+    eccappbuf_t chars;
+    eccappbuf_t esccharbuf;
+    eccstrbox_t escsubtext;
+    eccstrbox_t identxt;
     eccvalue_t escvalue;
     assert(self);
     self->tokenvalue = ECCValConstUndefined;
@@ -394,7 +394,7 @@ retry:
                                                         index += 2;
                                                         break;
                                                     }
-                                                    self->text = ecc_textbuf_make(self->text.bytes + index - 1, 4);
+                                                    self->text = ecc_strbox_make(self->text.bytes + index - 1, 4);
                                                     return ecc_astlex_syntaxerror(self, ecc_strbuf_create("malformed hexadecimal character escape sequence"));
                                                 }
                                             case 'u':
@@ -409,7 +409,7 @@ retry:
                                                         index += 4;
                                                         break;
                                                     }
-                                                    self->text = ecc_textbuf_make(self->text.bytes + index - 1, 6);
+                                                    self->text = ecc_strbox_make(self->text.bytes + index - 1, 6);
                                                     return ecc_astlex_syntaxerror(self, ecc_strbuf_create("malformed Unicode character escape sequence"));
                                                 }
                                                 break;
@@ -722,7 +722,7 @@ retry:
                                     return ecc_astlex_syntaxerror(self, ecc_strbuf_create("incomplete unicode escape"));
                                 }
                             }
-                            if(ecc_textbuf_isspace((ecctextchar_t){ currch, 0 }))
+                            if(ecc_strbox_isspace((eccrune_t){ currch, 0 }))
                             {
                                 break;
                             }
@@ -737,20 +737,20 @@ retry:
                             ecc_strbuf_beginappend(&esccharbuf);
                             while(escsubtext.length)
                             {
-                                currch = ecc_textbuf_nextcharacter(&escsubtext).codepoint;
-                                if(currch == '\\' && ecc_textbuf_nextcharacter(&escsubtext).codepoint == 'u')
+                                currch = ecc_strbox_nextcharacter(&escsubtext).codepoint;
+                                if(currch == '\\' && ecc_strbox_nextcharacter(&escsubtext).codepoint == 'u')
                                 {
-                                    ubc1 = ecc_textbuf_nextcharacter(&escsubtext).codepoint;
-                                    ubc2 = ecc_textbuf_nextcharacter(&escsubtext).codepoint;
-                                    ubc3 = ecc_textbuf_nextcharacter(&escsubtext).codepoint;
-                                    ubc4 = ecc_textbuf_nextcharacter(&escsubtext).codepoint;
+                                    ubc1 = ecc_strbox_nextcharacter(&escsubtext).codepoint;
+                                    ubc2 = ecc_strbox_nextcharacter(&escsubtext).codepoint;
+                                    ubc3 = ecc_strbox_nextcharacter(&escsubtext).codepoint;
+                                    ubc4 = ecc_strbox_nextcharacter(&escsubtext).codepoint;
                                     if(isxdigit(ubc1) && isxdigit(ubc2) && isxdigit(ubc3) && isxdigit(ubc4))
                                     {
                                         currch = ecc_astlex_uint16hex(ubc1, ubc2, ubc3, ubc4);
                                     }
                                     else
                                     {
-                                        ecc_textbuf_advance(&escsubtext, -5);
+                                        ecc_strbox_advance(&escsubtext, -5);
                                     }
                                 }
                                 ecc_strbuf_appendcodepoint(&esccharbuf, currch);
@@ -896,34 +896,34 @@ const char* ecc_astlex_tokenchars(int token, char buffer[4])
     return "unknown";
 }
 
-eccvalue_t ecc_astlex_scanbinary(ecctextstring_t text, int flags)
+eccvalue_t ecc_astlex_scanbinary(eccstrbox_t text, int flags)
 {
     int lazy;
     double dblval;
     char* end;
     char* buffer;
-    ecctextstring_t tail;
+    eccstrbox_t tail;
     buffer = (char*)calloc(text.length+1, sizeof(char));
     lazy = flags & ECC_LEXFLAG_SCANLAZY;
     end = buffer;
     dblval = ECC_CONST_NAN;
     if(flags & ECC_LEXFLAG_SCANSLOPPY)
     {
-        tail = ecc_textbuf_make(text.bytes + text.length, text.length);
-        while(tail.length && ecc_textbuf_isspace(ecc_textbuf_prevcharacter(&tail)))
+        tail = ecc_strbox_make(text.bytes + text.length, text.length);
+        while(tail.length && ecc_strbox_isspace(ecc_strbox_prevcharacter(&tail)))
         {
             text.length = tail.length;
         }
-        while(text.length && ecc_textbuf_isspace(ecc_textbuf_character(text)))
+        while(text.length && ecc_strbox_isspace(ecc_strbox_character(text)))
         {
-            ecc_textbuf_nextcharacter(&text);
+            ecc_strbox_nextcharacter(&text);
         }
     }
     else
     {
         while(text.length && isspace(*text.bytes))
         {
-            ecc_textbuf_advance(&text, 1);
+            ecc_strbox_advance(&text, 1);
         }
     }
     memcpy(buffer, text.bytes, text.length);
@@ -962,7 +962,7 @@ eccvalue_t ecc_astlex_scanbinary(ecctextstring_t text, int flags)
     return ecc_value_fromfloat(dblval);
 }
 
-eccvalue_t ecc_astlex_scaninteger(ecctextstring_t text, int base, int flags)
+eccvalue_t ecc_astlex_scaninteger(eccstrbox_t text, int base, int flags)
 {
     int lazy;
     long integer;
@@ -973,21 +973,21 @@ eccvalue_t ecc_astlex_scaninteger(ecctextstring_t text, int base, int flags)
     lazy = flags & ECC_LEXFLAG_SCANLAZY;
     if(flags & ECC_LEXFLAG_SCANSLOPPY)
     {
-        ecctextstring_t tail = ecc_textbuf_make(text.bytes + text.length, text.length);
-        while(tail.length && ecc_textbuf_isspace(ecc_textbuf_prevcharacter(&tail)))
+        eccstrbox_t tail = ecc_strbox_make(text.bytes + text.length, text.length);
+        while(tail.length && ecc_strbox_isspace(ecc_strbox_prevcharacter(&tail)))
         {
             text.length = tail.length;
         }        
-        while(text.length && ecc_textbuf_isspace(ecc_textbuf_character(text)))
+        while(text.length && ecc_strbox_isspace(ecc_strbox_character(text)))
         {
-            ecc_textbuf_nextcharacter(&text);
+            ecc_strbox_nextcharacter(&text);
         }
     }
     else
     {
         while(text.length && isspace(*text.bytes))
         {
-            ecc_textbuf_advance(&text, 1);
+            ecc_strbox_advance(&text, 1);
         }
     }
     memcpy(buffer, text.bytes, text.length);
@@ -1023,7 +1023,7 @@ eccvalue_t ecc_astlex_scaninteger(ecctextstring_t text, int base, int flags)
     return ecc_value_fromint((int32_t)integer);
 }
 
-uint32_t ecc_astlex_scanelement(ecctextstring_t text)
+uint32_t ecc_astlex_scanelement(eccstrbox_t text)
 {
     eccvalue_t value;
     uint32_t index;

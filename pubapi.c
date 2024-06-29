@@ -40,7 +40,7 @@ eccstate_t* ecc_script_create(void)
     memset(self, 0, sizeof(eccstate_t));
 
     self->globalfunc = ecc_globals_create();
-    self->maximumCallDepth = 512;
+    self->maximumCallDepth = ECC_CONF_MAXCALLDEPTH;
 
     return self;
 }
@@ -86,7 +86,7 @@ int ecc_script_evalinput(eccstate_t* self, eccioinput_t* input, int flags)
     context.execenv = &self->globalfunc->funcenv;
     context.thisvalue = ecc_value_object(&self->globalfunc->funcenv);
     context.ecc = self;
-    context.strictMode = !(flags & ECC_SCRIPTEVAL_SLOPPYMODE);
+    context.isstrictmode = !(flags & ECC_SCRIPTEVAL_SLOPPYMODE);
 
     if(!input)
         return EXIT_FAILURE;
@@ -107,7 +107,7 @@ int ecc_script_evalinput(eccstate_t* self, eccioinput_t* input, int flags)
     if(flags & ECC_SCRIPTEVAL_PRIMITIVERESULT)
     {
         ecc_context_rewindstatement(&context);
-        context.text = &context.ops->text;
+        context.ctxtextfirst = &context.ops->text;
 
         if((flags & ECC_SCRIPTEVAL_STRINGRESULT) == ECC_SCRIPTEVAL_STRINGRESULT)
             self->result = ecc_value_tostring(&context, self->result);
@@ -138,8 +138,8 @@ void ecc_script_evalinputwithcontext(eccstate_t* self, eccioinput_t* input, eccc
     lexer = ecc_astlex_createwithinput(input);
     parser = ecc_astparse_createwithlexer(lexer);
 
-    if(context->strictMode)
-        parser->strictMode = 1;
+    if(context->isstrictmode)
+        parser->isstrictmode = 1;
 
     if(self->sloppyMode)
         lexer->permitutfoutsidelit = 1;
@@ -221,7 +221,7 @@ void ecc_script_fatal(const char* format, ...)
     exit(EXIT_FAILURE);
 }
 
-eccioinput_t* ecc_script_findinput(eccstate_t* self, ecctextstring_t text)
+eccioinput_t* ecc_script_findinput(eccstate_t* self, eccstrbox_t text)
 {
     uint32_t i;
 
@@ -232,14 +232,12 @@ eccioinput_t* ecc_script_findinput(eccstate_t* self, ecctextstring_t text)
     return NULL;
 }
 
-void ecc_script_printtextinput(eccstate_t* self, ecctextstring_t text, int fullLine)
+void ecc_script_printtextinput(eccstate_t* self, eccstrbox_t text, int fullLine)
 {
     int32_t ofLine;
-    ecctextstring_t ofText;
+    eccstrbox_t ofText;
     const char* ofInput;
-
     assert(self);
-
     if(text.bytes >= self->ofText.bytes && text.bytes < self->ofText.bytes + self->ofText.length)
     {
         ofLine = self->ofLine;
@@ -252,18 +250,15 @@ void ecc_script_printtextinput(eccstate_t* self, ecctextstring_t text, int fullL
         ofText = ECC_String_Empty;
         ofInput = NULL;
     }
-
     ecc_ioinput_printtext(ecc_script_findinput(self, text), text, ofLine, ofText, ofInput, fullLine);
 }
 
 void ecc_script_garbagecollect(eccstate_t* self)
 {
     uint32_t index, count;
-
     ecc_mempool_unmarkall();
     ecc_mempool_markvalue(ecc_value_object(ECC_Prototype_Arguments));
     ecc_mempool_markvalue(ecc_value_function(self->globalfunc));
-
     for(index = 0, count = self->inputCount; index < count; ++index)
     {
         eccioinput_t* input = self->inputs[index];

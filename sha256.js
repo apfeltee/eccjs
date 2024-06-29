@@ -35,7 +35,8 @@ function unshiftright(a, b)
     return na; 
 }
 
-function SHA256(s) {
+function SHA256(s)
+{
     var chrsz = 8;
 
     function safe_add(x, y) {
@@ -107,6 +108,8 @@ function SHA256(s) {
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0
         ];
+
+
         var a, b, c, d, e, f, g, h, i, j;
         var T1, T2;
         m[l >> 5] = m[l >> 5] | 0x80 << (24 - l % 32);

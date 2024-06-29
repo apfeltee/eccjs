@@ -1,7 +1,6 @@
 
-#define test(i, e, t) actuallyruntest(__func__, __LINE__, i, e, t)
 
-static void testLexer (void)
+static void ecc_unittest_testlexer (void)
 {
 	test("/*hello", "SyntaxError: unterminated comment"
 	,    "^~~~~~~");
@@ -37,7 +36,7 @@ static void testLexer (void)
 	,    "^~~~~" "  ");
 }
 
-static void testParser (void)
+static void ecc_unittest_testparser (void)
 {
 	test("debugger()", "SyntaxError: missing ; before statement"
 	,    "        ^ ");
@@ -163,7 +162,7 @@ static void testParser (void)
 	,    "    ^");
 }
 
-static void testEval (void)
+static void ecc_unittest_testeval (void)
 {
 	test("", "undefined", NULL);
 	test("1;;;;;", "1", NULL);
@@ -199,7 +198,7 @@ static void testEval (void)
 	test("var a = 123; (1, eval)('a')", "123", NULL);
 }
 
-static void testConvertion (void)
+static void ecc_unittest_testconvertion (void)
 {
 	test("var a = { b: {'toString': undefined }}; a.b", "TypeError: cannot convert 'a.b' to primitive"
 	,    "                                        ^~~");
@@ -234,7 +233,7 @@ static void testConvertion (void)
 	,    "                                                           ^~~~~~      ");
 }
 
-static void testException (void)
+static void ecc_unittest_testexception (void)
 {
 	test("throw undefined", "undefined"
 	,    "      ^~~~~~~~~");
@@ -267,7 +266,7 @@ static void testException (void)
 	test("var c = 0; try{ c += 1; } finally{ c *= 2; } c", "2", NULL);
 }
 
-static void testOperator (void)
+static void ecc_unittest_testoperator (void)
 {
 	test("+ 10", "10", NULL);
 	test("- 10", "-10", NULL);
@@ -287,7 +286,7 @@ static void testOperator (void)
 	test("var u = undefined; u += 123.;", "NaN", NULL);
 }
 
-static void testEquality (void)
+static void ecc_unittest_testequality (void)
 {
 	test("1 == 1", "true", NULL);
 	test("1 != 2", "true", NULL);
@@ -344,7 +343,7 @@ static void testEquality (void)
 	test("new String('abc') == new String('abc')", "false", NULL);
 }
 
-static void testRelational (void)
+static void ecc_unittest_testrelational (void)
 {
 	test("4 > 3", "true", NULL);
 	test("4 >= 3", "true", NULL);
@@ -367,7 +366,7 @@ static void testRelational (void)
 	test("function F(){}; var o = new F(); o instanceof Object", "true", NULL);
 }
 
-static void testConditional (void)
+static void ecc_unittest_testconditional (void)
 {
 	test("var a = null, b; if (a) b = true;", "undefined", NULL);
 	test("var a = 1, b; if (a) b = true;", "true", NULL);
@@ -379,7 +378,7 @@ static void testConditional (void)
 	test("var y = new Boolean(true); true && y", "true", NULL);
 }
 
-static void testSwitch (void)
+static void ecc_unittest_testswitch (void)
 {
 	test("switch (1) { case 1: 123; case 2: 'abc'; }", "abc", NULL);
 	test("switch (2) { case 1: 123; case 2: 'abc'; }", "abc", NULL);
@@ -394,7 +393,7 @@ static void testSwitch (void)
 	,    "               ^~~     ");
 }
 
-static void testDelete (void)
+static void ecc_unittest_testdelete (void)
 {
 	test("delete b", "SyntaxError: delete of an unqualified identifier"
 	,    "       ^");
@@ -404,7 +403,7 @@ static void testDelete (void)
 	,    "       ^~~~~~~~~~~~~~~~");
 }
 
-static void testGlobal (void)
+static void ecc_unittest_testglobal (void)
 {
 	test("typeof this", "object", NULL);
 	test("null", "null", NULL);
@@ -446,7 +445,7 @@ static void testGlobal (void)
 	test("unescape('%E9%E7%E7%E4%EEtest./%u4F8B')", "éççäîtest./例", NULL);
 }
 
-static void testFunction (void)
+static void ecc_unittest_testfunction (void)
 {
 	test("try { function f() {}; f() } catch(e) { e }", "undefined", NULL);
 	test("var a; a.prototype", "TypeError: cannot convert 'a' to object"
@@ -527,7 +526,7 @@ static void testFunction (void)
 	test("function a(){ function b(){} return b }; var c = a(), d = a(); c.prototype.constructor == d.prototype.constructor", "false", NULL);
 }
 
-static void testLoop (void)
+static void ecc_unittest_testloop (void)
 {
 	test("var a = 0; for (;;) if (++a > 10) break; a", "11", NULL);
 	test("var a; for (a = 0;;) if (++a > 10) break; a", "11", NULL);
@@ -556,14 +555,14 @@ static void testLoop (void)
 	test("var a; do a = 1; while (false); a", "1", NULL);
 }
 
-static void testThis (void)
+static void ecc_unittest_testthis (void)
 {
 	test("function a() { return typeof this; } a()", "undefined", NULL);
 	test("var a = { b: function () { return typeof this; } }; a.b()", "object", NULL);
 	test("var a = { b: function () { return this; } }; a.b().b === a.b", "true", NULL);
 }
 
-static void testObject (void)
+static void ecc_unittest_testobject (void)
 {
 	test("Object", "function Object() [native code]", NULL);
 	test("Object.prototype.toString.call(Object.prototype)", "[object Object]", NULL);
@@ -690,7 +689,7 @@ static void testObject (void)
 	,    "                                                              ^~~~~~~");
 }
 
-static void testError (void)
+static void ecc_unittest_testerror (void)
 {
 	test("Error", "function Error() [native code]", NULL);
 	test("Object.prototype.toString.call(Error.prototype)", "[object Error]", NULL);
@@ -721,7 +720,7 @@ static void testError (void)
 	,    "                                                       ^");
 }
 
-static void testAccessor (void)
+static void ecc_unittest_testaccessor (void)
 {
 	test("var a = { get () {} }", "SyntaxError: expected identifier, got '('"
 	,    "              ^      ");
@@ -750,7 +749,7 @@ static void testAccessor (void)
 	test("var a = { get set() { return 123 } }; a.set", "123", NULL);
 }
 
-static void testArray (void)
+static void ecc_unittest_testarray (void)
 {
 	test("Array", "function Array() [native code]", NULL);
 	test("Object.prototype.toString.call(Array.prototype)", "[object Array]", NULL);
@@ -857,7 +856,7 @@ static void testArray (void)
 	test("var a = [], b = ''; a[34] = 34; Object.defineProperty(a, 12, {value: 12}); for (var i in a) b += i", "34", NULL);
 }
 
-static void testBoolean (void)
+static void ecc_unittest_testboolean (void)
 {
 	test("Boolean", "function Boolean() [native code]", NULL);
 	test("Object.prototype.toString.call(Boolean.prototype)", "[object Boolean]", NULL);
@@ -876,7 +875,7 @@ static void testBoolean (void)
 	test("Boolean.prototype.toString(true)", "false", NULL);
 }
 
-static void testNumber (void)
+static void ecc_unittest_testnumber (void)
 {
 	test("Number", "function Number() [native code]", NULL);
 	test("Object.prototype.toString.call(Number.prototype)", "[object Number]", NULL);
@@ -947,7 +946,7 @@ static void testNumber (void)
 	test("Math.pow(-1, Infinity)", "NaN", NULL);
 }
 
-static void testDate (void)
+static void ecc_unittest_testdate (void)
 {
 	test("Date", "function Date() [native code]", NULL);
 	test("Object.prototype.toString.call(Date.prototype)", "[object Date]", NULL);
@@ -1048,7 +1047,7 @@ static void testDate (void)
 	test("Date.parse('1984/08/31 01:23:45  +0000')", "NaN", NULL);
 }
 
-static void testString (void)
+static void ecc_unittest_teststring (void)
 {
 	test("String", "function String() [native code]", NULL);
 	test("Object.prototype.toString.call(String.prototype)", "[object String]", NULL);
@@ -1204,7 +1203,7 @@ static void testString (void)
 	test("var s = new String('123'); ++s[2]; ++s[2] + s", "4123", NULL);
 }
 
-static void testRegExp (void)
+static void ecc_unittest_testregexp (void)
 {
 	test("RegExp", "function RegExp() [native code]", NULL);
 	test("Object.prototype.toString.call(RegExp.prototype)", "[object RegExp]", NULL);
@@ -1289,7 +1288,7 @@ static void testRegExp (void)
 	,             "   " "  ^");
 }
 
-static void testJSON (void)
+static void ecc_unittest_testjson (void)
 {
 	test("JSON", "[object JSON]", NULL);
 	test("JSON.parse('abc')", "SyntaxError: expect { or ["

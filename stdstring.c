@@ -10,29 +10,29 @@
 #include "ecc.h"
 #include "compat.h"
 
-static void eccstringtypefn_mark(eccobject_t *object);
-static void eccstringtypefn_capture(eccobject_t *object);
-static void eccstringtypefn_finalize(eccobject_t *object);
-static eccvalue_t objstringfn_toString(ecccontext_t *context);
-static eccvalue_t objstringfn_valueOf(ecccontext_t *context);
-static eccvalue_t objstringfn_charAt(ecccontext_t *context);
-static eccvalue_t objstringfn_charCodeAt(ecccontext_t *context);
-static eccvalue_t objstringfn_concat(ecccontext_t *context);
-static eccvalue_t objstringfn_indexOf(ecccontext_t *context);
-static eccvalue_t objstringfn_lastIndexOf(ecccontext_t *context);
-static eccvalue_t objstringfn_localeCompare(ecccontext_t *context);
-static eccvalue_t objstringfn_match(ecccontext_t *context);
-static void eccstring_replace(eccappendbuffer_t *chars, ecctextstring_t replace, ecctextstring_t before, ecctextstring_t match, ecctextstring_t after, int count, const char *dcap[]);
-static eccvalue_t objstringfn_replace(ecccontext_t *context);
-static eccvalue_t objstringfn_search(ecccontext_t *context);
-static eccvalue_t objstringfn_slice(ecccontext_t *context);
-static eccvalue_t objstringfn_split(ecccontext_t *context);
-static eccvalue_t objstringfn_substring(ecccontext_t *context);
-static eccvalue_t objstringfn_toLowerCase(ecccontext_t *context);
-static eccvalue_t objstringfn_toUpperCase(ecccontext_t *context);
-static eccvalue_t objstringfn_trim(ecccontext_t *context);
-static eccvalue_t objstringfn_constructor(ecccontext_t *context);
-static eccvalue_t objstringfn_fromCharCode(ecccontext_t *context);
+static void ecc_string_typefnmark(eccobject_t *object);
+static void ecc_string_typefncapture(eccobject_t *object);
+static void ecc_string_typefnfinalize(eccobject_t *object);
+static eccvalue_t ecc_objfnstring_tostring(ecccontext_t *context);
+static eccvalue_t ecc_objfnstring_valueof(ecccontext_t *context);
+static eccvalue_t ecc_objfnstring_charat(ecccontext_t *context);
+static eccvalue_t ecc_objfnstring_charcodeat(ecccontext_t *context);
+static eccvalue_t ecc_objfnstring_concat(ecccontext_t *context);
+static eccvalue_t ecc_objfnstring_indexof(ecccontext_t *context);
+static eccvalue_t ecc_objfnstring_lastindexof(ecccontext_t *context);
+static eccvalue_t ecc_objfnstring_localecompare(ecccontext_t *context);
+static eccvalue_t ecc_objfnstring_match(ecccontext_t *context);
+static void ecc_stringutil_replace(eccappbuf_t *chars, eccstrbox_t replace, eccstrbox_t before, eccstrbox_t match, eccstrbox_t after, int count, const char *dcap[]);
+static eccvalue_t ecc_objfnstring_replace(ecccontext_t *context);
+static eccvalue_t ecc_objfnstring_search(ecccontext_t *context);
+static eccvalue_t ecc_objfnstring_slice(ecccontext_t *context);
+static eccvalue_t ecc_objfnstring_split(ecccontext_t *context);
+static eccvalue_t ecc_objfnstring_substring(ecccontext_t *context);
+static eccvalue_t ecc_objfnstring_tolowercase(ecccontext_t *context);
+static eccvalue_t ecc_objfnstring_touppercase(ecccontext_t *context);
+static eccvalue_t ecc_objfnstring_trim(ecccontext_t *context);
+static eccvalue_t ecc_objfnstring_constructor(ecccontext_t *context);
+static eccvalue_t ecc_objfnstring_fromcharcode(ecccontext_t *context);
 
 
 eccobject_t* ECC_Prototype_String = NULL;
@@ -40,52 +40,52 @@ eccobjfunction_t* ECC_CtorFunc_String = NULL;
 
 const eccobjinterntype_t ECC_Type_String = {
     .text = &ECC_String_StringType,
-    .fnmark = eccstringtypefn_mark,
-    .fncapture = eccstringtypefn_capture,
-    .fnfinalize = eccstringtypefn_finalize,
+    .fnmark = ecc_string_typefnmark,
+    .fncapture = ecc_string_typefncapture,
+    .fnfinalize = ecc_string_typefnfinalize,
 };
 
 
-static void eccstringtypefn_mark(eccobject_t* object)
+static void ecc_string_typefnmark(eccobject_t* object)
 {
     eccobjstring_t* self = (eccobjstring_t*)object;
 
     ecc_mempool_markvalue(ecc_value_fromchars(self->sbuf));
 }
 
-static void eccstringtypefn_capture(eccobject_t* object)
+static void ecc_string_typefncapture(eccobject_t* object)
 {
     eccobjstring_t* self = (eccobjstring_t*)object;
 
     ++self->sbuf->refcount;
 }
 
-static void eccstringtypefn_finalize(eccobject_t* object)
+static void ecc_string_typefnfinalize(eccobject_t* object)
 {
     eccobjstring_t* self = (eccobjstring_t*)object;
 
     --self->sbuf->refcount;
 }
 
-static eccvalue_t objstringfn_toString(ecccontext_t* context)
+static eccvalue_t ecc_objfnstring_tostring(ecccontext_t* context)
 {
     ecc_context_assertthistype(context, ECC_VALTYPE_STRING);
 
     return ecc_value_fromchars(context->thisvalue.data.string->sbuf);
 }
 
-static eccvalue_t objstringfn_valueOf(ecccontext_t* context)
+static eccvalue_t ecc_objfnstring_valueof(ecccontext_t* context)
 {
     ecc_context_assertthistype(context, ECC_VALTYPE_STRING);
 
     return ecc_value_fromchars(context->thisvalue.data.string->sbuf);
 }
 
-static eccvalue_t objstringfn_charAt(ecccontext_t* context)
+static eccvalue_t ecc_objfnstring_charat(ecccontext_t* context)
 {
     int32_t index, length;
     const char* chars;
-    ecctextstring_t text;
+    eccstrbox_t text;
 
     ecc_context_assertthiscoercibleprimitive(context);
 
@@ -99,7 +99,7 @@ static eccvalue_t objstringfn_charAt(ecccontext_t* context)
         return ecc_value_fromtext(&ECC_String_Empty);
     else
     {
-        ecctextchar_t c = ecc_textbuf_character(text);
+        eccrune_t c = ecc_strbox_character(text);
 
         if(c.codepoint < 0x010000)
             return ecc_value_buffer(text.bytes, c.units);
@@ -121,11 +121,11 @@ static eccvalue_t objstringfn_charAt(ecccontext_t* context)
     }
 }
 
-static eccvalue_t objstringfn_charCodeAt(ecccontext_t* context)
+static eccvalue_t ecc_objfnstring_charcodeat(ecccontext_t* context)
 {
     int32_t index, length;
     const char* chars;
-    ecctextstring_t text;
+    eccstrbox_t text;
 
     ecc_context_assertthiscoercibleprimitive(context);
 
@@ -139,7 +139,7 @@ static eccvalue_t objstringfn_charCodeAt(ecccontext_t* context)
         return ecc_value_fromfloat(ECC_CONST_NAN);
     else
     {
-        ecctextchar_t c = ecc_textbuf_character(text);
+        eccrune_t c = ecc_strbox_character(text);
 
         if(c.codepoint < 0x010000)
             return ecc_value_fromfloat(c.codepoint);
@@ -156,9 +156,9 @@ static eccvalue_t objstringfn_charCodeAt(ecccontext_t* context)
     }
 }
 
-static eccvalue_t objstringfn_concat(ecccontext_t* context)
+static eccvalue_t ecc_objfnstring_concat(ecccontext_t* context)
 {
-    eccappendbuffer_t chars;
+    eccappbuf_t chars;
     int32_t index, count;
 
     ecc_context_assertthiscoercibleprimitive(context);
@@ -173,9 +173,9 @@ static eccvalue_t objstringfn_concat(ecccontext_t* context)
     return ecc_strbuf_endappend(&chars);
 }
 
-static eccvalue_t objstringfn_indexOf(ecccontext_t* context)
+static eccvalue_t ecc_objfnstring_indexof(ecccontext_t* context)
 {
-    ecctextstring_t text;
+    eccstrbox_t text;
     eccvalue_t search, start;
     int32_t index, length, searchLength;
     const char *chars, *searchChars;
@@ -197,7 +197,7 @@ static eccvalue_t objstringfn_indexOf(ecccontext_t* context)
     text = ecc_string_textatindex(chars, length, index, 0);
     if(text.flags & ECC_TEXTFLAG_BREAKFLAG)
     {
-        ecc_textbuf_nextcharacter(&text);
+        ecc_strbox_nextcharacter(&text);
         ++index;
     }
 
@@ -207,16 +207,16 @@ static eccvalue_t objstringfn_indexOf(ecccontext_t* context)
             return ecc_value_fromint(index);
 
         ++index;
-        if(ecc_textbuf_nextcharacter(&text).codepoint > 0xffff)
+        if(ecc_strbox_nextcharacter(&text).codepoint > 0xffff)
             ++index;
     }
 
     return ecc_value_fromint(-1);
 }
 
-static eccvalue_t objstringfn_lastIndexOf(ecccontext_t* context)
+static eccvalue_t ecc_objfnstring_lastindexof(ecccontext_t* context)
 {
-    ecctextstring_t text;
+    eccstrbox_t text;
     eccvalue_t search, start;
     int32_t index, length, searchLength;
     const char *chars, *searchChars;
@@ -251,17 +251,17 @@ static eccvalue_t objstringfn_lastIndexOf(ecccontext_t* context)
             break;
 
         --index;
-        if(ecc_textbuf_prevcharacter(&text).codepoint > 0xffff)
+        if(ecc_strbox_prevcharacter(&text).codepoint > 0xffff)
             --index;
     }
 
     return ecc_value_fromint(-1);
 }
 
-static eccvalue_t objstringfn_localeCompare(ecccontext_t* context)
+static eccvalue_t ecc_objfnstring_localecompare(ecccontext_t* context)
 {
     eccvalue_t that;
-    ecctextstring_t a, b;
+    eccstrbox_t a, b;
 
     ecc_context_assertthiscoercibleprimitive(context);
 
@@ -280,7 +280,7 @@ static eccvalue_t objstringfn_localeCompare(ecccontext_t* context)
     return ecc_value_fromint(memcmp(a.bytes, b.bytes, a.length));
 }
 
-static eccvalue_t objstringfn_match(ecccontext_t* context)
+static eccvalue_t ecc_objfnstring_match(ecccontext_t* context)
 {
     eccobjregexp_t* regexp;
     eccvalue_t value, lastIndex;
@@ -301,11 +301,11 @@ static eccvalue_t objstringfn_match(ecccontext_t* context)
     {
         const char* bytes = ecc_value_stringbytes(&context->thisvalue);
         int32_t length = ecc_value_stringlength(&context->thisvalue);
-        ecctextstring_t text = ecc_string_textatindex(bytes, length, 0, 0);
+        eccstrbox_t text = ecc_string_textatindex(bytes, length, 0, 0);
         const char* capture[regexp->count * 2];
         const char* strindex[regexp->count * 2];
         eccobject_t* array = ecc_array_create();
-        eccappendbuffer_t chars;
+        eccappbuf_t chars;
         uint32_t size = 0;
 
         do
@@ -337,9 +337,9 @@ static eccvalue_t objstringfn_match(ecccontext_t* context)
                 }
 
                 if(capture[1] - text.bytes > 0)
-                    ecc_textbuf_advance(&text, (int32_t)(capture[1] - text.bytes));
+                    ecc_strbox_advance(&text, (int32_t)(capture[1] - text.bytes));
                 else
-                    ecc_textbuf_nextcharacter(&text);
+                    ecc_strbox_nextcharacter(&text);
             }
             else
                 break;
@@ -361,18 +361,18 @@ static eccvalue_t objstringfn_match(ecccontext_t* context)
 }
 
 static void
-eccstring_replace(eccappendbuffer_t* chars, ecctextstring_t replace, ecctextstring_t before, ecctextstring_t match, ecctextstring_t after, int count, const char* dcap[])
+ecc_stringutil_replace(eccappbuf_t* chars, eccstrbox_t replace, eccstrbox_t before, eccstrbox_t match, eccstrbox_t after, int count, const char* dcap[])
 {
-    ecctextchar_t c;
+    eccrune_t c;
 
     while(replace.length)
     {
-        c = ecc_textbuf_character(replace);
+        c = ecc_strbox_character(replace);
         if(c.codepoint == '$')
         {
             int index;
-            ecc_textbuf_advance(&replace, 1);
-            switch(ecc_textbuf_character(replace).codepoint)
+            ecc_strbox_advance(&replace, 1);
+            switch(ecc_strbox_character(replace).codepoint)
             {
                 case '$':
                     ecc_strbuf_append(chars, "$");
@@ -403,7 +403,7 @@ eccstring_replace(eccappendbuffer_t* chars, ecctextstring_t replace, ecctextstri
                             if(isdigit(replace.bytes[1]) && index * 10 <= count)
                             {
                                 index = index * 10 + replace.bytes[1] - '0';
-                                ecc_textbuf_advance(&replace, 1);
+                                ecc_strbox_advance(&replace, 1);
                             }
                             if(dcap && index && index < count)
                             {
@@ -431,23 +431,23 @@ eccstring_replace(eccappendbuffer_t* chars, ecctextstring_t replace, ecctextstri
         {
             ecc_strbuf_append(chars, "%.*s", c.units, replace.bytes);
         }
-        ecc_textbuf_advance(&replace, c.units);
+        ecc_strbox_advance(&replace, c.units);
     }
 }
 
-static eccvalue_t objstringfn_replace(ecccontext_t* context)
+static eccvalue_t ecc_objfnstring_replace(ecccontext_t* context)
 {
     eccobjregexp_t* regexp = NULL;
-    eccappendbuffer_t chars;
+    eccappbuf_t chars;
     eccvalue_t value, replace;
-    ecctextstring_t text;
+    eccstrbox_t text;
     const char *bytes, *searchBytes;
     int32_t length, searchLength;
     ecc_context_assertthiscoercibleprimitive(context);
     context->thisvalue = ecc_value_tostring(context, ecc_context_this(context));
     bytes = ecc_value_stringbytes(&context->thisvalue);
     length = ecc_value_stringlength(&context->thisvalue);
-    text = ecc_textbuf_make(bytes, length);
+    text = ecc_strbox_make(bytes, length);
     value = ecc_context_argument(context, 0);
     if(value.type == ECC_VALTYPE_REGEXP)
         regexp = value.data.regexp;
@@ -460,7 +460,7 @@ static eccvalue_t objstringfn_replace(ecccontext_t* context)
     {
         const char* capture[regexp->count * 2];
         const char* strindex[regexp->count * 2];
-        ecctextstring_t seek = text;
+        eccstrbox_t seek = text;
 
         ecc_strbuf_beginappend(&chars);
         do
@@ -492,15 +492,15 @@ static eccvalue_t objstringfn_replace(ecccontext_t* context)
                     ecc_strbuf_append(&chars, "%.*s", ecc_value_stringlength(&result), ecc_value_stringbytes(&result));
                 }
                 else
-                    eccstring_replace(&chars, ecc_textbuf_make(ecc_value_stringbytes(&replace), ecc_value_stringlength(&replace)),
-                                ecc_textbuf_make(bytes, (int32_t)(capture[0] - bytes)), ecc_textbuf_make(capture[0], (int32_t)(capture[1] - capture[0])),
-                                ecc_textbuf_make(capture[1], (int32_t)((bytes + length) - capture[1])), regexp->count, capture);
+                    ecc_stringutil_replace(&chars, ecc_strbox_make(ecc_value_stringbytes(&replace), ecc_value_stringlength(&replace)),
+                                ecc_strbox_make(bytes, (int32_t)(capture[0] - bytes)), ecc_strbox_make(capture[0], (int32_t)(capture[1] - capture[0])),
+                                ecc_strbox_make(capture[1], (int32_t)((bytes + length) - capture[1])), regexp->count, capture);
 
-                ecc_textbuf_advance(&text, (int32_t)(state.capture[1] - text.bytes));
+                ecc_strbox_advance(&text, (int32_t)(state.capture[1] - text.bytes));
 
                 seek = text;
                 if(text.bytes == state.capture[1])
-                    ecc_textbuf_nextcharacter(&seek);
+                    ecc_strbox_nextcharacter(&seek);
             }
             else
                 break;
@@ -525,7 +525,7 @@ static eccvalue_t objstringfn_replace(ecccontext_t* context)
                 text.length = searchLength;
                 break;
             }
-            ecc_textbuf_nextcharacter(&text);
+            ecc_strbox_nextcharacter(&text);
         }
 
         ecc_strbuf_beginappend(&chars);
@@ -544,9 +544,9 @@ static eccvalue_t objstringfn_replace(ecccontext_t* context)
             ecc_strbuf_append(&chars, "%.*s", ecc_value_stringlength(&result), ecc_value_stringbytes(&result));
         }
         else
-            eccstring_replace(&chars, ecc_textbuf_make(ecc_value_stringbytes(&replace), ecc_value_stringlength(&replace)),
-                        ecc_textbuf_make(text.bytes, (int32_t)(text.bytes - bytes)), ecc_textbuf_make(text.bytes, text.length),
-                        ecc_textbuf_make(text.bytes, (int32_t)(length - (text.bytes - bytes))), 0, NULL);
+            ecc_stringutil_replace(&chars, ecc_strbox_make(ecc_value_stringbytes(&replace), ecc_value_stringlength(&replace)),
+                        ecc_strbox_make(text.bytes, (int32_t)(text.bytes - bytes)), ecc_strbox_make(text.bytes, text.length),
+                        ecc_strbox_make(text.bytes, (int32_t)(length - (text.bytes - bytes))), 0, NULL);
 
         ecc_strbuf_append(&chars, "%.*s", length - (text.bytes - bytes), text.bytes + text.length);
 
@@ -554,7 +554,7 @@ static eccvalue_t objstringfn_replace(ecccontext_t* context)
     }
 }
 
-static eccvalue_t objstringfn_search(ecccontext_t* context)
+static eccvalue_t ecc_objfnstring_search(ecccontext_t* context)
 {
     eccobjregexp_t* regexp;
     eccvalue_t value;
@@ -572,7 +572,7 @@ static eccvalue_t objstringfn_search(ecccontext_t* context)
     {
         const char* bytes = ecc_value_stringbytes(&context->thisvalue);
         int32_t length = ecc_value_stringlength(&context->thisvalue);
-        ecctextstring_t text = ecc_string_textatindex(bytes, length, 0, 0);
+        eccstrbox_t text = ecc_string_textatindex(bytes, length, 0, 0);
         const char* capture[regexp->count * 2];
         const char* index[regexp->count * 2];
 
@@ -584,10 +584,10 @@ static eccvalue_t objstringfn_search(ecccontext_t* context)
     return ecc_value_fromint(-1);
 }
 
-static eccvalue_t objstringfn_slice(ecccontext_t* context)
+static eccvalue_t ecc_objfnstring_slice(ecccontext_t* context)
 {
     eccvalue_t from, to;
-    ecctextstring_t start, end;
+    eccstrbox_t start, end;
     const char* chars;
     int32_t length;
     uint16_t head = 0, tail = 0;
@@ -601,22 +601,22 @@ static eccvalue_t objstringfn_slice(ecccontext_t* context)
 
     from = ecc_context_argument(context, 0);
     if(from.type == ECC_VALTYPE_UNDEFINED)
-        start = ecc_textbuf_make(chars, length);
+        start = ecc_strbox_make(chars, length);
     else if(from.type == ECC_VALTYPE_BINARY && from.data.valnumfloat == ECC_CONST_INFINITY)
-        start = ecc_textbuf_make(chars + length, 0);
+        start = ecc_strbox_make(chars + length, 0);
     else
         start = ecc_string_textatindex(chars, length, ecc_value_tointeger(context, from).data.integer, 1);
 
     to = ecc_context_argument(context, 1);
     if(to.type == ECC_VALTYPE_UNDEFINED || (to.type == ECC_VALTYPE_BINARY && (isnan(to.data.valnumfloat) || to.data.valnumfloat == ECC_CONST_INFINITY)))
-        end = ecc_textbuf_make(chars + length, 0);
+        end = ecc_strbox_make(chars + length, 0);
     else if(to.type == ECC_VALTYPE_BINARY && to.data.valnumfloat == -ECC_CONST_INFINITY)
-        end = ecc_textbuf_make(chars, length);
+        end = ecc_strbox_make(chars, length);
     else
         end = ecc_string_textatindex(chars, length, ecc_value_tointeger(context, to).data.integer, 1);
 
     if(start.flags & ECC_TEXTFLAG_BREAKFLAG)
-        headcp = ecc_textbuf_nextcharacter(&start).codepoint;
+        headcp = ecc_strbox_nextcharacter(&start).codepoint;
 
     length = (int32_t)(end.bytes - start.bytes);
 
@@ -644,20 +644,20 @@ static eccvalue_t objstringfn_slice(ecccontext_t* context)
         if(end.flags & ECC_TEXTFLAG_BREAKFLAG)
         {
             /* simulate 16-bit surrogate */
-            ecc_strbuf_writecodepoint(result->bytes + head + length, (((ecc_textbuf_character(end).codepoint - 0x010000) >> 10) & 0x3ff) + 0xd800);
+            ecc_strbuf_writecodepoint(result->bytes + head + length, (((ecc_strbox_character(end).codepoint - 0x010000) >> 10) & 0x3ff) + 0xd800);
         }
 
         return ecc_value_fromchars(result);
     }
 }
 
-static eccvalue_t objstringfn_split(ecccontext_t* context)
+static eccvalue_t ecc_objfnstring_split(ecccontext_t* context)
 {
     eccvalue_t separatorValue, limitValue;
     eccobjregexp_t* regexp = NULL;
     eccobject_t* array;
     eccstrbuffer_t* element;
-    ecctextstring_t text, separator = { 0 };
+    eccstrbox_t text, separator = { 0 };
     uint32_t size = 0, limit = UINT32_MAX;
 
     ecc_context_assertthiscoercibleprimitive(context);
@@ -696,7 +696,7 @@ static eccvalue_t objstringfn_split(ecccontext_t* context)
     {
         const char* capture[regexp->count * 2];
         const char* strindex[regexp->count * 2];
-        ecctextstring_t seek = text;
+        eccstrbox_t seek = text;
 
         for(;;)
         {
@@ -710,7 +710,7 @@ static eccvalue_t objstringfn_split(ecccontext_t* context)
             {
                 if(capture[1] <= text.bytes)
                 {
-                    ecc_textbuf_advance(&seek, 1);
+                    ecc_strbox_advance(&seek, 1);
                     continue;
                 }
 
@@ -731,7 +731,7 @@ static eccvalue_t objstringfn_split(ecccontext_t* context)
                         ecc_object_addelement(array, size++, ECCValConstUndefined, 0);
                 }
 
-                ecc_textbuf_advance(&text, (int32_t)(capture[1] - text.bytes));
+                ecc_strbox_advance(&text, (int32_t)(capture[1] - text.bytes));
                 seek = text;
             }
             else
@@ -745,14 +745,14 @@ static eccvalue_t objstringfn_split(ecccontext_t* context)
     }
     else if(!separator.length)
     {
-        ecctextchar_t c;
+        eccrune_t c;
 
         while(text.length)
         {
             if(size >= limit)
                 break;
 
-            c = ecc_textbuf_character(text);
+            c = ecc_strbox_character(text);
             if(c.codepoint < 0x010000)
                 ecc_object_addelement(array, size++, ecc_value_buffer(text.bytes, c.units), 0);
             else
@@ -767,14 +767,14 @@ static eccvalue_t objstringfn_split(ecccontext_t* context)
                 ecc_strbuf_writecodepoint(buffer, (((c.codepoint - 0x010000) >> 0) & 0x3ff) + 0xdc00);
                 ecc_object_addelement(array, size++, ecc_value_buffer(buffer, 3), 0);
             }
-            ecc_textbuf_advance(&text, c.units);
+            ecc_strbox_advance(&text, c.units);
         }
 
         return ecc_value_object(array);
     }
     else
     {
-        ecctextstring_t seek = text;
+        eccstrbox_t seek = text;
         int32_t length;
 
         while(seek.length >= separator.length)
@@ -789,11 +789,11 @@ static eccvalue_t objstringfn_split(ecccontext_t* context)
                 memcpy(element->bytes, text.bytes, length);
                 ecc_object_addelement(array, size++, ecc_value_fromchars(element), 0);
 
-                ecc_textbuf_advance(&text, length + separator.length);
+                ecc_strbox_advance(&text, length + separator.length);
                 seek = text;
                 continue;
             }
-            ecc_textbuf_nextcharacter(&seek);
+            ecc_strbox_nextcharacter(&seek);
         }
 
         if(size < limit)
@@ -807,10 +807,10 @@ static eccvalue_t objstringfn_split(ecccontext_t* context)
     return ecc_value_object(array);
 }
 
-static eccvalue_t objstringfn_substring(ecccontext_t* context)
+static eccvalue_t ecc_objfnstring_substring(ecccontext_t* context)
 {
     eccvalue_t from, to;
-    ecctextstring_t start, end;
+    eccstrbox_t start, end;
     const char* chars;
     int32_t length, head = 0, tail = 0;
     uint32_t headcp = 0;
@@ -821,29 +821,29 @@ static eccvalue_t objstringfn_substring(ecccontext_t* context)
 
     from = ecc_context_argument(context, 0);
     if(from.type == ECC_VALTYPE_UNDEFINED || (from.type == ECC_VALTYPE_BINARY && (isnan(from.data.valnumfloat) || from.data.valnumfloat == -ECC_CONST_INFINITY)))
-        start = ecc_textbuf_make(chars, length);
+        start = ecc_strbox_make(chars, length);
     else if(from.type == ECC_VALTYPE_BINARY && from.data.valnumfloat == ECC_CONST_INFINITY)
-        start = ecc_textbuf_make(chars + length, 0);
+        start = ecc_strbox_make(chars + length, 0);
     else
         start = ecc_string_textatindex(chars, length, ecc_value_tointeger(context, from).data.integer, 0);
 
     to = ecc_context_argument(context, 1);
     if(to.type == ECC_VALTYPE_UNDEFINED || (to.type == ECC_VALTYPE_BINARY && to.data.valnumfloat == ECC_CONST_INFINITY))
-        end = ecc_textbuf_make(chars + length, 0);
+        end = ecc_strbox_make(chars + length, 0);
     else if(to.type == ECC_VALTYPE_BINARY && !isfinite(to.data.valnumfloat))
-        end = ecc_textbuf_make(chars, length);
+        end = ecc_strbox_make(chars, length);
     else
         end = ecc_string_textatindex(chars, length, ecc_value_tointeger(context, to).data.integer, 0);
 
     if(start.bytes > end.bytes)
     {
-        ecctextstring_t temp = start;
+        eccstrbox_t temp = start;
         start = end;
         end = temp;
     }
 
     if(start.flags & ECC_TEXTFLAG_BREAKFLAG)
-        headcp = ecc_textbuf_nextcharacter(&start).codepoint;
+        headcp = ecc_strbox_nextcharacter(&start).codepoint;
 
     length = (int32_t)(end.bytes - start.bytes);
 
@@ -871,17 +871,17 @@ static eccvalue_t objstringfn_substring(ecccontext_t* context)
         if(end.flags & ECC_TEXTFLAG_BREAKFLAG)
         {
             /* simulate 16-bit surrogate */
-            ecc_strbuf_writecodepoint(result->bytes + head + length, (((ecc_textbuf_character(end).codepoint - 0x010000) >> 10) & 0x3ff) + 0xd800);
+            ecc_strbuf_writecodepoint(result->bytes + head + length, (((ecc_strbox_character(end).codepoint - 0x010000) >> 10) & 0x3ff) + 0xd800);
         }
 
         return ecc_value_fromchars(result);
     }
 }
 
-static eccvalue_t objstringfn_toLowerCase(ecccontext_t* context)
+static eccvalue_t ecc_objfnstring_tolowercase(ecccontext_t* context)
 {
     eccstrbuffer_t* chars;
-    ecctextstring_t text;
+    eccstrbox_t text;
 
     if(!ecc_value_isstring(context->thisvalue))
         context->thisvalue = ecc_value_tostring(context, ecc_context_this(context));
@@ -889,34 +889,34 @@ static eccvalue_t objstringfn_toLowerCase(ecccontext_t* context)
     text = ecc_value_textof(&context->thisvalue);
     {
         char buffer[text.length * 2];
-        char* end = ecc_textbuf_tolower(text, buffer);
+        char* end = ecc_strbox_tolower(text, buffer);
         chars = ecc_strbuf_createwithbytes((int32_t)(end - buffer), buffer);
     }
 
     return ecc_value_fromchars(chars);
 }
 
-static eccvalue_t objstringfn_toUpperCase(ecccontext_t* context)
+static eccvalue_t ecc_objfnstring_touppercase(ecccontext_t* context)
 {
     eccstrbuffer_t* chars;
-    ecctextstring_t text;
+    eccstrbox_t text;
 
     context->thisvalue = ecc_value_tostring(context, ecc_context_this(context));
     text = ecc_value_textof(&context->thisvalue);
     {
         char buffer[text.length * 3];
-        char* end = ecc_textbuf_toupper(text, buffer);
+        char* end = ecc_strbox_toupper(text, buffer);
         chars = ecc_strbuf_createwithbytes((int32_t)(end - buffer), buffer);
     }
 
     return ecc_value_fromchars(chars);
 }
 
-static eccvalue_t objstringfn_trim(ecccontext_t* context)
+static eccvalue_t ecc_objfnstring_trim(ecccontext_t* context)
 {
     eccstrbuffer_t* chars;
-    ecctextstring_t text, last;
-    ecctextchar_t c;
+    eccstrbox_t text, last;
+    eccrune_t c;
 
     if(!ecc_value_isstring(context->thisvalue))
         context->thisvalue = ecc_value_tostring(context, ecc_context_this(context));
@@ -924,18 +924,18 @@ static eccvalue_t objstringfn_trim(ecccontext_t* context)
     text = ecc_value_textof(&context->thisvalue);
     while(text.length)
     {
-        c = ecc_textbuf_character(text);
-        if(!ecc_textbuf_isspace(c))
+        c = ecc_strbox_character(text);
+        if(!ecc_strbox_isspace(c))
             break;
 
-        ecc_textbuf_advance(&text, c.units);
+        ecc_strbox_advance(&text, c.units);
     }
 
-    last = ecc_textbuf_make(text.bytes + text.length, text.length);
+    last = ecc_strbox_make(text.bytes + text.length, text.length);
     while(last.length)
     {
-        c = ecc_textbuf_prevcharacter(&last);
-        if(!ecc_textbuf_isspace(c))
+        c = ecc_strbox_prevcharacter(&last);
+        if(!ecc_strbox_isspace(c))
             break;
 
         text.length = last.length;
@@ -946,7 +946,7 @@ static eccvalue_t objstringfn_trim(ecccontext_t* context)
     return ecc_value_fromchars(chars);
 }
 
-static eccvalue_t objstringfn_constructor(ecccontext_t* context)
+static eccvalue_t ecc_objfnstring_constructor(ecccontext_t* context)
 {
     eccvalue_t value;
 
@@ -962,9 +962,9 @@ static eccvalue_t objstringfn_constructor(ecccontext_t* context)
         return value;
 }
 
-static eccvalue_t objstringfn_fromCharCode(ecccontext_t* context)
+static eccvalue_t ecc_objfnstring_fromcharcode(ecccontext_t* context)
 {
-    eccappendbuffer_t chars;
+    eccappbuf_t chars;
     int32_t index, count;
 
     count = ecc_context_argumentcount(context);
@@ -981,30 +981,30 @@ void ecc_string_setup()
 {
     const eccvalflag_t h = ECC_VALFLAG_HIDDEN;
 
-    ecc_function_setupbuiltinobject(&ECC_CtorFunc_String, objstringfn_constructor, 1, &ECC_Prototype_String,
+    ecc_function_setupbuiltinobject(&ECC_CtorFunc_String, ecc_objfnstring_constructor, 1, &ECC_Prototype_String,
                                           ecc_value_string(ecc_string_create(ecc_strbuf_createsized(0))), &ECC_Type_String);
 
-    ecc_function_addmethod(ECC_CtorFunc_String, "fromCharCode", objstringfn_fromCharCode, -1, h);
+    ecc_function_addmethod(ECC_CtorFunc_String, "fromCharCode", ecc_objfnstring_fromcharcode, -1, h);
 
-    ecc_function_addto(ECC_Prototype_String, "toString", objstringfn_toString, 0, h);
-    ecc_function_addto(ECC_Prototype_String, "valueOf", objstringfn_valueOf, 0, h);
-    ecc_function_addto(ECC_Prototype_String, "charAt", objstringfn_charAt, 1, h);
-    ecc_function_addto(ECC_Prototype_String, "charCodeAt", objstringfn_charCodeAt, 1, h);
-    ecc_function_addto(ECC_Prototype_String, "concat", objstringfn_concat, -1, h);
-    ecc_function_addto(ECC_Prototype_String, "indexOf", objstringfn_indexOf, -1, h);
-    ecc_function_addto(ECC_Prototype_String, "lastIndexOf", objstringfn_lastIndexOf, -1, h);
-    ecc_function_addto(ECC_Prototype_String, "localeCompare", objstringfn_localeCompare, 1, h);
-    ecc_function_addto(ECC_Prototype_String, "match", objstringfn_match, 1, h);
-    ecc_function_addto(ECC_Prototype_String, "replace", objstringfn_replace, 2, h);
-    ecc_function_addto(ECC_Prototype_String, "search", objstringfn_search, 1, h);
-    ecc_function_addto(ECC_Prototype_String, "slice", objstringfn_slice, 2, h);
-    ecc_function_addto(ECC_Prototype_String, "split", objstringfn_split, 2, h);
-    ecc_function_addto(ECC_Prototype_String, "substring", objstringfn_substring, 2, h);
-    ecc_function_addto(ECC_Prototype_String, "toLowerCase", objstringfn_toLowerCase, 0, h);
-    ecc_function_addto(ECC_Prototype_String, "toLocaleLowerCase", objstringfn_toLowerCase, 0, h);
-    ecc_function_addto(ECC_Prototype_String, "toUpperCase", objstringfn_toUpperCase, 0, h);
-    ecc_function_addto(ECC_Prototype_String, "toLocaleUpperCase", objstringfn_toUpperCase, 0, h);
-    ecc_function_addto(ECC_Prototype_String, "trim", objstringfn_trim, 0, h);
+    ecc_function_addto(ECC_Prototype_String, "toString", ecc_objfnstring_tostring, 0, h);
+    ecc_function_addto(ECC_Prototype_String, "valueOf", ecc_objfnstring_valueof, 0, h);
+    ecc_function_addto(ECC_Prototype_String, "charAt", ecc_objfnstring_charat, 1, h);
+    ecc_function_addto(ECC_Prototype_String, "charCodeAt", ecc_objfnstring_charcodeat, 1, h);
+    ecc_function_addto(ECC_Prototype_String, "concat", ecc_objfnstring_concat, -1, h);
+    ecc_function_addto(ECC_Prototype_String, "indexOf", ecc_objfnstring_indexof, -1, h);
+    ecc_function_addto(ECC_Prototype_String, "lastIndexOf", ecc_objfnstring_lastindexof, -1, h);
+    ecc_function_addto(ECC_Prototype_String, "localeCompare", ecc_objfnstring_localecompare, 1, h);
+    ecc_function_addto(ECC_Prototype_String, "match", ecc_objfnstring_match, 1, h);
+    ecc_function_addto(ECC_Prototype_String, "replace", ecc_objfnstring_replace, 2, h);
+    ecc_function_addto(ECC_Prototype_String, "search", ecc_objfnstring_search, 1, h);
+    ecc_function_addto(ECC_Prototype_String, "slice", ecc_objfnstring_slice, 2, h);
+    ecc_function_addto(ECC_Prototype_String, "split", ecc_objfnstring_split, 2, h);
+    ecc_function_addto(ECC_Prototype_String, "substring", ecc_objfnstring_substring, 2, h);
+    ecc_function_addto(ECC_Prototype_String, "toLowerCase", ecc_objfnstring_tolowercase, 0, h);
+    ecc_function_addto(ECC_Prototype_String, "toLocaleLowerCase", ecc_objfnstring_tolowercase, 0, h);
+    ecc_function_addto(ECC_Prototype_String, "toUpperCase", ecc_objfnstring_touppercase, 0, h);
+    ecc_function_addto(ECC_Prototype_String, "toLocaleUpperCase", ecc_objfnstring_touppercase, 0, h);
+    ecc_function_addto(ECC_Prototype_String, "trim", ecc_objfnstring_trim, 0, h);
 }
 
 void ecc_string_teardown(void)
@@ -1036,11 +1036,11 @@ eccobjstring_t* ecc_string_create(eccstrbuffer_t* chars)
 
 eccvalue_t ecc_string_valueatindex(eccobjstring_t* self, int32_t index)
 {
-    ecctextchar_t c;
-    ecctextstring_t text;
+    eccrune_t c;
+    eccstrbox_t text;
 
     text = ecc_string_textatindex(self->sbuf->bytes, self->sbuf->length, index, 0);
-    c = ecc_textbuf_character(text);
+    c = ecc_strbox_character(text);
 
     if(c.units <= 0)
         return ECCValConstUndefined;
@@ -1066,17 +1066,17 @@ eccvalue_t ecc_string_valueatindex(eccobjstring_t* self, int32_t index)
     }
 }
 
-ecctextstring_t ecc_string_textatindex(const char* chars, int32_t length, int32_t position, int enableReverse)
+eccstrbox_t ecc_string_textatindex(const char* chars, int32_t length, int32_t position, int enableReverse)
 {
-    ecctextstring_t text = ecc_textbuf_make(chars, length), prev;
-    ecctextchar_t c;
+    eccstrbox_t text = ecc_strbox_make(chars, length), prev;
+    eccrune_t c;
 
     if(position >= 0)
     {
         while(position-- > 0)
         {
             prev = text;
-            c = ecc_textbuf_nextcharacter(&text);
+            c = ecc_strbox_nextcharacter(&text);
 
             if(c.codepoint > 0xffff && !position--)
             {
@@ -1092,7 +1092,7 @@ ecctextstring_t ecc_string_textatindex(const char* chars, int32_t length, int32_
 
         while(position++ < 0)
         {
-            c = ecc_textbuf_prevcharacter(&text);
+            c = ecc_strbox_prevcharacter(&text);
 
             if(c.codepoint > 0xffff && position++ >= 0)
             {
@@ -1111,16 +1111,16 @@ ecctextstring_t ecc_string_textatindex(const char* chars, int32_t length, int32_
 
 int32_t ecc_string_unitindex(const char* chars, int32_t max, int32_t unit)
 {
-    ecctextstring_t text = ecc_textbuf_make(chars, max);
+    eccstrbox_t text = ecc_strbox_make(chars, max);
     int32_t position = 0;
-    ecctextchar_t c;
+    eccrune_t c;
 
     while(unit > 0)
     {
         if(text.length)
         {
             ++position;
-            c = ecc_textbuf_nextcharacter(&text);
+            c = ecc_strbox_nextcharacter(&text);
             unit -= c.units;
 
             if(c.codepoint > 0xffff) /* simulate 16-bit surrogate */

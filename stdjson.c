@@ -14,7 +14,7 @@ typedef struct eccjsonstringify_t eccjsonstringify_t;
 
 struct eccjsonparser_t
 {
-    ecctextstring_t text;
+    eccstrbox_t text;
     const char* start;
     int line;
     /* reviver */
@@ -26,7 +26,7 @@ struct eccjsonparser_t
 
 struct eccjsonstringify_t
 {
-    eccappendbuffer_t chars;
+    eccappbuf_t chars;
     char spaces[11];
     int level;
     eccobject_t* filter;
@@ -38,19 +38,19 @@ struct eccjsonstringify_t
 };
 
 static eccvalue_t ecc_json_error(eccjsonparser_t *parse, int length, eccstrbuffer_t *chars);
-static ecctextstring_t ecc_json_errorofline(eccjsonparser_t *parse);
-static ecctextchar_t ecc_json_nextc(eccjsonparser_t *parse);
-static ecctextstring_t ecc_json_parsestring(eccjsonparser_t *parse);
+static eccstrbox_t ecc_json_errorofline(eccjsonparser_t *parse);
+static eccrune_t ecc_json_nextc(eccjsonparser_t *parse);
+static eccstrbox_t ecc_json_parsestring(eccjsonparser_t *parse);
 static eccvalue_t ecc_json_parseliteral(eccjsonparser_t *parse);
 static eccvalue_t ecc_json_parseobject(eccjsonparser_t *parse);
 static eccvalue_t ecc_json_parsearray(eccjsonparser_t *parse);
 static eccvalue_t ecc_json_runparser(eccjsonparser_t *parse);
 static eccvalue_t ecc_json_revive(eccjsonparser_t *parse, eccvalue_t thisval, eccvalue_t property, eccvalue_t value);
 static eccvalue_t ecc_json_itermore(eccjsonparser_t *parse, eccvalue_t thisval, eccvalue_t property, eccvalue_t value);
-static eccvalue_t objjsonfn_parse(ecccontext_t *context);
+static eccvalue_t ecc_objfnjson_parse(ecccontext_t *context);
 static eccvalue_t ecc_json_replace(eccjsonstringify_t *stringify, eccvalue_t thisval, eccvalue_t property, eccvalue_t value);
 static int ecc_json_stringify(eccjsonstringify_t *stringify, eccvalue_t thisval, eccvalue_t property, eccvalue_t value, int isArray, int addComa);
-static eccvalue_t objjsonfn_stringify(ecccontext_t *context);
+static eccvalue_t ecc_objfnjson_stringify(ecccontext_t *context);
 
 const eccobjinterntype_t ECC_Type_Json = {
     .text = &ECC_String_JsonType,
@@ -58,34 +58,34 @@ const eccobjinterntype_t ECC_Type_Json = {
 
 static eccvalue_t ecc_json_error(eccjsonparser_t* parse, int length, eccstrbuffer_t* chars)
 {
-    return ecc_value_error(ecc_error_syntaxerror(ecc_textbuf_make(parse->text.bytes + (length < 0 ? length : 0), abs(length)), chars));
+    return ecc_value_error(ecc_error_syntaxerror(ecc_strbox_make(parse->text.bytes + (length < 0 ? length : 0), abs(length)), chars));
 }
 
-static ecctextstring_t ecc_json_errorofline(eccjsonparser_t* parse)
+static eccstrbox_t ecc_json_errorofline(eccjsonparser_t* parse)
 {
-    ecctextstring_t text = { 0 };
+    eccstrbox_t text = { 0 };
     text.bytes = parse->start;
     while(parse->text.length)
     {
-        ecctextchar_t c = ecc_textbuf_character(parse->text);
+        eccrune_t c = ecc_strbox_character(parse->text);
         if(c.codepoint == '\r' || c.codepoint == '\n')
             break;
 
-        ecc_textbuf_advance(&parse->text, 1);
+        ecc_strbox_advance(&parse->text, 1);
     }
     text.length = (int32_t)(parse->text.bytes - parse->start);
     return text;
 }
 
-static ecctextchar_t ecc_json_nextc(eccjsonparser_t* parse)
+static eccrune_t ecc_json_nextc(eccjsonparser_t* parse)
 {
-    ecctextchar_t c = { 0 };
+    eccrune_t c = { 0 };
     while(parse->text.length)
     {
-        c = ecc_textbuf_nextcharacter(&parse->text);
+        c = ecc_strbox_nextcharacter(&parse->text);
 
-        if(c.codepoint == '\r' && ecc_textbuf_character(parse->text).codepoint == '\n')
-            ecc_textbuf_advance(&parse->text, 1);
+        if(c.codepoint == '\r' && ecc_strbox_character(parse->text).codepoint == '\n')
+            ecc_strbox_advance(&parse->text, 1);
 
         if(c.codepoint == '\r' || c.codepoint == '\n')
         {
@@ -99,15 +99,15 @@ static ecctextchar_t ecc_json_nextc(eccjsonparser_t* parse)
     return c;
 }
 
-static ecctextstring_t ecc_json_parsestring(eccjsonparser_t* parse)
+static eccstrbox_t ecc_json_parsestring(eccjsonparser_t* parse)
 {
-    ecctextstring_t text = { parse->text.bytes, 0, 0 };
-    ecctextchar_t c;
+    eccstrbox_t text = { parse->text.bytes, 0, 0 };
+    eccrune_t c;
     do
     {
-        c = ecc_textbuf_nextcharacter(&parse->text);
+        c = ecc_strbox_nextcharacter(&parse->text);
         if(c.codepoint == '\\')
-            ecc_textbuf_advance(&parse->text, 1);
+            ecc_strbox_advance(&parse->text, 1);
     } while(c.codepoint != '\"' && parse->text.length);
 
     text.length = (int32_t)(parse->text.bytes - text.bytes - 1);
@@ -116,14 +116,14 @@ static ecctextstring_t ecc_json_parsestring(eccjsonparser_t* parse)
 
 static eccvalue_t ecc_json_parseliteral(eccjsonparser_t* parse)
 {
-    ecctextchar_t c = ecc_json_nextc(parse);
+    eccrune_t c = ecc_json_nextc(parse);
 
     switch(c.codepoint)
     {
         case 't':
             if(!memcmp(parse->text.bytes, "rue", 3))
             {
-                ecc_textbuf_advance(&parse->text, 3);
+                ecc_strbox_advance(&parse->text, 3);
                 return ECCValConstTrue;
             }
             break;
@@ -131,7 +131,7 @@ static eccvalue_t ecc_json_parseliteral(eccjsonparser_t* parse)
         case 'f':
             if(!memcmp(parse->text.bytes, "alse", 4))
             {
-                ecc_textbuf_advance(&parse->text, 4);
+                ecc_strbox_advance(&parse->text, 4);
                 return ECCValConstFalse;
             }
             break;
@@ -139,7 +139,7 @@ static eccvalue_t ecc_json_parseliteral(eccjsonparser_t* parse)
         case 'n':
             if(!memcmp(parse->text.bytes, "ull", 3))
             {
-                ecc_textbuf_advance(&parse->text, 3);
+                ecc_strbox_advance(&parse->text, 3);
                 return ECCValConstNull;
             }
             break;
@@ -156,26 +156,26 @@ static eccvalue_t ecc_json_parseliteral(eccjsonparser_t* parse)
         case '8':
         case '9':
         {
-            ecctextstring_t text = ecc_textbuf_make(parse->text.bytes - 1, 1);
+            eccstrbox_t text = ecc_strbox_make(parse->text.bytes - 1, 1);
 
             if(c.codepoint == '-')
-                c = ecc_textbuf_nextcharacter(&parse->text);
+                c = ecc_strbox_nextcharacter(&parse->text);
 
             if(c.codepoint != '0')
                 while(parse->text.length)
                 {
-                    c = ecc_textbuf_nextcharacter(&parse->text);
+                    c = ecc_strbox_nextcharacter(&parse->text);
                     if(!isdigit(c.codepoint))
                         break;
                 }
             else
-                c = ecc_textbuf_nextcharacter(&parse->text);
+                c = ecc_strbox_nextcharacter(&parse->text);
 
             if(c.codepoint == '.')
             {
                 while(parse->text.length)
                 {
-                    c = ecc_textbuf_nextcharacter(&parse->text);
+                    c = ecc_strbox_nextcharacter(&parse->text);
                     if(!isdigit(c.codepoint))
                         break;
                 }
@@ -183,19 +183,19 @@ static eccvalue_t ecc_json_parseliteral(eccjsonparser_t* parse)
 
             if(c.codepoint == 'e' || c.codepoint == 'E')
             {
-                c = ecc_textbuf_nextcharacter(&parse->text);
+                c = ecc_strbox_nextcharacter(&parse->text);
                 if(c.codepoint == '+' || c.codepoint == '-')
-                    c = ecc_textbuf_nextcharacter(&parse->text);
+                    c = ecc_strbox_nextcharacter(&parse->text);
 
                 while(parse->text.length)
                 {
-                    c = ecc_textbuf_nextcharacter(&parse->text);
+                    c = ecc_strbox_nextcharacter(&parse->text);
                     if(!isdigit(c.codepoint))
                         break;
                 }
             }
 
-            ecc_textbuf_advance(&parse->text, -c.units);
+            ecc_strbox_advance(&parse->text, -c.units);
             text.length = (int32_t)(parse->text.bytes - text.bytes);
 
             return ecc_astlex_scanbinary(text, 0);
@@ -203,7 +203,7 @@ static eccvalue_t ecc_json_parseliteral(eccjsonparser_t* parse)
 
         case '"':
         {
-            ecctextstring_t text = ecc_json_parsestring(parse);
+            eccstrbox_t text = ecc_json_parsestring(parse);
             return ecc_value_fromchars(ecc_strbuf_createwithbytes(text.length, text.bytes));
             break;
         }
@@ -222,7 +222,7 @@ static eccvalue_t ecc_json_parseliteral(eccjsonparser_t* parse)
 static eccvalue_t ecc_json_parseobject(eccjsonparser_t* parse)
 {
     eccobject_t* object = ecc_object_create(ECC_Prototype_Object);
-    ecctextchar_t c;
+    eccrune_t c;
     eccvalue_t value;
     eccindexkey_t key;
 
@@ -261,7 +261,7 @@ static eccvalue_t ecc_json_parseobject(eccjsonparser_t* parse)
 static eccvalue_t ecc_json_parsearray(eccjsonparser_t* parse)
 {
     eccobject_t* object = ecc_array_create();
-    ecctextchar_t c;
+    eccrune_t c;
     eccvalue_t value;
 
     for(;;)
@@ -287,7 +287,7 @@ static eccvalue_t ecc_json_parsearray(eccjsonparser_t* parse)
 
 static eccvalue_t ecc_json_runparser(eccjsonparser_t* parse)
 {
-    ecctextchar_t c = ecc_json_nextc(parse);
+    eccrune_t c = ecc_json_nextc(parse);
 
     if(c.codepoint == '{')
         return ecc_json_parseobject(parse);
@@ -338,7 +338,7 @@ static eccvalue_t ecc_json_revive(eccjsonparser_t* parse, eccvalue_t thisval, ec
 static eccvalue_t ecc_json_itermore(eccjsonparser_t* parse, eccvalue_t thisval, eccvalue_t property, eccvalue_t value)
 {
     uint32_t index, count;
-    eccappendbuffer_t chars;
+    eccappbuf_t chars;
 
     if(ecc_value_isobject(value))
     {
@@ -363,17 +363,17 @@ static eccvalue_t ecc_json_itermore(eccjsonparser_t* parse, eccvalue_t thisval, 
     return ecc_json_revive(parse, thisval, property, value);
 }
 
-static eccvalue_t objjsonfn_parse(ecccontext_t* context)
+static eccvalue_t ecc_objfnjson_parse(ecccontext_t* context)
 {
     eccvalue_t value, reviver, result;
     eccjsonparser_t parse = {};
     parse.context.parent = context;
     parse.context.ecc = context->ecc;
     parse.context.depth = context->depth + 1;
-    parse.context.textIndex = ECC_CTXINDEXTYPE_CALL;
+    parse.context.ctxtextindex = ECC_CTXINDEXTYPE_CALL;
     value = ecc_value_tostring(context, ecc_context_argument(context, 0));
     reviver = ecc_context_argument(context, 1);
-    parse.text = ecc_textbuf_make(ecc_value_stringbytes(&value), ecc_value_stringlength(&value));
+    parse.text = ecc_strbox_make(ecc_value_stringbytes(&value), ecc_value_stringlength(&value));
     parse.start = parse.text.bytes;
     parse.line = 1;
     parse.function = reviver.type == ECC_VALTYPE_FUNCTION ? reviver.data.function : NULL;
@@ -381,7 +381,7 @@ static eccvalue_t objjsonfn_parse(ecccontext_t* context)
     result = ecc_json_runparser(&parse);
     if(result.type != ECC_VALTYPE_ERROR && parse.text.length)
     {
-        ecctextchar_t c = ecc_textbuf_character(parse.text);
+        eccrune_t c = ecc_strbox_character(parse.text);
         result = ecc_json_error(&parse, c.units, ecc_strbuf_create("unexpected '%.*s'", c.units, parse.text.bytes));
     }
     if(result.type == ECC_VALTYPE_ERROR)
@@ -510,8 +510,8 @@ static int ecc_json_stringify(eccjsonstringify_t* stringify, eccvalue_t thisval,
     {
         eccobject_t* object = value.data.object;
         int subisarr = ecc_value_objectisarray(object);
-        eccappendbuffer_t chars;
-        const ecctextstring_t* strprop;
+        eccappbuf_t chars;
+        const eccstrbox_t* strprop;
         int hasValue = 0;
 
         ecc_strbuf_append(&stringify->chars, "%s%s", subisarr ? "[" : "{", strlen(stringify->spaces) ? "\n" : "");
@@ -553,14 +553,14 @@ static int ecc_json_stringify(eccjsonstringify_t* stringify, eccvalue_t thisval,
     return 1;
 }
 
-static eccvalue_t objjsonfn_stringify(ecccontext_t* context)
+static eccvalue_t ecc_objfnjson_stringify(ecccontext_t* context)
 {
     eccvalue_t value, replacer, space;
     eccjsonstringify_t stringify = {};
     stringify.context.parent = context;
     stringify.context.ecc = context->ecc;
     stringify.context.depth = context->depth + 1;
-    stringify.context.textIndex = ECC_CTXINDEXTYPE_CALL;
+    stringify.context.ctxtextindex = ECC_CTXINDEXTYPE_CALL;
     memset(stringify.spaces, 0, sizeof(stringify.spaces ));
 
     value = ecc_context_argument(context, 0);
@@ -634,8 +634,8 @@ void ecc_json_setup()
 
     ECC_Prototype_JSONObject = ecc_object_createtyped(&ECC_Type_Json);
 
-    ecc_function_addto(ECC_Prototype_JSONObject, "parse", objjsonfn_parse, -1, h);
-    ecc_function_addto(ECC_Prototype_JSONObject, "stringify", objjsonfn_stringify, -1, h);
+    ecc_function_addto(ECC_Prototype_JSONObject, "parse", ecc_objfnjson_parse, -1, h);
+    ecc_function_addto(ECC_Prototype_JSONObject, "stringify", ecc_objfnjson_stringify, -1, h);
 }
 
 void ecc_json_teardown(void)
